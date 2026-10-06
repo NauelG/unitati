@@ -4,16 +4,22 @@ Draft. Names here become folder names in `src/lib/server/<domain>/` (see [ADR 00
 
 ## Domains
 
-| Domain         | Owns                                                                                  |
-| -------------- | ------------------------------------------------------------------------------------- |
-| `directory`    | `Person`, `Team`, `Department`, `Location`                                            |
-| `assets`       | `Asset`, `AssetModel`, `Category`, `Assignment`, `Kit`; later `License`, `Consumable` |
-| `service-desk` | `Ticket`, `Queue`, `Comment` (public / internal), `CannedResponse`; later `Sla`       |
-| `projects`     | `Project`, `Milestone`, `Task`, `Board`, `Column`; later `TimeEntry`                  |
-| `links`        | `Link`: a typed relation between two records of any domain                            |
-| cross-cutting  | `ActivityLog`, `Attachment`, `CustomField`, global search                             |
+| Domain         | Owns                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------ |
+| `directory`    | `Organisation`, `Person`, `Team`, `Department`, `Location`                           |
+| `assets`       | `Asset`, `AssetModel`, `Category`, `Manufacturer`, `Custody`; later `Kit`, `License` |
+| `service-desk` | `Ticket`, `Queue`, `Comment` (public / internal); later `CannedResponse`, `Sla`      |
+| `projects`     | `Project`, `Task`, `State` + `StateGroup`; later `Milestone`                         |
+| `links`        | the pairwise join tables and the uniform read facade over them                       |
+| cross-cutting  | `ActivityLog`, `Attachment`, global search                                           |
 
 `directory` is the only domain everyone depends on. The other three domains do not import each other's tables; they relate through `links`.
+
+`Organisation` exists so the schema is tenant-ready while exactly one row is used: every aggregate root carries `organisation_id` ([ADR 0004](adr/0004-tenancy.md)).
+
+`State` carries a user-chosen name and a system-owned `StateGroup` (`backlog`, `unstarted`, `started`, `completed`, `cancelled`). That split is how a catalogue stays configurable while the structure does not — the shape Plane uses.
+
+`CustomField` is deliberately absent: it is post-v1 in the [roadmap](roadmap-v1.md).
 
 ## Core entities
 
@@ -36,35 +42,33 @@ erDiagram
     PROJECT ||--o{ TASK : "has"
     TASK }o--o| PERSON : "owned by"
 
-    LINK }o--|| ANY_RECORD : "source"
-    LINK }o--|| ANY_RECORD : "target"
+    TICKET ||--o{ TICKET_ASSET : "affects"
+    ASSET ||--o{ TICKET_ASSET : "affected by"
+    TICKET ||--o{ TICKET_TASK : "tracked by"
+    TASK ||--o{ TICKET_TASK : "tracks"
 ```
 
-## The `Link` entity
+## Cross-domain relations
 
-A single table for cross-domain relations:
+One join table per pair, each with real foreign keys, all owned by `links`
+([ADR 0005](adr/0005-single-suite-and-relations.md)):
 
-| Column       | Example                                      |
-| ------------ | -------------------------------------------- |
-| `sourceType` | `ticket`                                     |
-| `sourceId`   | `T-1042`                                     |
-| `targetType` | `asset`                                      |
-| `targetId`   | `LT-0142`                                    |
-| `kind`       | `affects`, `caused`, `tracked-by`, `targets` |
-| `createdBy`  | person id                                    |
-| `createdAt`  | timestamp                                    |
+| Table           | Relation                 | Meaning                                   | Tier    |
+| --------------- | ------------------------ | ----------------------------------------- | ------- |
+| `ticket_asset`  | ticket `affects` asset   | The ticket is about this device           | MVP     |
+| `ticket_task`   | ticket `tracked-by` task | The ticket's resolution is a project task | MVP     |
+| `project_asset` | project `targets` asset  | The asset is in the project's scope       | post-v1 |
 
-Allowed `(sourceType, kind, targetType)` triples are declared in code, not free-form:
+Each row also carries `createdBy` and `createdAt`, so a relation can be attributed like any
+other record.
 
-| Source  | Kind         | Target | Meaning                                   |
-| ------- | ------------ | ------ | ----------------------------------------- |
-| ticket  | `affects`    | asset  | The ticket is about this device           |
-| ticket  | `tracked-by` | task   | The ticket's resolution is a project task |
-| task    | `targets`    | asset  | The task acts on this device              |
-| project | `targets`    | asset  | The asset is in the project's scope       |
-| ticket  | `duplicates` | ticket | Duplicate tickets                         |
+`links` exposes one read function, `relatedTo(record)`, which is what the design system's
+`RecordRef` and `RelatedRecords` components consume. **The interface is uniform; the storage
+is not** — and conflating those two is what makes polymorphic link tables look inevitable.
 
-**Tradeoff:** a polymorphic table cannot use real foreign keys. The alternative is one join table per pair (`ticket_asset`, `ticket_task`, …), which gives database integrity but more tables and more code per new relation. Decide in the first vertical slice. The polymorphic table is the default because it keeps the domains decoupled and powers a generic "related items" panel.
+The guarantee this buys: the database cannot hold a ticket pointing at an asset that does
+not exist. No foreign key can protect a column that sometimes means `assets` and sometimes
+`tasks`, which is why the earlier polymorphic draft was dropped.
 
 ## Key cross-domain flows
 

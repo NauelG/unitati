@@ -13,3 +13,6 @@ bun.lockb
 /.agents/
 /.claude/
 skills-lock.json
+
+# Exported design handoff, keep byte-identical
+/docs/design/
