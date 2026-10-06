@@ -57,6 +57,6 @@ the storage is not.
   own semantics. Paying for that generality without having that problem buys nothing.
 - **Hybrid: joins for core relations, generic table for the rest.** Rejected: two mechanisms
   to maintain and a permanent argument about which one a new relation belongs to.
-- **Switchable modules.** Rejected: a unitati with the inventory switched off is Zammad,
+- **Switchable modules.** Rejected: a Unitati with the inventory switched off is Zammad,
   which is free, mature and has a better helpdesk UX than we will write in six months. It
   would also empty the ticket screen the design system is built around.

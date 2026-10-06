@@ -17,7 +17,7 @@ The first line is always the version the pull request carries. Titles follow Con
 
 Never sign or attribute anything to an AI tool, anywhere.
 
-> This document defines the pull request format for unitati. It takes precedence over the vendored `pr` skill in `.agents/skills/pr/`, which describes a different format and is not used here.
+> This document defines the pull request format for Unitati. It takes precedence over the vendored `pr` skill in `.agents/skills/pr/`, which describes a different format and is not used here.
 
 ## Versioning
 

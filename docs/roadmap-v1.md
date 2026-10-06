@@ -1,6 +1,6 @@
 # Roadmap to v1
 
-Every capability unitati may ever ship, classified once, so that the question asked of any
+Every capability Unitati may ever ship, classified once, so that the question asked of any
 new idea is **"why does this get in?"** and never "why would we leave it out?".
 
 The raw material comes from seven reference products (see [sources](#sources)); the
@@ -146,13 +146,13 @@ Will not be built. Reopening one needs a new reason, not a reminder.
 
 | Capability                                                                 | From         | Reason                                                              |
 | -------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------- |
-| Depreciation, purchase orders, order items, suppliers as financial records | Snipe-IT     | Accounting. [Vision](vision.md) states unitati is not an ERP        |
-| Tiers, plan limits, billing                                                | Shelf        | Commercial SaaS plumbing; unitati is self-hosted and single-install |
+| Depreciation, purchase orders, order items, suppliers as financial records | Snipe-IT     | Accounting. [Vision](vision.md) states Unitati is not an ERP        |
+| Tiers, plan limits, billing                                                | Shelf        | Commercial SaaS plumbing; Unitati is self-hosted and single-install |
 | Gamification, idea boards, goal and logic canvases                         | Leantime     | Product management for a different audience                         |
 | Full CMDB with discovery agent                                             | GLPI, iTop   | [Vision](vision.md) rules out RMM and endpoint agents               |
 | ITIL process engine: CAB, problem management                               | OTOBO, iTop  | [Vision](vision.md) rules out full ITIL                             |
 | Live chat                                                                  | Zammad       | A different product with its own staffing model                     |
-| Public registration, user bans, captcha                                    | OpenSupports | unitati serves an internal directory; there is no anonymous public  |
+| Public registration, user bans, captcha                                    | OpenSupports | Unitati serves an internal directory; there is no anonymous public  |
 | XML-defined data model                                                     | iTop         | Contradicts "boundaries in code mirror boundaries in the domain"    |
 
 ## Sources

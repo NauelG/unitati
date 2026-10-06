@@ -42,13 +42,17 @@ Suites that already unify these exist, but they are commercial SaaS or carry dat
 
 ## Status
 
-**Evaluation phase (v0.1.0).** Docs and scaffold only, with no product features yet. Already in place:
+**Evaluation phase.** Slice 1 of 8 has shipped, so the app runs and you can sign in, but none of the three product domains exists yet. In place:
 
-- Product docs: [vision](docs/vision.md), [alternatives](docs/alternatives.md), [domain model](docs/domain-model.md), [MVP scope](docs/mvp-scope.md).
-- Scaffold: SvelteKit + Postgres/Drizzle, domain folders, a placeholder login screen and app shell, both showing the running version.
-- Versioning policy, with its CI gate.
+- **Setup and authentication.** An empty installation sends every route to `/setup`, which creates the organisation and the first administrator in one transaction. Email and password through Better Auth ([ADR 0006](docs/adr/0006-email-and-password-authentication.md)); the session resolves once per request and route groups guard the rest.
+- **People directory.** `organisation`, `person`, `department`, `location` and `team`. A person exists without a credential, so equipment can be held by someone who never signs in.
+- **Roles and scoping.** Fixed roles with granular permissions ([ADR 0007](docs/adr/0007-roles-and-permissions.md)): a denial answers 404 rather than 403, so refusing does not confirm that a record exists. Every aggregate root carries `organisation_id`, and all access is scoped by it ([ADR 0004](docs/adr/0004-tenancy.md)).
+- **App shell** built on the design-system tokens, one colour per domain, navigation filtered by permission. Spanish interface through Paraglide ([ADR 0008](docs/adr/0008-ui-language.md)).
+- Product docs, the [design system](docs/design/README.md), and the versioning policy with its CI gate.
 
-Next: MVP slice 1, which covers auth, the people directory and the app shell. See [MVP scope](docs/mvp-scope.md).
+Not built yet: assets, service desk, projects, and the links between them. Those four folders under `src/lib/server/` hold a README and nothing else.
+
+Next: slice 2, assets. The eight slices and the exit criterion that defines "done" are in [MVP scope](docs/mvp-scope.md).
 
 ## Architecture
 
@@ -62,20 +66,28 @@ Decisions are recorded one per file in [`docs/adr/`](docs/adr/):
 
 ```
 src/
+  hooks.server.ts     resolves the session once per request
   routes/
     (app)/            authenticated app (shell shows the version)
-    (auth)/login/     login screen (shows the version)
+      directory/      people index
+    (auth)/
+      setup/          first run: organisation + first administrator
+      login/          login screen (shows the version)
+    sign-out/
   lib/
     version.ts        running version, injected at build time
-    components/       shared UI components
+    components/       shared UI components (Button, Field, AppVersion)
+    paraglide/        generated from messages/, not committed
     server/
+      auth/           Better Auth wiring, guards, provisioning
+      access/         role and permission checks
       directory/      people, teams, departments, locations
-      assets/         IT asset management
-      service-desk/   tickets, queues, comments
-      projects/       projects, milestones, tasks, boards
-      links/          typed cross-domain relations
+      assets/         IT asset management            — stub
+      service-desk/   tickets, queues, comments      — stub
+      projects/       projects, milestones, tasks    — stub
+      links/          typed cross-domain relations   — stub
       db/             connection + aggregated Drizzle schema
-      shared/         pure helpers (Outcome type)
+      shared/         pure helpers (Outcome type, shared columns)
 ```
 
 ## Versioning

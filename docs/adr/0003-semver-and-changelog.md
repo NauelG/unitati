@@ -5,7 +5,7 @@
 
 ## Context
 
-unitati will run in more than one environment (local, staging, one or more organisations if it goes open source). When something breaks, the first question is "which build is this?". A prose rule like "remember to bump the version" fails without anyone noticing, so the policy needs a gate.
+Unitati will run in more than one environment (local, staging, one or more organisations if it goes open source). When something breaks, the first question is "which build is this?". A prose rule like "remember to bump the version" fails without anyone noticing, so the policy needs a gate.
 
 ## Decision
 

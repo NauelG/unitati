@@ -1,6 +1,6 @@
 # Alternatives
 
-Existing products that cover **projects (P)**, **ticketing (T)** and **IT asset management (A)**. The question this answers is whether unitati needs to exist.
+Existing products that cover **projects (P)**, **ticketing (T)** and **IT asset management (A)**. The question this answers is whether Unitati needs to exist.
 
 Research date: 2026-10-06. Cells marked _unverified_ were not confirmed against current vendor docs.
 

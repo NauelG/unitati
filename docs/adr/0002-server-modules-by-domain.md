@@ -5,7 +5,7 @@
 
 ## Context
 
-unitati has three product areas that, in existing tools, live in three applications. Putting them in one codebase brings back the old risk: one big `db.ts` where every domain reaches into every other domain's tables.
+Unitati has three product areas that, in existing tools, live in three applications. Putting them in one codebase brings back the old risk: one big `db.ts` where every domain reaches into every other domain's tables.
 
 ## Decision
 

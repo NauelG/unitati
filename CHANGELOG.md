@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to unitati are documented here. The format follows
+All notable changes to Unitati are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
@@ -19,8 +19,16 @@ minor bumps carry features and patch bumps carry fixes.
 - `logo-concept.png` recompressed losslessly, 1.23 MB to 0.91 MB. Pixel data is unchanged.
 - `README.md` leads with the brand lockup, light and dark, and keeps three badges instead of
   eleven. The rest duplicated the Stack section, which says the same with more detail.
-- The product is written "Unitati" in prose, matching `tokens.json` and the brand assets.
-  Package name, repository and file names stay lowercase.
+- The product is written "Unitati" everywhere it is read as a name: the Spanish interface
+  (`app_name`, the login heading, the setup lede), `AGENTS.md`, the ADRs and the remaining
+  docs. It matches what `tokens.json` and the brand SVGs already said. Identifiers keep the
+  lowercase spelling, because they are not the name: the npm package, the repository slug,
+  the Postgres role and database, the `provision.ts` slug fallback, and every file path.
+- The README's Status section described an app that no longer exists. It claimed "no product
+  features yet" and announced slice 1 as next, when slice 1 had already shipped. It now says
+  what runs — setup, authentication, the people directory, roles — and names the four server
+  folders that are still empty, so the gap is explicit rather than implied. The `src/` tree
+  gains `hooks.server.ts`, `setup/`, `directory/`, `auth/` and `access/`.
 - Ignore files (`.gitignore`, `.prettierignore`, `.eslintignore`) are exempt from the version
   gate ([ADR 0003](docs/adr/0003-semver-and-changelog.md)). They steer tooling and never reach
   the build, yet touching one alone used to force a release: 0.1.2 was published for exactly

@@ -1,7 +1,7 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 
-	"app_name": "unitati",
+	"app_name": "Unitati",
 	"app_tagline": "Proyectos, soporte e inventario sobre un único modelo de datos.",
 
 	"nav_overview": "Inicio",
@@ -13,7 +13,7 @@
 	"nav_user_menu": "Menú de usuario",
 	"nav_main": "Navegación principal",
 
-	"login_title": "Entra en unitati",
+	"login_title": "Entra en Unitati",
 	"login_lede": "Proyectos, soporte e inventario sobre un único modelo de datos.",
 	"login_email_label": "Correo electrónico",
 	"login_email_placeholder": "nombre@empresa.com",
@@ -24,7 +24,7 @@
 	"login_unexpected": "No se ha podido entrar. Inténtalo de nuevo.",
 
 	"setup_title": "Crea la cuenta de administración",
-	"setup_lede": "Aún no hay nadie en esta instalación. La primera cuenta administra unitati.",
+	"setup_lede": "Aún no hay nadie en esta instalación. La primera cuenta administra Unitati.",
 	"setup_name_label": "Nombre",
 	"setup_name_placeholder": "Nombre y apellidos",
 	"setup_submit": "Crear cuenta y entrar",
