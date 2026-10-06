@@ -5,6 +5,36 @@ All notable changes to unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.2.1] - 2026-10-06
+
+### Changed
+
+- The design system is no longer a single 2.08 MB HTML file. `docs/design/assets/` now holds
+  each asset as a real file — `tokens.css`, `components.css`, `tokens.json`, 12 brand SVGs,
+  18 icons and the logo concept — and `design-system.html` links them instead of embedding
+  them as base64. The file dropped to 103 KB, so it is reviewable in a diff.
+- The stylesheet is now a single source of truth. The old file carried the same 19.4 KB of
+  CSS twice: once inline to render the examples, once base64-encoded as a download. Those
+  two copies could drift apart without anyone noticing; now they are one file.
+- `logo-concept.png` recompressed losslessly, 1.23 MB to 0.91 MB. Pixel data is unchanged.
+- `README.md` leads with the brand lockup, light and dark, and keeps three badges instead of
+  eleven. The rest duplicated the Stack section, which says the same with more detail.
+- The product is written "Unitati" in prose, matching `tokens.json` and the brand assets.
+  Package name, repository and file names stay lowercase.
+- Ignore files (`.gitignore`, `.prettierignore`, `.eslintignore`) are exempt from the version
+  gate ([ADR 0003](docs/adr/0003-semver-and-changelog.md)). They steer tooling and never reach
+  the build, yet touching one alone used to force a release: 0.1.2 was published for exactly
+  that reason.
+- `package-lock.json` had drifted to `0.1.2` while `package.json` said `0.2.0`; both now agree.
+
+### Added
+
+- `docs/design/extract-assets.mjs`: unpacks a design handoff into `assets/` plus an HTML
+  shell. It refuses to guess a filename for an asset the handoff never names, and stops if an
+  embedded stylesheet has drifted from its downloadable copy.
+- `docs/design/README.md`: what lives in the folder, which files are generated, and how to
+  unpack the next handoff.
+
 ## [0.2.0] - 2026-10-06
 
 ### Added
