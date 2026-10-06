@@ -46,5 +46,13 @@ Plus: one directory, one permission model, one global search, one activity log.
 
 - Not an ERP: no accounting, purchasing or invoicing.
 - No RMM or endpoint discovery agent in the MVP; CSV import and API only.
-- Not multi-tenant SaaS; one installation serves one organisation.
+- Not a multi-tenant SaaS. One installation serves one organisation, and there is no
+  tenant management, no subdomain routing and no billing. The data model is nevertheless
+  tenant-ready from day one, because single-tenant is multi-tenant with one row and the
+  reverse needs a rewrite — see [ADR 0004](adr/0004-tenancy.md).
+- No switchable modules. The three domains are always installed; roles decide who sees
+  what. Switching one off would empty the screens the product is designed around — see
+  [ADR 0005](adr/0005-single-suite-and-relations.md).
 - No full ITIL process engine (change advisory boards, problem management).
+- No asset bookings or reservations: a calendar domain of its own, well covered elsewhere.
+  Recorded in the [roadmap](roadmap-v1.md) as post-v1.

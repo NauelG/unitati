@@ -33,7 +33,7 @@ The planned items follow `renyst` (Postgres, Drizzle, better-auth, shadcn-svelte
 ### Alternatives considered
 
 - **React Router 7 / Next.js:** large ecosystem and Shelf uses Remix, but it is a second stack to maintain alongside the existing Svelte apps.
-- **SQLite (as in mod-minihub):** simpler to operate, but full-text search, concurrent technicians and polymorphic relations are more comfortable on Postgres.
+- **SQLite (as in mod-minihub):** simpler to operate, but full-text search, concurrent technicians and cross-domain referential integrity are more comfortable on Postgres.
 - **Prisma:** more mature, but Drizzle keeps SQL explicit and matches `renyst`.
 - **Separate API + SPA:** better client/server separation, but twice the deployment surface for a single-team product.
 

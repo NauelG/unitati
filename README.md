@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.1-2563eb" alt="Version 0.1.1" />
+  <img src="https://img.shields.io/badge/version-0.1.2-2563eb" alt="Version 0.1.2" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <img src="https://img.shields.io/badge/SvelteKit-3-FF3E00?logo=svelte&logoColor=white" alt="SvelteKit 3" />
   <img src="https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white" alt="Svelte 5" />
@@ -93,8 +93,10 @@ The running version is shown **in the app shell and on the login screen**, so ev
 | ---------------------------------------------------------------------- | -------------------------------------------------------------- |
 | [`docs/vision.md`](docs/vision.md)                                     | Problem, target user, value proposition, principles, non-goals |
 | [`docs/alternatives.md`](docs/alternatives.md)                         | Market map of existing suites and where the gap is             |
-| [`docs/domain-model.md`](docs/domain-model.md)                         | Domains, entities, the `Link` model, cross-domain flows        |
-| [`docs/mvp-scope.md`](docs/mvp-scope.md)                               | Prioritised vertical slices (P0 / P1 / P2) and estimate        |
+| [`docs/domain-model.md`](docs/domain-model.md)                         | Domains, entities, cross-domain relations and flows            |
+| [`docs/roadmap-v1.md`](docs/roadmap-v1.md)                             | Every capability classified: MVP, v1, post-v1, discarded       |
+| [`docs/mvp-scope.md`](docs/mvp-scope.md)                               | The minimum subset: vertical slices and the exit criterion     |
+| [`docs/design/`](docs/design/)                                         | Exported design system: tokens, components, layouts            |
 | [`docs/decision-internal-vs-oss.md`](docs/decision-internal-vs-oss.md) | Open decision: internal tool vs open source, license           |
 | [`docs/adr/`](docs/adr/)                                               | Architecture decision records                                  |
 | [`CHANGELOG.md`](CHANGELOG.md)                                         | Release history                                                |
