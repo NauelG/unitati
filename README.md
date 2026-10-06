@@ -1,25 +1,26 @@
 <p align="center">
-  <strong>unitati</strong><br />
+  <picture>
+    <source
+      media="(prefers-color-scheme: dark)"
+      srcset="docs/design/assets/brand/unitati-lockup-inverse.svg"
+    />
+    <img src="docs/design/assets/brand/unitati-lockup.svg" alt="Unitati" width="340" />
+  </picture>
+</p>
+
+<p align="center">
   Projects, service desk and IT asset management for internal IT teams, on one data model.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.2.0-2563eb" alt="Version 0.2.0" />
+  <img src="https://img.shields.io/badge/version-0.2.0-1d5cf0" alt="Version 0.2.0" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
-  <img src="https://img.shields.io/badge/SvelteKit-3-FF3E00?logo=svelte&logoColor=white" alt="SvelteKit 3" />
-  <img src="https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white" alt="Svelte 5" />
-  <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript strict" />
-  <img src="https://img.shields.io/badge/Tailwind-4-38B2AC?logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" />
-  <img src="https://img.shields.io/badge/Postgres-Drizzle-4169E1?logo=postgresql&logoColor=white" alt="Postgres + Drizzle" />
-  <img src="https://img.shields.io/badge/tests-Vitest-6E9F18?logo=vitest&logoColor=white" alt="Vitest" />
-  <img src="https://img.shields.io/badge/Node-24-339933?logo=nodedotjs&logoColor=white" alt="Node 24" />
-  <img src="https://img.shields.io/badge/semver-2.0.0-blue" alt="SemVer" />
   <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
 </p>
 
 ---
 
-## What is unitati?
+## What is Unitati?
 
 Internal IT teams usually run three separate tools: one for **projects** (e.g. Leantime), one for **tickets** (e.g. OpenSupports) and one for **assets** (e.g. Snipe-IT, Shelf). The real cost is not three tabs. It is **disconnected data**:
 
@@ -27,7 +28,7 @@ Internal IT teams usually run three separate tools: one for **projects** (e.g. L
 2. **No context.** A ticket doesn't know which laptop it is about, and the laptop doesn't know its incident history.
 3. **No continuity.** A hardware refresh is planned in one tool, while the assets it replaces live in another. There is no shared search or cross-cutting report.
 
-unitati puts the three areas on **one data model**, where the relations are the product:
+Unitati puts the three areas on **one data model**, where the relations are the product:
 
 | Relation                 | Example                                                                   |
 | ------------------------ | ------------------------------------------------------------------------- |
@@ -79,7 +80,7 @@ src/
 
 ## Versioning
 
-unitati follows [Semantic Versioning](https://semver.org/). Pre-1.0, features bump the minor version and fixes bump the patch.
+Unitati follows [Semantic Versioning](https://semver.org/). Pre-1.0, features bump the minor version and fixes bump the patch.
 
 - Every pull request that ships app behaviour bumps the version in `package.json`.
 - The same PR adds a dated entry to [`CHANGELOG.md`](CHANGELOG.md) ([Keep a Changelog](https://keepachangelog.com/en/1.1.0/)) and updates the version badge above.
@@ -96,7 +97,7 @@ The running version is shown **in the app shell and on the login screen**, so ev
 | [`docs/domain-model.md`](docs/domain-model.md)                         | Domains, entities, cross-domain relations and flows            |
 | [`docs/roadmap-v1.md`](docs/roadmap-v1.md)                             | Every capability classified: MVP, v1, post-v1, discarded       |
 | [`docs/mvp-scope.md`](docs/mvp-scope.md)                               | The minimum subset: vertical slices and the exit criterion     |
-| [`docs/design/`](docs/design/)                                         | Exported design system: tokens, components, layouts            |
+| [`docs/design/`](docs/design/README.md)                                | Design system: tokens, brand assets, components, layouts       |
 | [`docs/decision-internal-vs-oss.md`](docs/decision-internal-vs-oss.md) | Open decision: internal tool vs open source, license           |
 | [`docs/adr/`](docs/adr/)                                               | Architecture decision records                                  |
 | [`CHANGELOG.md`](CHANGELOG.md)                                         | Release history                                                |

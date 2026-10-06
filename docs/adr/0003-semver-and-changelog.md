@@ -21,6 +21,7 @@ unitati will run in more than one environment (local, staging, one or more organ
    - `package.json` is not imported into client code, which keeps the dependency list out of the bundle.
 4. **CI enforces it.** `scripts/check-version-bump.mjs` runs on every pull request and fails if any of the above is missing.
    - Changes that only touch docs, CI or agent files (`docs/`, `.github/`, `README.md`, `AGENTS.md`, …) are exempt.
+   - Ignore files (`.gitignore`, `.prettierignore`, `.eslintignore`) are exempt too. They steer tooling and never reach the build output, so a bump would announce a release whose only content is a formatting rule. The test is whether a user could observe the change in a running build, not whether the file sits at the repository root.
 5. **Releases are tagged** `vX.Y.Z` on the merge commit in `main`.
 
 Same policy as `renyst-app`, minus its in-app release notes.
