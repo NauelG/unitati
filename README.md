@@ -4,7 +4,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.2-2563eb" alt="Version 0.1.2" />
+  <img src="https://img.shields.io/badge/version-0.2.0-2563eb" alt="Version 0.2.0" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <img src="https://img.shields.io/badge/SvelteKit-3-FF3E00?logo=svelte&logoColor=white" alt="SvelteKit 3" />
   <img src="https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white" alt="Svelte 5" />
@@ -118,9 +118,10 @@ Requires **Node 24** (see `.nvmrc`) and **Docker with the Compose v2 plugin**. T
 
 ```sh
 npm install
-cp .env.example .env
+cp .env.example .env   # then set BETTER_AUTH_SECRET: openssl rand -base64 32
 
 npm run db:start     # Postgres 17 in Docker (waits until healthy)
+npm run db:migrate   # create the schema
 npm run db:stop      # stop it
 
 npm run dev          # dev server on http://localhost:5173
@@ -143,7 +144,26 @@ npm run preview      # preview the production build
 npm run check:version-bump   # versioning gate (BASE_REF=origin/main by default)
 ```
 
-The login screen is at [`/login`](http://localhost:5173/login). It is a placeholder until auth lands.
+An empty installation sends every route to [`/setup`](http://localhost:5173/setup), which creates
+the organisation and the first administrator. After that, [`/login`](http://localhost:5173/login).
+
+### Environment
+
+| Variable             | Required      | Purpose                                            |
+| -------------------- | ------------- | -------------------------------------------------- |
+| `DATABASE_URL`       | to run        | Postgres connection string                         |
+| `BETTER_AUTH_SECRET` | to run        | Signs session cookies and tokens                   |
+| `BETTER_AUTH_URL`    | in production | Public origin; defaults to `http://localhost:5173` |
+
+None of them is needed to `build`: building analyses the app without opening a connection
+(see `src/env.ts`).
+
+### Deploying
+
+`node --env-file=.env build` serves on port 3000. Behind a reverse proxy, adapter-node must be
+told its public origin or **every form submission is rejected** as cross-site: set
+`PROTOCOL_HEADER=x-forwarded-proto` and `HOST_HEADER=x-forwarded-host`. The `ORIGIN` variable
+of earlier versions no longer exists in adapter-node 6.
 
 ## Contributing
 

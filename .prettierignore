@@ -16,3 +16,8 @@ skills-lock.json
 
 # Exported design handoff, keep byte-identical
 /docs/design/
+
+# inlang writes its own metadata, cache and readmes into this folder on every
+# compile; settings.json is the only file we author.
+/project.inlang/
+!/project.inlang/settings.json

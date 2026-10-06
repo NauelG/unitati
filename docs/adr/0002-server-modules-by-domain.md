@@ -11,15 +11,21 @@ unitati has three product areas that, in existing tools, live in three applicati
 
 Server code lives in `src/lib/server/<domain>/`, and each folder is named after a business concept:
 
-| Folder          | Owns                                                      |
-| --------------- | --------------------------------------------------------- |
-| `directory/`    | people, teams, departments, locations                     |
-| `assets/`       | assets, models, categories, assignments                   |
-| `service-desk/` | tickets, queues, comments                                 |
-| `projects/`     | projects, milestones, tasks, boards                       |
-| `links/`        | typed cross-domain relations (see `docs/domain-model.md`) |
-| `db/`           | connection and the aggregated Drizzle schema              |
-| `shared/`       | pure helpers with no domain knowledge                     |
+| Folder          | Owns                                                         |
+| --------------- | ------------------------------------------------------------ |
+| `directory/`    | organisations, people, teams, departments, locations         |
+| `assets/`       | assets, models, categories, assignments                      |
+| `service-desk/` | tickets, queues, comments                                    |
+| `projects/`     | projects, milestones, tasks, boards                          |
+| `links/`        | typed cross-domain relations (see `docs/domain-model.md`)    |
+| `auth/`         | credentials, sessions, guards (infrastructure, not a domain) |
+| `access/`       | the permission table (ADR 0007)                              |
+| `db/`           | connection and the aggregated Drizzle schema                 |
+| `shared/`       | pure helpers with no domain knowledge                        |
+
+`auth/` and `access/` are infrastructure in the same sense as `db/`: they carry no business
+concept of their own. A credential is not a person — `directory` owns who people are, `auth`
+owns whether they can sign in.
 
 Each domain owns its tables in `<domain>/schema.ts`; `db/schema.ts` only re-exports them.
 

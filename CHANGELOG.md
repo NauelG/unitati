@@ -5,6 +5,42 @@ All notable changes to unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.2.0] - 2026-10-06
+
+### Added
+
+- MVP slice 1. An empty installation walks through `/setup`, creates its organisation and
+  first admin in one transaction, and lands on the app shell.
+- Email and password authentication via Better Auth (ADR 0006), with sessions resolved once
+  per request in `hooks.server.ts` and route-group guards.
+- Directory: `organisation`, `person`, `department`, `location`, `team`. A person exists
+  without a credential, so equipment can be held by someone who never signs in.
+- Fixed roles with granular permissions (ADR 0007). Denials answer 404 rather than 403, so a
+  refusal does not confirm that a record exists.
+- Every aggregate root carries `organisation_id` and all access is scoped by it (ADR 0004).
+- Spanish interface with Paraglide, externalised from the first screen (ADR 0008).
+- App shell with the design-system tokens, one colour per domain, and navigation filtered by
+  permission.
+- `Button` and `Field` components; `Field` wires label, error and description for screen
+  readers.
+
+### Changed
+
+- `src/routes/layout.css` becomes `src/app.css`, the entry point shadcn-svelte expects.
+- The database connection resolves on first use instead of at import time, so importing a
+  module no longer opens a connection a build never asked for.
+- `drizzle-orm` and `postgres` move to `dependencies`: they ship at runtime.
+
+### Notes
+
+- `overrides` pins Better Auth's `@sveltejs/kit` peer to ours. Better Auth declares `^2.0.0`
+  and this project runs SvelteKit 3; the peer is optional and only the `svelte-kit` helper
+  touches it. The override is surgical on purpose — `legacy-peer-deps` would disable peer
+  checking for every package.
+- Shipped without `formsnap`: it requires `sveltekit-superforms@^2`, while version 3 is the
+  one that supports SvelteKit 3 natively. Its job — accessible field wiring — is what the
+  design system specifies as `Field`.
+
 ## [0.1.2] - 2026-10-06
 
 ### Added
