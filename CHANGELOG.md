@@ -5,6 +5,14 @@ All notable changes to unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.1.1] - 2026-10-06
+
+### Fixed
+
+- `vite build` no longer requires `DATABASE_URL`. Building analyses the app without opening a
+  connection, so environments that legitimately have no database credentials (CI, image builds)
+  can build it. The variable is still mandatory when the app starts.
+
 ## [0.1.0] - 2026-10-06
 
 ### Added
