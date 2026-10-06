@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Version bump, changelog and README badge
+        if: github.event_name == 'pull_request'
+        run: BASE_REF="origin/${{ github.base_ref }}" npm run check:version-bump
+      - run: npm run check
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build

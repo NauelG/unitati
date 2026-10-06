@@ -1,0 +1,15 @@
+# Package Managers
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+bun.lockb
+
+# Miscellaneous
+/static/
+/drizzle/
+
+# Vendored agent skills (managed by skills installer, not ours to format)
+/.agents/
+/.claude/
+skills-lock.json
