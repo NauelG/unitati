@@ -1,7 +1,7 @@
 {
 	"name": "unitati",
 	"private": true,
-	"version": "0.1.2",
+	"version": "0.2.0",
 	"type": "module",
 	"engines": {
 		"node": ">=24"
@@ -11,7 +11,7 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
-		"prepare": "svelte-kit sync || echo ''",
+		"prepare": "(svelte-kit sync && paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide) || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --check . && eslint .",
@@ -28,24 +28,35 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
+		"@fontsource-variable/instrument-sans": "^5.3.0",
+		"@fontsource-variable/martian-mono": "^5.3.0",
+		"@fontsource-variable/unbounded": "^5.3.0",
+		"@inlang/paraglide-js": "^2.26.0",
+		"@lucide/svelte": "^1.52.0",
 		"@sveltejs/adapter-node": "^6.0.0",
 		"@sveltejs/kit": "^3.0.0",
 		"@sveltejs/vite-plugin-svelte": "^7.2.0",
 		"@tailwindcss/vite": "^4.3.0",
 		"@types/node": "^24",
+		"bits-ui": "^2.19.5",
+		"clsx": "^2.1.1",
 		"drizzle-kit": "^0.31.10",
-		"drizzle-orm": "^0.45.2",
 		"eslint": "^10.4.1",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.19.0",
 		"globals": "^17.6.0",
-		"postgres": "^3.4.9",
+		"mode-watcher": "^1.1.0",
 		"prettier": "^3.8.3",
 		"prettier-plugin-svelte": "^4.1.0",
 		"prettier-plugin-tailwindcss": "^0.8.0",
+		"shadcn-svelte": "^1.7.0",
 		"svelte": "^5.57.1",
 		"svelte-check": "^4.6.0",
+		"sveltekit-superforms": "^3.0.0",
+		"tailwind-merge": "^3.7.0",
+		"tailwind-variants": "^3.3.1",
 		"tailwindcss": "^4.3.0",
+		"tw-animate-css": "^1.4.0",
 		"typescript": "^6.0.3",
 		"typescript-eslint": "^8.60.1",
 		"vite": "^8.3.0",
@@ -54,5 +65,15 @@
 	"imports": {
 		"#lib": "./src/lib/index.js",
 		"#lib/*": "./src/lib/*"
+	},
+	"overrides": {
+		"better-auth": {
+			"@sveltejs/kit": "$@sveltejs/kit"
+		}
+	},
+	"dependencies": {
+		"better-auth": "^1.7.7",
+		"drizzle-orm": "^0.45.3",
+		"postgres": "^3.4.9"
 	}
 }

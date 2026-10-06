@@ -1,0 +1,59 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+
+	"app_name": "unitati",
+	"app_tagline": "Proyectos, soporte e inventario sobre un único modelo de datos.",
+
+	"nav_overview": "Inicio",
+	"nav_assets": "Inventario",
+	"nav_service_desk": "Soporte",
+	"nav_projects": "Proyectos",
+	"nav_directory": "Personas",
+	"nav_sign_out": "Cerrar sesión",
+	"nav_user_menu": "Menú de usuario",
+	"nav_main": "Navegación principal",
+
+	"login_title": "Entra en unitati",
+	"login_lede": "Proyectos, soporte e inventario sobre un único modelo de datos.",
+	"login_email_label": "Correo electrónico",
+	"login_email_placeholder": "nombre@empresa.com",
+	"login_password_label": "Contraseña",
+	"login_submit": "Entrar",
+	"login_submitting": "Entrando…",
+	"login_failed": "El correo o la contraseña no son correctos.",
+	"login_unexpected": "No se ha podido entrar. Inténtalo de nuevo.",
+
+	"setup_title": "Crea la cuenta de administración",
+	"setup_lede": "Aún no hay nadie en esta instalación. La primera cuenta administra unitati.",
+	"setup_name_label": "Nombre",
+	"setup_name_placeholder": "Nombre y apellidos",
+	"setup_submit": "Crear cuenta y entrar",
+	"setup_submitting": "Creando la cuenta…",
+	"setup_taken": "Esta instalación ya está configurada.",
+	"setup_failed": "No se ha podido crear la cuenta. Inténtalo de nuevo.",
+
+	"validation_email": "Escribe un correo electrónico válido.",
+	"validation_password_short": "La contraseña debe tener al menos {min} caracteres.",
+	"validation_name_required": "Escribe un nombre.",
+
+	"directory_title": "Personas",
+	"directory_lede": "Quién trabaja aquí, en qué departamento y con qué permisos.",
+	"directory_empty": "Todavía no hay nadie más en el directorio.",
+	"directory_column_name": "Nombre",
+	"directory_column_email": "Correo",
+	"directory_column_department": "Departamento",
+	"directory_column_role": "Rol",
+	"directory_no_department": "Sin departamento",
+
+	"role_admin": "Administración",
+	"role_technician": "Técnico",
+	"role_employee": "Empleado",
+
+	"overview_title": "Inicio",
+	"overview_greeting": "Hola, {name}.",
+	"overview_pending": "Los paneles llegan con el inventario y el soporte.",
+
+	"error_not_found": "No hemos encontrado esta página.",
+	"error_forbidden": "No tienes acceso a esta página.",
+	"error_generic": "Algo ha salido mal."
+}

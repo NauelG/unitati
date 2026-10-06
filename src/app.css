@@ -1,0 +1,158 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource-variable/unbounded';
+@import '@fontsource-variable/instrument-sans';
+@import '@fontsource-variable/martian-mono';
+
+/* Dark mode is specified in the design system; nothing applies `.dark` yet, so the
+   variant compiles and never matches until the theme toggle lands. */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design tokens — source of truth: docs/design/design-system.html.
+ * Values are copied verbatim; the shadcn-svelte mapping below points at these
+ * and never redefines a colour, so there is exactly one place to change one.
+ */
+:root {
+	/* Surfaces and ink */
+	--surface-0: #f5f6f8;
+	--surface-1: #ffffff;
+	--surface-2: #eef0f3;
+	--ink: #0f1720;
+	--ink-muted: #566171;
+	--border: #e2e5ea;
+	--border-strong: #7a8494;
+
+	/* Action and brand */
+	--brand: #1d5cf0;
+	--brand-hover: #174bc7;
+	--brand-soft: #e8efff;
+	--action: #0f1720;
+	--action-hover: #273241;
+	--action-accent: #1d5cf0;
+	--on-brand: #ffffff;
+	--on-action: #ffffff;
+	--on-action-accent: #ffffff;
+	--on-danger: #ffffff;
+
+	/* One colour per domain: the three are meant to coexist on screen */
+	--asset: var(--brand);
+	--asset-soft: var(--brand-soft);
+	--desk: #6544e8;
+	--desk-soft: #f0ebff;
+	--project: #0b7653;
+	--project-soft: #e2f6ee;
+
+	/* States */
+	--focus: #1d5cf0;
+	--success: #12733f;
+	--success-soft: #e3f5ea;
+	--warning: #995700;
+	--warning-soft: #fff1d9;
+	--danger: #c2261c;
+	--danger-soft: #fdecea;
+	--scrim: rgba(11, 16, 22, 0.48);
+
+	/* Typography */
+	--font-display: 'Unbounded Variable', 'Instrument Sans', system-ui, sans-serif;
+	--font-sans: 'Instrument Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--font-mono: 'Martian Mono Variable', ui-monospace, Menlo, Consolas, monospace;
+
+	/* Spacing */
+	--space-1: 4px;
+	--space-2: 8px;
+	--space-3: 12px;
+	--space-4: 16px;
+	--space-5: 20px;
+	--space-6: 24px;
+	--space-8: 32px;
+	--space-12: 48px;
+
+	/* Radius */
+	--radius-sm: 6px;
+	--radius-md: 8px;
+	--radius-lg: 12px;
+	--radius-xl: 20px;
+	--radius-full: 9999px;
+
+	/* Elevation */
+	--shadow-sm: 0 1px 2px rgba(15, 23, 32, 0.06);
+	--shadow-md: 0 4px 12px rgba(15, 23, 32, 0.08), 0 1px 2px rgba(15, 23, 32, 0.06);
+	--shadow-lg: 0 16px 40px rgba(15, 23, 32, 0.16);
+
+	/* Sizes */
+	--size-control-sm: 28px;
+	--size-control-md: 36px;
+	--size-control-lg: 40px;
+	--size-row: 40px;
+	--size-row-compact: 32px;
+	--size-sidebar: 248px;
+	--size-icon-sm: 16px;
+	--size-icon-md: 20px;
+}
+
+/* shadcn-svelte theme variables, mapped exactly as the design system prescribes
+   in "Using it with shadcn-svelte". */
+@theme inline {
+	--color-background: var(--surface-0);
+	--color-foreground: var(--ink);
+	--color-card: var(--surface-1);
+	--color-card-foreground: var(--ink);
+	--color-popover: var(--surface-1);
+	--color-popover-foreground: var(--ink);
+	--color-primary: var(--action);
+	--color-primary-foreground: var(--on-action);
+	--color-secondary: var(--surface-2);
+	--color-secondary-foreground: var(--ink);
+	--color-muted: var(--surface-2);
+	--color-muted-foreground: var(--ink-muted);
+	--color-accent: var(--surface-2);
+	--color-accent-foreground: var(--ink);
+	--color-destructive: var(--danger);
+	--color-destructive-foreground: var(--on-danger);
+	--color-border: var(--border);
+	--color-input: var(--border-strong);
+	--color-ring: var(--focus);
+
+	/* Domain colours, available as Tailwind utilities (bg-asset, text-desk, …) */
+	--color-asset: var(--asset);
+	--color-asset-soft: var(--asset-soft);
+	--color-desk: var(--desk);
+	--color-desk-soft: var(--desk-soft);
+	--color-project: var(--project);
+	--color-project-soft: var(--project-soft);
+	--color-success: var(--success);
+	--color-warning: var(--warning);
+
+	--font-display: var(--font-display);
+	--font-sans: var(--font-sans);
+	--font-mono: var(--font-mono);
+
+	--radius-sm: var(--radius-sm);
+	--radius-md: var(--radius-md);
+	--radius-lg: var(--radius-lg);
+	--radius-xl: var(--radius-xl);
+}
+
+@layer base {
+	* {
+		border-color: var(--border);
+	}
+
+	body {
+		background-color: var(--surface-0);
+		color: var(--ink);
+		font-family: var(--font-sans);
+	}
+
+	/* The design system leans on the display face for headings only. */
+	h1,
+	h2 {
+		font-family: var(--font-display);
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--focus);
+		outline-offset: 2px;
+	}
+}

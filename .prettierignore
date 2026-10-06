@@ -16,3 +16,7 @@ skills-lock.json
 
 # Exported design handoff, keep byte-identical
 /docs/design/
+
+# inlang generated metadata (settings.json stays ours)
+/project.inlang/.meta.json
+/project.inlang/cache/
