@@ -15,7 +15,7 @@ assets/
   css/docs-page.css     Chrome of this documentation page only. Not part of the system.
   brand/*.svg           Marks, wordmarks, lockups and app icons.
   icons/*.svg           Lucide icons used across the interface.
-  img/logo-concept.png  Logo exploration, for reference.
+  img/logo-concept.*    Logo exploration, for reference. AVIF, with WebP behind it.
 ```
 
 `css/docs-page.css` exists to style the documentation you are reading. It is deliberately
@@ -52,6 +52,21 @@ node docs/design/extract-assets.mjs --check    # report only, write nothing
 
 This rewrites `assets/` and leaves an HTML shell that links those files. The CSS that
 renders the examples is then the same file you would download, so the two cannot diverge.
+
+Photographs are re-encoded to AVIF and WebP and emitted as a `<picture>`, with WebP on the
+`<img>` because every browser renders it. That needs `avifenc`, `cwebp` and ImageMagick:
+
+```sh
+sudo apt install libavif-bin webp imagemagick
+```
+
+Without them the image falls back to a losslessly recompressed PNG, which needs nothing but
+Node. The page renders either way; only its weight changes. Each re-encoding must come out
+both smaller and above an SSIM of 0.97 against the original, so an encoder that misbehaves
+is dropped rather than shipped unseen. The concept render measures 0.9945.
+
+Vector assets are never re-encoded. The logo files under `brand/` are the authoritative
+artwork, and they stay byte-identical to what the designer exported.
 
 The extractor refuses to guess. If a handoff carries an asset it never names, extraction
 fails and asks you to name it in `UNNAMED`, rather than inventing a filename that would

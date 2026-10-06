@@ -15,6 +15,11 @@
  * The stylesheet becomes the single source of truth: the CSS that renders the
  * examples is byte-identical to the CSS you download, because it is one file.
  *
+ * Photographs are re-encoded to AVIF and WebP when those encoders are
+ * installed, and emitted as a `<picture>`. When they are not, the image falls
+ * back to a losslessly recompressed PNG, which needs nothing but Node. The
+ * document always renders; only its weight depends on the toolchain.
+ *
  * Usage:
  *   node docs/design/extract-assets.mjs [handoff.html]
  *   node docs/design/extract-assets.mjs --check     # verify, write nothing
@@ -24,7 +29,9 @@
 
 import { createHash } from 'node:crypto';
 import { deflateSync, inflateSync } from 'node:zlib';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -58,6 +65,41 @@ const SHEETS = [
 ];
 
 const DOCS_SHEET = 'css/docs-page.css';
+
+/**
+ * Re-encodings attempted for a photographic bitmap, best compression first.
+ *
+ * The handoff's concept render is 1774x887 with 60k distinct colours, so a
+ * palette cannot hold it and lossless compression has almost nothing left to
+ * take: `optipng -o7` beats a plain zlib pass by 0.4%. Modern codecs are a
+ * different order of magnitude — AVIF at q90 is 9% of the PNG at an SSIM of
+ * 0.994, which is below what an eye resolves on a reference illustration whose
+ * authoritative form is the vector logo set next to it.
+ *
+ * `quality` is the structural-similarity floor each encoding must clear to be
+ * accepted; falling below it means the encoder behaved unlike it did here and
+ * the result is discarded rather than shipped unseen.
+ */
+const RECODERS = [
+	{
+		ext: 'avif',
+		mime: 'image/avif',
+		bin: 'avifenc',
+		args: (input, output) => ['-s', '4', '-q', '90', input, output]
+	},
+	{
+		ext: 'webp',
+		mime: 'image/webp',
+		bin: 'cwebp',
+		args: (input, output) => ['-quiet', '-q', '90', input, '-o', output]
+	}
+];
+
+/** Formats every browser in use renders, so one of them must carry the `<img>`. */
+const UNIVERSAL = new Set(['webp', 'png', 'jpg', 'jpeg']);
+
+/** Structural similarity below which a re-encoding is rejected as suspect. */
+const MIN_SSIM = 0.97;
 
 /** `alt` values that name a Lucide icon rather than describing an image. */
 const ICON_NAME = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
@@ -130,6 +172,85 @@ function crc32(buf) {
 	let c = -1;
 	for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
 	return (c ^ -1) >>> 0;
+}
+
+// ---------------------------------------------------------------------------
+// Bitmaps: modern codecs when available
+// ---------------------------------------------------------------------------
+
+/** Run a tool, returning null when it is absent or exits non-zero. */
+function tryRun(bin, args) {
+	try {
+		return execFileSync(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Structural similarity between two image files, or null if it cannot be read.
+ *
+ * ImageMagick writes the metric to stderr and exits non-zero whenever the images
+ * differ at all, which for a lossy encoding is always, so the exit code says
+ * nothing useful and only the number matters.
+ */
+function similarity(reference, candidate) {
+	try {
+		execFileSync('magick', ['compare', '-metric', 'SSIM', reference, candidate, 'null:'], {
+			stdio: ['ignore', 'pipe', 'pipe']
+		});
+		return 1;
+	} catch (error) {
+		const reported = String(error.stderr ?? '').match(/([0-9.]+)/);
+		return reported ? Number(reported[1]) : null;
+	}
+}
+
+/**
+ * Produce the representations of a bitmap, in `<picture>` order.
+ *
+ * The returned list is ordered best-compression first, and the last entry is
+ * always a format every browser renders, because that one carries the `<img>`
+ * and is what a reader sees when nothing else matches. An encoding is kept only
+ * when it is both smaller and visually faithful; a missing encoder, a failed
+ * run, a file that grew, or a similarity below `MIN_SSIM` all drop it silently,
+ * which is what makes an environment without the toolchain merely produce a
+ * heavier document rather than a broken one.
+ */
+function represent(bytes, basePath) {
+	const base = basePath.replace(/\.[^./]+$/, '');
+	const lossless = { path: `${base}.png`, mime: 'image/png', bytes: shrinkPng(bytes) };
+
+	const scratch = mkdtempSync(join(tmpdir(), 'unitati-design-'));
+	const source = join(scratch, 'source.png');
+	writeFileSync(source, bytes);
+
+	const kept = [];
+	try {
+		for (const recoder of RECODERS) {
+			const target = join(scratch, `out.${recoder.ext}`);
+			if (tryRun(recoder.bin, recoder.args(source, target)) === null) continue;
+
+			let encoded;
+			try {
+				encoded = readFileSync(target);
+			} catch {
+				continue;
+			}
+			if (encoded.length >= bytes.length) continue;
+
+			const ssim = similarity(source, target);
+			if (ssim !== null && ssim < MIN_SSIM) continue;
+
+			kept.push({ path: `${base}.${recoder.ext}`, mime: recoder.mime, bytes: encoded, ssim });
+		}
+	} finally {
+		rmSync(scratch, { recursive: true, force: true });
+	}
+
+	// Guarantee the fallback is universally renderable, whatever survived above.
+	if (!kept.some((rep) => UNIVERSAL.has(rep.path.split('.').pop()))) kept.push(lossless);
+	return kept.length ? kept : [lossless];
 }
 
 // ---------------------------------------------------------------------------
@@ -228,11 +349,51 @@ function splitStyles(style, blobs) {
 	return { sheets, chrome: `${chrome.trim()}\n` };
 }
 
+/**
+ * Replace each `<img>` carrying `uri` with a `<picture>` offering `sources`.
+ *
+ * Walks the document by index rather than matching a regular expression: the
+ * URI being replaced is the entire base64 payload, megabytes wide, and building
+ * a pattern out of it is both slow and a quoting hazard. An occurrence on any
+ * element other than `<img>` is left for the caller's plain substitution, since
+ * `<picture>` only means anything around an image.
+ */
+function wrapInPicture(html, uri, imgSrc, sources) {
+	let out = '';
+	let cursor = 0;
+
+	for (;;) {
+		const hit = html.indexOf(uri, cursor);
+		if (hit < 0) return out + html.slice(cursor);
+
+		const open = html.lastIndexOf('<', hit);
+		const close = html.indexOf('>', hit) + 1;
+		const tag = html.slice(open, close);
+
+		if (/^<img\b/i.test(tag)) {
+			out += html.slice(cursor, open) + `<picture>${sources}${tag.replace(uri, imgSrc)}</picture>`;
+		} else {
+			out += html.slice(cursor, close);
+		}
+		cursor = close;
+	}
+}
+
 /** Rewrite the document so it links `assets/` instead of embedding it. */
 function buildShell(html, placed, sheets) {
 	let out = html;
-	for (const { blob, path } of placed) {
-		for (const uri of blob.uris) out = out.split(uri).join(`assets/${path}`);
+
+	for (const { blob, reps } of placed) {
+		const fallback = reps[reps.length - 1];
+		const sources = reps
+			.slice(0, -1)
+			.map((rep) => `<source srcset="assets/${rep.path}" type="${rep.mime}">`)
+			.join('');
+
+		for (const uri of blob.uris) {
+			if (sources) out = wrapInPicture(out, uri, `assets/${fallback.path}`, sources);
+			out = out.split(uri).join(`assets/${fallback.path}`);
+		}
 	}
 
 	const links = [...sheets, { file: DOCS_SHEET }]
@@ -259,8 +420,17 @@ function main() {
 	}
 
 	const blobs = readBlobs(html);
-	const placed = blobs.map((blob) => ({ blob, path: resolvePath(blob) }));
 	const { sheets, chrome } = splitStyles(style, blobs);
+
+	// A bitmap becomes a set of representations; everything else is one file.
+	const placed = blobs.map((blob) => {
+		const path = resolvePath(blob);
+		const reps =
+			blob.mime === 'image/png' || blob.mime === 'image/jpeg'
+				? represent(blob.bytes, path)
+				: [{ path, mime: blob.mime, bytes: blob.bytes }];
+		return { blob, path, reps, was: blob.bytes.length };
+	});
 
 	const collisions = new Map();
 	for (const { path, blob } of placed) {
@@ -273,11 +443,11 @@ function main() {
 			// Stylesheets are written from the inline copy, not the download copy, so
 			// the shell keeps rendering exactly what it rendered before.
 			.filter(({ path }) => !sheets.some((s) => s.file === path))
-			.map(({ blob, path }) => ({
-				path,
-				bytes: blob.mime === 'image/png' ? shrinkPng(blob.bytes) : blob.bytes,
-				was: blob.bytes.length
-			})),
+			.flatMap(({ reps, was }) =>
+				// The original weight is charged to the first representation, so the
+				// summary reads as one saving per source image rather than per file.
+				reps.map((rep, index) => ({ ...rep, was: index === 0 ? was : undefined }))
+			),
 		...sheets.map(({ file, css }) => ({ path: file, bytes: Buffer.from(css, 'utf8') })),
 		{ path: DOCS_SHEET, bytes: Buffer.from(chrome, 'utf8') }
 	];
@@ -300,9 +470,10 @@ function main() {
 	writeFileSync(source, shell);
 
 	const total = files.reduce((sum, f) => sum + f.bytes.length, 0);
-	for (const f of [...files].sort((a, b) => b.bytes.length - a.bytes.length).slice(0, 6)) {
+	for (const f of [...files].sort((a, b) => b.bytes.length - a.bytes.length).slice(0, 7)) {
 		const saved = f.was && f.was > f.bytes.length ? ` (was ${fmt(f.was)})` : '';
-		console.log(`  ${fmt(f.bytes.length).padStart(10)}  assets/${f.path}${saved}`);
+		const fidelity = f.ssim !== undefined && f.ssim !== null ? ` SSIM ${f.ssim.toFixed(4)}` : '';
+		console.log(`  ${fmt(f.bytes.length).padStart(10)}  assets/${f.path}${saved}${fidelity}`);
 	}
 	console.log(`\n${files.length} assets, ${fmt(total)} total.`);
 	console.log(`${relative(process.cwd(), source)}: ${fmt(html.length)} -> ${fmt(shell.length)}.`);

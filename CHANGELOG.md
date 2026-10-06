@@ -16,7 +16,13 @@ minor bumps carry features and patch bumps carry fixes.
 - The stylesheet is now a single source of truth. The old file carried the same 19.4 KB of
   CSS twice: once inline to render the examples, once base64-encoded as a download. Those
   two copies could drift apart without anyone noticing; now they are one file.
-- `logo-concept.png` recompressed losslessly, 1.23 MB to 0.91 MB. Pixel data is unchanged.
+- The concept render ships as AVIF with a WebP fallback in a `<picture>`, 1.23 MB down to
+  157 KB for the pair. It is 1774x887 with 60k distinct colours, so no palette fits it and
+  lossless compression had nothing left to give: `optipng -o7` beats a plain zlib pass by
+  0.4%. AVIF at q90 measures an SSIM of 0.9945, and the authoritative logo artwork is the
+  vector set beside it, which is untouched. Re-encoding needs `avifenc`, `cwebp` and
+  ImageMagick; without them the extractor emits a losslessly recompressed PNG instead, so
+  the page renders either way and only its weight depends on the toolchain.
 - `README.md` leads with the brand lockup, light and dark, and keeps three badges instead of
   eleven. The rest duplicated the Stack section, which says the same with more detail.
 - The product is written "Unitati" everywhere it is read as a name: the Spanish interface
