@@ -5,7 +5,7 @@
 
 ## Context
 
-unitati combines three domains (assets, service desk, projects) in one self-hosted application. The author already maintains SvelteKit applications (`renyst`, `mod-minihub`), so reusing that stack lowers the learning cost and lets tooling, skills and conventions be shared.
+Unitati combines three domains (assets, service desk, projects) in one self-hosted application. The author already maintains SvelteKit applications (`renyst`, `mod-minihub`), so reusing that stack lowers the learning cost and lets tooling, skills and conventions be shared.
 
 ## Decision
 

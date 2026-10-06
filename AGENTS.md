@@ -1,6 +1,6 @@
 ## Project
 
-unitati: projects, service desk and ITAM on one data model. Start with `README.md` and `docs/`.
+Unitati: projects, service desk and ITAM on one data model. Start with `README.md` and `docs/`.
 
 ## Conventions
 

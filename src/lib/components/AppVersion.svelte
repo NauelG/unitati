@@ -4,6 +4,6 @@
 	let { class: className = '' }: { class?: string } = $props();
 </script>
 
-<span class="font-mono text-xs text-neutral-500 {className}" title="unitati version"
+<span class="font-mono text-xs text-neutral-500 {className}" title="Unitati version"
 	>v{APP_VERSION}</span
 >

@@ -1,25 +1,26 @@
 <p align="center">
-  <strong>unitati</strong><br />
+  <picture>
+    <source
+      media="(prefers-color-scheme: dark)"
+      srcset="docs/design/assets/brand/unitati-lockup-inverse.svg"
+    />
+    <img src="docs/design/assets/brand/unitati-lockup.svg" alt="Unitati" width="340" />
+  </picture>
+</p>
+
+<p align="center">
   Projects, service desk and IT asset management for internal IT teams, on one data model.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.2.0-2563eb" alt="Version 0.2.0" />
+  <img src="https://img.shields.io/badge/version-0.2.1-1d5cf0" alt="Version 0.2.1" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
-  <img src="https://img.shields.io/badge/SvelteKit-3-FF3E00?logo=svelte&logoColor=white" alt="SvelteKit 3" />
-  <img src="https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white" alt="Svelte 5" />
-  <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript strict" />
-  <img src="https://img.shields.io/badge/Tailwind-4-38B2AC?logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" />
-  <img src="https://img.shields.io/badge/Postgres-Drizzle-4169E1?logo=postgresql&logoColor=white" alt="Postgres + Drizzle" />
-  <img src="https://img.shields.io/badge/tests-Vitest-6E9F18?logo=vitest&logoColor=white" alt="Vitest" />
-  <img src="https://img.shields.io/badge/Node-24-339933?logo=nodedotjs&logoColor=white" alt="Node 24" />
-  <img src="https://img.shields.io/badge/semver-2.0.0-blue" alt="SemVer" />
   <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
 </p>
 
 ---
 
-## What is unitati?
+## What is Unitati?
 
 Internal IT teams usually run three separate tools: one for **projects** (e.g. Leantime), one for **tickets** (e.g. OpenSupports) and one for **assets** (e.g. Snipe-IT, Shelf). The real cost is not three tabs. It is **disconnected data**:
 
@@ -27,7 +28,7 @@ Internal IT teams usually run three separate tools: one for **projects** (e.g. L
 2. **No context.** A ticket doesn't know which laptop it is about, and the laptop doesn't know its incident history.
 3. **No continuity.** A hardware refresh is planned in one tool, while the assets it replaces live in another. There is no shared search or cross-cutting report.
 
-unitati puts the three areas on **one data model**, where the relations are the product:
+Unitati puts the three areas on **one data model**, where the relations are the product:
 
 | Relation                 | Example                                                                   |
 | ------------------------ | ------------------------------------------------------------------------- |
@@ -41,13 +42,17 @@ Suites that already unify these exist, but they are commercial SaaS or carry dat
 
 ## Status
 
-**Evaluation phase (v0.1.0).** Docs and scaffold only, with no product features yet. Already in place:
+**Evaluation phase.** Slice 1 of 8 has shipped, so the app runs and you can sign in, but none of the three product domains exists yet. In place:
 
-- Product docs: [vision](docs/vision.md), [alternatives](docs/alternatives.md), [domain model](docs/domain-model.md), [MVP scope](docs/mvp-scope.md).
-- Scaffold: SvelteKit + Postgres/Drizzle, domain folders, a placeholder login screen and app shell, both showing the running version.
-- Versioning policy, with its CI gate.
+- **Setup and authentication.** An empty installation sends every route to `/setup`, which creates the organisation and the first administrator in one transaction. Email and password through Better Auth ([ADR 0006](docs/adr/0006-email-and-password-authentication.md)); the session resolves once per request and route groups guard the rest.
+- **People directory.** `organisation`, `person`, `department`, `location` and `team`. A person exists without a credential, so equipment can be held by someone who never signs in.
+- **Roles and scoping.** Fixed roles with granular permissions ([ADR 0007](docs/adr/0007-roles-and-permissions.md)): a denial answers 404 rather than 403, so refusing does not confirm that a record exists. Every aggregate root carries `organisation_id`, and all access is scoped by it ([ADR 0004](docs/adr/0004-tenancy.md)).
+- **App shell** built on the design-system tokens, one colour per domain, navigation filtered by permission. Spanish interface through Paraglide ([ADR 0008](docs/adr/0008-ui-language.md)).
+- Product docs, the [design system](docs/design/README.md), and the versioning policy with its CI gate.
 
-Next: MVP slice 1, which covers auth, the people directory and the app shell. See [MVP scope](docs/mvp-scope.md).
+Not built yet: assets, service desk, projects, and the links between them. Those four folders under `src/lib/server/` hold a README and nothing else.
+
+Next: slice 2, assets. The eight slices and the exit criterion that defines "done" are in [MVP scope](docs/mvp-scope.md).
 
 ## Architecture
 
@@ -61,25 +66,33 @@ Decisions are recorded one per file in [`docs/adr/`](docs/adr/):
 
 ```
 src/
+  hooks.server.ts     resolves the session once per request
   routes/
     (app)/            authenticated app (shell shows the version)
-    (auth)/login/     login screen (shows the version)
+      directory/      people index
+    (auth)/
+      setup/          first run: organisation + first administrator
+      login/          login screen (shows the version)
+    sign-out/
   lib/
     version.ts        running version, injected at build time
-    components/       shared UI components
+    components/       shared UI components (Button, Field, AppVersion)
+    paraglide/        generated from messages/, not committed
     server/
+      auth/           Better Auth wiring, guards, provisioning
+      access/         role and permission checks
       directory/      people, teams, departments, locations
-      assets/         IT asset management
-      service-desk/   tickets, queues, comments
-      projects/       projects, milestones, tasks, boards
-      links/          typed cross-domain relations
+      assets/         IT asset management            — stub
+      service-desk/   tickets, queues, comments      — stub
+      projects/       projects, milestones, tasks    — stub
+      links/          typed cross-domain relations   — stub
       db/             connection + aggregated Drizzle schema
-      shared/         pure helpers (Outcome type)
+      shared/         pure helpers (Outcome type, shared columns)
 ```
 
 ## Versioning
 
-unitati follows [Semantic Versioning](https://semver.org/). Pre-1.0, features bump the minor version and fixes bump the patch.
+Unitati follows [Semantic Versioning](https://semver.org/). Pre-1.0, features bump the minor version and fixes bump the patch.
 
 - Every pull request that ships app behaviour bumps the version in `package.json`.
 - The same PR adds a dated entry to [`CHANGELOG.md`](CHANGELOG.md) ([Keep a Changelog](https://keepachangelog.com/en/1.1.0/)) and updates the version badge above.
@@ -96,7 +109,7 @@ The running version is shown **in the app shell and on the login screen**, so ev
 | [`docs/domain-model.md`](docs/domain-model.md)                         | Domains, entities, cross-domain relations and flows            |
 | [`docs/roadmap-v1.md`](docs/roadmap-v1.md)                             | Every capability classified: MVP, v1, post-v1, discarded       |
 | [`docs/mvp-scope.md`](docs/mvp-scope.md)                               | The minimum subset: vertical slices and the exit criterion     |
-| [`docs/design/`](docs/design/)                                         | Exported design system: tokens, components, layouts            |
+| [`docs/design/`](docs/design/README.md)                                | Design system: tokens, brand assets, components, layouts       |
 | [`docs/decision-internal-vs-oss.md`](docs/decision-internal-vs-oss.md) | Open decision: internal tool vs open source, license           |
 | [`docs/adr/`](docs/adr/)                                               | Architecture decision records                                  |
 | [`CHANGELOG.md`](CHANGELOG.md)                                         | Release history                                                |

@@ -24,7 +24,11 @@ const EXEMPT_PATTERNS = [
 	/^CLAUDE\.md$/,
 	/^README\.md$/,
 	/^CHANGELOG\.md$/,
-	/^\.gitignore$/
+	// Ignore files steer tooling, never the build output: nothing a user runs changes
+	// when they do. Listing only .gitignore here was an oversight.
+	/^\.gitignore$/,
+	/^\.prettierignore$/,
+	/^\.eslintignore$/
 ];
 
 const git = (args) => execFileSync('git', args, { encoding: 'utf8' }).trim();

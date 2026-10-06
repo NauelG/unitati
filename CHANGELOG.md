@@ -1,9 +1,53 @@
 # Changelog
 
-All notable changes to unitati are documented here. The format follows
+All notable changes to Unitati are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
+
+## [0.2.1] - 2026-10-06
+
+### Changed
+
+- The design system is no longer a single 2.08 MB HTML file. `docs/design/assets/` now holds
+  each asset as a real file — `tokens.css`, `components.css`, `tokens.json`, 12 brand SVGs,
+  18 icons and the logo concept — and `design-system.html` links them instead of embedding
+  them as base64. The file dropped to 103 KB, so it is reviewable in a diff.
+- The stylesheet is now a single source of truth. The old file carried the same 19.4 KB of
+  CSS twice: once inline to render the examples, once base64-encoded as a download. Those
+  two copies could drift apart without anyone noticing; now they are one file.
+- The concept render ships as AVIF with a WebP fallback in a `<picture>`, 1.23 MB down to
+  157 KB for the pair. It is 1774x887 with 60k distinct colours, so no palette fits it and
+  lossless compression had nothing left to give: `optipng -o7` beats a plain zlib pass by
+  0.4%. AVIF at q90 measures an SSIM of 0.9945, and the authoritative logo artwork is the
+  vector set beside it, which is untouched. Re-encoding needs `avifenc`, `cwebp` and
+  ImageMagick; without them the extractor emits a losslessly recompressed PNG instead, so
+  the page renders either way and only its weight depends on the toolchain.
+- `README.md` leads with the brand lockup, light and dark, and keeps three badges instead of
+  eleven. The rest duplicated the Stack section, which says the same with more detail.
+- The product is written "Unitati" everywhere it is read as a name: the Spanish interface
+  (`app_name`, the login heading, the setup lede), `AGENTS.md`, the ADRs and the remaining
+  docs. It matches what `tokens.json` and the brand SVGs already said. Identifiers keep the
+  lowercase spelling, because they are not the name: the npm package, the repository slug,
+  the Postgres role and database, the `provision.ts` slug fallback, and every file path.
+- The README's Status section described an app that no longer exists. It claimed "no product
+  features yet" and announced slice 1 as next, when slice 1 had already shipped. It now says
+  what runs — setup, authentication, the people directory, roles — and names the four server
+  folders that are still empty, so the gap is explicit rather than implied. The `src/` tree
+  gains `hooks.server.ts`, `setup/`, `directory/`, `auth/` and `access/`.
+- Ignore files (`.gitignore`, `.prettierignore`, `.eslintignore`) are exempt from the version
+  gate ([ADR 0003](docs/adr/0003-semver-and-changelog.md)). They steer tooling and never reach
+  the build, yet touching one alone used to force a release: 0.1.2 was published for exactly
+  that reason.
+- `package-lock.json` had drifted to `0.1.2` while `package.json` said `0.2.0`; both now agree.
+
+### Added
+
+- `docs/design/extract-assets.mjs`: unpacks a design handoff into `assets/` plus an HTML
+  shell. It refuses to guess a filename for an asset the handoff never names, and stops if an
+  embedded stylesheet has drifted from its downloadable copy.
+- `docs/design/README.md`: what lives in the folder, which files are generated, and how to
+  unpack the next handoff.
 
 ## [0.2.0] - 2026-10-06
 
