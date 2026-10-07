@@ -14,6 +14,41 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
+## Language
+
+Issue titles and bodies are written in **English**, like every other technical artefact in
+this repo. Pull request descriptions are the one exception — see
+[pull-requests.md](pull-requests.md).
+
+## Issue body contract
+
+An issue carrying the `ready-for-agent` label has a body with these sections, in this order.
+The contract exists because an AFK agent reads the body and nothing else: what the body omits,
+the agent invents.
+
+| Section            | Holds                                                                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| _(lead paragraph)_ | One or two sentences: what this is and why it exists. No heading.                                                                  |
+| `## Context`       | Why now, what it unblocks, which decisions already constrain it.                                                                   |
+| `## Scope`         | What is built. Each bullet is a deliverable, not an aspiration.                                                                    |
+| `## Out of scope`  | What is deliberately absent, **with the reason**. An omission with no reason comes back as an argument.                            |
+| `## Data model`    | Tables, columns, types, foreign keys, constraints, and the domain that owns each (ADR 0002).                                       |
+| `## Done when`     | Verifiable criteria. If a human has to judge whether one passed, it is not a criterion.                                            |
+| `## Verification`  | The commands that prove it: `npm run check`, `npm run lint`, `npm test`, `npm run test:db`, plus any steps a command cannot cover. |
+| `## References`    | ADRs, docs, existing files the work must follow or extend.                                                                         |
+
+Rules:
+
+- **`Out of scope` is not optional.** It is the section that stops an agent from building v1
+  while implementing the MVP.
+- **`Data model` names real columns.** "A table for custody" is not a data model; it is a wish.
+- **Reference files by path**, and docs by relative link (`../blob/main/docs/...`), so the
+  links resolve from the GitHub issue view.
+- Keep the provenance footer (`From [roadmap-v1.md](...)`) when rewriting an existing body.
+
+New issues start from [`.github/ISSUE_TEMPLATE/feature.md`](../../.github/ISSUE_TEMPLATE/feature.md),
+which is this contract as a fillable skeleton.
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_

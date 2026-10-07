@@ -6,18 +6,43 @@ projects, service desk and ITAM are more useful joined than apart.
 Planned as thin vertical slices, each usable end to end. Slices 4 and 6 are the
 differentiator; everything before them exists to make them possible.
 
+## Groundwork
+
+Two pieces that are not vertical slices — nothing about them is usable end to end — and that
+block slices 2, 3 and 5 all the same. Both are small, and both exist because the alternative is
+every slice solving the same problem its own way:
+
+| Piece                     | Why it blocks                                                                                                                                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Database test harness** | Every "done when" in slices 2 to 7 is a claim about data and permissions. With only pure-logic unit tests, an agent can assert it works but cannot show it.                                           |
+| **Component gallery**     | The design system names ten components; two exist. Without `DataTable`, `StatusBadge` and `Avatar` delivered once, each slice invents its own table, and the suite ends up with three design systems. |
+
+The gallery carries the ratchet that keeps it honest: **a component that is not in the gallery
+is not finished**, so every slice extends it rather than bypassing it.
+
 ## Slices
 
-| #   | Slice                | Includes                                                                                                     |
-| --- | -------------------- | ------------------------------------------------------------------------------------------------------------ |
-| 1   | Foundation           | Organisation (single row), email + password auth, people directory, fixed roles, app shell, es-ES            |
-| 2   | Assets               | Assets, models, categories, manufacturers, locations, custody, status, per-asset history                     |
-| 3   | Service desk         | Tickets, queues, public and internal comments, attachments, status workflow, employee portal, outbound email |
-| 4   | **Ticket ↔ asset**   | Pick an affected asset when opening a ticket; the asset page lists its tickets                               |
-| 5   | Projects             | Projects, tasks, statuses by group, kanban board, owners, due dates                                          |
-| 6   | **Ticket → task**    | Escalate a ticket to a project task; the two stay linked                                                     |
-| 7   | Search and activity  | Global search (Postgres FTS) across the three domains; activity log per record                               |
-| 8   | Seed and walkthrough | Realistic seed data and the end-to-end script that defines "done"                                            |
+| #   | Slice                     | Includes                                                                                                                          |
+| --- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Foundation                | Organisation (single row), email + password auth, people directory, fixed roles, app shell, es-ES                                 |
+| 2   | Assets                    | Assets, models, categories, manufacturers, locations, custody, state (in use / in repair / in stock / retired), per-asset history |
+| 3   | Service desk              | Tickets, queues, public and internal comments, attachments, status workflow, employee portal, outbound email                      |
+| 4   | **Ticket ↔ asset**        | Pick an affected asset when opening a ticket; the asset page lists its tickets                                                    |
+| 5   | Projects                  | Projects, tasks, statuses by group, kanban board, owners, due dates                                                               |
+| 6   | **Ticket → project work** | Escalate a ticket to a task, or to a project; the records stay linked                                                             |
+| 7   | Search and activity       | Global search (Postgres FTS) across the three domains; activity log per record                                                    |
+| 8   | Seed and walkthrough      | Seed at realistic volume and the end-to-end script that defines "done"                                                            |
+
+Slice 2's **state** and its **custody** are orthogonal, as Shelf.nu models them: an asset can be
+in use and held by Laura, or in use and be the floor printer nobody holds. An earlier draft of
+this table used `available / in_custody / checked_out`, which duplicated custody in a second
+column and shipped a `checked_out` value nothing in the MVP could ever set — bookings are
+[post-v1](roadmap-v1.md). The vocabulary here is the one the design system already maps to tones.
+
+Slice 6 escalates to **either** a task or a project, because _"what work resolves this"_ and
+_"what programme is this attended under"_ are different questions, and a request that justifies a
+whole project has no task to point at yet. See the
+[amendment to ADR 0005](adr/0005-single-suite-and-relations.md#amendment-2026-10-07-ticket--project).
 
 ## Out of the MVP, on purpose
 
@@ -41,12 +66,27 @@ The MVP is done when the seeded walkthrough passes end to end:
 3. A technician picks it up from the queue, comments internally, answers publicly, and the
    requester is notified by email.
 4. The asset page shows that ticket in its history, alongside its earlier ones.
-5. The technician escalates the ticket to a task in a project; both records show the link.
-6. Global search finds the person, the asset, the ticket and the task from one box.
+5. The technician escalates the ticket to a task in a project, and a second ticket to a project
+   directly; every record shows the link, and the ticket keeps its own status.
+6. Global search finds the person, the asset, the ticket and the task from one box — and finds
+   only what the searcher is allowed to see.
 7. Every record shows who changed what, and when.
 
 Realistic seed data is not decoration: developing against three records hides pagination,
-search ranking, deep hierarchies and the states that only appear at volume.
+search ranking, deep hierarchies and the states that only appear at volume. Which is why the
+seed is **not** built here: it starts in slice 2 and every slice extends it. A seed written in
+slice 8 would mean slices 2 to 7 were developed against exactly the three records this paragraph
+condemns. What slice 8 adds is volume, the walkthrough, and the tests that prove it.
+
+The walkthrough is verified twice, because each test answers a different question: an
+**integration test** chains the seven steps through the domain functions and proves the data and
+the relations hold, and **one Playwright spec** walks them through the interface and proves the
+buttons exist and are wired. Playwright arrives here and nowhere earlier — by slice 8 the screens
+are stable, which is the only point at which end-to-end tests cost less than they return.
+
+The seed is **deterministic**, from a fixed random seed: `AST-0142` means the same machine on
+every machine, so a screenshot from last month still compares, a bug report still resolves, and
+the Playwright spec can assert on a named record instead of "the first row".
 
 This criterion replaces the earlier one ("a team works for two weeks without opening
 Leantime, OpenSupports or Snipe-IT"). That one is a better test of value, but there is no
