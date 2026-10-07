@@ -30,6 +30,7 @@ The internal IT team of an SMB or mid-sized organisation: **2–30 technicians**
 | Ticket ↔ Asset           | "Laptop won't boot" is linked to `LT-0142`; the laptop shows the ticket   |
 | Asset → incident history | `LT-0142` has had 4 tickets in 6 months, so it is a replacement candidate |
 | Ticket → Task            | A recurring issue becomes a task in the "Wi-Fi upgrade" project           |
+| Ticket → Project         | "We need a tool to manage X" is bigger than a task: it opens a project    |
 | Project → Assets         | "2027 laptop refresh" targets every asset of model X older than 4 years   |
 | Person → everything      | One profile: assigned devices, open tickets, tasks owned                  |
 

@@ -44,8 +44,10 @@ erDiagram
 
     TICKET ||--o{ TICKET_ASSET : "affects"
     ASSET ||--o{ TICKET_ASSET : "affected by"
-    TICKET ||--o{ TICKET_TASK : "tracked by"
-    TASK ||--o{ TICKET_TASK : "tracks"
+    TICKET ||--o{ TICKET_TASK : "resolved by"
+    TASK ||--o{ TICKET_TASK : "resolves"
+    TICKET ||--o{ TICKET_PROJECT : "handled in"
+    PROJECT ||--o{ TICKET_PROJECT : "handles"
 ```
 
 ## Cross-domain relations
@@ -53,14 +55,28 @@ erDiagram
 One join table per pair, each with real foreign keys, all owned by `links`
 ([ADR 0005](adr/0005-single-suite-and-relations.md)):
 
-| Table           | Relation                 | Meaning                                   | Tier    |
-| --------------- | ------------------------ | ----------------------------------------- | ------- |
-| `ticket_asset`  | ticket `affects` asset   | The ticket is about this device           | MVP     |
-| `ticket_task`   | ticket `tracked-by` task | The ticket's resolution is a project task | MVP     |
-| `project_asset` | project `targets` asset  | The asset is in the project's scope       | post-v1 |
+| Table            | Relation                    | Panel label   | Meaning                                              | Tier    |
+| ---------------- | --------------------------- | ------------- | ---------------------------------------------------- | ------- |
+| `ticket_asset`   | ticket `affects` asset      | _Affects_     | The ticket is about this device                      | MVP     |
+| `ticket_task`    | ticket `resolved-by` task   | _Resolved in_ | A task carries the work that resolves the ticket     | MVP     |
+| `ticket_project` | ticket `handled-in` project | _Handled in_  | The ticket is attended within this programme of work | MVP     |
+| `project_asset`  | project `targets` asset     | _Targets_     | The asset is in the project's scope                  | post-v1 |
 
 Each row also carries `createdBy` and `createdAt`, so a relation can be attributed like any
-other record.
+other record. Every one of these tables carries a **composite unique constraint on its pair**:
+merge and split ([#20](../../issues/20)) moves a losing record's links onto the winner, and
+without the constraint a link the winner already held lands twice.
+
+The **Relation** column is domain vocabulary, not schema. There is no `kind` column: ADR 0005
+made the relation _be_ the table, so a verb here names a meaning for people and for panel
+labels, never a value stored in a row. Looking for `kind` in the database is looking for
+something that was deliberately removed.
+
+A ticket escalates to a task _and_ to a project because those answer different questions —
+_"what work resolves this"_ versus _"what programme is this attended under"_. The second exists
+because a request that justifies a whole project has no task to point at yet. See the
+[amendment to ADR 0005](adr/0005-single-suite-and-relations.md#amendment-2026-10-07-ticket--project)
+for the products this was checked against.
 
 `links` exposes one read function, `relatedTo(record)`, which is what the design system's
 `RecordRef` and `RelatedRecords` components consume. **The interface is uniform; the storage
@@ -97,12 +113,20 @@ sequenceDiagram
     participant SD as service-desk
     participant P as projects
     participant L as links
-    T->>SD: "this needs a project task"
-    SD->>P: create task in project X
-    SD->>L: link(ticket, tracked-by, task)
-    P-->>SD: task done (domain event)
-    SD->>SD: suggest resolving the ticket
+    T->>SD: "this needs project work"
+    SD->>P: create or pick a task, or pick a project
+    SD->>L: link(ticket, resolved-by, task) or link(ticket, handled-in, project)
+    Note over SD,L: The ticket keeps its status; escalating changes nothing else
+    L-->>SD: relation renders live — the task shows today's state
+    P-->>SD: task reaches a completed state → email the assigned technician
 ```
+
+The ticket is not moved, closed or reassigned by escalating: any automatic change would lie
+about who is waiting on whom. The technician sees the linked task's **current** state on the
+ticket, because relations render live while activity renders the past
+([ADR 0009](adr/0009-activity-log.md)). When that state enters the `completed` group the
+assigned technician is emailed — the one staff-facing notification in the MVP, and one that
+[#33](../../issues/33) must make preferable once a notification centre exists.
 
 ### Refresh project from inventory
 
