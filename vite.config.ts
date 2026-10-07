@@ -36,7 +36,27 @@ export default defineConfig({
 					name: 'server',
 					environment: 'node',
 					include: ['src/**/*.{test,spec}.{js,ts}'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
+					// `*.db.spec.ts` needs Postgres; this project is the loop that must
+					// stay fast and run with Docker stopped.
+					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}', 'src/**/*.db.spec.ts']
+				}
+			},
+			{
+				extends: './vite.config.ts',
+				test: {
+					name: 'db',
+					environment: 'node',
+					include: ['src/**/*.db.spec.ts'],
+					globalSetup: ['./src/lib/server/db/testing/global-setup.ts'],
+					setupFiles: ['./src/lib/server/db/testing/setup.ts'],
+					// One database, truncated between tests: two files running at once
+					// would delete each other's rows. Isolation is the point, so it wins
+					// over the wall clock.
+					fileParallelism: false,
+					// Randomised order, so "these tests do not depend on each other" is
+					// exercised on every run instead of being asserted once. A failure
+					// here is a real order dependency; Vitest prints the seed to replay it.
+					sequence: { shuffle: true }
 				}
 			}
 		]
