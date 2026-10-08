@@ -17,5 +17,28 @@ transaction.** An action and its history commit together, because custody assign
 entry is worse than neither: it is a history that cannot be trusted, and one that cannot be
 trusted is not read.
 
-The table, its `CHECK` that exactly one target column is set, and the write helper land with the
-first domain that writes into it (#7, slice 2). This folder currently holds the contract only.
+## The table
+
+`schema.ts` holds it, and it arrived with the first domain that writes into it (#7, slice 2)
+rather than with the contract — because its foreign key to `assets` had to exist from its first
+migration. Added later it would have left a window in which history could point at an asset that
+never existed.
+
+Five nullable target columns and a `CHECK` that **exactly one** is set, written as a sum of casts
+rather than a chain of `OR`s so that two targets are refused as well as none. `asset_id` and
+`person_id` carry their foreign keys now; `ticket_id`, `task_id` and `project_id` are columns
+waiting for #8 and #10, and they already satisfy the constraint.
+
+Both the `activity_verb` `pgEnum` and the `CHECK` are derived from `verbs.ts` — the enum from
+`ACTIVITY_VERBS`, the constraint from `ACTIVITY_TARGETS` indexed against the real columns, so a
+name in that list with no column fails to compile.
+
+## Writing and reading
+
+`recordActivity` takes a **`Transaction`, not a `Database`**. That is the ADR's "same
+transaction" rule expressed in a type rather than in a comment: a caller who has not opened one
+cannot call it. The payload is validated with Zod on the way in, because `jsonb` would take any
+shape and the union only binds data that came through that gate.
+
+`listActivity` reads a record's entries back, newest first. It is the _events_ half of a timeline
+only: ADR 0009 merges live relations in at read time, and #9 brings those.

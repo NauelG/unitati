@@ -3,3 +3,5 @@
 // and is re-exported here. This file never declares a table of its own.
 export * from '../auth/schema';
 export * from '../directory/schema';
+export * from '../assets/schema';
+export * from '../activity/schema';

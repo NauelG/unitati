@@ -7,6 +7,14 @@ export { schema };
 
 export type Database = ReturnType<typeof create>;
 
+/**
+ * The handle a `db.transaction(...)` callback receives, named so a function can
+ * demand one. Activity rows must be written inside the transaction of the action
+ * that caused them (ADR 0009), and a parameter typed `Transaction` rather than
+ * `Database` is how that is enforced at compile time instead of in a comment.
+ */
+export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+
 function create() {
 	if (!DATABASE_URL) throw new Error('DATABASE_URL is not set');
 	return drizzle(postgres(DATABASE_URL), { schema });
