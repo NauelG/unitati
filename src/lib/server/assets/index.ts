@@ -20,11 +20,25 @@ export {
 	createManufacturer,
 	createCategory,
 	createAssetModel,
+	renameManufacturer,
+	renameCategory,
+	updateAssetModel,
+	deleteManufacturer,
+	deleteCategory,
+	deleteAssetModel,
 	listManufacturers,
 	listCategories,
 	listAssetModels
 } from './catalogue';
-export type { CatalogueEntry, CatalogueFailure, AssetModelEntry } from './catalogue';
+export type {
+	CatalogueEntry,
+	CatalogueFailure,
+	CatalogueEditFailure,
+	CatalogueDeleteFailure,
+	AssetModelFailure,
+	AssetModelEditFailure,
+	AssetModelEntry
+} from './catalogue';
 
 export {
 	assets,
@@ -156,6 +170,7 @@ const fullAssetColumns = {
 	serial: assets.serial,
 	state: assets.state,
 	shared: assets.shared,
+	assetModelId: assets.assetModelId,
 	modelName: assetModels.name,
 	manufacturerName: manufacturers.name,
 	categoryName: categories.name,
@@ -286,9 +301,12 @@ export async function assetTimeline(
 const ASSET_COLLISIONS = {
 	assets_org_tag: 'duplicate_asset_tag',
 	assets_org_serial: 'duplicate_serial'
-} as const satisfies Record<string, RegisterAssetFailure>;
+} as const satisfies Record<string, RegisterAssetFailure & UpdateAssetFailure>;
 
-function assetCollision(error: unknown): RegisterAssetFailure | null {
+/** The two collisions both registering and editing can hit; the narrow type is what lets each declare only its own failures. */
+type AssetCollision = (typeof ASSET_COLLISIONS)[keyof typeof ASSET_COLLISIONS];
+
+function assetCollision(error: unknown): AssetCollision | null {
 	const constraint = uniqueConstraintName(error);
 	if (constraint === null) return null;
 
@@ -301,7 +319,44 @@ function assetCollision(error: unknown): RegisterAssetFailure | null {
 /* Writes                                                                     */
 /* -------------------------------------------------------------------------- */
 
-export type RegisterAssetFailure = 'duplicate_asset_tag' | 'duplicate_serial';
+export type RegisterAssetFailure =
+	'duplicate_asset_tag' | 'duplicate_serial' | 'model_not_found' | 'location_not_found';
+
+export type UpdateAssetFailure =
+	'asset_not_found' | 'duplicate_asset_tag' | 'duplicate_serial' | 'model_not_found';
+
+/**
+ * The model and the location arrive as ids from a form, and a foreign key only
+ * proves a row exists — not that it belongs to the actor's organisation. Without
+ * this an asset could be hung on another tenant's model, and the next listing
+ * would read that model's name back to the wrong organisation (ADR 0004).
+ */
+async function foreignReference(
+	organisationId: string,
+	refs: { assetModelId?: string; locationId?: string | null }
+): Promise<'model_not_found' | 'location_not_found' | null> {
+	if (refs.assetModelId !== undefined) {
+		const [model] = await getDb()
+			.select({ id: assetModels.id })
+			.from(assetModels)
+			.where(
+				and(eq(assetModels.id, refs.assetModelId), eq(assetModels.organisationId, organisationId))
+			)
+			.limit(1);
+		if (!model) return 'model_not_found';
+	}
+
+	if (refs.locationId) {
+		const [location] = await getDb()
+			.select({ id: locations.id })
+			.from(locations)
+			.where(and(eq(locations.id, refs.locationId), eq(locations.organisationId, organisationId)))
+			.limit(1);
+		if (!location) return 'location_not_found';
+	}
+
+	return null;
+}
 
 /**
  * Registers an asset and opens its history in the same transaction (ADR 0009):
@@ -318,6 +373,9 @@ export async function registerAsset(
 	input: RegisterAssetInput
 ): Promise<Outcome<{ id: string; assetTag: string }, RegisterAssetFailure>> {
 	const values = registerAssetInput.parse(input);
+
+	const missing = await foreignReference(actor.organisationId, values);
+	if (missing) return failure(missing);
 
 	try {
 		return await getDb().transaction(async (tx) => {
@@ -353,8 +411,13 @@ export async function updateAssetDetails(
 	actor: SessionUser,
 	assetId: string,
 	input: UpdateAssetDetailsInput
-): Promise<Outcome<void, 'asset_not_found' | RegisterAssetFailure>> {
+): Promise<Outcome<void, UpdateAssetFailure>> {
 	const values = updateAssetDetailsInput.parse(input);
+
+	// An edit carries no location, so the model is the only reference that can
+	// be foreign here; `location_not_found` belongs to registering alone.
+	const missing = await foreignReference(actor.organisationId, values);
+	if (missing === 'model_not_found') return failure(missing);
 
 	try {
 		const updated = await getDb()
@@ -590,4 +653,22 @@ export async function addNote(
 
 		return success(undefined);
 	});
+}
+
+/**
+ * Moves `asset_code_seq` forward so the next *generated* tag is free.
+ *
+ * Needed by anything that writes explicit tags in bulk — the development seed
+ * today, the CSV import (#21) tomorrow: an explicit tag never touches the
+ * sequence, so without this the next asset somebody registers by hand draws
+ * `AST-0001` and is refused as a duplicate of the first imported one. A bug
+ * that appears the first time anyone clicks "Register" after an import.
+ *
+ * `GREATEST` keeps it from ever winding the sequence *back* when the real
+ * inventory has already outgrown what is being imported.
+ */
+export async function advanceAssetTagSequence(upTo: number): Promise<void> {
+	await getDb().execute(
+		sql`select setval('asset_code_seq', greatest((select last_value from asset_code_seq), ${upTo}))`
+	);
 }

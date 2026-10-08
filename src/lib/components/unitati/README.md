@@ -50,9 +50,16 @@ here because this is the folder they govern.
 
 ## What is deliberately missing
 
-`RecordRef`, `RelatedRecords`, `AssetTimeline`, `GlobalSearch` and `TicketDetailLayout` are
-specified in the design system and not built: each needs a domain that does not exist yet. See
-issues #7, #8, #9 and #12.
+`RecordRef`, `RelatedRecords`, `GlobalSearch` and `TicketDetailLayout` are specified in the design
+system and not built: each needs a domain that does not exist yet. See issues #8, #9 and #12.
+
+`AssetTimeline` is built, and reads the `activity` table only. The ticket and project dots, and
+the live relations ADR 0009 merges in at read time, arrive with #9 — not before, because a variant
+nothing can render is a variant nobody tests.
+
+Two things in this folder are not in the design system and exist because a screen needed them:
+`SelectField` (the `Field` of a `<select>`, sharing its styles) and `Pager` (previous / next as
+links, because a page is a URL). `Button` renders an `<a>` when given an `href`.
 
 `src/lib/utils.ts` carries only the `cn` and `WithElementRef` that `ui/table` imports —
 `shadcn-svelte add button` was run against it and needs nothing more. A component that wants

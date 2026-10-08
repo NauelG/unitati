@@ -10,13 +10,17 @@
 		type DataTableColumn,
 		type DataTableSort
 	} from '#lib/components/unitati/DataTable.svelte';
+	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
+	import Pager from '#lib/components/unitati/Pager.svelte';
+	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import {
 		BADGED_STATUS_KEYS,
 		type AssetState,
 		type Priority
 	} from '#lib/components/unitati/status.js';
+	import type { TimelineEntry } from '#lib/server/activity/index.js';
 	import type { Snippet } from 'svelte';
 
 	/**
@@ -104,6 +108,88 @@
 	let selected = $state<string[]>(['2']);
 	let sort = $state<DataTableSort>({ key: 'code', direction: 'asc' });
 
+	let selectValue = $state('');
+	let selectWithValue = $state('laptops');
+	const selectOptions = [
+		{ value: 'laptops', label: 'Portátiles' },
+		{ value: 'monitors', label: 'Monitores' },
+		{ value: 'phones', label: 'Teléfonos' }
+	];
+
+	/**
+	 * One entry per verb, newest first, so the rail shows every dot and every
+	 * sentence. The last two exercise the nullable ends of `location.changed`.
+	 */
+	const at = (day: number, hour: number) => new Date(Date.UTC(2026, 9, day, hour, 15));
+	const timelineEntries: TimelineEntry[] = [
+		{
+			id: 't7',
+			verb: 'note.added',
+			payload: { text: 'Teclado sustituido por garantía.\nSe conserva el cargador original.' },
+			occurredAt: at(8, 9),
+			actorPersonId: 'p1',
+			actorName: 'Grace Hopper'
+		},
+		{
+			id: 't6',
+			verb: 'location.changed',
+			payload: {
+				fromLocationId: 'l1',
+				fromLocationName: 'Almacén',
+				toLocationId: 'l2',
+				toLocationName: 'Oficina de Girona'
+			},
+			occurredAt: at(7, 16),
+			actorPersonId: 'p1',
+			actorName: 'Grace Hopper'
+		},
+		{
+			id: 't5',
+			verb: 'location.changed',
+			payload: {
+				fromLocationId: null,
+				fromLocationName: null,
+				toLocationId: 'l1',
+				toLocationName: 'Almacén'
+			},
+			occurredAt: at(6, 11),
+			actorPersonId: null,
+			actorName: null
+		},
+		{
+			id: 't4',
+			verb: 'state.changed',
+			payload: { from: 'in_use', to: 'in_repair' },
+			occurredAt: at(5, 10),
+			actorPersonId: 'p1',
+			actorName: 'Grace Hopper'
+		},
+		{
+			id: 't3',
+			verb: 'custody.returned',
+			payload: { fromPersonId: 'p2', fromPersonName: 'Ada Lovelace' },
+			occurredAt: at(4, 8),
+			actorPersonId: 'p1',
+			actorName: 'Grace Hopper'
+		},
+		{
+			id: 't2',
+			verb: 'custody.assigned',
+			payload: { toPersonId: 'p2', toPersonName: 'Ada Lovelace' },
+			occurredAt: at(2, 12),
+			actorPersonId: 'p1',
+			actorName: 'Grace Hopper'
+		},
+		{
+			id: 't1',
+			verb: 'asset.created',
+			payload: { assetTag: 'AST-0142', name: 'MacBook Pró 14"' },
+			occurredAt: at(1, 9),
+			actorPersonId: 'p1',
+			actorName: 'Grace Hopper'
+		}
+	];
+
 	const columns: DataTableColumn<Asset>[] = [
 		{ key: 'code', header: 'Código', sortable: true, cell: code },
 		{ key: 'name', header: 'Nombre', sortable: true, cell: name },
@@ -152,6 +238,16 @@
 		</header>
 
 		{#snippet buttons()}
+			{#snippet asLinks()}
+				{#each variants as variant (variant)}
+					<Button {variant} href="#gallery-link">Ir a la ficha</Button>
+				{/each}
+				<Button variant="secondary" size="sm" href="#gallery-link">
+					<Plus class="size-4" aria-hidden="true" />
+					Con icono
+				</Button>
+			{/snippet}
+			{@render row('como enlace', asLinks)}
 			{#each variants as variant (variant)}
 				{#snippet sizeRow()}
 					{#each sizes as size (size)}
@@ -165,7 +261,7 @@
 		{/snippet}
 		{@render section(
 			'Button',
-			'Cuatro variantes por tres tamaños, más deshabilitado y solo icono. La forma es de pastilla porque las terminaciones de la marca son redondas.',
+			'Cuatro variantes por tres tamaños, más deshabilitado y solo icono. Con `href` el elemento es un enlace, no un botón: lleva a un sitio en vez de hacer algo. La forma es de pastilla porque las terminaciones de la marca son redondas.',
 			buttons
 		)}
 
@@ -301,6 +397,74 @@
 			'DataTable',
 			'Primera columna el código en monoespaciada, segunda el título en negrita. Selección, orden y enlace de fila son opcionales. Sin filas dibuja el estado vacío con una frase y su acción, no una rejilla vacía.',
 			tables
+		)}
+
+		{#snippet selects()}
+			<div class="grid gap-[var(--space-5)] sm:grid-cols-2">
+				<SelectField
+					label="Categoría"
+					placeholder="Elige una categoría"
+					options={selectOptions}
+					bind:value={selectValue}
+				/>
+				<SelectField label="Categoría" options={selectOptions} bind:value={selectWithValue} />
+				<SelectField
+					label="Ubicación"
+					options={selectOptions}
+					value=""
+					placeholder="Sin ubicación"
+					hint="Opcional: la ubicación propia del activo."
+				/>
+				<SelectField
+					label="Modelo"
+					placeholder="Elige un modelo"
+					options={selectOptions}
+					value=""
+					error="Elige un modelo."
+				/>
+				<SelectField label="Estado" options={selectOptions} value="monitors" disabled />
+			</div>
+		{/snippet}
+		{@render section(
+			'SelectField',
+			'La misma etiqueta, ayuda y error que Field. Con `placeholder` hay una opción vacía seleccionable (lo que envía una columna anulable para «ninguno»); sin él, el valor siempre tiene respuesta.',
+			selects
+		)}
+
+		{#snippet pagers()}
+			<div class="space-y-[var(--space-5)]">
+				<Pager page={1} pageCount={8} perPage={25} total={200} href={(page) => `?page=${page}`} />
+				<Pager page={4} pageCount={8} perPage={25} total={200} href={(page) => `?page=${page}`} />
+				<Pager page={8} pageCount={8} perPage={25} total={200} href={(page) => `?page=${page}`} />
+				<Pager page={1} pageCount={1} perPage={25} total={7} href={(page) => `?page=${page}`} />
+				<Pager page={1} pageCount={1} perPage={25} total={0} href={(page) => `?page=${page}`} />
+			</div>
+		{/snippet}
+		{@render section(
+			'Pager',
+			'Primera página, intermedia, última, una sola y vacía. Son enlaces: una página es una URL, así que sobrevive a recargar y al botón de atrás. Quien lo usa decide la URL y conserva su propia cadena de consulta.',
+			pagers
+		)}
+
+		{#snippet timelines()}
+			<div class="max-w-xl">
+				<AssetTimeline entries={timelineEntries} />
+			</div>
+
+			<h3 class="mt-[var(--space-8)] text-sm font-semibold text-[var(--ink)]">Un solo evento</h3>
+			<div class="mt-[var(--space-3)] max-w-xl">
+				<AssetTimeline entries={timelineEntries.slice(-1)} />
+			</div>
+
+			<h3 class="mt-[var(--space-8)] text-sm font-semibold text-[var(--ink)]">Vacío</h3>
+			<div class="mt-[var(--space-3)] max-w-xl">
+				<AssetTimeline entries={[]} />
+			</div>
+		{/snippet}
+		{@render section(
+			'AssetTimeline',
+			'La historia de un activo, del más reciente al más antiguo: una entrada por verbo. Lee solo del registro de actividad; la persona que actuó se resuelve en vivo y el hecho (a quién se asignó) viene congelado en la entrada.',
+			timelines
 		)}
 	</div>
 {/if}

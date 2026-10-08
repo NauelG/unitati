@@ -5,6 +5,63 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.7.0] - 2026-10-08
+
+### Added
+
+- The inventory screens, closing slice 2 (#7): `/assets` (server-side pagination and search),
+  `/assets/new`, `/assets/[tag]`, `/assets/[tag]/edit`, and the catalogue at `/assets/models`,
+  `/assets/categories` and `/assets/manufacturers`. A technician registers an asset, hands it to
+  a person and takes it back, and the detail page shows all three events newest first.
+- On the detail page, custody, state, location and notes are separate actions rather than form
+  fields: each is an event with its own history entry, and a form that could set `custodian` would
+  write the row without the entry that makes the history trustworthy (ADR 0009).
+- A model can be created inline from `/assets/new`, and is preselected when it is made.
+- **Redaction holds in the payload.** An employee sees their own equipment in full and, for shared
+  equipment, the tag, name and location only. Checked against the JSON SvelteKit sends to the
+  browser (`__data.json`), not just the rendered page.
+- `AssetTimeline`, `Pager` and `SelectField` components, and `Button` renders a link when given
+  an `href`. All four have their variants and states in `/dev/components`.
+- `npm run db:seed`: 200 assets with custody, state, location and notes, deterministic from a
+  fixed seed and idempotent (a second run changes nothing). It applies its plan through the
+  domain's own functions, so the history it shows is history the app could have written. On an
+  empty database it also does `/setup`'s job and prints demo logins for an administrator, a
+  technician and an employee. It refuses any `DATABASE_URL` whose host is not `localhost`.
+- Editing and deleting for manufacturers, categories and models. Deleting an entry something still
+  uses answers with a sentence instead of a 500: `restrict` is a typed `in_use` outcome.
+- `requireAnyPermission` and `listLocations`, for screens several permissions reach and for the
+  location picker.
+- `advanceAssetTagSequence`: anything that writes explicit tags in bulk (the seed now, the CSV
+  import in #21 next) must move `asset_code_seq`, or the next asset registered by hand draws
+  `AST-0001` and is refused as a duplicate.
+- Route-level specs for what the browser is sent: the real `load` functions against Postgres,
+  asserting that an employee's page data carries no serial, custody or history for shared
+  equipment, and that the registering, catalogue and edit screens answer 404.
+
+### Changed
+
+- #7's acceptance criteria: the shared view keeps `assetTag` (it is the identifier in the URL and
+  what lets an employee name the floor printer on a ticket), and the search criterion is
+  `macbook` / `pro` / `pró`, not `mcbook` — `unaccent` strips diacritics, it does not correct
+  spelling, and typo tolerance would be its own `pg_trgm` issue.
+- `FullAssetView` carries `assetModelId` and `AssetModelEntry` carries `manufacturerId` and
+  `categoryId`, so forms preselect by id instead of matching on names.
+- `Field` and `SelectField` accept a `null` value and no longer declare a fallback for it. A form
+  library hands `undefined` for an optional field, and Svelte refuses `bind:value={undefined}`
+  into a prop that has a fallback.
+- The navigation shows "Inventario" to anyone holding any asset-read permission, not only
+  `assets.view`: an employee reaches it through `assets.view.own` and `assets.view.shared`.
+
+### Fixed
+
+- An asset tagged `new`, `models`, `categories` or `manufacturers` was registered happily and then
+  unreachable: the static route wins over `/assets/[tag]`. Those tags are now refused by the
+  schema, so the rule holds for the import in #21 as well as for a form.
+- A crafted form could attach an asset to another organisation's model or location, or a model to
+  another organisation's manufacturer or category, and read that name back in a listing. A
+  foreign key proves a row exists, not that it is yours. Registering, editing and every catalogue
+  write now look the reference up inside the actor's organisation and answer `*_not_found`.
+
 ## [0.6.1] - 2026-10-08
 
 ### Added

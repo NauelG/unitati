@@ -42,3 +42,25 @@ export function requirePermission(user: SessionUser | null, permission: Permissi
 	if (!can(authenticated, permission)) error(404, 'Not found');
 	return authenticated;
 }
+
+/**
+ * Gate a screen that several capabilities can reach. `/assets` is the case: a
+ * technician reaches it by `assets.view`, an employee by `assets.view.own` or
+ * `assets.view.shared`, and what each of them then *sees* is decided by the
+ * domain, row by row.
+ *
+ * Any one is enough. An empty list would let everybody in, so it is rejected
+ * outright: that is a call site that forgot to say what it guards.
+ */
+export function requireAnyPermission(
+	user: SessionUser | null,
+	permissions: readonly Permission[]
+): SessionUser {
+	if (permissions.length === 0) {
+		throw new Error('requireAnyPermission needs at least one permission.');
+	}
+
+	const authenticated = requireUser(user);
+	if (!permissions.some((permission) => can(authenticated, permission))) error(404, 'Not found');
+	return authenticated;
+}

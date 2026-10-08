@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getDb } from '../db';
-import { listPeople } from '.';
-import { departments, organisations, people } from './schema';
+import { listLocations, listPeople } from '.';
+import { departments, locations, organisations, people } from './schema';
 
 /**
  * The worked example for the database harness, and the first test in the repo
@@ -89,5 +89,24 @@ describe('isolation between tests', () => {
 
 	it('lets another test insert it again', async () => {
 		await expect(insertAcmeWithOnePerson()).resolves.toHaveLength(1);
+	});
+});
+
+describe('listLocations', () => {
+	it('returns only the requested organisation’s locations, by name', async () => {
+		const acme = await createOrganisation('Acme', 'acme');
+		const globex = await createOrganisation('Globex', 'globex');
+
+		await getDb()
+			.insert(locations)
+			.values([
+				{ organisationId: acme.id, name: 'Warehouse' },
+				{ organisationId: acme.id, name: 'Barcelona office' },
+				{ organisationId: globex.id, name: 'Secret vault' }
+			]);
+
+		const found = await listLocations(acme.id);
+
+		expect(found.map((location) => location.name)).toEqual(['Barcelona office', 'Warehouse']);
 	});
 });

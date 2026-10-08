@@ -22,6 +22,8 @@ export interface FullAssetView {
 	serial: string | null;
 	state: AssetState;
 	shared: boolean;
+	/** For a form that preselects the current model; the catalogue entry, not a secret. */
+	assetModelId: string;
 	modelName: string;
 	manufacturerName: string;
 	categoryName: string;

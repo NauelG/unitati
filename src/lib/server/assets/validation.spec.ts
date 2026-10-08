@@ -154,6 +154,28 @@ describe('registerAssetInput', () => {
 	});
 });
 
+describe('reserved tags', () => {
+	// The tag is the URL segment (ADR 0010), and the app's own sections live
+	// beside it: a tag called `models` would be unreachable, because the static
+	// route wins over `[tag]`.
+	it.each(['new', 'models', 'categories', 'manufacturers', 'Models', ' NEW '])(
+		'refuses %j as a tag',
+		(assetTag) => {
+			expect(
+				registerAssetInput.safeParse({ name: 'A', assetModelId: model, assetTag }).success
+			).toBe(false);
+			expect(updateAssetDetailsInput.safeParse({ assetTag }).success).toBe(false);
+		}
+	);
+
+	it('still accepts an ordinary tag, including one that merely contains a reserved word', () => {
+		expect(
+			registerAssetInput.safeParse({ name: 'A', assetModelId: model, assetTag: 'MODELS-01' })
+				.success
+		).toBe(true);
+	});
+});
+
 describe('updateAssetDetailsInput', () => {
 	it('accepts an edit of one field alone', () => {
 		expect(updateAssetDetailsInput.safeParse({ name: 'Renamed' }).success).toBe(true);

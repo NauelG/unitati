@@ -1,0 +1,41 @@
+<script lang="ts">
+	import { untrack } from 'svelte';
+	import { superForm } from 'sveltekit-superforms';
+	import Button from '#lib/components/unitati/Button.svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import AssetFields from '../../AssetFields.svelte';
+	import { options } from '../../options';
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
+
+	const { form, errors, enhance, submitting } = superForm(untrack(() => data.form));
+
+	const modelOptions = $derived(
+		options(data.models, (entry) => `${entry.manufacturerName} · ${entry.name}`)
+	);
+</script>
+
+<svelte:head>
+	<title>{m.asset_edit_title({ tag: data.assetTag })} · {m.app_name()}</title>
+</svelte:head>
+
+<div class="mx-auto max-w-2xl">
+	<h1 class="font-display text-2xl font-semibold text-[var(--ink)]">
+		{m.asset_edit_title({ tag: data.assetTag })}
+	</h1>
+	<p class="mt-2 text-[var(--ink-muted)]">{m.asset_edit_lede()}</p>
+
+	<form method="POST" use:enhance class="mt-[var(--space-6)] space-y-[var(--space-5)]">
+		<AssetFields bind:values={$form} errors={$errors} {modelOptions} tagRequired />
+
+		<div class="flex items-center gap-[var(--space-3)]">
+			<Button type="submit" size="lg" disabled={$submitting}>
+				{$submitting ? m.form_saving() : m.asset_form_submit_edit()}
+			</Button>
+			<Button href="/assets/{encodeURIComponent(data.assetTag)}" variant="ghost" size="lg">
+				{m.form_cancel()}
+			</Button>
+		</div>
+	</form>
+</div>

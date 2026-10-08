@@ -21,6 +21,21 @@ import { assetModels, assets, categories, manufacturers } from './schema';
  * that lists one.
  */
 
+/**
+ * Tags the router owns. The tag is a URL segment (ADR 0010) and the assets
+ * section keeps its own screens beside it — `/assets/new`, `/assets/models`… —
+ * so an asset tagged `models` would be registered happily and then be
+ * unreachable: the static route wins over `[tag]`. #21 imports tags an
+ * organisation already has stuck on its hardware, which is exactly how one
+ * would arrive, so the rule lives here with the schema and not in a form.
+ */
+export const RESERVED_ASSET_TAGS: ReadonlySet<string> = new Set([
+	'new',
+	'models',
+	'categories',
+	'manufacturers'
+]);
+
 /** Trimmed, and then non-empty: `'   '` is not a name. */
 const nonEmpty = (schema: z.ZodString) => schema.trim().min(1);
 
@@ -57,7 +72,10 @@ export const registerAssetInput = createInsertSchema(assets, {
 	name: nonEmpty,
 	// Editable from the start (ADR 0010): the generated `AST-####` is a default,
 	// not a constant, so an explicit tag is accepted — it just may not be blank.
-	assetTag: (schema) => nonEmpty(schema).optional(),
+	assetTag: (schema) =>
+		nonEmpty(schema)
+			.refine((tag) => !RESERVED_ASSET_TAGS.has(tag.toLowerCase()), 'reserved')
+			.optional(),
 	// Nullable in the table and nullable here. The refinement only bites on a
 	// string, so "no serial" stays expressible while `''` cannot sneak in as a
 	// serial that the partial unique index would then treat as a real value.

@@ -2,7 +2,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { users } from '../auth/schema';
 import type { SessionUser } from '../auth/guards';
-import { departments, organisations, people } from './schema';
+import { departments, locations, organisations, people } from './schema';
 
 export { organisations, people, departments, locations, teams } from './schema';
 export type { Organisation, Person, Department, Location, Team } from './schema';
@@ -64,4 +64,23 @@ export async function listPeople(organisationId: string): Promise<DirectoryEntry
 		.leftJoin(users, eq(people.userId, users.id))
 		.where(eq(people.organisationId, organisationId))
 		.orderBy(asc(people.fullName));
+}
+
+export interface LocationEntry {
+	id: string;
+	name: string;
+}
+
+/**
+ * For a `<select>`: an asset's location is chosen from the organisation's own
+ * rows. Takes an `organisationId` rather than a `SessionUser`, like
+ * `listPeople`, because a location is not redacted for anyone who can reach the
+ * form.
+ */
+export async function listLocations(organisationId: string): Promise<LocationEntry[]> {
+	return getDb()
+		.select({ id: locations.id, name: locations.name })
+		.from(locations)
+		.where(eq(locations.organisationId, organisationId))
+		.orderBy(asc(locations.name));
 }

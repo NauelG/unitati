@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.6.1-1d5cf0" alt="Version 0.6.1" />
+  <img src="https://img.shields.io/badge/version-0.7.0-1d5cf0" alt="Version 0.7.0" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
 </p>
@@ -42,17 +42,18 @@ Suites that already unify these exist, but they are commercial SaaS or carry dat
 
 ## Status
 
-**Evaluation phase.** Slice 1 of 8 has shipped, so the app runs and you can sign in, but none of the three product domains exists yet. In place:
+**Evaluation phase.** Slices 1 and 2 of 8 have shipped: the app runs, you can sign in, and the inventory half of the product works. In place:
 
 - **Setup and authentication.** An empty installation sends every route to `/setup`, which creates the organisation and the first administrator in one transaction. Email and password through Better Auth ([ADR 0006](docs/adr/0006-email-and-password-authentication.md)); the session resolves once per request and route groups guard the rest.
 - **People directory.** `organisation`, `person`, `department`, `location` and `team`. A person exists without a credential, so equipment can be held by someone who never signs in.
 - **Roles and scoping.** Fixed roles with granular permissions ([ADR 0007](docs/adr/0007-roles-and-permissions.md)): a denial answers 404 rather than 403, so refusing does not confirm that a record exists. Every aggregate root carries `organisation_id`, and all access is scoped by it ([ADR 0004](docs/adr/0004-tenancy.md)).
 - **App shell** built on the design-system tokens, one colour per domain, navigation filtered by permission. Spanish interface through Paraglide ([ADR 0008](docs/adr/0008-ui-language.md)).
+- **Inventory.** Register, edit, search and page through assets; assign custody and take it back; change state and location; keep a timeline of everything that happened to a machine ([ADR 0009](docs/adr/0009-activity-log.md)). Manufacturers, categories and models are maintained in the app. An employee sees their own equipment in full and **name, tag and location only** for shared equipment — in the payload sent to the browser, not merely in the markup.
 - Product docs, the [design system](docs/design/README.md), and the versioning policy with its CI gate.
 
-Not built yet: assets, service desk, projects, and the links between them. Those four folders under `src/lib/server/` hold a README and nothing else.
+Not built yet: service desk, projects, and the links between them. Those three folders under `src/lib/server/` hold a README and nothing else.
 
-Next: slice 2, assets. The eight slices and the exit criterion that defines "done" are in [MVP scope](docs/mvp-scope.md).
+Next: slice 3, the service desk. The eight slices and the exit criterion that defines "done" are in [MVP scope](docs/mvp-scope.md).
 
 ## Architecture
 
@@ -70,6 +71,7 @@ src/
   routes/
     (app)/            authenticated app (shell shows the version)
       directory/      people index
+      assets/         inventory: list, register, detail, edit, catalogue
     (auth)/
       setup/          first run: organisation + first administrator
       login/          login screen (shows the version)
@@ -82,7 +84,9 @@ src/
       auth/           Better Auth wiring, guards, provisioning
       access/         role and permission checks
       directory/      people, teams, departments, locations
-      assets/         IT asset management            — stub
+      assets/         inventory, custody, catalogue
+      activity/       the history every domain writes to
+      seed/           development seed (npm run db:seed)
       service-desk/   tickets, queues, comments      — stub
       projects/       projects, milestones, tasks    — stub
       links/          typed cross-domain relations   — stub
@@ -135,6 +139,7 @@ cp .env.example .env   # then set BETTER_AUTH_SECRET: openssl rand -base64 32
 
 npm run db:start     # Postgres 17 in Docker (waits until healthy)
 npm run db:migrate   # create the schema
+npm run db:seed      # 200 assets, people and history; prints demo logins (localhost only)
 npm run db:stop      # stop it
 
 npm run dev          # dev server on http://localhost:5173

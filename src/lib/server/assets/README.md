@@ -50,3 +50,27 @@ find a "MacBook Pró"; `mcbook` does not, and would need `pg_trgm`.
 `validation.ts` generates Zod schemas **from** the Drizzle tables, so a new column cannot leave a
 stale validator behind. `organisation_id` is omitted from every input schema: the tenancy scope
 comes from the session, never from the payload (ADR 0004).
+
+## Screens
+
+Under `src/routes/(app)/assets/`: `/assets` (list, search, pager), `/assets/new`,
+`/assets/[tag]` (detail, with the custody, state, location and note actions, and the timeline),
+`/assets/[tag]/edit`, and the catalogue at `/assets/models`, `/assets/categories` and
+`/assets/manufacturers`.
+
+Three rules the screens keep, each of which cost a bug to learn:
+
+- **A reference that arrives from a form is checked against the organisation.** A foreign key
+  proves a row exists, not that it is yours. `registerAsset`, `updateAssetDetails` and the
+  catalogue writes look the model, manufacturer, category and location up inside the actor's
+  organisation, and answer `*_not_found` otherwise.
+- **Custody, state and location are never form fields.** They are events, and go through
+  `assignCustody`, `changeState` and `changeLocation` so each writes its history entry.
+  `forms.ts` deliberately omits `custodianPersonId`.
+- **A denial is a 404.** `requireAnyPermission` reaches `/assets` for any of the three read
+  permissions; the catalogue and every write need `assets.manage` (custody needs
+  `assets.checkout`).
+
+## Seed
+
+`npm run db:seed` — see [`../seed/README.md`](../seed/README.md).
