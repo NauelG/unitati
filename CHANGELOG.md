@@ -5,6 +5,32 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.6.1] - 2026-10-08
+
+### Added
+
+- A staging environment, documented in
+  [ADR 0012](docs/adr/0012-environments-and-real-verification.md). It runs the production build
+  behind `tailscale serve` on the tailnet, against its own `unitati_staging` database, and it is
+  where a pull request's _Guia de verificació en real_ is executed from now on. Dev mode could
+  never stand in for it: the first HTTPS request emitted
+  `__Secure-better-auth.session_token; Secure`, a cookie form `http://localhost:5173` cannot
+  produce, so bugs on that path were invisible by construction.
+- `scripts/staging-deploy.sh` deploys a ref of `origin`, never a working tree, so staging proves
+  what was pushed rather than what sits on somebody's disk. It builds into
+  `releases/<timestamp>-<sha>` and swaps an atomic symlink; a failed health check reverts it and
+  attaches the journal, so a broken build cannot take staging down. Migrations are **not**
+  reverted — they are forward-only, and a destructive one needs a plan of its own.
+- `scripts/staging-autodeploy.sh` gates the five-minute poll: deploy only once every check run
+  for that exact commit has completed green, with the verified SHA pinned so a push landing
+  mid-run cannot smuggle in a commit nobody checked. It reads the check-runs API, because GitHub
+  Actions leaves `/commits/<sha>/status` reporting `{"state":"pending","total":0}` for ever and a
+  gate built on that endpoint would never open.
+- One artefact serves every environment: no origin and no base path are baked into the build.
+  `adapter-node` reconstructs the origin from `PROTOCOL_HEADER` and `HOST_HEADER`, and
+  `tailscale serve` was measured to send `x-forwarded-host` including the port, so form `POST`s
+  pass the CSRF check with nothing in between.
+
 ## [0.6.0] - 2026-10-08
 
 ### Added
