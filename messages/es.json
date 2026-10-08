@@ -49,6 +49,23 @@
 	"role_technician": "Técnico",
 	"role_employee": "Empleado",
 
+	"status_new": "Nuevo",
+	"status_in_progress": "En curso",
+	"status_waiting_on_user": "Esperando al usuario",
+	"status_resolved": "Resuelto",
+	"status_closed": "Cerrado",
+
+	"priority_low": "Baja",
+	"priority_high": "Alta",
+	"priority_urgent": "Urgente",
+
+	"asset_state_in_stock": "En stock",
+	"asset_state_in_use": "En uso",
+	"asset_state_in_repair": "En reparación",
+	"asset_state_retired": "Retirado",
+
+	"table_select_column": "Selección",
+
 	"overview_title": "Inicio",
 	"overview_greeting": "Hola, {name}.",
 	"overview_pending": "Los paneles llegan con el inventario y el soporte.",

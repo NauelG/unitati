@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dev } from '$app/env';
 	import { page } from '$app/state';
 	import AppVersion from '#lib/components/AppVersion.svelte';
 	import type { Permission } from '#lib/server/access/permissions.js';
@@ -43,7 +44,19 @@
 					label: m.nav_directory(),
 					permission: 'people.view',
 					accent: 'var(--ink)'
-				}
+				},
+				// The component gallery. `dev` is a build-time literal, so this entry
+				// and the route behind it both disappear from a production build.
+				...(dev
+					? [
+							{
+								href: '/dev/components',
+								label: 'Componentes',
+								permission: null,
+								accent: 'var(--border-strong)'
+							}
+						]
+					: [])
 			] satisfies NavLink[]
 		).filter((link) => !link.permission || data.permissions.includes(link.permission))
 	);

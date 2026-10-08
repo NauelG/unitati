@@ -2,8 +2,8 @@
 	import { untrack } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import AppVersion from '#lib/components/AppVersion.svelte';
-	import Button from '#lib/components/ui/Button.svelte';
-	import Field from '#lib/components/ui/Field.svelte';
+	import Button from '#lib/components/unitati/Button.svelte';
+	import Field from '#lib/components/unitati/Field.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
