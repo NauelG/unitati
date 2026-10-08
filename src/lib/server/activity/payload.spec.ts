@@ -1,0 +1,76 @@
+import { describe, expect, it } from 'vitest';
+import { ACTIVITY_VERBS } from './verbs';
+import { PAYLOAD_SCHEMAS, parsePayload } from './payload';
+
+const PERSON = '3f1e0c9a-0000-4000-8000-000000000001';
+const LOCATION = '3f1e0c9a-0000-4000-8000-000000000002';
+
+describe('the payload contract', () => {
+	it('declares a schema for every verb', () => {
+		expect(Object.keys(PAYLOAD_SCHEMAS).sort()).toEqual([...ACTIVITY_VERBS].sort());
+	});
+
+	it('declares no schema for a verb that does not exist', () => {
+		expect(ACTIVITY_VERBS).toHaveLength(Object.keys(PAYLOAD_SCHEMAS).length);
+	});
+});
+
+describe('parsePayload', () => {
+	it('accepts a well-formed custody assignment', () => {
+		expect(
+			parsePayload('custody.assigned', { toPersonId: PERSON, toPersonName: 'Ada Lovelace' })
+		).toEqual({ toPersonId: PERSON, toPersonName: 'Ada Lovelace' });
+	});
+
+	it('refuses a custody entry with no snapshot, which is the whole point of one', () => {
+		expect(() => parsePayload('custody.assigned', { toPersonId: PERSON })).toThrow();
+	});
+
+	it('refuses an empty snapshot name', () => {
+		expect(() =>
+			parsePayload('custody.assigned', { toPersonId: PERSON, toPersonName: '' })
+		).toThrow();
+	});
+
+	it('refuses an identifier that is not a uuid', () => {
+		expect(() =>
+			parsePayload('custody.assigned', { toPersonId: 'ada', toPersonName: 'Ada' })
+		).toThrow();
+	});
+
+	it('refuses a state outside the four', () => {
+		expect(() => parsePayload('state.changed', { from: 'in_stock', to: 'lost' })).toThrow();
+	});
+
+	it('accepts a state change between two real states', () => {
+		expect(parsePayload('state.changed', { from: 'in_stock', to: 'in_use' })).toEqual({
+			from: 'in_stock',
+			to: 'in_use'
+		});
+	});
+
+	it('accepts a location change with either end missing', () => {
+		expect(
+			parsePayload('location.changed', {
+				fromLocationId: null,
+				fromLocationName: null,
+				toLocationId: LOCATION,
+				toLocationName: 'Planta 2'
+			})
+		).toMatchObject({ fromLocationId: null, toLocationName: 'Planta 2' });
+	});
+
+	it('refuses a location change that omits an end entirely', () => {
+		expect(() =>
+			parsePayload('location.changed', { toLocationId: LOCATION, toLocationName: 'Planta 2' })
+		).toThrow();
+	});
+
+	it('refuses a note with no text', () => {
+		expect(() => parsePayload('note.added', { text: '' })).toThrow();
+	});
+
+	it('refuses a payload belonging to a different verb', () => {
+		expect(() => parsePayload('note.added', { assetTag: 'AST-0001', name: 'MacBook' })).toThrow();
+	});
+});
