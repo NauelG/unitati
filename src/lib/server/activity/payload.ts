@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ASSET_STATES } from '#lib/domain/status.js';
 import type { ActivityVerb } from './verbs';
 
 /**
@@ -15,28 +16,34 @@ import type { ActivityVerb } from './verbs';
  * an audit trail.
  */
 
-/** The four asset states, spelled here so `state.changed` validates them. */
-export const ASSET_STATES = ['in_use', 'in_repair', 'in_stock', 'retired'] as const;
-
+// The vocabulary comes from the one place that owns it, so a state the asset
+// domain accepts and a state this validates cannot drift apart.
 const assetState = z.enum(ASSET_STATES);
 
-/** A person as they were when the entry was written. */
-const personSnapshot = {
-	toPersonId: z.uuid(),
-	toPersonName: z.string().min(1)
-};
+/** A name that is present is a real name; a name that is absent is `null`. */
+const presentName = z.string().min(1);
 
-const payloadSchemas = {
+/**
+ * The compile-time gate is the `satisfies` below: a verb added to
+ * `ACTIVITY_VERBS` without an entry here is a missing property, reported on
+ * this object. It is not widened on export — widening to
+ * `Record<ActivityVerb, z.ZodType>` would make every `.parse()` return
+ * `unknown` and quietly undo the thing this file exists for.
+ */
+export const PAYLOAD_SCHEMAS = {
 	'asset.created': z.object({
-		assetTag: z.string().min(1),
-		name: z.string().min(1)
+		assetTag: presentName,
+		name: presentName
 	}),
 
-	'custody.assigned': z.object(personSnapshot),
+	'custody.assigned': z.object({
+		toPersonId: z.uuid(),
+		toPersonName: presentName
+	}),
 
 	'custody.returned': z.object({
 		fromPersonId: z.uuid(),
-		fromPersonName: z.string().min(1)
+		fromPersonName: presentName
 	}),
 
 	'state.changed': z.object({
@@ -44,26 +51,22 @@ const payloadSchemas = {
 		to: assetState
 	}),
 
-	// Both ends nullable: an asset can arrive from nowhere and be unassigned
-	// from a location without being given a new one.
+	// Both ends nullable: an asset can arrive from nowhere, and come off a
+	// location without being given another.
 	'location.changed': z.object({
 		fromLocationId: z.uuid().nullable(),
-		fromLocationName: z.string().nullable(),
+		fromLocationName: presentName.nullable(),
 		toLocationId: z.uuid().nullable(),
-		toLocationName: z.string().nullable()
+		toLocationName: presentName.nullable()
 	}),
 
 	'note.added': z.object({
 		text: z.string().min(1)
 	})
-	// The annotation is the compile-time gate: a verb added to the enum without
-	// an entry here is a missing property, reported on this object.
 } satisfies Record<ActivityVerb, z.ZodType>;
 
-export const PAYLOAD_SCHEMAS: Record<ActivityVerb, z.ZodType> = payloadSchemas;
-
 /** The payload belonging to one verb, inferred from its schema. */
-export type PayloadFor<V extends ActivityVerb> = z.infer<(typeof payloadSchemas)[V]>;
+export type PayloadFor<V extends ActivityVerb> = z.infer<(typeof PAYLOAD_SCHEMAS)[V]>;
 
 /** Every verb paired with its own payload: the discriminated union itself. */
 export type ActivityEntry = {
@@ -76,5 +79,8 @@ export type ActivityEntry = {
  * went through here.
  */
 export function parsePayload<V extends ActivityVerb>(verb: V, payload: unknown): PayloadFor<V> {
-	return payloadSchemas[verb].parse(payload) as PayloadFor<V>;
+	// Indexing by a generic parameter yields the union of every schema, so the
+	// return type widens to the union of every payload. The cast narrows it back
+	// to the one the verb selects — the only thing lost is what `V` already said.
+	return PAYLOAD_SCHEMAS[verb].parse(payload) as PayloadFor<V>;
 }

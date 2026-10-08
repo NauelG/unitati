@@ -72,7 +72,6 @@
 	"activity_state_changed": "Cambió el estado de {from} a {to}",
 	"activity_location_changed": "Movió el activo de {from} a {to}",
 	"activity_note_added": "Añadió una nota",
-	"activity_actor_system": "El sistema",
 	"activity_location_none": "sin ubicación",
 
 	"overview_title": "Inicio",

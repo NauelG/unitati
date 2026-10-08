@@ -10,5 +10,5 @@
 export { ACTIVITY_VERBS, ACTIVITY_TARGETS } from './verbs';
 export type { ActivityVerb, ActivityTarget, ActivityTargetColumn } from './verbs';
 
-export { PAYLOAD_SCHEMAS, ASSET_STATES, parsePayload } from './payload';
+export { PAYLOAD_SCHEMAS, parsePayload } from './payload';
 export type { ActivityEntry, PayloadFor } from './payload';

@@ -1,24 +1,14 @@
 import { m } from '#lib/paraglide/messages.js';
+import type { StatusKey } from '#lib/domain/status.js';
 
 /**
- * The status vocabulary the design system's Status section names, as types.
- *
- * Three families rather than one bag: a ticket is never `in_stock` and an asset
- * is never `waiting_on_user`, so slices 2 and 3 can hold the narrow type and a
- * mistake becomes a type error instead of a wrong badge. `StatusKey` is their
- * union, which is what the badge accepts.
- *
- * These keys have no server-side counterpart yet: the `assets` and
- * `service-desk` tables do not exist until #7 and #8. When they land, their
- * columns must store these same strings — otherwise there are two vocabularies
- * to keep in step, and they will drift. See ADR 0011.
+ * The presentation half of the status vocabulary: a tone and a message for each
+ * key. The keys themselves live in `#lib/domain/status.js`, which is also what
+ * `activity`'s payload validation and the `assets` schema read, so there is one
+ * list rather than one per layer (ADR 0011).
  */
 
-export type TicketStatus = 'new' | 'in_progress' | 'waiting_on_user' | 'resolved' | 'closed';
-export type Priority = 'low' | 'normal' | 'high' | 'urgent';
-export type AssetState = 'in_stock' | 'in_use' | 'in_repair' | 'retired';
-
-export type StatusKey = TicketStatus | Priority | AssetState;
+export type { TicketStatus, Priority, AssetState, StatusKey } from '#lib/domain/status.js';
 
 /** The six badge tones; a tone is a meaning, never a colour name. */
 export type Tone = 'brand' | 'desk' | 'success' | 'warning' | 'danger' | 'neutral';

@@ -1,5 +1,5 @@
 import { m } from '#lib/paraglide/messages.js';
-import type { ActivityEntry } from '#lib/server/activity/payload.js';
+import type { ActivityEntry } from '#lib/server/activity/index.js';
 import { statusLabel } from './status.js';
 
 /**
@@ -13,7 +13,8 @@ import { statusLabel } from './status.js';
  * line in a history.
  *
  * The type import reaches into `server/` for a type only, which is erased at
- * build time; the same thing `(app)/+layout.svelte` does for `Permission`.
+ * build time — and through the module's `index.ts`, because that file says
+ * callers import from there and never from a file inside it (ADR 0002).
  */
 export function activitySentence(entry: ActivityEntry): string {
 	switch (entry.verb) {
@@ -48,9 +49,4 @@ export function activitySentence(entry: ActivityEntry): string {
 			throw new Error(`Unhandled activity verb: ${JSON.stringify(unhandled)}`);
 		}
 	}
-}
-
-/** The actor's name, or who to blame when there is no person: the system. */
-export function activityActor(actorName: string | null): string {
-	return actorName ?? m.activity_actor_system();
 }

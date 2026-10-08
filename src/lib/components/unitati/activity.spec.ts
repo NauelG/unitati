@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ActivityEntry } from '#lib/server/activity/payload.js';
-import { activityActor, activitySentence } from './activity';
+import type { ActivityEntry } from '#lib/server/activity/index.js';
+import { activitySentence } from './activity';
 
 const PERSON = '3f1e0c9a-0000-4000-8000-000000000001';
 const LOCATION = '3f1e0c9a-0000-4000-8000-000000000002';
@@ -84,15 +84,5 @@ describe('activitySentence', () => {
 		// The body is rendered as the note itself, below the sentence. Inlining it
 		// here would put it into every timeline summary and every notification.
 		expect(activitySentence(entry)).not.toContain('hunter2');
-	});
-});
-
-describe('activityActor', () => {
-	it('uses the actor name when there is one', () => {
-		expect(activityActor('Ada Lovelace')).toBe('Ada Lovelace');
-	});
-
-	it('names the system when there is none', () => {
-		expect(activityActor(null)).toBe('El sistema');
 	});
 });

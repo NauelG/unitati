@@ -33,13 +33,13 @@ export const ACTIVITY_TARGETS = ['assetId', 'ticketId', 'taskId', 'projectId', '
 export type ActivityTargetColumn = (typeof ACTIVITY_TARGETS)[number];
 
 /**
- * A reference to the one record an entry is about. A union of single-key
+ * A reference to the one record an entry is about: a union of single-key
  * objects, so `{ assetId, ticketId }` is rejected by the compiler rather than
  * only by the `CHECK` — the constraint is the backstop, not the first defence.
+ *
+ * Derived from the list above rather than restating it, so the five names are
+ * spelled once.
  */
-export type ActivityTarget =
-	| { assetId: string }
-	| { ticketId: string }
-	| { taskId: string }
-	| { projectId: string }
-	| { personId: string };
+export type ActivityTarget = {
+	[Column in ActivityTargetColumn]: Record<Column, string>;
+}[ActivityTargetColumn];
