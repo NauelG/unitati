@@ -66,6 +66,15 @@
 
 	"table_select_column": "Selección",
 
+	"activity_asset_created": "Registró el activo",
+	"activity_custody_assigned": "Asignó la custodia a {personName}",
+	"activity_custody_returned": "Recuperó la custodia de {personName}",
+	"activity_state_changed": "Cambió el estado de {from} a {to}",
+	"activity_location_changed": "Movió el activo de {from} a {to}",
+	"activity_note_added": "Añadió una nota",
+	"activity_actor_system": "El sistema",
+	"activity_location_none": "sin ubicación",
+
 	"overview_title": "Inicio",
 	"overview_greeting": "Hola, {name}.",
 	"overview_pending": "Los paneles llegan con el inventario y el soporte.",

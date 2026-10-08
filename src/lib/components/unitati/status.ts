@@ -74,3 +74,14 @@ export function statusBadge(status: StatusKey): { tone: Tone; label: string } | 
 
 	return { tone: TONES[status], label: LABELS[status]() };
 }
+
+/**
+ * The label on its own, for prose that names a status inside a sentence — an
+ * activity entry reading "changed the state from In stock to In use".
+ *
+ * `normal` is excluded at the type level because it has no label: the default
+ * priority is expressed by the absence of a badge, so there is no word for it.
+ */
+export function statusLabel(status: Exclude<StatusKey, 'normal'>): string {
+	return LABELS[status]();
+}
