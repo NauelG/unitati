@@ -1,5 +1,5 @@
 {
-  "id": "d9a93b26-6743-4e3d-b060-9addb1a631b4",
+  "id": "6caa1c86-010f-4ca9-bc9e-9b3dc01c8733",
   "prevId": "de927eb8-0e5e-4e83-b672-650f170e3bb0",
   "version": "7",
   "dialect": "postgresql",
@@ -1031,6 +1031,16 @@
             "type": "stored"
           }
         },
+        "search_shared": {
+          "name": "search_shared",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": true,
+          "generated": {
+            "as": "to_tsvector('simple', immutable_unaccent(coalesce(\"name\", '') || ' ' || coalesce(\"asset_tag\", '')))",
+            "type": "stored"
+          }
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1119,6 +1129,21 @@
           "columns": [
             {
               "expression": "search",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        },
+        "assets_search_shared_gin": {
+          "name": "assets_search_shared_gin",
+          "columns": [
+            {
+              "expression": "search_shared",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

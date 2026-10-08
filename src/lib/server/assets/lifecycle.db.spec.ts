@@ -369,10 +369,26 @@ describe('registerAsset, on a collision', () => {
 });
 
 /**
- * Server-side pagination from the first list screen. The proof that it is
- * server-side is that `rows` holds one page while `total` reports every match:
- * a listing that loaded everything and sliced in memory could not report the
- * first number without returning the second.
+ * Server-side pagination from the first list screen.
+ *
+ * What these tests prove is the *window*: page 2 of 200 returns rows 26 to 50
+ * and reports a total of 200. They do **not** prove that the window was applied
+ * by Postgres rather than by JavaScript — an in-memory slice would produce
+ * byte-identical output, so claiming otherwise from these assertions would be a
+ * claim the test cannot support.
+ *
+ * That half was verified by reading the server's own statement log
+ * (`log_statement='all'`) while this spec ran. The listing issues:
+ *
+ *     select ... from "assets" inner join "asset_models" ... left join
+ *     "locations" ... where "assets"."organisation_id" = $1
+ *     order by "assets"."asset_tag" asc limit $2 offset $3
+ *
+ * and the total comes from `select count(*)::int from (<that same query>)
+ * "matching"`, with no limit or offset. The SQL text is not asserted here on
+ * purpose: pinning a generated query string would fail on every harmless
+ * Drizzle release, and it is the kind of claim worth re-checking by observation
+ * rather than freezing.
  */
 describe('listAssets pagination', () => {
 	const bulk = async (organisationId: string, modelId: string, howMany: number) => {
@@ -512,6 +528,78 @@ describe('listAssets search', () => {
 	 */
 	it('does not match a misspelling, because unaccent is not a spellchecker', async () => {
 		expect(await tagsFor('mcbook')).toEqual([]);
+	});
+
+	it('matches a serial for somebody who may read serials', async () => {
+		const { organisation, modelId, technician } = await workspace();
+		await createAsset(organisation.id, modelId, {
+			assetTag: 'AST-0001',
+			name: 'A laptop',
+			serial: 'C02X1234'
+		});
+
+		const result = await listAssets(technician, { search: 'C02X1234' });
+
+		expect(result.rows.map((row) => row.assetTag)).toEqual(['AST-0001']);
+	});
+});
+
+/**
+ * The search box must not answer questions the payload refuses.
+ *
+ * `assets.search` covers name, tag **and serial**, so an employee who may read
+ * only the name and location of a shared asset could otherwise type a serial
+ * and learn from the result whether it belonged to that asset — redaction with
+ * an oracle behind it. The narrow surface matches `search_shared` instead, and
+ * these are the tests that keep it that way.
+ */
+describe('search does not leak what the payload redacts', () => {
+	const sharedPrinter = async () => {
+		const organisation = await createOrganisation();
+		const { modelId } = await createCatalogue(organisation.id, 'LaserJet 400', 'HP', 'Printers');
+		const employee = await createViewer(organisation.id, 'employee', 'Ada Lovelace');
+
+		await createAsset(organisation.id, modelId, {
+			assetTag: 'AST-0001',
+			name: 'Floor printer',
+			serial: 'SECRET-SERIAL',
+			shared: true
+		});
+
+		return { organisation, modelId, employee };
+	};
+
+	it('lets an employee find a shared asset by its name', async () => {
+		const { employee } = await sharedPrinter();
+
+		const result = await listAssets(employee, { search: 'printer' });
+
+		expect(result.rows.map((row) => row.assetTag)).toEqual(['AST-0001']);
+	});
+
+	it('lets an employee find a shared asset by its tag', async () => {
+		const { employee } = await sharedPrinter();
+
+		const result = await listAssets(employee, { search: 'AST-0001' });
+
+		expect(result.rows.map((row) => row.assetTag)).toEqual(['AST-0001']);
+	});
+
+	it('does not let an employee confirm a shared asset’s serial', async () => {
+		const { employee } = await sharedPrinter();
+
+		const result = await listAssets(employee, { search: 'SECRET-SERIAL' });
+
+		expect(result.rows).toEqual([]);
+	});
+
+	/** The model is not in the shared payload either, so it is not searchable. */
+	it('does not let an employee learn a shared asset’s model', async () => {
+		const { employee } = await sharedPrinter();
+
+		const result = await listAssets(employee, { search: 'laserjet' });
+
+		expect(result.rows).toEqual([]);
 	});
 });
 

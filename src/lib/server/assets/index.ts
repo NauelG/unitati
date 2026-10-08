@@ -4,23 +4,27 @@ import { listActivity, recordActivity, type TimelineEntry } from '../activity';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
-import { constraintViolation } from '../db/errors';
+import { uniqueConstraintName } from '../db/errors';
 import { locations, people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
 import { assetModels, assets, categories, manufacturers } from './schema';
 import { viewAsset, type AssetView } from './view';
 import { registerAssetInput, updateAssetDetailsInput } from './validation';
-import type {
-	AssetModelInput,
-	CategoryInput,
-	ManufacturerInput,
-	RegisterAssetInput,
-	UpdateAssetDetailsInput
-} from './validation';
+import type { RegisterAssetInput, UpdateAssetDetailsInput } from './validation';
 
 export { viewAsset } from './view';
 export type { AssetView, FullAssetView, SharedAssetView } from './view';
+
+export {
+	createManufacturer,
+	createCategory,
+	createAssetModel,
+	listManufacturers,
+	listCategories,
+	listAssetModels
+} from './catalogue';
+export type { CatalogueEntry, CatalogueFailure, AssetModelEntry } from './catalogue';
 
 export {
 	assets,
@@ -107,15 +111,32 @@ function requireScope(viewer: SessionUser): SQL {
 	);
 }
 
-/** `simple` + `unaccent`, through the immutable wrapper the migration creates.
+/**
+ * `simple` + `unaccent`, through the immutable wrapper the migration creates.
  *
  * `plainto_tsquery`, not `to_tsquery`: the term comes from a search box, and
- * `to_tsquery` raises a syntax error on "macbook pro" — a user typing two words
- * is not an error worth a 500. It matches the asset's own vector or its model's,
- * so searching a model name finds the forty machines of that model. */
-function matchesSearch(term: string): SQL {
+ * `to_tsquery` raises a syntax error on "macbook pro" — somebody typing two
+ * words is not a 500.
+ *
+ * **The surface searched is the surface visible.** A viewer who sees whole rows
+ * matches the asset's full vector or its model's, so searching "macbook" finds
+ * the forty machines of that model. A viewer restricted to shared rows matches
+ * `search_shared` alone — name and tag. Searching the full vector would let
+ * them confirm a serial, and searching the model's would let them learn a model,
+ * neither of which the shared view shows them; a search box that answers
+ * questions the payload refuses is the same leak taking one more step.
+ *
+ * The cost is that an employee cannot search the serial of the laptop in their
+ * own custody, which `viewAsset` would have shown them in full. One predicate
+ * cannot vary per row, and erring towards the narrower surface is the safe way
+ * to be wrong.
+ */
+function matchesSearch(term: string, wholeRows: boolean): SQL {
 	const query = sql`plainto_tsquery('simple', immutable_unaccent(${term}))`;
-	return sql`(${assets.search} @@ ${query} or ${assetModels.search} @@ ${query})`;
+
+	return wholeRows
+		? sql`(${assets.search} @@ ${query} or ${assetModels.search} @@ ${query})`
+		: sql`(${assets.searchShared} @@ ${query})`;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -145,6 +166,30 @@ const fullAssetColumns = {
 };
 
 /**
+ * An asset with its catalogue chain and its two optional sides, joined once.
+ *
+ * Written once for the same reason `fullAssetColumns` is: the listing, its
+ * count and the detail read must see exactly the same rows, and a search that
+ * reaches `asset_models` makes that a question about the joins. Three
+ * hand-written copies of five joins are three chances for the count to report a
+ * total the pager cannot reach.
+ *
+ * Inner joins for the catalogue, because every column of it is `not null`; left
+ * joins for custody and location, because neither is — an inner join there
+ * would silently hide every asset nobody holds, which is most of an inventory.
+ */
+function assetsWithCatalogue() {
+	return getDb()
+		.select(fullAssetColumns)
+		.from(assets)
+		.innerJoin(assetModels, eq(assets.assetModelId, assetModels.id))
+		.innerJoin(manufacturers, eq(assetModels.manufacturerId, manufacturers.id))
+		.innerJoin(categories, eq(assetModels.categoryId, categories.id))
+		.leftJoin(people, eq(assets.custodianPersonId, people.id))
+		.leftJoin(locations, eq(assets.locationId, locations.id));
+}
+
+/**
  * Paginated on the server from the first list screen (ADR-less but deliberate):
  * with 200 seeded assets, loading everything works, and that is exactly the
  * trap — it keeps working until the install with 4,000 rows.
@@ -154,38 +199,32 @@ export async function listAssets(
 	request: AssetListRequest = {}
 ): Promise<Page<AssetView>> {
 	const window = pageWindow(request);
+	const wholeRows = can(viewer, 'assets.view');
 	const term = request.search?.trim();
-	const where = and(requireScope(viewer), term ? matchesSearch(term) : undefined) as SQL;
+	const where = and(requireScope(viewer), term ? matchesSearch(term, wholeRows) : undefined) as SQL;
 
-	const db = getDb();
-
-	const rows = await db
-		.select(fullAssetColumns)
-		.from(assets)
-		.innerJoin(assetModels, eq(assets.assetModelId, assetModels.id))
-		.innerJoin(manufacturers, eq(assetModels.manufacturerId, manufacturers.id))
-		.innerJoin(categories, eq(assetModels.categoryId, categories.id))
-		.leftJoin(people, eq(assets.custodianPersonId, people.id))
-		.leftJoin(locations, eq(assets.locationId, locations.id))
+	const rows = await assetsWithCatalogue()
 		.where(where)
 		// Unique per organisation, so it is a total order: without a tie-break a
-		// row can appear on both page 1 and page 2 and on neither.
+		// row can appear on both page 1 and page 2, or on neither.
 		.orderBy(asc(assets.assetTag))
 		.limit(window.limit)
 		.offset(window.offset);
 
-	// Counted over the same joins and the same predicate, because the search
-	// filter touches `asset_models`: a count over `assets` alone would report a
-	// total the pager cannot reach.
-	const [counted] = await db
+	/**
+	 * The count wraps the *same* query as a subquery rather than repeating its
+	 * joins and predicate. Two hand-written queries can disagree — and when they
+	 * do, the symptom is a pager offering a page that comes back empty. One of
+	 * them being literally a `count(*)` over the other cannot.
+	 *
+	 * It is a second round trip, not a window function over the page, because
+	 * `total` is every matching row while `rows` is twenty-five of them: that is
+	 * the whole point of paging in the database instead of in memory.
+	 */
+	const matching = assetsWithCatalogue().where(where).as('matching');
+	const [counted] = await getDb()
 		.select({ total: sql<number>`count(*)::int` })
-		.from(assets)
-		.innerJoin(assetModels, eq(assets.assetModelId, assetModels.id))
-		.innerJoin(manufacturers, eq(assetModels.manufacturerId, manufacturers.id))
-		.innerJoin(categories, eq(assetModels.categoryId, categories.id))
-		.leftJoin(people, eq(assets.custodianPersonId, people.id))
-		.leftJoin(locations, eq(assets.locationId, locations.id))
-		.where(where);
+		.from(matching);
 
 	const visible = rows.map((row) => viewAsset({ visibility: 'full', ...row }, viewer));
 
@@ -197,14 +236,7 @@ export async function getAssetByTag(
 	viewer: SessionUser,
 	assetTag: string
 ): Promise<Outcome<AssetView, 'asset_not_found'>> {
-	const [row] = await getDb()
-		.select(fullAssetColumns)
-		.from(assets)
-		.innerJoin(assetModels, eq(assets.assetModelId, assetModels.id))
-		.innerJoin(manufacturers, eq(assetModels.manufacturerId, manufacturers.id))
-		.innerJoin(categories, eq(assetModels.categoryId, categories.id))
-		.leftJoin(people, eq(assets.custodianPersonId, people.id))
-		.leftJoin(locations, eq(assets.locationId, locations.id))
+	const [row] = await assetsWithCatalogue()
 		.where(and(requireScope(viewer), eq(assets.assetTag, assetTag)))
 		.limit(1);
 
@@ -241,110 +273,28 @@ export async function assetTimeline(
 	);
 }
 
-/* -------------------------------------------------------------------------- */
-/* Catalogue                                                                  */
-/* -------------------------------------------------------------------------- */
-
 /**
- * Which unique constraint refused a write, or null if the failure was something
- * else. The constraint's name is the only thing that separates "that tag is
- * taken" from "that serial is taken", and those are two different sentences for
- * the person who typed one of them.
+ * The two collisions an asset write can expect, keyed by the constraint that
+ * reports them.
+ *
+ * A lookup rather than a ternary, because a ternary has an `else`: written as
+ * `constraint === 'assets_org_serial' ? 'duplicate_serial' : 'duplicate_tag'`
+ * it answers "duplicate tag" for *every* unique constraint added later, which
+ * would turn a future collision into a confidently wrong message. Anything not
+ * in this table is not an expected failure and is rethrown.
  */
-function violatedUniqueConstraint(error: unknown): string | null {
-	const violation = constraintViolation(error);
-	return violation?.code === '23505' ? violation.constraint : null;
-}
+const ASSET_COLLISIONS = {
+	assets_org_tag: 'duplicate_asset_tag',
+	assets_org_serial: 'duplicate_serial'
+} as const satisfies Record<string, RegisterAssetFailure>;
 
-export type CatalogueFailure = 'duplicate_name';
+function assetCollision(error: unknown): RegisterAssetFailure | null {
+	const constraint = uniqueConstraintName(error);
+	if (constraint === null) return null;
 
-export async function createManufacturer(
-	actor: SessionUser,
-	input: ManufacturerInput
-): Promise<Outcome<{ id: string }, CatalogueFailure>> {
-	try {
-		const [row] = await getDb()
-			.insert(manufacturers)
-			.values({ ...input, organisationId: actor.organisationId })
-			.returning({ id: manufacturers.id });
-		return success(row);
-	} catch (error) {
-		if (violatedUniqueConstraint(error) !== null) return failure('duplicate_name');
-		throw error;
-	}
-}
-
-export async function createCategory(
-	actor: SessionUser,
-	input: CategoryInput
-): Promise<Outcome<{ id: string }, CatalogueFailure>> {
-	try {
-		const [row] = await getDb()
-			.insert(categories)
-			.values({ ...input, organisationId: actor.organisationId })
-			.returning({ id: categories.id });
-		return success(row);
-	} catch (error) {
-		if (violatedUniqueConstraint(error) !== null) return failure('duplicate_name');
-		throw error;
-	}
-}
-
-export async function createAssetModel(
-	actor: SessionUser,
-	input: AssetModelInput
-): Promise<Outcome<{ id: string }, CatalogueFailure>> {
-	try {
-		const [row] = await getDb()
-			.insert(assetModels)
-			.values({ ...input, organisationId: actor.organisationId })
-			.returning({ id: assetModels.id });
-		return success(row);
-	} catch (error) {
-		if (violatedUniqueConstraint(error) !== null) return failure('duplicate_name');
-		throw error;
-	}
-}
-
-export interface CatalogueEntry {
-	id: string;
-	name: string;
-}
-
-export function listManufacturers(organisationId: string): Promise<CatalogueEntry[]> {
-	return getDb()
-		.select({ id: manufacturers.id, name: manufacturers.name })
-		.from(manufacturers)
-		.where(eq(manufacturers.organisationId, organisationId))
-		.orderBy(asc(manufacturers.name));
-}
-
-export function listCategories(organisationId: string): Promise<CatalogueEntry[]> {
-	return getDb()
-		.select({ id: categories.id, name: categories.name })
-		.from(categories)
-		.where(eq(categories.organisationId, organisationId))
-		.orderBy(asc(categories.name));
-}
-
-export interface AssetModelEntry extends CatalogueEntry {
-	manufacturerName: string;
-	categoryName: string;
-}
-
-export function listAssetModels(organisationId: string): Promise<AssetModelEntry[]> {
-	return getDb()
-		.select({
-			id: assetModels.id,
-			name: assetModels.name,
-			manufacturerName: manufacturers.name,
-			categoryName: categories.name
-		})
-		.from(assetModels)
-		.innerJoin(manufacturers, eq(assetModels.manufacturerId, manufacturers.id))
-		.innerJoin(categories, eq(assetModels.categoryId, categories.id))
-		.where(eq(assetModels.organisationId, organisationId))
-		.orderBy(asc(manufacturers.name), asc(assetModels.name));
+	return constraint in ASSET_COLLISIONS
+		? ASSET_COLLISIONS[constraint as keyof typeof ASSET_COLLISIONS]
+		: null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -387,9 +337,9 @@ export async function registerAsset(
 			return success({ id: row.id, assetTag: row.assetTag });
 		});
 	} catch (error) {
-		const constraint = violatedUniqueConstraint(error);
-		if (constraint === null) throw error;
-		return failure(constraint === 'assets_org_serial' ? 'duplicate_serial' : 'duplicate_asset_tag');
+		const collision = assetCollision(error);
+		if (collision === null) throw error;
+		return failure(collision);
 	}
 }
 
@@ -416,9 +366,9 @@ export async function updateAssetDetails(
 		if (updated.length === 0) return failure('asset_not_found');
 		return success(undefined);
 	} catch (error) {
-		const constraint = violatedUniqueConstraint(error);
-		if (constraint === null) throw error;
-		return failure(constraint === 'assets_org_serial' ? 'duplicate_serial' : 'duplicate_asset_tag');
+		const collision = assetCollision(error);
+		if (collision === null) throw error;
+		return failure(collision);
 	}
 }
 
@@ -503,6 +453,20 @@ export async function returnCustody(
 			.where(eq(people.id, asset.custodianPersonId))
 			.limit(1);
 
+		/**
+		 * `custodian_person_id` is a `set null` foreign key, so a held asset always
+		 * has a person to name. If it does not, the database has contradicted
+		 * itself, and the only safe thing is to stop: inventing a placeholder would
+		 * write a sentence into the audit trail that nobody ever said, and ADR 0009
+		 * calls that trail non-negotiable. An exception for an invariant violation,
+		 * exactly as ADR 0002 prescribes.
+		 */
+		if (!person) {
+			throw new Error(
+				`Asset ${asset.id} names custodian ${asset.custodianPersonId}, who is not in the directory.`
+			);
+		}
+
 		await tx
 			.update(assets)
 			.set({ custodianPersonId: null, updatedAt: new Date() })
@@ -513,13 +477,7 @@ export async function returnCustody(
 			actorPersonId: actor.personId,
 			target: { assetId: asset.id },
 			verb: 'custody.returned',
-			payload: {
-				fromPersonId: asset.custodianPersonId,
-				// The custodian column is a `set null` foreign key, so the person is
-				// still there whenever custody is held. Falling back keeps the payload
-				// valid rather than throwing on a row that should not exist.
-				fromPersonName: person?.fullName ?? 'Unknown'
-			}
+			payload: { fromPersonId: asset.custodianPersonId, fromPersonName: person.fullName }
 		});
 
 		return success(undefined);

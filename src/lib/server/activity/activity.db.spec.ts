@@ -1,6 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { getDb } from '../db';
+import { refusalFrom } from '../db/testing/refusal';
 import { assets } from '../assets/schema';
 import {
 	createAsset,
@@ -21,23 +22,6 @@ import { ACTIVITY_TARGETS, ACTIVITY_VERBS } from './verbs';
  * would exercise it, but a deferred constraint or a cascade would not, and a
  * harness that hides what a spec exists to prove is a harness that lies.
  */
-
-async function refusalFrom(action: Promise<unknown>) {
-	try {
-		await action;
-		return null;
-	} catch (error) {
-		let current: unknown = error;
-		while (current) {
-			const reported = current as { code?: string; constraint_name?: string; cause?: unknown };
-			if (typeof reported.code === 'string') {
-				return { code: reported.code, constraint: reported.constraint_name };
-			}
-			current = reported.cause;
-		}
-		return { code: undefined, constraint: undefined };
-	}
-}
 
 async function scenario() {
 	const organisation = await createOrganisation();

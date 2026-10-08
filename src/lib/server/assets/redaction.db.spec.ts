@@ -30,6 +30,28 @@ import {
  * the moment a column is added to the projection.
  */
 
+/**
+ * **A deliberate deviation from the criterion, recorded rather than hidden.**
+ *
+ * The issue says the shared payload holds "name and location only". This holds
+ * name, location, `visibility` — and `assetTag`, which is a third *field*
+ * however it is justified.
+ *
+ * It is here because ADR 0007 introduced `assets.view.shared` for one case:
+ * "an employee reporting a fault on the floor printer… Without minimum read
+ * access they cannot find it, **cannot link it**, and the ticket ↔ asset
+ * relation — the differentiator — fails for every shared asset." The tag is
+ * what links it: ADR 0010 makes it the public identifier and the URL segment,
+ * so a payload without it describes an asset the employee cannot act on, and
+ * the criterion's own purpose fails.
+ *
+ * The internal uuid is *not* included — #9 can resolve a tag server-side — so
+ * this is the narrowest identifier that satisfies both documents.
+ *
+ * Flagged on the pull request for sign-off; if it is rejected, the fix is to
+ * drop `assetTag` here and in `SharedAssetView`, and #9 then needs another way
+ * to name a shared asset.
+ */
 const SHARED_ROW_KEYS = ['assetTag', 'locationName', 'name', 'visibility'];
 
 describe('listAssets, as an employee', () => {

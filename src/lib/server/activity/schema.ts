@@ -11,9 +11,18 @@ import type { ActivityEntry } from './payload';
  * keys, one per entity that can carry history, and a `CHECK` that exactly one
  * is set. Real referential integrity, one table to query.
  *
- * This module is cross-cutting, not a domain: it owns the table and the payload
- * contract, and nothing in it knows what an asset is. The rows are written by
- * whichever domain caused them, inside that domain's own transaction.
+ * This module is cross-cutting rather than a domain: it owns the table and the
+ * payload contract, and the rows are written by whichever domain caused them,
+ * inside that domain's own transaction.
+ *
+ * It does import `assets`, which is the one thing the design cannot avoid: ADR
+ * 0009 chose typed foreign keys over a polymorphic `record_type` precisely so
+ * the database refuses history attached to a record that does not exist, and a
+ * foreign key has to name its table. The dependency runs one way only — a
+ * domain calls `recordActivity`, and this file points at the domain's table —
+ * so there is no cycle. ADR 0002's rule against domains importing each other's
+ * tables binds the domains; `activity` is not one of them, any more than `db/`
+ * or `access/` is.
  *
  * **Why the table lands with #7 rather than with the contract in PR 1.** Its
  * foreign key to `assets` has to exist from its first migration. Shipping the

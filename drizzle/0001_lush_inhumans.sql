@@ -1,6 +1,6 @@
 -- Hand-written preamble. drizzle-kit diffs tables, not extensions or functions,
--- so these three statements are not regenerated and must not be removed: the
--- generated `search` columns below call immutable_unaccent() and the table
+-- so these statements are not regenerated and must not be removed: the
+-- generated `search` columns below call immutable_unaccent() and the tables
 -- cannot be created without it.
 CREATE EXTENSION IF NOT EXISTS "unaccent";--> statement-breakpoint
 -- `unaccent(text)` is STABLE, not IMMUTABLE, because the dictionary it reads
@@ -44,6 +44,7 @@ CREATE TABLE "assets" (
 	"shared" boolean DEFAULT false NOT NULL,
 	"location_id" uuid,
 	"search" "tsvector" GENERATED ALWAYS AS (to_tsvector('simple', immutable_unaccent(coalesce("name", '') || ' ' || coalesce("asset_tag", '') || ' ' || coalesce("serial", '')))) STORED NOT NULL,
+	"search_shared" "tsvector" GENERATED ALWAYS AS (to_tsvector('simple', immutable_unaccent(coalesce("name", '') || ' ' || coalesce("asset_tag", '')))) STORED NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "assets_org_tag" UNIQUE("organisation_id","asset_tag")
@@ -103,6 +104,7 @@ CREATE INDEX "assets_org_idx" ON "assets" USING btree ("organisation_id");--> st
 CREATE INDEX "assets_custodian_idx" ON "assets" USING btree ("custodian_person_id");--> statement-breakpoint
 CREATE INDEX "assets_model_idx" ON "assets" USING btree ("asset_model_id");--> statement-breakpoint
 CREATE INDEX "assets_search_gin" ON "assets" USING gin ("search");--> statement-breakpoint
+CREATE INDEX "assets_search_shared_gin" ON "assets" USING gin ("search_shared");--> statement-breakpoint
 CREATE INDEX "activity_asset_occurred" ON "activity" USING btree ("asset_id","occurred_at");--> statement-breakpoint
 CREATE INDEX "activity_person_occurred" ON "activity" USING btree ("person_id","occurred_at");--> statement-breakpoint
 CREATE INDEX "activity_org_occurred" ON "activity" USING btree ("organisation_id","occurred_at");

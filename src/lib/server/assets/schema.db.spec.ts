@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { getDb } from '../db';
+import { refusalFrom } from '../db/testing/refusal';
 import { assetModels, assets, manufacturers } from './schema';
 import { createAsset, createCatalogue, createOrganisation, createPerson } from './testing/fixtures';
 
@@ -12,37 +13,6 @@ import { createAsset, createCatalogue, createOrganisation, createPerson } from '
  * test; `assets_org_serial` is satisfied only by the partial unique index that
  * the acceptance criterion is actually about.
  */
-
-interface DatabaseRefusal {
-	/** SQLSTATE: `23505` unique violation, `23502` not-null, `23503` foreign key. */
-	code: string | undefined;
-	constraint: string | undefined;
-}
-
-/**
- * The error a caller catches is a Drizzle `DrizzleQueryError`; the
- * `PostgresError` that knows the SQLSTATE hangs off `cause`. Unwrapped here by
- * hand rather than through `db/errors.ts`, on purpose: a test that uses the
- * production unwrapper to check the production unwrapper agrees with itself
- * whatever either of them does. This walks the chain independently, so these
- * assertions pin the real shape the driver produces.
- */
-async function refusalFrom(action: Promise<unknown>): Promise<DatabaseRefusal | null> {
-	try {
-		await action;
-		return null;
-	} catch (error) {
-		let current: unknown = error;
-		while (current) {
-			const reported = current as { code?: string; constraint_name?: string; cause?: unknown };
-			if (typeof reported.code === 'string') {
-				return { code: reported.code, constraint: reported.constraint_name };
-			}
-			current = reported.cause;
-		}
-		return { code: undefined, constraint: undefined };
-	}
-}
 
 /** The lexemes of a `tsvector`, without their positions, sorted. */
 function lexemes(vector: string): string[] {

@@ -42,7 +42,16 @@ export function constraintViolation(error: unknown): ConstraintViolation | null 
 	return null;
 }
 
-/** True when the failure was a unique index or unique constraint refusing a row. */
-export function isUniqueViolation(error: unknown): boolean {
-	return constraintViolation(error)?.code === '23505';
+/**
+ * The name of the unique constraint that refused a row, or null if the failure
+ * was not a unique violation at all.
+ *
+ * Named for what it returns rather than for the question it answers, because
+ * callers need the name: it is the only thing that separates "that tag is
+ * taken" from "that serial is taken", and those are two different sentences for
+ * whoever typed one of them.
+ */
+export function uniqueConstraintName(error: unknown): string | null {
+	const violation = constraintViolation(error);
+	return violation?.code === '23505' ? violation.constraint : null;
 }

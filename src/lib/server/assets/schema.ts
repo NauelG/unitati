@@ -200,6 +200,22 @@ export const assets = pgTable(
 					`coalesce("name", '') || ' ' || coalesce("asset_tag", '') || ' ' || coalesce("serial", '')`
 				)
 			),
+		/**
+		 * The same vector over **only the fields a shared view exposes**, for
+		 * viewers who may not see the whole row.
+		 *
+		 * A second column rather than a cleverer `WHERE`, because a `tsvector`
+		 * cannot be matched field by field: searching `search` searches the serial.
+		 * Without this column, an employee granted the name and location of the
+		 * floor printer could type its serial into the search box and read the
+		 * answer off whether the row came back — field-level redaction with an
+		 * unredacted oracle behind it. You may search exactly what you may see.
+		 */
+		searchShared: tsvector('search_shared')
+			.notNull()
+			.generatedAlwaysAs((): SQL =>
+				searchVector(`coalesce("name", '') || ' ' || coalesce("asset_tag", '')`)
+			),
 		...timestamps
 	},
 	(table) => [
@@ -216,7 +232,8 @@ export const assets = pgTable(
 		/** The employee scope filters on this column on every list request. */
 		index('assets_custodian_idx').on(table.custodianPersonId),
 		index('assets_model_idx').on(table.assetModelId),
-		index('assets_search_gin').using('gin', table.search)
+		index('assets_search_gin').using('gin', table.search),
+		index('assets_search_shared_gin').using('gin', table.searchShared)
 	]
 );
 
