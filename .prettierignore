@@ -24,3 +24,9 @@ skills-lock.json
 # compile; settings.json is the only file we author.
 /project.inlang/
 !/project.inlang/settings.json
+
+# shadcn-svelte output: written by `shadcn-svelte add` and re-written by the
+# next one, so it stays byte-identical to upstream and diffable against it.
+# Our own components live in src/lib/components/unitati/ and are formatted
+# normally. Same reasoning as the design handoff above.
+/src/lib/components/ui/
