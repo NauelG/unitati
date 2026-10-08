@@ -178,12 +178,54 @@ None of them is needed to `build`: building analyses the app without opening a c
 refuses any database whose name does not end in `_test` — it truncates every table between
 tests and will not do that to yours.
 
+### Environments
+
+Three environments, **one artefact**: no origin and no base path are baked into the build, so a
+single `npm run build` output runs in all of them. See
+[ADR 0012](docs/adr/0012-environments-and-real-verification.md).
+
+| Environment    | Origin                                                   | Database          | Artefact                  |
+| -------------- | -------------------------------------------------------- | ----------------- | ------------------------- |
+| **dev**        | `http://localhost:5173`                                  | `unitati`         | `vite dev`                |
+| **staging**    | `https://talos.nutria-pirate.ts.net:8443` (tailnet only) | `unitati_staging` | the production build      |
+| **production** | does not exist yet                                       | —                 | the container of ADR 0001 |
+
+**A pull request's _Guia de verificació en real_ is executed against staging**, because dev mode
+does not run the production build and cannot reach the paths that only exist there — secure
+cookies being the first of them.
+
+Staging updates itself: `unitati-staging-update.timer` polls `origin/main` every five minutes and
+deploys it **only when CI for that exact commit is green**. Without that gate a broken push would
+deploy itself minutes later and take staging down with nobody having touched anything. To deploy
+by hand, or to deploy something other than `main`:
+
+```sh
+~/staging/repo/scripts/staging-deploy.sh                # deploys origin/main
+~/staging/repo/scripts/staging-deploy.sh feat/x         # deploys a branch
+DRY_RUN=1 ~/staging/repo/scripts/staging-autodeploy.sh  # what would the timer do?
+```
+
+The script deploys a ref of `origin`, never a working tree, so staging proves that what was
+pushed works. It builds into `releases/<timestamp>-<sha>`, swaps an atomic symlink, restarts the
+systemd user unit and health-checks the result; a failed check reverts the symlink to the release
+that was serving. Migrations are **not** reverted — they are forward-only.
+
+```sh
+systemctl --user list-timers unitati-staging-update.timer
+journalctl --user -u unitati-staging-update -n 50
+journalctl --user -u unitati-staging -f
+```
+
 ### Deploying
 
 `node --env-file=.env build` serves on port 3000. Behind a reverse proxy, adapter-node must be
 told its public origin or **every form submission is rejected** as cross-site: set
 `PROTOCOL_HEADER=x-forwarded-proto` and `HOST_HEADER=x-forwarded-host`. The `ORIGIN` variable
 of earlier versions no longer exists in adapter-node 6.
+
+Unitati is served at the **root of its origin**: `kit.paths.base` stays empty. A deployment that
+needs isolation gets its own hostname, port or Tailscale Service, never a subpath — see
+[#66](https://github.com/NauelG/unitati/issues/66).
 
 ## Contributing
 
