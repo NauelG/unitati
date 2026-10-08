@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.2.1-1d5cf0" alt="Version 0.2.1" />
+  <img src="https://img.shields.io/badge/version-0.3.0-1d5cf0" alt="Version 0.3.0" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
 </p>
@@ -143,8 +143,10 @@ npm run dev -- --open
 npm run check        # type-check (svelte-check)
 npm run lint         # prettier + eslint
 npm run format       # prettier --write
-npm test             # unit tests once
+npm test             # unit tests once (no database, no Docker needed)
 npm run test:unit    # vitest in watch mode
+npm run test:db      # tests against Postgres; needs db:start
+npm run test:db:watch # the same, in watch mode
 
 npm run db:generate  # drizzle migrations from the schema
 npm run db:migrate   # apply migrations
@@ -171,6 +173,11 @@ the organisation and the first administrator. After that, [`/login`](http://loca
 None of them is needed to `build`: building analyses the app without opening a connection
 (see `src/env.ts`).
 
+`npm run test:db` reads its own `DATABASE_URL` from the committed `.env.test`, which points at
+`unitati_test`. A `DATABASE_URL` exported in your shell overrides that file, so the harness
+refuses any database whose name does not end in `_test` — it truncates every table between
+tests and will not do that to yours.
+
 ### Deploying
 
 `node --env-file=.env build` serves on port 3000. Behind a reverse proxy, adapter-node must be
@@ -182,7 +189,7 @@ of earlier versions no longer exists in adapter-node 6.
 
 - [Conventional Commits](https://www.conventionalcommits.org/).
 - One pull request per change. It bumps the version and updates `CHANGELOG.md` and the README badge (see [Versioning](#versioning)).
-- Before opening a PR: `npm run check && npm run lint && npm test`.
+- Before opening a PR: `npm run check && npm run lint && npm test`, plus `npm run db:start && npm run test:db` when the change touches the database.
 - Architectural decisions go in a new `docs/adr/NNNN-title.md`.
 
 ## License

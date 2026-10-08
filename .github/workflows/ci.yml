@@ -27,4 +27,9 @@ jobs:
       - run: npm run check
       - run: npm run lint
       - run: npm test
+      # The same Postgres developers run, from the same compose.yaml: a `services:`
+      # block would repeat the image and the credentials and then drift from it.
+      - name: Start Postgres
+        run: npm run db:start
+      - run: npm run test:db
       - run: npm run build

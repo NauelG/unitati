@@ -5,6 +5,38 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.3.0] - 2026-10-07
+
+### Added
+
+- Postgres in the test loop. A second Vitest project, `db`, runs `src/**/*.db.spec.ts` against
+  a real database, so a slice's acceptance criteria can be proven instead of asserted. Until
+  now every spec was pure logic, which means every claim about rows and about access control
+  was a claim nothing in the repo could contradict. `npm run test:db` runs it,
+  `npm run test:db:watch` watches it, and `npm test` still runs `server` only and still passes
+  with Docker stopped.
+- `src/lib/server/db/testing/` holds the harness: it creates `unitati_test` if it is missing,
+  migrates it, and truncates every table before each test. The table list is read off the
+  Drizzle schema, so adding a table to a domain is enough — a hand-kept list is a list that
+  falls behind, and a table missing from it leaks rows into the next test.
+- `src/lib/server/directory/directory.db.spec.ts`, the worked example, proves that `listPeople`
+  scopes to one organisation (ADR 0004) rather than asserting it. Two of its tests insert the
+  same globally unique slug, which fails without truncation and so tests the harness itself.
+- `.env.test`, committed, points the test run at `unitati_test`. Vite's `loadEnv` lets a
+  `DATABASE_URL` exported in the shell override that file, so a developer with the development
+  connection string in their environment would have watched `TRUNCATE` empty their own
+  database. The harness now refuses any database whose name does not end in `_test`, before it
+  opens a connection.
+- CI starts Postgres from the same `compose.yaml` developers use and runs both projects, so a
+  red database test fails the build.
+
+### Changed
+
+- The `db` project does not run its files in parallel, and runs its tests in a random order.
+  One database truncated between tests means two files at once would delete each other's rows,
+  so isolation wins over the wall clock; randomising the order then exercises "these tests do
+  not depend on each other" on every run rather than asserting it once.
+
 ## [0.2.1] - 2026-10-06
 
 ### Changed
