@@ -7,7 +7,9 @@ nothing here imports it.
 
 ## The ratchet
 
-**A component that is not in the gallery is not finished.**
+**A component that is not in the gallery is not finished.** Every variant, and every branch —
+`Avatar` renders three different ways depending on `meta` and `imageUrl`, so the gallery shows
+all three.
 
 [`/dev/components`](<../../../routes/(app)/dev/components/+page.svelte>) renders every variant and
 every state of everything in this folder. Adding a component means adding its section; adding a
@@ -34,10 +36,14 @@ subpath imports, and `shadcn-svelte` validates its aliases against real resolvab
 
 ## Rules these components keep
 
+Decided in [ADR 0011](../../../../docs/adr/0011-component-layers-and-the-gallery.md); summarised
+here because this is the folder they govern.
+
 - **Colour only through a token.** `var(--brand)`, never `#1d5cf0`. `src/app.css` is the one
   place a colour is defined; a literal here is a second source of truth.
 - **`tv()` builds every class string.** No template-literal concatenation: tailwind-variants
-  already resolves conflicts and keeps the variant table readable as a table.
+  already resolves conflicts and keeps the variant table readable as a table. A positional or
+  conditional style is a variant, not an `if` returning a string.
 - **Status arrives as a key, never as text.** `status.ts` holds the vocabulary and maps each key
   to a tone and a message, so a label is translatable and a typo is a type error.
 - **Colour means a domain or a state, never a person.** `Avatar` has no tone variant on purpose.

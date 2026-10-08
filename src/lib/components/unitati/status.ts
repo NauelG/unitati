@@ -7,6 +7,11 @@ import { m } from '#lib/paraglide/messages.js';
  * is never `waiting_on_user`, so slices 2 and 3 can hold the narrow type and a
  * mistake becomes a type error instead of a wrong badge. `StatusKey` is their
  * union, which is what the badge accepts.
+ *
+ * These keys have no server-side counterpart yet: the `assets` and
+ * `service-desk` tables do not exist until #7 and #8. When they land, their
+ * columns must store these same strings — otherwise there are two vocabularies
+ * to keep in step, and they will drift. See ADR 0011.
  */
 
 export type TicketStatus = 'new' | 'in_progress' | 'waiting_on_user' | 'resolved' | 'closed';

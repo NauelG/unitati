@@ -51,9 +51,11 @@
 		...rest
 	}: Props = $props();
 
-	// Generated once, so the label never points at a stale control, while an
-	// explicitly passed `id` stays reactive.
-	const generatedId = `field-${crypto.randomUUID().slice(0, 8)}`;
+	// `$props.id()`, not a random string: the server and the client have to agree
+	// on this value. `crypto.randomUUID()` gives each render a different one, so
+	// hydrating the SSR'd login and setup forms left every `for` pointing at an
+	// id that no longer existed. An explicitly passed `id` still wins, reactively.
+	const generatedId = $props.id();
 	const fieldId = $derived(id ?? generatedId);
 	const errorId = $derived(`${fieldId}-error`);
 	const hintId = $derived(`${fieldId}-hint`);

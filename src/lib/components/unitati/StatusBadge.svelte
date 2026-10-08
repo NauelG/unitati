@@ -20,11 +20,10 @@
 				warning: 'bg-[var(--warning-soft)] text-[var(--warning)]',
 				danger: 'bg-[var(--danger-soft)] text-[var(--danger)]',
 				neutral: 'bg-[var(--surface-2)] text-[var(--ink-muted)]'
-			},
-			/** Drops the leading dot, for a badge that sits beside another. */
-			plain: { true: 'before:hidden' }
-		},
-		defaultVariants: { tone: 'neutral', plain: false }
+			}
+		}
+		// No `defaultVariants`: the tone is always derived from the status, so a
+		// default would be a value nothing can reach.
 	});
 </script>
 
@@ -37,15 +36,14 @@
 		 * fails `npm run check` instead of rendering an untranslated badge.
 		 */
 		status: StatusKey;
-		plain?: boolean;
 		class?: string;
 	}
 
-	let { status, plain = false, class: className }: Props = $props();
+	let { status, class: className }: Props = $props();
 
 	const resolved = $derived(statusBadge(status));
 </script>
 
 {#if resolved}
-	<span class={badge({ tone: resolved.tone, plain, class: className })}>{resolved.label}</span>
+	<span class={badge({ tone: resolved.tone, class: className })}>{resolved.label}</span>
 {/if}

@@ -64,10 +64,12 @@
 
 	const styles = $derived(avatar({ size }));
 	const initials = $derived(initialsOf(name));
-	const withName = $derived(meta !== undefined);
+	// `meta` is what decides it, because a name on its own belongs in the cell
+	// beside the disc, not inside this component.
+	const asPersonRow = $derived(meta !== undefined);
 </script>
 
-{#if withName}
+{#if asPersonRow}
 	<!-- The name is right there as text, so the disc is decoration. -->
 	<span class={styles.person({ class: className })}>
 		<span class={styles.disc()} aria-hidden="true">

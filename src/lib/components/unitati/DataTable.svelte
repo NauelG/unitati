@@ -29,11 +29,15 @@
 				'w-full overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]',
 			table: 'w-full border-separate border-spacing-0 text-sm',
 			head: [
-				'h-8 px-[var(--space-3)] text-left align-middle',
+				'h-8 px-[var(--space-3)] py-0 text-left align-middle',
 				'text-xs leading-4 font-semibold tracking-[0.04em] text-[var(--ink-muted)]',
 				'bg-[var(--surface-2)] border-b border-[var(--border)]'
 			],
-			cell: 'px-[var(--space-3)] align-middle whitespace-nowrap border-b border-[var(--border)]',
+			// `py-0` undoes the vendored cell's `p-2`, whose vertical padding would
+			// otherwise add to the row height the design system fixes at 40px. The
+			// row rule comes from `ui/table`'s own `border-b`, not from here: two
+			// borders on the same edge draw a 2px line.
+			cell: 'px-[var(--space-3)] py-0 align-middle whitespace-nowrap',
 			empty:
 				'flex flex-col items-center gap-[var(--space-4)] px-[var(--space-6)] py-[var(--space-12)] text-center'
 		},
@@ -48,10 +52,29 @@
 					head: 'text-right',
 					cell: 'text-right [font-variant-numeric:tabular-nums]'
 				}
+			},
+			/**
+			 * The design system reads the first column as the record code in mono
+			 * and the second as the title in strong. It is positional there, so it
+			 * is positional here. A variant and not a hand-built string: every
+			 * class in this folder comes out of `tv()`.
+			 */
+			emphasis: {
+				code: {
+					cell: 'font-mono text-xs leading-[18px] font-medium tracking-[-0.01em] [font-variant-numeric:tabular-nums] text-[var(--ink)]'
+				},
+				title: { cell: 'font-medium text-[var(--ink)]' },
+				muted: { cell: 'text-[var(--ink-muted)]' }
 			}
 		},
-		defaultVariants: { compact: false, align: 'start' }
+		defaultVariants: { compact: false, align: 'start', emphasis: 'muted' }
 	});
+
+	/** Position decides the emphasis, exactly as the design system assigns it. */
+	export function emphasisFor(index: number): 'code' | 'title' | 'muted' {
+		if (index === 0) return 'code';
+		return index === 1 ? 'title' : 'muted';
+	}
 </script>
 
 <script lang="ts" generics="Row">
@@ -87,7 +110,6 @@
 		emptyMessage: string;
 		/** The primary action that resolves the emptiness, usually a Button. */
 		emptyAction?: Snippet;
-		caption?: string;
 		class?: string;
 	}
 
@@ -102,7 +124,6 @@
 		compact = false,
 		emptyMessage,
 		emptyAction,
-		caption,
 		class: className
 	}: Props = $props();
 
@@ -129,38 +150,18 @@
 		if (sort?.key !== key) return ChevronsUpDown;
 		return sort.direction === 'asc' ? ChevronUp : ChevronDown;
 	}
-
-	/**
-	 * The design system sets the first column as the record code in mono and the
-	 * second as the title in strong. It is positional there, so it is positional
-	 * here; a column that wants something else supplies its own `cell`.
-	 */
-	function emphasis(index: number): string {
-		if (index === 0) {
-			return 'font-mono text-xs leading-[18px] font-medium tracking-[-0.01em] [font-variant-numeric:tabular-nums] text-[var(--ink)]';
-		}
-		return index === 1 ? 'font-medium text-[var(--ink)]' : 'text-[var(--ink-muted)]';
-	}
 </script>
 
-{#if rows.length === 0}
-	<div class={styles.panel({ class: className })}>
+<div class={styles.panel({ class: className })}>
+	{#if rows.length === 0}
 		<div class={styles.empty()}>
 			<p class="text-sm text-[var(--ink-muted)]">{emptyMessage}</p>
 			{#if emptyAction}
 				{@render emptyAction()}
 			{/if}
 		</div>
-	</div>
-{:else}
-	<div class={styles.panel({ class: className })}>
+	{:else}
 		<Table.Root class={styles.table()}>
-			{#if caption}
-				<Table.Caption class="px-[var(--space-3)] py-[var(--space-2)] text-[var(--ink-muted)]">
-					{caption}
-				</Table.Caption>
-			{/if}
-
 			<Table.Header>
 				<Table.Row class="hover:bg-transparent">
 					{#if selectable}
@@ -197,7 +198,7 @@
 					{@const key = rowKey(row)}
 					{@const isSelected = selected?.includes(key) ?? false}
 					<Table.Row
-						class="relative hover:bg-[var(--surface-2)] aria-selected:bg-[var(--brand-soft)] last:[&>td]:border-b-0"
+						class="relative last:border-b-0 hover:bg-[var(--surface-2)] aria-selected:bg-[var(--brand-soft)]"
 						aria-selected={selectable ? isSelected : undefined}
 					>
 						{#if selectable}
@@ -216,13 +217,14 @@
 							<Table.Cell
 								class={styles.cell({
 									align: column.align ?? 'start',
-									class: emphasis(index)
+									emphasis: emphasisFor(index)
 								})}
 							>
 								{#if index === 0 && href}
-									<!-- One real link per row. Its overlay stretches over the row so
-									     a pointer can click anywhere; if a browser refuses to position
-									     against a `tr`, the link itself still works. -->
+									<!-- One real link per row, stretched over the row so a pointer can
+									     click anywhere. The checkbox is lifted above it; any other
+									     interactive control in a cell would sit underneath, which is
+									     why a table with a row `href` keeps its cells inert. -->
 									<a
 										href={href(row)}
 										class="after:absolute after:inset-0 hover:underline focus-visible:underline"
@@ -238,5 +240,5 @@
 				{/each}
 			</Table.Body>
 		</Table.Root>
-	</div>
-{/if}
+	{/if}
+</div>

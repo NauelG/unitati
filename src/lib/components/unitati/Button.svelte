@@ -11,7 +11,9 @@
 			'rounded-[var(--radius-full)] border-0 font-semibold whitespace-nowrap',
 			'tracking-[0.005em] transition-[background-color,transform,box-shadow] duration-[120ms] ease-out',
 			'active:not-disabled:translate-y-px',
-			'disabled:pointer-events-none disabled:opacity-50'
+			// `.ut-btn[disabled]` in the reference CSS: the shadow goes too, so a
+			// disabled button reads as flat rather than merely faded.
+			'disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none'
 		],
 		variants: {
 			variant: {

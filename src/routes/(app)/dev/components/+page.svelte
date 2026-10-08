@@ -36,6 +36,19 @@
 	const variants: ButtonVariant[] = ['primary', 'secondary', 'ghost', 'danger'];
 	const sizes: ButtonSize[] = ['sm', 'md', 'lg'];
 
+	/**
+	 * An inline SVG, not a file: the gallery has to render with no network, and a
+	 * portrait that 404s would be testing the wrong thing in the `imageUrl` rows.
+	 */
+	const PORTRAIT =
+		'data:image/svg+xml;utf8,' +
+		encodeURIComponent(
+			'<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80">' +
+				'<rect width="80" height="80" fill="#1d5cf0"/>' +
+				'<circle cx="40" cy="30" r="14" fill="#e8efff"/>' +
+				'<path d="M12 80a28 28 0 0 1 56 0z" fill="#e8efff"/></svg>'
+		);
+
 	let fieldValue = $state('');
 	let withError = $state('ada@');
 
@@ -186,8 +199,6 @@
 				{/each}
 			</div>
 			<div class="mt-[var(--space-5)] flex flex-wrap items-center gap-[var(--space-3)]">
-				<span class="font-mono text-xs text-[var(--ink-muted)]">plain</span>
-				<StatusBadge status="urgent" plain />
 				<span class="font-mono text-xs text-[var(--ink-muted)]">normal →</span>
 				<StatusBadge status="normal" />
 				<span class="text-sm text-[var(--ink-muted)]">(no renderiza nada)</span>
@@ -209,9 +220,31 @@
 
 			{#snippet oneWord()}
 				<Avatar name="Prometheus" />
-				<Avatar name="Ada Lovelace Byron" meta="Soporte · Técnico" />
+				<span class="text-sm text-[var(--ink-muted)]">un solo nombre → una inicial</span>
 			{/snippet}
-			{@render row('con meta', oneWord)}
+			{@render row('sin apellido', oneWord)}
+
+			{#snippet withMeta()}
+				<Avatar name="Ada Lovelace Byron" meta="Soporte · Técnico" />
+				<Avatar name="Ada Lovelace Byron" meta="Soporte · Técnico" size="lg" />
+			{/snippet}
+			{@render row('con meta', withMeta)}
+
+			{#snippet withImage()}
+				<Avatar name="Ada Lovelace Byron" imageUrl={PORTRAIT} size="sm" />
+				<Avatar name="Ada Lovelace Byron" imageUrl={PORTRAIT} />
+				<Avatar name="Ada Lovelace Byron" imageUrl={PORTRAIT} size="lg" />
+				<Avatar name="Ada Lovelace Byron" imageUrl={PORTRAIT} meta="Soporte · Técnico" />
+			{/snippet}
+			{@render row('con imagen', withImage)}
+
+			{#snippet brokenImage()}
+				<Avatar name="Ada Lovelace Byron" imageUrl="/does-not-exist.png" />
+				<span class="text-sm text-[var(--ink-muted)]">
+					imagen rota → el disco neutro queda detrás
+				</span>
+			{/snippet}
+			{@render row('imagen rota', brokenImage)}
 		{/snippet}
 		{@render section(
 			'Avatar',
