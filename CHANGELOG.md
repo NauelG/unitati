@@ -5,6 +5,57 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.6.0] - 2026-10-08
+
+### Added
+
+- The four inventory tables (`src/lib/server/assets/schema.ts`): `manufacturers`, `categories`,
+  `asset_models` and `assets`. The catalogue hangs off the **model**, not off each asset, and
+  `asset_model_id` is `not null` — an asset with no model is an asset no report can group. The
+  model's manufacturer and category are `restrict`, not `set null`, because a model with
+  neither would put every report into a growing "unclassified" bucket.
+- `asset_tag` is `AST-####` from the `asset_code_seq` sequence, **editable**, and unique per
+  organisation (ADR 0010). The generated value is a default, not a constant: #21 imports tags an
+  organisation already has stuck on its hardware.
+- State and custody as two axes that do not constrain each other: an asset can be `in_use` with
+  nobody holding it (the floor printer) and `in_stock` in a technician's drawer. The
+  `asset_state` enum is built **from** `ASSET_STATES`, so it is not a third copy of a vocabulary
+  that already has an owner (ADR 0011).
+- `serial` is nullable with a **partial** unique index: two assets without one coexist, two with
+  the same one in an organisation do not.
+- The `activity` table, with its `CHECK` that **exactly one** target column is set — written as
+  a sum of casts, so two targets are refused as well as none — and its foreign key to `assets`.
+  It lands here rather than with the contract in 0.5.0 because that key has to exist from its
+  first migration; added later it would have left a window in which history could point at an
+  asset that never existed. The `activity_verb` enum and the `CHECK` are both derived from
+  `verbs.ts`.
+- `recordActivity` takes a **`Transaction`, not a `Database`**: ADR 0009's "same transaction"
+  rule expressed as a type, so a caller who has not opened one cannot write history. An action
+  and its entry commit together, because custody assigned without its entry is a history that
+  cannot be trusted.
+- The asset domain functions with their permission scope and **field-level redaction**. An
+  `employee` sees their own equipment in full and **name and location only** for a shared asset —
+  in the payload, not merely in the markup, which is why `SharedAssetView` is a separate type
+  with nowhere to put a serial.
+- Full-text search: generated `tsvector` columns on `assets` and `asset_models` behind GIN
+  indexes, `simple` + `unaccent` and never the Spanish dictionary, because model names and
+  serials are not prose. A second vector, `search_shared`, covers only what a shared view
+  exposes: searching the full one would let an employee confirm a serial they may not read.
+- `drizzle-zod`, with the schemas generated **from** the Drizzle tables, so a new column cannot
+  leave a stale validator behind. `organisation_id` is omitted from every input schema — the
+  tenancy scope comes from the session, never from the payload (ADR 0004).
+- `src/lib/server/db/errors.ts` reads a constraint violation back out of a failed query, and
+  `db/testing/refusal.ts` lets a spec assert the constraint by name rather than merely that
+  something threw.
+
+### Notes
+
+- The migration creates the `unaccent` extension and an `immutable_unaccent` wrapper by hand,
+  above what `drizzle-kit` generates. Plain `unaccent(text)` is `STABLE`, and Postgres refuses a
+  non-immutable expression in a generated column.
+- `unaccent` strips accents; it does not correct typos. `macbook`, `MACBOOK`, `pro` and `pró`
+  all find a "MacBook Pró"; `mcbook` does not, and would need `pg_trgm`.
+
 ## [0.5.0] - 2026-10-08
 
 ### Added
