@@ -5,6 +5,45 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.4.0] - 2026-10-08
+
+### Added
+
+- `StatusBadge`, `Avatar` and `DataTable`, the three components every MVP slice needs. The design
+  system names ten and two existed; these are the ones that unblock a list screen, so slices 2, 3
+  and 5 no longer each build their own table.
+- `StatusBadge` takes a status key, never display text, so its label stays translatable and
+  `status="En curso"` fails `npm run check`. The keys come in three families — ticket status,
+  priority, asset state — because a ticket is never `in_stock`. Priority `normal` renders no
+  badge: a column that shouts "Normal" on every row teaches the reader to stop looking.
+- `/dev/components`, the gallery, and the ratchet it enforces: a component that is not in it is
+  not finished. It exists only in development — its load returns 404 otherwise, its markup sits
+  behind `dev`, and the app shell's entry to it disappears from a production build along with
+  every fixture.
+- [ADR 0011](docs/adr/0011-component-layers-and-the-gallery.md) records the conventions: two
+  component folders with two owners, `tv()` for every class string, colour only through a token,
+  and status as a key.
+
+### Changed
+
+- `src/lib/components/ui/` now holds `shadcn-svelte` output and nothing else; our own
+  design-system components live in `src/lib/components/unitati/`. The first
+  `shadcn-svelte add button` would have written `ui/button/` beside a hand-written
+  `ui/Button.svelte` — two things called Button in one folder, one vendored and one ours.
+- `components.json` aliases say `#lib` instead of `$lib`. `shadcn-svelte` validates its aliases
+  against resolvable paths and this repo addresses `src/lib` through Node subpath imports, so with
+  `$lib` the CLI refused to run at all. Adding a component was impossible before this.
+- `Button` and `Field` are rewritten with `tailwind-variants`, which was installed and unused
+  while both composed class strings by hand — the pattern the next agent would have copied.
+  `Button` also becomes the pill the design system specifies rather than the rounded rectangle it
+  had been, and its disabled state drops the shadow as the reference CSS does.
+
+### Fixed
+
+- `Field` generated its `id` with `crypto.randomUUID()`, so the server and the client produced
+  different ones and hydrating the SSR'd login and setup forms left every `<label for>` pointing
+  at an id that no longer existed. It uses `$props.id()`.
+
 ## [0.3.0] - 2026-10-07
 
 ### Added
