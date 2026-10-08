@@ -5,6 +5,31 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.8.0] - 2026-10-08
+
+### Added
+
+- `APP_ENV` (`development`, `staging` or `production`), a runtime variable that says where a build
+  runs ([ADR 0013](docs/adr/0013-app-env-and-the-non-production-surface.md)). `NODE_ENV` cannot:
+  staging runs the production build. Unset means `development` under `vite dev` and `production`
+  in a build; a value outside the vocabulary stops the server at start. **Staging's
+  `unitati.env` must now set `APP_ENV=staging`.**
+- An environment badge in the app header and on the login screen, in every environment but
+  production, with one tone per environment so a development screenshot is not mistaken for a
+  staging one.
+- The Unitati logo in the sidebar, the mobile header and the login screen, as the `Logo`
+  component (mark and lockup), taken from `docs/design/assets/brand`.
+- `Logo` and `EnvironmentBadge` sections in the component gallery.
+
+### Changed
+
+- The component gallery (`/dev/components`) and its menu entry are available in every environment
+  but production, not just under `vite dev`, so a pull request's verification guide can use it on
+  staging. It still answers 404 in production. Amends decision 4 of
+  [ADR 0011](docs/adr/0011-component-layers-and-the-gallery.md).
+- The favicon is the Unitati mark, with an `apple-touch-icon`, instead of the SvelteKit
+  template's Svelte logo.
+
 ## [0.7.0] - 2026-10-08
 
 ### Added

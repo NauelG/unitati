@@ -31,8 +31,10 @@ Slices 2, 3 and 5 each ship a list screen. Without a table delivered once, all t
 3. **Colour only through a token.** `var(--brand)`, never a hex literal. `src/app.css` is the
    one place a colour is defined.
 4. **A component that is not in the gallery is not finished.** `/dev/components` renders every
-   variant and every state of everything in `unitati/`. It exists only in development: its
-   `load` returns 404 otherwise and its markup sits behind `dev`.
+   variant and every state of everything in `unitati/`. It exists in every environment but
+   production: its `load` returns 404 there. _(Originally "only in development", gated on `dev`;
+   amended by [ADR 0013](0013-app-env-and-the-non-production-surface.md), because staging runs
+   the production build.)_
 5. **Status arrives as a key, never as display text.** `unitati/status.ts` holds the vocabulary
    and maps each key to a tone and a message function, so a label stays translatable and a typo
    fails `npm run check`.

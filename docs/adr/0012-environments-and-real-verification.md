@@ -92,6 +92,9 @@ available for the day a pilot exists.
 
 ## Consequences
 
+- Which environment a build is running in is the runtime variable `APP_ENV`, not `NODE_ENV`
+  (staging runs the production build). See [ADR 0013](0013-app-env-and-the-non-production-surface.md);
+  `unitati.env` on staging must set `APP_ENV=staging`.
 - A verification guide can name one URL, identical for everyone with tailnet access, instead of
   describing a local setup.
 - Staging accumulates whatever the verification guides create. It is a copy of nothing, and no

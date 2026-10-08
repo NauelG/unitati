@@ -16,8 +16,9 @@ every state of everything in this folder. Adding a component means adding its se
 variant means adding its example. The gallery is the only place where a reviewer sees the whole
 set at once, so a component missing from it is a component nobody will notice has rotted.
 
-The route exists only in development. It is not a surface to secure, document or keep
-accessible — it is a workbench.
+The route exists in every environment but production (`APP_ENV`, see
+[ADR 0013](../../../../docs/adr/0013-app-env-and-the-non-production-surface.md)) and answers 404
+there. It is not a surface to secure, document or keep accessible — it is a workbench.
 
 ## Two folders, two owners
 

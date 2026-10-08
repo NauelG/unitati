@@ -1,5 +1,6 @@
-import { building } from '$app/env';
+import { building, dev } from '$app/env';
 import { defineEnvVars } from '@sveltejs/kit/env';
+import { parseAppEnvironment } from '#lib/environment.js';
 
 /**
  * Required to run the app, optional to build it: `vite build` analyses the app
@@ -13,6 +14,14 @@ const requiredAtRuntime = (name: string) => (value: string | undefined) => {
 };
 
 export const variables = defineEnvVars({
+	APP_ENV: {
+		description:
+			'Where this build runs: development, staging or production. Everything but production shows an environment badge and exposes the component gallery. Unset means development under `vite dev` and production otherwise, so a host that forgets it is treated as production.',
+		// Public so the shell can render the badge without a `load`; not static so one build
+		// serves every environment (ADR 0012).
+		public: true,
+		schema: (value) => parseAppEnvironment(value, dev ? 'development' : 'production')
+	},
 	DATABASE_URL: {
 		description: 'The database connection string.',
 		schema: requiredAtRuntime('DATABASE_URL')

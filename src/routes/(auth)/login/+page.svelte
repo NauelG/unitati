@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { APP_ENV } from '$app/env/public';
 	import { superForm } from 'sveltekit-superforms';
 	import AppVersion from '#lib/components/AppVersion.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import EnvironmentBadge from '#lib/components/unitati/EnvironmentBadge.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
+	import Logo from '#lib/components/unitati/Logo.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
@@ -23,8 +26,10 @@
 		class="w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-8"
 		style:box-shadow="var(--shadow-md)"
 	>
-		<h1 class="font-display text-xl font-semibold text-[var(--ink)]">{m.app_name()}</h1>
-		<p class="mt-1 text-sm text-[var(--ink-muted)]">{m.login_lede()}</p>
+		<h1>
+			<Logo size="lg" />
+		</h1>
+		<p class="mt-3 text-sm text-[var(--ink-muted)]">{m.login_lede()}</p>
 
 		<form method="POST" use:enhance class="mt-6 space-y-4">
 			<Field
@@ -57,7 +62,8 @@
 			</Button>
 		</form>
 
-		<footer class="mt-8 text-center">
+		<footer class="mt-8 flex items-center justify-center gap-3">
+			<EnvironmentBadge environment={APP_ENV} />
 			<AppVersion />
 		</footer>
 	</div>
