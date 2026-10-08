@@ -5,6 +5,35 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.5.0] - 2026-10-08
+
+### Added
+
+- The activity contract (`src/lib/server/activity/`), the first half of what slice 2 needs
+  before it can write a single history entry. A row holds a **verb** — the canonical key of
+  what happened, never a rendered sentence — and a **payload** whose shape the verb decides.
+  Adding a verb takes three edits and the compiler insists on all three: the list, the payload
+  shape, and the sentence. Omitting the shape is a missing property; omitting the sentence fails
+  the renderer's exhaustive `switch`.
+- Payloads carry an identifier **and** a snapshot. A custody entry stores the person's name as
+  it was, so renaming somebody does not rewrite what the history says happened (ADR 0009).
+- The listing contract (`src/lib/server/shared/pagination.ts`): `limit`, `offset` and `total`,
+  settled at the first list screen rather than the third. With 200 rows, loading everything
+  works — which is why it is a trap, since it keeps working until the install with 4,000.
+  `perPage` is clamped, because `?perPage=100000` is otherwise a denial of service anyone can
+  type, and a malformed page number yields page one instead of an error.
+- `src/lib/domain/status.ts` holds the status vocabulary — the keys, with no labels and no
+  tones. Three layers need the same list and none of them owns it: the badge pairs each key
+  with a tone and a message, the activity payload validates against it, and the `assets` schema
+  will build its `pgEnum` from it. A key added without its tone fails `npm run check`.
+
+### Fixed
+
+- `zod` was imported by the login and setup form actions while being nobody's declared
+  dependency: it arrived only as a transitive one through `sveltekit-superforms`. The day that
+  package changes its range, the application breaks for a reason nothing in `package.json`
+  would explain. It is a direct dependency now.
+
 ## [0.4.0] - 2026-10-08
 
 ### Added
