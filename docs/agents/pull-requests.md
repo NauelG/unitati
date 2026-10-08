@@ -8,7 +8,7 @@ The pull request is where a human becomes aware of a change and decides whether 
 
 Written in **Catalan**, in four sections:
 
-1. **Problema**: what was wrong or missing, from the point of view of whoever uses the app first, then the technical cause. Reference the issue with "Tanca #N"; if there is none, say where the problem came from.
+1. **Problema**: what was wrong or missing, from the point of view of whoever uses the app first, then the technical cause. Reference the issue with `Closes #N`; if there is none, say where the problem came from. The keyword is **always the English one**, even though the rest of the description is Catalan: GitHub only recognises its own closing keywords (`close`, `fix`, `resolve` and their variants), so "Tanca #N" links nothing and leaves the issue open after the merge (this happened with #7 and #71). Use `Closes #N` on its own line, one per issue.
 2. **Solució**: what changed and why. Call out behaviour changes, database migrations, new environment variables, and any architectural decision that belongs in `docs/adr/`.
 3. **Tests**: what was added or run, and whether it was confirmed to fail against the old code. Include the result of `npm run check`, `npm run lint` and `npm test`.
 4. **Guia de verificació en real**: a checklist of manual steps — route, action, **Esperat:** result — that proves the change in the running app. Warn when a step mutates data, and run those against a copy of the database.

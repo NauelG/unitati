@@ -4,7 +4,7 @@
 
 ## 1. Problema
 
-<!-- Què fallava o què faltava: primer per a qui fa servir l'app, després la causa tècnica. "Tanca #N" si hi ha issue; si no, digues d'on ha sortit. -->
+<!-- Què fallava o què faltava: primer per a qui fa servir l'app, després la causa tècnica. `Closes #N` (sempre en anglès: GitHub no reconeix «Tanca») si hi ha issue; si no, digues d'on ha sortit. -->
 
 ## 2. Solució
 
