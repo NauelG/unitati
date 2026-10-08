@@ -1,8 +1,11 @@
 <script lang="ts">
-	import { dev } from '$app/env';
+	import { APP_ENV } from '$app/env/public';
 	import { page } from '$app/state';
 	import AppVersion from '#lib/components/AppVersion.svelte';
 	import { ASSET_READ_PERMISSIONS } from '#lib/domain/access.js';
+	import EnvironmentBadge from '#lib/components/unitati/EnvironmentBadge.svelte';
+	import Logo from '#lib/components/unitati/Logo.svelte';
+	import { isProduction } from '#lib/environment.js';
 	import type { Permission } from '#lib/server/access/permissions.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { LayoutProps } from './$types';
@@ -47,13 +50,13 @@
 					permission: 'people.view',
 					accent: 'var(--ink)'
 				},
-				// The component gallery. `dev` is a build-time literal, so this entry
-				// and the route behind it both disappear from a production build.
-				...(dev
+				// The component gallery, open in every environment but production. The route
+				// answers 404 there too, so hiding the entry is a convenience, not the guard.
+				...(!isProduction(APP_ENV)
 					? [
 							{
 								href: '/dev/components',
-								label: 'Componentes',
+								label: m.nav_components(),
 								permission: null,
 								accent: 'var(--border-strong)'
 							}
@@ -82,8 +85,8 @@
 		style:width="var(--size-sidebar)"
 	>
 		<div class="flex h-14 items-center px-5">
-			<a href="/" class="font-display text-base font-semibold text-[var(--ink)]">
-				{m.app_name()}
+			<a href="/" class="rounded-[var(--radius-sm)]" aria-label={m.app_name()}>
+				<Logo size="md" />
 			</a>
 		</div>
 
@@ -119,11 +122,12 @@
 		<header
 			class="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--surface-1)] px-6"
 		>
-			<span class="font-display text-sm font-semibold text-[var(--ink)] md:hidden">
-				{m.app_name()}
-			</span>
+			<a href="/" class="rounded-[var(--radius-sm)] md:hidden" aria-label={m.app_name()}>
+				<Logo size="sm" />
+			</a>
 
 			<div class="ml-auto flex items-center gap-4">
+				<EnvironmentBadge environment={APP_ENV} />
 				<AppVersion />
 				<div class="flex items-center gap-2.5">
 					<span

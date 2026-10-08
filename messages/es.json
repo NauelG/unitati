@@ -12,6 +12,11 @@
 	"nav_sign_out": "Cerrar sesión",
 	"nav_user_menu": "Menú de usuario",
 	"nav_main": "Navegación principal",
+	"nav_components": "Componentes",
+
+	"env_development": "Desarrollo",
+	"env_staging": "Preproducción",
+	"env_notice": "Entorno no productivo",
 
 	"login_title": "Entra en Unitati",
 	"login_lede": "Proyectos, soporte e inventario sobre un único modelo de datos.",
