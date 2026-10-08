@@ -1,10 +1,10 @@
 import { asc, count, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { activity } from '../activity';
-import { assets, listAssets, registerAsset } from '../assets';
+import { advanceAssetTagSequence, assets, listAssets, registerAsset } from '../assets';
 import { createCatalogue, createOrganisation, createViewer } from '../assets/testing/fixtures';
 import { getDb } from '../db';
-import { advanceAssetTagSequence, applyPlan } from './apply';
+import { applyPlan } from './apply';
 import { buildPlan } from './plan';
 
 /**

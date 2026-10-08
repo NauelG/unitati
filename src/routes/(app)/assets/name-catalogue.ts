@@ -1,4 +1,4 @@
-import { fail, type RequestEvent } from '@sveltejs/kit';
+import type { RequestEvent } from '@sveltejs/kit';
 import { z } from 'zod';
 import { m } from '#lib/paraglide/messages.js';
 import type {
@@ -9,6 +9,7 @@ import type {
 } from '#lib/server/assets/index.js';
 import { requirePermission, type SessionUser } from '#lib/server/auth/guards.js';
 import type { Outcome } from '#lib/server/shared/outcome.js';
+import { fieldsOf, rejected, withId } from './form-data';
 
 /**
  * Manufacturers and categories are the same screen: a flat list of names that
@@ -39,17 +40,6 @@ export interface NameCatalogueOperations {
 }
 
 const nameOnly = z.object({ name: z.string().trim().min(1) });
-const withId = z.object({ id: z.uuid() });
-
-type Fields = Record<string, string>;
-
-async function fieldsOf(request: Request): Promise<Fields> {
-	const data = await request.formData();
-	return Object.fromEntries([...data].filter(([, value]) => typeof value === 'string')) as Fields;
-}
-
-const rejected = (action: string, message: string, id?: string) =>
-	fail(400, { action, message, id: id ?? null });
 
 export function nameCatalogue(operations: NameCatalogueOperations) {
 	return {

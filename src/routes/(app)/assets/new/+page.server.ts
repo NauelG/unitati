@@ -7,12 +7,39 @@ import {
 	listAssetModels,
 	listCategories,
 	listManufacturers,
-	registerAsset
+	registerAsset,
+	type AssetModelFailure,
+	type RegisterAssetFailure
 } from '#lib/server/assets/index.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
 import { listLocations } from '#lib/server/directory/index.js';
 import { localiseInvalid, modelForm, registerAssetForm } from '../forms';
 import type { Actions, PageServerLoad } from './$types';
+
+/**
+ * Which field each refusal belongs to, and the sentence for it. A record over
+ * the failure union rather than a cast: a failure added to the domain without a
+ * line here is a type error, not a form that quietly shows nothing. The
+ * sentences are functions so they are read per request, in that request's locale.
+ */
+const registerFailures: Record<
+	RegisterAssetFailure,
+	readonly ['assetTag' | 'serial' | 'assetModelId' | 'locationId', () => string]
+> = {
+	duplicate_asset_tag: ['assetTag', m.asset_error_duplicate_tag],
+	duplicate_serial: ['serial', m.asset_error_duplicate_serial],
+	model_not_found: ['assetModelId', m.asset_error_model_missing],
+	location_not_found: ['locationId', m.asset_error_location_missing]
+};
+
+const modelFailures: Record<
+	AssetModelFailure,
+	readonly ['name' | 'manufacturerId' | 'categoryId', () => string]
+> = {
+	duplicate_name: ['name', m.catalogue_error_duplicate],
+	manufacturer_not_found: ['manufacturerId', m.catalogue_error_manufacturer_missing],
+	category_not_found: ['categoryId', m.catalogue_error_category_missing]
+};
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = requirePermission(locals.user, 'assets.manage');
@@ -47,14 +74,8 @@ export const actions: Actions = {
 		const outcome = await registerAsset(user, form.data);
 
 		if (!outcome.ok) {
-			const [field, text] = {
-				duplicate_asset_tag: ['assetTag', m.asset_error_duplicate_tag()],
-				duplicate_serial: ['serial', m.asset_error_duplicate_serial()],
-				model_not_found: ['assetModelId', m.asset_error_model_missing()],
-				location_not_found: ['locationId', m.asset_error_location_missing()]
-			}[outcome.error] as ['assetTag' | 'serial' | 'assetModelId' | 'locationId', string];
-
-			return setError(form, field, text, { status: 400 });
+			const [field, text] = registerFailures[outcome.error];
+			return setError(form, field, text(), { status: 400 });
 		}
 
 		redirect(303, `/assets/${encodeURIComponent(outcome.value.assetTag)}`);
@@ -69,13 +90,8 @@ export const actions: Actions = {
 		const outcome = await createAssetModel(user, form.data);
 
 		if (!outcome.ok) {
-			const [field, text] = {
-				duplicate_name: ['name', m.catalogue_error_duplicate()],
-				manufacturer_not_found: ['manufacturerId', m.catalogue_error_manufacturer_missing()],
-				category_not_found: ['categoryId', m.catalogue_error_category_missing()]
-			}[outcome.error] as ['name' | 'manufacturerId' | 'categoryId', string];
-
-			return setError(form, field, text, { status: 400 });
+			const [field, text] = modelFailures[outcome.error];
+			return setError(form, field, text(), { status: 400 });
 		}
 
 		// The id travels in the form's message so the register form can select the

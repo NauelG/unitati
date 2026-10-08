@@ -1,4 +1,3 @@
-import { sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import {
 	addNote,
@@ -126,17 +125,4 @@ export async function applyPlan(actor: SessionUser, plan: InventoryPlan): Promis
 	}
 
 	return summary;
-}
-
-/**
- * Tags were supplied explicitly, so `asset_code_seq` never moved. The next asset
- * somebody registers would draw `AST-0001` and be refused as a duplicate of the
- * first seeded one — a bug that appears the first time anyone clicks "Register"
- * after seeding. `GREATEST` keeps it from ever winding the sequence *back* when
- * the real inventory has already outgrown the seed.
- */
-export async function advanceAssetTagSequence(upTo: number): Promise<void> {
-	await getDb().execute(
-		sql`select setval('asset_code_seq', greatest((select last_value from asset_code_seq), ${upTo}))`
-	);
 }

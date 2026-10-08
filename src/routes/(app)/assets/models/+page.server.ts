@@ -1,5 +1,3 @@
-import { fail } from '@sveltejs/kit';
-import { z } from 'zod';
 import { m } from '#lib/paraglide/messages.js';
 import {
 	assetModelInput,
@@ -12,6 +10,7 @@ import {
 	type AssetModelEditFailure
 } from '#lib/server/assets/index.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
+import { fieldsOf, rejected, withId } from '../form-data';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -26,19 +25,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return { models, manufacturers, categories };
 };
 
-const withId = z.object({ id: z.uuid() });
-
-type Fields = Record<string, string>;
-
-async function fieldsOf(request: Request): Promise<Fields> {
-	const data = await request.formData();
-	return Object.fromEntries([...data].filter(([, value]) => typeof value === 'string')) as Fields;
-}
-
-const rejected = (action: string, message: string, id?: string) =>
-	fail(400, { action, message, id: id ?? null });
-
-const writeFailures: Record<Exclude<AssetModelEditFailure, never>, () => string> = {
+const writeFailures: Record<AssetModelEditFailure, () => string> = {
 	duplicate_name: m.catalogue_error_duplicate,
 	manufacturer_not_found: m.catalogue_error_manufacturer_missing,
 	category_not_found: m.catalogue_error_category_missing,

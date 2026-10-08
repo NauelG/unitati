@@ -1,4 +1,4 @@
-import { error, fail } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { z } from 'zod';
 import { ASSET_READ_PERMISSIONS } from '#lib/domain/access.js';
 import { ASSET_STATES } from '#lib/domain/status.js';
@@ -20,6 +20,7 @@ import {
 	type SessionUser
 } from '#lib/server/auth/guards.js';
 import { listLocations, listPeople } from '#lib/server/directory/index.js';
+import { fieldsOf, rejected } from '../form-data';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
@@ -71,15 +72,6 @@ const stateForm = z.object({ state: z.enum(ASSET_STATES) });
 // An empty string is "no location", which is a real choice, not a missing value.
 const locationForm = z.object({ locationId: z.union([z.uuid(), z.literal('')]) });
 const noteForm = z.object({ text: z.string().trim().min(1) });
-
-type Fields = Record<string, string>;
-
-async function fieldsOf(request: Request): Promise<Fields> {
-	const data = await request.formData();
-	return Object.fromEntries([...data].filter(([, value]) => typeof value === 'string')) as Fields;
-}
-
-const rejected = (action: string, message: string) => fail(400, { action, message });
 
 export const actions: Actions = {
 	assignCustody: async ({ request, locals, params }) => {

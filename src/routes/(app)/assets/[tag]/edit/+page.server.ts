@@ -2,7 +2,12 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { setError, superValidate } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { m } from '#lib/paraglide/messages.js';
-import { getAssetByTag, listAssetModels, updateAssetDetails } from '#lib/server/assets/index.js';
+import {
+	getAssetByTag,
+	listAssetModels,
+	updateAssetDetails,
+	type UpdateAssetFailure
+} from '#lib/server/assets/index.js';
 import { requirePermission, type SessionUser } from '#lib/server/auth/guards.js';
 import { editAssetForm, localiseInvalid } from '../../forms';
 import type { Actions, PageServerLoad } from './$types';
@@ -17,6 +22,15 @@ async function targetOf(user: SessionUser, tag: string) {
 	if (!found.ok || found.value.visibility !== 'full') error(404, 'Not found');
 	return found.value;
 }
+
+const editFailures: Record<
+	Exclude<UpdateAssetFailure, 'asset_not_found'>,
+	readonly ['assetTag' | 'serial' | 'assetModelId', () => string]
+> = {
+	duplicate_asset_tag: ['assetTag', m.asset_error_duplicate_tag],
+	duplicate_serial: ['serial', m.asset_error_duplicate_serial],
+	model_not_found: ['assetModelId', m.asset_error_model_missing]
+};
 
 export const load: PageServerLoad = async ({ locals, params }) => {
 	const user = requirePermission(locals.user, 'assets.manage');
@@ -56,14 +70,8 @@ export const actions: Actions = {
 		if (!outcome.ok) {
 			if (outcome.error === 'asset_not_found') error(404, 'Not found');
 
-			const [field, text] = {
-				duplicate_asset_tag: ['assetTag', m.asset_error_duplicate_tag()],
-				duplicate_serial: ['serial', m.asset_error_duplicate_serial()],
-				model_not_found: ['assetModelId', m.asset_error_model_missing()],
-				location_not_found: ['assetModelId', m.asset_error_model_missing()]
-			}[outcome.error] as ['assetTag' | 'serial' | 'assetModelId', string];
-
-			return setError(form, field, text, { status: 400 });
+			const [field, text] = editFailures[outcome.error];
+			return setError(form, field, text(), { status: 400 });
 		}
 
 		// The tag is the URL (ADR 0010): a rename moves the page.

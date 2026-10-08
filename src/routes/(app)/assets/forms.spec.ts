@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { superValidate } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
-import { editAssetForm, registerAssetForm } from './forms';
+import { editAssetForm, localiseInvalid, registerAssetForm } from './forms';
 
 const MODEL_ID = '5ba77c3b-50c4-49ca-8a4b-d1c30d5cd5cc';
 
@@ -60,6 +60,19 @@ describe('registerAssetForm', () => {
 
 		expect(form.valid).toBe(false);
 		expect(form.errors.state).toBeDefined();
+	});
+
+	it('says so, in Spanish, when the tag is one the router owns', async () => {
+		const form = await superValidate(
+			submitted({ name: 'Laptop', assetTag: 'models', assetModelId: MODEL_ID, state: 'in_stock' }),
+			zod4(registerAssetForm)
+		);
+
+		expect(form.valid).toBe(false);
+		expect(form.errors.assetTag).toBeDefined();
+		expect(localiseInvalid(form).errors.assetTag).toEqual([
+			'Esa etiqueta está reservada: elige otra.'
+		]);
 	});
 
 	it('does not accept a custodian: custody is an event, not a field', async () => {

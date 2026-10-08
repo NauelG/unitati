@@ -31,6 +31,12 @@ minor bumps carry features and patch bumps carry fixes.
   uses answers with a sentence instead of a 500: `restrict` is a typed `in_use` outcome.
 - `requireAnyPermission` and `listLocations`, for screens several permissions reach and for the
   location picker.
+- `advanceAssetTagSequence`: anything that writes explicit tags in bulk (the seed now, the CSV
+  import in #21 next) must move `asset_code_seq`, or the next asset registered by hand draws
+  `AST-0001` and is refused as a duplicate.
+- Route-level specs for what the browser is sent: the real `load` functions against Postgres,
+  asserting that an employee's page data carries no serial, custody or history for shared
+  equipment, and that the registering, catalogue and edit screens answer 404.
 
 ### Changed
 
@@ -48,6 +54,9 @@ minor bumps carry features and patch bumps carry fixes.
 
 ### Fixed
 
+- An asset tagged `new`, `models`, `categories` or `manufacturers` was registered happily and then
+  unreachable: the static route wins over `/assets/[tag]`. Those tags are now refused by the
+  schema, so the rule holds for the import in #21 as well as for a form.
 - A crafted form could attach an asset to another organisation's model or location, or a model to
   another organisation's manufacturer or category, and read that name back in a listing. A
   foreign key proves a row exists, not that it is yours. Registering, editing and every catalogue

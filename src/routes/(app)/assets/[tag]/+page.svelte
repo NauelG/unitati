@@ -6,23 +6,18 @@
 	import Field from '#lib/components/unitati/Field.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
-	import { statusLabel } from '#lib/components/unitati/status.js';
-	import { ASSET_STATES } from '#lib/domain/status.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import type { PageProps } from './$types';
 	import AssetsNav from '../AssetsNav.svelte';
+	import { options, stateOptions } from '../options';
 
 	let { data, form }: PageProps = $props();
 
 	const asset = $derived(data.asset);
-	const stateOptions = ASSET_STATES.map((key) => ({ value: key, label: statusLabel(key) }));
-	const personOptions = $derived(
-		data.people.map((person) => ({ value: person.id, label: person.fullName }))
-	);
-	const locationOptions = $derived(
-		data.locations.map((entry) => ({ value: entry.id, label: entry.name }))
-	);
+	const stateChoices = stateOptions();
+	const personOptions = $derived(options(data.people, (person) => person.fullName));
+	const locationOptions = $derived(options(data.locations, (entry) => entry.name));
 
 	const panel =
 		'rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-5)]';
@@ -80,7 +75,7 @@
 
 				<dl class="mt-[var(--space-3)] divide-y divide-[var(--border)]">
 					{#if asset.visibility === 'full'}
-						{#snippet serial()}{asset.serial ?? m.asset_detail_none()}{/snippet}
+						{#snippet serial()}{asset.serial ?? '—'}{/snippet}
 						{#snippet model()}{asset.modelName}{/snippet}
 						{#snippet manufacturer()}{asset.manufacturerName}{/snippet}
 						{#snippet category()}{asset.categoryName}{/snippet}
@@ -171,7 +166,7 @@
 								<SelectField
 									label={m.asset_detail_state()}
 									name="state"
-									options={stateOptions}
+									options={stateChoices}
 									value={asset.state}
 								/>
 								{@render failure('changeState')}

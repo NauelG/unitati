@@ -52,7 +52,9 @@ export const modelForm = assetModelInput;
 export function localiseInvalid<T extends Record<string, unknown>>(form: SuperValidated<T>) {
 	const specific: Record<string, () => string> = {
 		name: m.validation_name_required,
-		assetModelId: m.asset_error_model_required
+		assetModelId: m.asset_error_model_required,
+		// Blank tags are dropped, never invalid, so the one way a tag fails is a reserved word.
+		assetTag: m.asset_error_tag_reserved
 	};
 
 	for (const field of Object.keys(form.errors)) {

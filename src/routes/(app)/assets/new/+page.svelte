@@ -4,9 +4,9 @@
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
-	import { statusLabel } from '#lib/components/unitati/status.js';
-	import { ASSET_STATES } from '#lib/domain/status.js';
 	import { m } from '#lib/paraglide/messages.js';
+	import AssetFields from '../AssetFields.svelte';
+	import { options, stateOptions } from '../options';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -32,21 +32,12 @@
 	const { submitting: modelSubmitting } = model;
 
 	const modelOptions = $derived(
-		data.models.map((entry) => ({
-			value: entry.id,
-			label: `${entry.manufacturerName} · ${entry.name}`
-		}))
+		options(data.models, (entry) => `${entry.manufacturerName} · ${entry.name}`)
 	);
-	const stateOptions = ASSET_STATES.map((key) => ({ value: key, label: statusLabel(key) }));
-	const locationOptions = $derived(
-		data.locations.map((entry) => ({ value: entry.id, label: entry.name }))
-	);
-	const manufacturerOptions = $derived(
-		data.manufacturers.map((entry) => ({ value: entry.id, label: entry.name }))
-	);
-	const categoryOptions = $derived(
-		data.categories.map((entry) => ({ value: entry.id, label: entry.name }))
-	);
+	const stateChoices = stateOptions();
+	const locationOptions = $derived(options(data.locations, (entry) => entry.name));
+	const manufacturerOptions = $derived(options(data.manufacturers, (entry) => entry.name));
+	const categoryOptions = $derived(options(data.categories, (entry) => entry.name));
 
 	const canCreateModel = $derived(data.manufacturers.length > 0 && data.categories.length > 0);
 </script>
@@ -65,74 +56,34 @@
 		use:enhance
 		class="mt-[var(--space-6)] space-y-[var(--space-5)]"
 	>
-		<Field
-			label={m.asset_form_name()}
-			name="name"
-			bind:value={$form.name}
-			error={$errors.name?.[0]}
-			required
-		/>
+		<AssetFields
+			bind:values={$form}
+			errors={$errors}
+			{modelOptions}
+			modelPlaceholder={m.asset_form_model_placeholder()}
+			tagHint={m.asset_form_tag_hint()}
+		>
+			{#snippet extra()}
+				<div class="grid gap-[var(--space-5)] sm:grid-cols-2">
+					<SelectField
+						label={m.asset_form_state()}
+						name="state"
+						options={stateChoices}
+						bind:value={$form.state}
+						error={$errors.state?.[0]}
+					/>
 
-		<Field
-			label={m.asset_form_tag()}
-			name="assetTag"
-			hint={m.asset_form_tag_hint()}
-			bind:value={$form.assetTag}
-			error={$errors.assetTag?.[0]}
-		/>
-
-		<Field
-			label={m.asset_form_serial()}
-			name="serial"
-			bind:value={$form.serial}
-			error={$errors.serial?.[0]}
-		/>
-
-		<SelectField
-			label={m.asset_form_model()}
-			name="assetModelId"
-			placeholder={m.asset_form_model_placeholder()}
-			options={modelOptions}
-			bind:value={$form.assetModelId}
-			error={$errors.assetModelId?.[0]}
-			required
-		/>
-
-		<div class="grid gap-[var(--space-5)] sm:grid-cols-2">
-			<SelectField
-				label={m.asset_form_state()}
-				name="state"
-				options={stateOptions}
-				bind:value={$form.state}
-				error={$errors.state?.[0]}
-			/>
-
-			<SelectField
-				label={m.asset_form_location()}
-				name="locationId"
-				placeholder={m.asset_form_no_location()}
-				options={locationOptions}
-				bind:value={$form.locationId}
-				error={$errors.locationId?.[0]}
-			/>
-		</div>
-
-		<label class="flex items-start gap-[var(--space-3)]">
-			<input
-				type="checkbox"
-				name="shared"
-				class="mt-0.5 size-4 accent-[var(--brand)]"
-				bind:checked={$form.shared}
-			/>
-			<span>
-				<span class="block text-[13px] leading-4 font-medium text-[var(--ink)]">
-					{m.asset_form_shared()}
-				</span>
-				<span class="block text-[13px] leading-[18px] text-[var(--ink-muted)]">
-					{m.asset_form_shared_hint()}
-				</span>
-			</span>
-		</label>
+					<SelectField
+						label={m.asset_form_location()}
+						name="locationId"
+						placeholder={m.asset_form_no_location()}
+						options={locationOptions}
+						bind:value={$form.locationId}
+						error={$errors.locationId?.[0]}
+					/>
+				</div>
+			{/snippet}
+		</AssetFields>
 
 		<div class="flex items-center gap-[var(--space-3)]">
 			<Button type="submit" size="lg" disabled={$submitting}>

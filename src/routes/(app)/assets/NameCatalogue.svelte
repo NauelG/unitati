@@ -68,7 +68,7 @@
 							<input
 								name="name"
 								value={entry.name}
-								aria-label={m.catalogue_name()}
+								aria-label={m.catalogue_column_name()}
 								class={input}
 								required
 							/>

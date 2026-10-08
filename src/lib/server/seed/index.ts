@@ -1,5 +1,6 @@
 import { DATABASE_URL } from '$app/env/private';
-import { advanceAssetTagSequence, applyPlan } from './apply';
+import { advanceAssetTagSequence } from '../assets';
+import { applyPlan } from './apply';
 import { DEMO_PASSWORD, ensureDemoLogins, ensureWorkspace } from './accounts';
 import { assertLocalDatabase } from './guard';
 import { buildPlan } from './plan';

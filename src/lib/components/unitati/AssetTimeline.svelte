@@ -24,7 +24,9 @@
 				"after:absolute after:top-7 after:bottom-0 after:left-[13px] after:w-px after:bg-[var(--border)] after:content-[''] last:after:hidden"
 			],
 			dot: 'grid size-7 shrink-0 place-items-center rounded-[var(--radius-full)] bg-[var(--asset-soft)] text-[var(--asset)]',
+			body: 'min-w-0 flex-1',
 			head: 'text-sm leading-5 font-medium text-[var(--ink)]',
+			actor: 'font-normal text-[var(--ink-muted)]',
 			time: 'text-xs leading-4 text-[var(--ink-muted)] [font-variant-numeric:tabular-nums]',
 			note: 'mt-[var(--space-1)] text-sm leading-5 whitespace-pre-wrap text-[var(--ink-muted)]',
 			empty: 'text-sm text-[var(--ink-muted)]'
@@ -79,11 +81,11 @@
 			{@const Icon = ICONS[entry.verb]}
 			<li class={styles.item()}>
 				<span class={styles.dot()} aria-hidden="true"><Icon class="size-3.5" /></span>
-				<div class="min-w-0 flex-1">
+				<div class={styles.body()}>
 					<p class={styles.head()}>
 						{activitySentence(entry)}
 						{#if entry.actorName}
-							<span class="font-normal text-[var(--ink-muted)]">
+							<span class={styles.actor()}>
 								{m.timeline_by({ name: entry.actorName })}
 							</span>
 						{/if}
