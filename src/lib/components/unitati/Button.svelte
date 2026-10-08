@@ -47,9 +47,9 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { HTMLButtonAttributes } from 'svelte/elements';
+	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
 
-	interface Props extends Omit<HTMLButtonAttributes, 'class'> {
+	interface Common {
 		variant?: ButtonVariant;
 		size?: ButtonSize;
 		/** Square button for an icon-only label. Needs an `aria-label` from the caller. */
@@ -59,16 +59,36 @@
 		class?: string;
 	}
 
+	/**
+	 * A control that does something is a `<button>`; one that goes somewhere is
+	 * an `<a>`. Giving the second the look of the first is a styling decision, so
+	 * it lives here, and `href` is what chooses the element — a link dressed as a
+	 * button by hand ends up with the wrong semantics for a keyboard or a screen
+	 * reader.
+	 */
+	type Props =
+		| (Common & Omit<HTMLButtonAttributes, 'class' | 'children'> & { href?: undefined })
+		| (Common & Omit<HTMLAnchorAttributes, 'class' | 'children'> & { href: string });
+
 	let {
 		variant = 'primary',
 		size = 'md',
 		iconOnly = false,
 		children,
 		class: className,
+		href,
 		...rest
 	}: Props = $props();
+
+	const classes = $derived(button({ variant, size, iconOnly, class: className }));
 </script>
 
-<button class={button({ variant, size, iconOnly, class: className })} {...rest}>
-	{@render children()}
-</button>
+{#if href !== undefined}
+	<a class={classes} {href} {...rest as HTMLAnchorAttributes}>
+		{@render children()}
+	</a>
+{:else}
+	<button class={classes} {...rest as HTMLButtonAttributes}>
+		{@render children()}
+	</button>
+{/if}

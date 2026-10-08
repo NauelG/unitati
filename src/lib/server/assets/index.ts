@@ -20,11 +20,25 @@ export {
 	createManufacturer,
 	createCategory,
 	createAssetModel,
+	renameManufacturer,
+	renameCategory,
+	updateAssetModel,
+	deleteManufacturer,
+	deleteCategory,
+	deleteAssetModel,
 	listManufacturers,
 	listCategories,
 	listAssetModels
 } from './catalogue';
-export type { CatalogueEntry, CatalogueFailure, AssetModelEntry } from './catalogue';
+export type {
+	CatalogueEntry,
+	CatalogueFailure,
+	CatalogueEditFailure,
+	CatalogueDeleteFailure,
+	AssetModelFailure,
+	AssetModelEditFailure,
+	AssetModelEntry
+} from './catalogue';
 
 export {
 	assets,
@@ -156,6 +170,7 @@ const fullAssetColumns = {
 	serial: assets.serial,
 	state: assets.state,
 	shared: assets.shared,
+	assetModelId: assets.assetModelId,
 	modelName: assetModels.name,
 	manufacturerName: manufacturers.name,
 	categoryName: categories.name,
@@ -301,7 +316,41 @@ function assetCollision(error: unknown): RegisterAssetFailure | null {
 /* Writes                                                                     */
 /* -------------------------------------------------------------------------- */
 
-export type RegisterAssetFailure = 'duplicate_asset_tag' | 'duplicate_serial';
+export type RegisterAssetFailure =
+	'duplicate_asset_tag' | 'duplicate_serial' | 'model_not_found' | 'location_not_found';
+
+/**
+ * The model and the location arrive as ids from a form, and a foreign key only
+ * proves a row exists — not that it belongs to the actor's organisation. Without
+ * this an asset could be hung on another tenant's model, and the next listing
+ * would read that model's name back to the wrong organisation (ADR 0004).
+ */
+async function foreignReference(
+	organisationId: string,
+	refs: { assetModelId?: string; locationId?: string | null }
+): Promise<'model_not_found' | 'location_not_found' | null> {
+	if (refs.assetModelId !== undefined) {
+		const [model] = await getDb()
+			.select({ id: assetModels.id })
+			.from(assetModels)
+			.where(
+				and(eq(assetModels.id, refs.assetModelId), eq(assetModels.organisationId, organisationId))
+			)
+			.limit(1);
+		if (!model) return 'model_not_found';
+	}
+
+	if (refs.locationId) {
+		const [location] = await getDb()
+			.select({ id: locations.id })
+			.from(locations)
+			.where(and(eq(locations.id, refs.locationId), eq(locations.organisationId, organisationId)))
+			.limit(1);
+		if (!location) return 'location_not_found';
+	}
+
+	return null;
+}
 
 /**
  * Registers an asset and opens its history in the same transaction (ADR 0009):
@@ -318,6 +367,9 @@ export async function registerAsset(
 	input: RegisterAssetInput
 ): Promise<Outcome<{ id: string; assetTag: string }, RegisterAssetFailure>> {
 	const values = registerAssetInput.parse(input);
+
+	const missing = await foreignReference(actor.organisationId, values);
+	if (missing) return failure(missing);
 
 	try {
 		return await getDb().transaction(async (tx) => {
@@ -355,6 +407,9 @@ export async function updateAssetDetails(
 	input: UpdateAssetDetailsInput
 ): Promise<Outcome<void, 'asset_not_found' | RegisterAssetFailure>> {
 	const values = updateAssetDetailsInput.parse(input);
+
+	const missing = await foreignReference(actor.organisationId, values);
+	if (missing) return failure(missing);
 
 	try {
 		const updated = await getDb()

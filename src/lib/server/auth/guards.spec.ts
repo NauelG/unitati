@@ -1,0 +1,41 @@
+import { describe, expect, it } from 'vitest';
+import { requireAnyPermission, type SessionUser } from './guards';
+
+const user = (role: SessionUser['role']): SessionUser => ({
+	id: 'u1',
+	name: 'Ada Lovelace',
+	email: 'ada@acme.test',
+	role,
+	organisationId: 'o1',
+	personId: 'p1'
+});
+
+/** SvelteKit's `error()` and `redirect()` throw; the thrown value carries the status. */
+function statusOf(run: () => unknown): number | undefined {
+	try {
+		run();
+	} catch (thrown) {
+		return (thrown as { status?: number }).status;
+	}
+	return undefined;
+}
+
+describe('requireAnyPermission', () => {
+	it('lets through a user who holds any one of the permissions', () => {
+		const employee = user('employee');
+
+		expect(requireAnyPermission(employee, ['assets.view', 'assets.view.shared'])).toBe(employee);
+	});
+
+	it('answers 404, not 403, when the user holds none of them', () => {
+		expect(statusOf(() => requireAnyPermission(user('employee'), ['assets.manage']))).toBe(404);
+	});
+
+	it('sends an anonymous visitor to the login screen', () => {
+		expect(statusOf(() => requireAnyPermission(null, ['assets.view']))).toBe(303);
+	});
+
+	it('refuses to guard with an empty list rather than let everybody in', () => {
+		expect(() => requireAnyPermission(user('admin'), [])).toThrow(/at least one/);
+	});
+});

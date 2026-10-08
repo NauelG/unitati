@@ -36,7 +36,8 @@
 		/** Rendered and announced; presence alone marks the control invalid. */
 		error?: string;
 		hint?: string;
-		value?: string;
+		/** `null` is what a nullable column hands over; it renders as an empty box. */
+		value?: string | null;
 		/** Narrower than Svelte's `ClassValue`: tailwind-variants merges strings. */
 		class?: string;
 	}
@@ -46,7 +47,9 @@
 		error,
 		hint,
 		id,
-		value = $bindable(''),
+		// No fallback: a form library hands over `undefined` for an optional field,
+		// and Svelte refuses `bind:value={undefined}` into a prop that has one.
+		value = $bindable(),
 		class: className,
 		...rest
 	}: Props = $props();

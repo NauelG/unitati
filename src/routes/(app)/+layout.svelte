@@ -2,6 +2,7 @@
 	import { dev } from '$app/env';
 	import { page } from '$app/state';
 	import AppVersion from '#lib/components/AppVersion.svelte';
+	import { ASSET_READ_PERMISSIONS } from '#lib/domain/access.js';
 	import type { Permission } from '#lib/server/access/permissions.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { LayoutProps } from './$types';
@@ -11,7 +12,8 @@
 	interface NavLink {
 		href: string;
 		label: string;
-		permission: Permission | null;
+		/** Any one of these shows the link; `null` shows it to everybody. */
+		permission: Permission | readonly Permission[] | null;
 		accent: string;
 	}
 
@@ -24,7 +26,7 @@
 				{
 					href: '/assets',
 					label: m.nav_assets(),
-					permission: 'assets.view',
+					permission: ASSET_READ_PERMISSIONS,
 					accent: 'var(--asset)'
 				},
 				{
@@ -58,7 +60,11 @@
 						]
 					: [])
 			] satisfies NavLink[]
-		).filter((link) => !link.permission || data.permissions.includes(link.permission))
+		).filter(
+			(link) =>
+				!link.permission ||
+				[link.permission].flat().some((permission) => data.permissions.includes(permission))
+		)
 	);
 
 	const initials = $derived(

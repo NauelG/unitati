@@ -27,6 +27,7 @@ const row = (overrides: Partial<FullAssetView> = {}): FullAssetView => ({
 	serial: 'SER-1',
 	state: 'in_use',
 	shared: true,
+	assetModelId: 'model-1',
 	modelName: 'LaserJet',
 	manufacturerName: 'HP',
 	categoryName: 'Printers',
