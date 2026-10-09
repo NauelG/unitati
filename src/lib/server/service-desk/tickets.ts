@@ -183,6 +183,14 @@ export type CreateTicketFailure =
  * `failure` would commit: the ticket and its first comment are already written
  * by the time an asset is found to be off-limits, and a ticket opened "about
  * nothing" is not what the person asked for.
+ *
+ * Carries `linkAsset`'s own reason. Only `asset_not_found` is an expected
+ * outcome here; anything else is a broken assumption and propagates as the
+ * error it is.
+ *
+ * Known cost: the `TCK-####` sequence is not transactional, so a refused
+ * request still consumes a number. Checking the assets first would need the
+ * visibility rule outside `links`, and a gap in the numbering is cheaper.
  */
 class AssetRefused extends Error {}
 
@@ -303,7 +311,9 @@ export async function createTicket(
 		// The bytes were written before the transaction; do not orphan them.
 		await Promise.all(stored.map((file) => storage.delete(file.row.storageKey)));
 
-		if (error instanceof AssetRefused) return failure('asset_not_found');
+		if (error instanceof AssetRefused && error.message === 'asset_not_found') {
+			return failure('asset_not_found');
+		}
 
 		if (uniqueConstraintName(error) === 'tickets_org_tag') return failure('duplicate_ticket_tag');
 		throw error;

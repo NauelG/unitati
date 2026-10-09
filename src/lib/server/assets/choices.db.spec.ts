@@ -118,18 +118,22 @@ describe('listAssetChoices', () => {
 		expect(choices).toEqual([]);
 	});
 
-	it('is bounded, because the limit comes from a query string', async () => {
+	it('shows a short list however large the inventory', async () => {
 		const { organisation, modelId, technician } = await inventory();
 		for (let index = 10; index < 70; index += 1) {
 			await createAsset(organisation.id, modelId, { assetTag: `AST-00${index}` });
 		}
 
-		const defaulted = await listAssetChoices(technician);
-		const absurd = await listAssetChoices(technician, { limit: 100_000 });
+		const choices = await listAssetChoices(technician);
 
-		expect({ defaulted: defaulted.length, absurd: absurd.length }).toEqual({
-			defaulted: 10,
-			absurd: 50
-		});
+		expect(choices).toHaveLength(10);
+	});
+
+	it('survives an absurdly long term', async () => {
+		const { technician } = await inventory();
+
+		const choices = await listAssetChoices(technician, { search: 'x'.repeat(10_000) });
+
+		expect(choices).toEqual([]);
 	});
 });

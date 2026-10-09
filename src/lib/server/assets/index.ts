@@ -282,12 +282,14 @@ function containsTerm(term: string, wholeRows: boolean): SQL {
 	return (wholeRows ? or(tagOrName, sql`${assetModels.name} ilike ${pattern}`) : tagOrName) as SQL;
 }
 
-const DEFAULT_CHOICES = 10;
-const MAX_CHOICES = 50;
+/** A picker shows a short list and asks again as the term narrows. */
+const CHOICES = 10;
+
+/** Nobody types a longer search; a bound keeps a pasted novel out of an `ilike`. */
+const MAX_TERM_LENGTH = 100;
 
 export interface AssetChoiceRequest {
 	search?: string;
-	limit?: number;
 }
 
 /**
@@ -300,20 +302,15 @@ export interface AssetChoiceRequest {
  * the narrowest shape that works. Whether they may attach it is still decided
  * again where the link is written, so a picker is a convenience and not a gate.
  *
- * Bounded, since the limit can come from a query string, and ordered by tag so
- * the same search always answers in the same order.
+ * Bounded in rows and in term length, since the term comes from a query string,
+ * and ordered by tag so the same search always answers in the same order.
  */
 export async function listAssetChoices(
 	viewer: SessionUser,
 	request: AssetChoiceRequest = {}
 ): Promise<AssetChoice[]> {
 	const wholeRows = can(viewer, 'assets.view');
-	const term = request.search?.trim();
-	const requested = request.limit;
-	const limit =
-		requested === undefined || !Number.isFinite(requested)
-			? DEFAULT_CHOICES
-			: Math.min(Math.max(Math.trunc(requested), 1), MAX_CHOICES);
+	const term = request.search?.trim().slice(0, MAX_TERM_LENGTH);
 
 	return getDb()
 		.select({ id: assets.id, assetTag: assets.assetTag, name: assets.name })
@@ -321,7 +318,7 @@ export async function listAssetChoices(
 		.innerJoin(assetModels, eq(assets.assetModelId, assetModels.id))
 		.where(and(requireAssetScope(viewer), term ? containsTerm(term, wholeRows) : undefined))
 		.orderBy(asc(assets.assetTag))
-		.limit(limit);
+		.limit(CHOICES);
 }
 
 /** The asset behind a `/assets/AST-0142` URL (ADR 0010), redacted for its viewer. */

@@ -274,6 +274,8 @@
 	"asset_picker_none": "No hay equipos que coincidan.",
 	"asset_picker_failed": "No se ha podido buscar. Inténtalo de nuevo.",
 	"asset_picker_remove": "Quitar {assetTag}",
+	"asset_picker_selected": "Equipos elegidos",
+	"asset_picker_count": "{count} equipos disponibles",
 	"ticket_form_assets": "Equipos afectados",
 	"ticket_form_assets_hint": "Opcional. Elige uno o varios equipos sobre los que trata la solicitud.",
 	"ticket_error_duplicate_ticket_tag": "Ya existe una solicitud con ese código.",

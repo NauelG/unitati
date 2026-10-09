@@ -216,6 +216,19 @@ describe('opening a ticket about assets', () => {
 		});
 	});
 
+	it('keeps the link event out of the requester’s thread, which is staff business', async () => {
+		const { w, mine } = await withAssets();
+		const outcome = await createTicket(w.employee, input(w, [mine.id]), [], w.deps);
+		if (!outcome.ok) throw new Error(outcome.error);
+
+		const thread = await ticketThread(w.employee, outcome.value.ticketTag);
+
+		expect(
+			thread.ok &&
+				thread.value.some((item) => item.kind === 'event' && item.entry.verb.startsWith('link.'))
+		).toBe(false);
+	});
+
 	it('opens a ticket with no assets exactly as before', async () => {
 		const { w } = await withAssets();
 

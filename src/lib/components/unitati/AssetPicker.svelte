@@ -22,7 +22,7 @@
 			],
 			tag: 'font-mono text-xs font-semibold',
 			remove: [
-				'grid size-5 place-items-center rounded-[var(--radius-full)] text-[var(--asset)]',
+				'grid size-6 place-items-center rounded-[var(--radius-full)] text-[var(--asset)]',
 				'hover:bg-[var(--surface-1)]'
 			],
 			input: [
@@ -76,6 +76,7 @@
 	const inputId = `${generatedId}-search`;
 	const hintId = `${generatedId}-hint`;
 
+	let search: HTMLInputElement | undefined = $state();
 	let term = $state('');
 	let open = $state(false);
 	let remote = $state<PickedAsset[]>([]);
@@ -111,13 +112,18 @@
 		};
 	});
 
+	// The button that was pressed leaves the DOM (an option once chosen, a chip
+	// once removed), and focus would fall to the page. It goes back to the box, so
+	// the next pick or the next Tab starts from where the user was.
 	function add(asset: PickedAsset) {
 		selected = [...selected, asset];
 		term = '';
+		search?.focus();
 	}
 
 	function remove(id: string) {
 		selected = selected.filter((asset) => asset.id !== id);
+		search?.focus();
 	}
 
 	/** Closes the list unless focus moved to something inside the picker. */
@@ -131,7 +137,7 @@
 	<label for={inputId} class={styles.label()}>{label}</label>
 
 	{#if selected.length > 0}
-		<ul class={styles.chips()} aria-label={label}>
+		<ul class={styles.chips()} aria-label={m.asset_picker_selected()}>
 			{#each selected as asset (asset.id)}
 				<li class={styles.chip()}>
 					<input type="hidden" {name} value={asset.id} />
@@ -151,6 +157,7 @@
 	{/if}
 
 	<input
+		bind:this={search}
 		id={inputId}
 		type="search"
 		autocomplete="off"
@@ -167,8 +174,13 @@
 		}}
 	/>
 
+	<!-- Always in the DOM: a live region inserted together with its text is often not announced. -->
+	<p class="sr-only" role="status">
+		{open && !failed ? m.asset_picker_count({ count: candidates.length }) : ''}
+	</p>
+
 	{#if open}
-		<div class={styles.results()} aria-live="polite">
+		<div class={styles.results()}>
 			{#if failed}
 				<p class={styles.empty()} role="alert">{m.asset_picker_failed()}</p>
 			{:else if candidates.length === 0}
