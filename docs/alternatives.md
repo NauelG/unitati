@@ -52,9 +52,33 @@ Not individually reviewed: Ralph (ITAM/DCIM only), osTicket and UVdesk (ticketin
 ## Watch list
 
 - **Freshservice**: UX and cross-module flows. Reference for what "integrated" should feel like.
-- **Seredina**: closest stack and positioning; check whether it adds projects.
-- **FreeITSM**: MIT, fast-moving solo project.
+- **Seredina**: closest stack and positioning; 1 GitHub star as of 2026-10-09, no projects yet —
+  not a competitor today, re-check only if it ships a projects module.
+- **FreeITSM**: MIT, fast-moving solo project; now carries an early `projects/` module (see
+  re-verification below).
 - **GLPI**: functional checklist. Its features are a reference, not its UX.
+
+## Re-verification — 2026-10-09
+
+Three days after the initial research date, checked where the conclusion was load-bearing
+(GLPI's rejection, the niche statement). Not a new scan: the next full re-run has no date and
+needs a trigger — a competitor shipping a projects module — tracked in the watch list above.
+
+- **GLPI is alive and shipping.** `11.0.11` released 2026-10-01; `12.0.0-RC3` is in progress.
+  The v12 highlights list "a few advancements on Accessibility." That is a UI change, not a UX
+  one — the dated rejection in [Evaluated and discarded](#evaluated-and-discarded) stands.
+- **New cost datum.** `11.0.11` is a security release fixing 8+ High-severity issues:
+  authentication bypass, privilege escalation, SQL injection, reflected XSS, and 2FA
+  deactivation. Self-hosting GLPI carries an ongoing patching burden this product does not
+  inherit by virtue of being smaller and newer; it is not a reason to prefer either option, just
+  a cost to name.
+- **Seredina**: 1 GitHub star. Ticketing + CMDB + NOC/SOC + AI copilot; still **no projects**
+  module. The watch-list note above is updated; it is not a competitor today.
+- **FreeITSM**: the market map above recorded "Partial (tasks)" for projects; it now carries an
+  actual `projects/` module. Still PHP/MySQL, still a solo maintainer, still MIT. Maturity
+  remains unproven, but the gap this product targets is narrowing here first.
+- **Niche, re-affirmed:** self-hosted, open-source-ready, modern UX, one data model linking
+  tickets, assets and tasks — still held by nobody else as of 2026-10-09.
 
 ## Sources
 

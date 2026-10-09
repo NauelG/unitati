@@ -1,7 +1,7 @@
 # Internal tool vs open source
 
-- **Status:** open
-- **Date:** 2026-10-06
+- **Status:** decided — keep building (2026-10-09)
+- **Date:** 2026-10-06 (decided 2026-10-09)
 
 ## Options
 
@@ -14,6 +14,20 @@
 | Career / portfolio | Invisible                        | Public proof of work                       |
 | Monetisation path  | None                             | Hosting, support, open-core (later)        |
 | Legal risk         | IP may belong to the employer    | Same, plus the license choice              |
+
+## Decision (2026-10-09)
+
+**Keep building, as recommended below.** Three days of further research — the dated
+re-verification in [`alternatives.md`](alternatives.md#re-verification-2026-10-09) — confirmed
+the niche is still unclaimed: no existing tool pairs this product's self-hosted/OSS-ready posture
+with a modern UX and one data model across tickets, assets and projects. [ADR 0016](adr/0016-ux-and-features-compound.md)
+records the corollary this decision depends on: UX and features compound, so the product only
+stays worth building if the weaker half keeps getting the work it needs — which is the ten-phase
+UI overhaul this decision, read together with ADR 0016, now justifies committing to.
+
+The two sub-decisions below were deferred on 2026-10-06 and **remain explicitly open**: closing
+this decision's `Status` does not close them. They need their own trigger (the first public push)
+to get resolved, not a calendar date.
 
 ## Recommendation
 
