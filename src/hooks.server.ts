@@ -3,7 +3,28 @@ import { building } from '$app/env';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { paraglideMiddleware } from '#lib/paraglide/server.js';
 import { getAuth } from '#lib/server/auth/index.js';
+import { closeDb } from '#lib/server/db/index.js';
 import { resolveSessionUser } from '#lib/server/directory/index.js';
+
+/**
+ * `adapter-node` emits this once the HTTP server has stopped accepting and has
+ * drained. It is the seam the adapter provides for an app to release what it
+ * owns, and the database pool is the only thing this app owns that outlives a
+ * request. Without it the process ignores `SIGTERM` entirely — the pool's
+ * sockets keep the event loop alive, so Node never exits and the supervisor
+ * eventually resorts to `SIGKILL`.
+ *
+ * Guarded on `building` because SvelteKit runs the app to analyse it during a
+ * build, and a build has no pool to close and no signal to handle.
+ *
+ * The rejection is caught rather than left floating: an unhandled one would
+ * take the process down with a stack trace that says nothing about shutdown.
+ */
+if (!building) {
+	process.on('sveltekit:shutdown', () => {
+		closeDb().catch((error: unknown) => console.error('could not close the database pool', error));
+	});
+}
 
 // `event.request` is readonly in SvelteKit 3, so the request is not swapped as
 // older examples do. The middleware already binds the locale for the duration
