@@ -5,6 +5,43 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.9.0] - 2026-10-09
+
+### Added
+
+- The service desk (slice 3). Queues, tickets, comments and attachments, with the migration that
+  creates them and the real foreign key `activity.ticket_id` was waiting for.
+- Tickets get a `TCK-####` code from their own sequence, editable and unique per organisation, and
+  the enforced workflow `new` → `in_progress` → `waiting_on_user` → `resolved` → `closed`, with
+  reopening as an explicit move back to `in_progress`. An illegal jump is a typed `invalid_transition`
+  failure from the domain function, not an exception, because the later SLA metrics are computed
+  from transitions.
+- The opening message is the first comment; there is no `description` column. Comments are
+  `public` or `internal`, and an internal note is filtered **in the query**: an employee's payload
+  does not contain it, rather than the page hiding it.
+- Attachments on a comment, behind a `Storage` interface (`put` / `get` / `delete`) over the local
+  filesystem at `UPLOADS_DIR`, served from `/attachments/[id]` as a download and scoped to the
+  organisation and to the comments the viewer may read.
+- Outbound mail over SMTP (`nodemailer`, `SMTP_*` and `MAIL_FROM`) to the requester only, for a new
+  public comment and for the move to `resolved`. It is sent after commit and never awaited; a
+  failure is logged and the comment is still saved. With `SMTP_HOST` unset, mail is off. A `mailpit`
+  service in `compose.yaml` catches it in development.
+- Staff screens under `/service-desk`: the list with search and queue and status filters, the new
+  ticket form, the detail with the conversation and the actions (reply, internal note, status,
+  priority, assignee, queue), and `/service-desk/queues`.
+- The employee portal as its own route group at `/portal`, with a minimal layout and no sidebar.
+  An employee is sent there from `/`, always opens a ticket as themselves, and cannot set the
+  requester or the priority even by posting the field.
+- Ticket subject and comment body are searched with the Spanish dictionary through `unaccent`, so
+  "impresoras" finds "impresora"; a viewer who cannot read internal notes does not match on them.
+- `TicketDetailLayout`, `TicketThread` and `TicketComposer`, all in `/dev/components`, and a plain
+  (dotless) variant of the badge. Six ticket verbs join the activity log.
+- The seed opens queues and a handful of tickets in every status.
+
+### Changed
+
+- The sidebar's Service desk link points at `/service-desk`.
+
 ## [0.8.2] - 2026-10-09
 
 ### Fixed
