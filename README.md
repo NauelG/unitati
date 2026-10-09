@@ -233,7 +233,7 @@ of earlier versions no longer exists in adapter-node 6.
 
 Unitati is served at the **root of its origin**: `kit.paths.base` stays empty. A deployment that
 needs isolation gets its own hostname, port or Tailscale Service, never a subpath — see
-[#66](https://github.com/NauelG/unitati/issues/66).
+[ADR 0014](docs/adr/0014-served-at-the-root-of-the-origin.md).
 
 ## Contributing
 
