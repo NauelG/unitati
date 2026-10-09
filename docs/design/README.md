@@ -3,6 +3,11 @@
 The visual language of unitati: colour tokens, typography, spacing scales, components
 and reference layouts. Open `design-system.html` in a browser to read it.
 
+The radius grammar, typography roles and three-surface vocabulary (canvas / primary work
+area / secondary panel) are recorded as a decision in
+[ADR 0019](../adr/0019-visual-language-and-work-surfaces.md); the files under `assets/` below
+are the implementation of that decision, not a second description of it.
+
 ## Layout
 
 ```

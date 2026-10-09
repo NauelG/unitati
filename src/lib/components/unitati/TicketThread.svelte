@@ -3,15 +3,20 @@
 
 	/**
 	 * The `.ut-thread` family: replies, internal notes and system events in one
-	 * chronological rail. Replies carry an avatar; an internal note sits on
-	 * `warning-soft` with its badge; an event is one muted line, because it is
+	 * chronological rail. Every reply is a bounded card now (ADR 0019) — a public
+	 * reply on `surface-1` with a border, an internal note on `warning-soft`
+	 * with its badge — rather than a public message floating borderless on
+	 * whatever sits behind the thread. An event is one muted line, because it is
 	 * context, not conversation.
 	 */
 	export const thread = tv({
 		slots: {
 			list: 'm-0 flex list-none flex-col gap-[var(--space-4)] p-0',
 			message: 'flex gap-[var(--space-3)]',
-			card: 'min-w-0 flex-1 rounded-[var(--radius-lg)]',
+			card: [
+				'min-w-0 flex-1 rounded-[var(--radius-lg)] border border-[var(--border)]',
+				'bg-[var(--surface-1)] px-[var(--space-4)] py-[var(--space-3)]'
+			],
 			head: 'flex flex-wrap items-center gap-x-[var(--space-2)] gap-y-1 text-sm',
 			author: 'font-medium text-[var(--ink)]',
 			time: 'text-xs leading-4 text-[var(--ink-muted)] [font-variant-numeric:tabular-nums]',
@@ -27,7 +32,7 @@
 		},
 		variants: {
 			internal: {
-				true: { card: 'bg-[var(--warning-soft)] px-[var(--space-4)] py-[var(--space-3)]' }
+				true: { card: 'border-transparent bg-[var(--warning-soft)]' }
 			}
 		}
 	});

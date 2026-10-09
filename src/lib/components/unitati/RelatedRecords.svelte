@@ -14,9 +14,9 @@
 		slots: {
 			root: 'rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-4)]',
 			title: 'text-sm font-semibold text-[var(--ink)]',
-			group: 'mt-[var(--space-4)] first-of-type:mt-[var(--space-3)]',
+			group: 'mt-[var(--space-5)] first-of-type:mt-[var(--space-3)]',
 			label: [
-				'flex items-center gap-[var(--space-1)] text-[11px] leading-4 font-semibold tracking-[0.06em]',
+				'flex items-center gap-[var(--space-1)] text-xs leading-4 font-semibold tracking-[0.06em]',
 				'text-[var(--ink-muted)] uppercase'
 			],
 			items: 'mt-[var(--space-2)] m-0 flex list-none flex-col gap-[var(--space-2)] p-0',

@@ -9,9 +9,9 @@ body { font-family: var(--font-sans); color: var(--ink); background: var(--surfa
 .ut-id { font-family: var(--font-mono); font-size: 12px; line-height: 18px; font-weight: 500; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 :where(.ut-btn, .ut-input, .ut-nav-item, .ut-ref, .ut-tab):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-/* Button: pill (the mark's round caps), ink primary, icon in a disc (the mark's dot) */
+/* Button: radius-md (ADR 0019 — full-pill geometry is reserved for badges/status), ink primary, icon in a disc (the mark's dot) */
 .ut-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); height: var(--size-control-md); padding: 0 var(--space-4);
-  border-radius: var(--radius-full); border: 0; font: 600 13px/16px var(--font-sans); letter-spacing: .005em; cursor: pointer; white-space: nowrap;
+  border-radius: var(--radius-md); border: 0; font: 600 13px/16px var(--font-sans); letter-spacing: .005em; cursor: pointer; white-space: nowrap;
   transition: background-color 120ms ease-out, transform 80ms ease-out, box-shadow 120ms ease-out; }
 .ut-btn:active:not([disabled]) { transform: translateY(1px); }
 .ut-btn:has(> .ut-btn-dot:first-child) { padding-left: 5px; }
@@ -59,8 +59,8 @@ body { font-family: var(--font-sans); color: var(--ink); background: var(--surfa
 .ut-field-error .ut-input { border-color: var(--danger); }
 .ut-field-error .ut-help { color: var(--danger); }
 
-/* Badge */
-.ut-badge { display: inline-flex; align-items: center; gap: var(--space-1); height: 22px; padding: 0 var(--space-2); border-radius: var(--radius-sm);
+/* Badge: full-pill geometry (ADR 0019) — the one shape in the radius grammar that stays a pill */
+.ut-badge { display: inline-flex; align-items: center; gap: var(--space-1); height: 22px; padding: 0 var(--space-2); border-radius: var(--radius-full);
   font: 600 12px/16px var(--font-sans); letter-spacing: .04em; background: var(--surface-2); color: var(--ink); white-space: nowrap; }
 .ut-badge::before { content: ""; width: 6px; height: 6px; border-radius: var(--radius-full); background: currentColor; }
 .ut-badge-plain::before { display: none; }
