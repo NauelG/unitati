@@ -4,6 +4,17 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
+		<script>
+			// AppShell's sidebar collapse (ADR 0015), applied before the first paint
+			// so a reload never flashes expanded-then-collapsed. `localStorage` is
+			// unavailable in neither SSR nor a sandboxed iframe only by throwing, so
+			// the read is guarded; a failure just means the sidebar starts expanded.
+			try {
+				if (localStorage.getItem('unitati:sidebar') === 'collapsed') {
+					document.documentElement.setAttribute('data-sidebar-collapsed', '');
+				}
+			} catch {}
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

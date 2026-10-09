@@ -84,3 +84,16 @@ export async function listLocations(organisationId: string): Promise<LocationEnt
 		.where(eq(locations.organisationId, organisationId))
 		.orderBy(asc(locations.name));
 }
+
+/**
+ * The count `AppShell` prints beside the Directory link. Takes a bare
+ * `organisationId`, like `listLocations`: nothing here is redacted per viewer,
+ * so there is no `SessionUser` to narrow against.
+ */
+export async function countPeople(organisationId: string): Promise<number> {
+	const [row] = await getDb()
+		.select({ count: sql<number>`count(*)::int` })
+		.from(people)
+		.where(eq(people.organisationId, organisationId));
+	return row?.count ?? 0;
+}

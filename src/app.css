@@ -87,6 +87,15 @@
 	--size-row: 40px;
 	--size-row-compact: 32px;
 	--size-sidebar: 248px;
+	/*
+	 * Not in the design system yet (#83 — tokens.json documents `--size-sidebar`
+	 * as "Expanded", with no collapsed counterpart). `--size-sidebar-current` is
+	 * what `AppShell` actually reads for its width; collapsing it is an
+	 * attribute-selector override below, not a reactive style, so the very
+	 * first paint already has the right value (see ADR 0015).
+	 */
+	--size-sidebar-collapsed: 64px;
+	--size-sidebar-current: var(--size-sidebar);
 	--size-icon-sm: 16px;
 	--size-icon-md: 20px;
 	/* Page content ceiling (ADR 0018): fluid below it, centred beyond. Only
@@ -136,6 +145,33 @@
 	--radius-md: var(--radius-md);
 	--radius-lg: var(--radius-lg);
 	--radius-xl: var(--radius-xl);
+}
+
+/*
+ * AppShell's collapsed rail (ADR 0015). The attribute lives on `<html>`,
+ * toggled by an inline script in `app.html` before paint — a CSS selector, not
+ * a Svelte class binding, is what keeps the width and the nav labels from
+ * flashing expanded-then-collapsed on load, the same way a dark-mode toggle
+ * avoids a flash of the wrong theme.
+ */
+html[data-sidebar-collapsed] {
+	--size-sidebar-current: var(--size-sidebar-collapsed);
+}
+
+html[data-sidebar-collapsed] .ut-sidebar .ut-nav-label,
+html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
+	display: none;
+}
+
+/*
+ * The vendored `ui/sheet` (ADR 0011: never hand-edited) ships `bg-black/10` on
+ * its overlay. Retheming it is a selector here, in the one file that already
+ * maps shadcn's tokens onto ours, rather than a fork of the vendored file —
+ * this is the mobile drawer's `--scrim`, issue #83's first real use of that
+ * token.
+ */
+[data-slot='sheet-overlay'] {
+	background-color: var(--scrim);
 }
 
 @layer base {

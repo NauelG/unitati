@@ -5,6 +5,22 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.14.0] - 2026-10-09
+
+### Changed
+
+- UI overhaul — phase 2 of #81: `AppShell` (ADR 0015) replaces the hand-written shell in
+  `(app)/+layout.svelte`, closing all six measured drifts against the design system (sidebar on
+  `surface-2`, 32px nav rows, `brand-soft`/`brand` active state, `MODULES`/`DIRECTORY` section
+  headings, a count per module, Settings slot + `AppVersion` at the sidebar bottom). Below 768px a
+  left-sheet drawer (vendored via `shadcn-svelte add sheet` — `ui/sheet`, `ui/button`) replaces
+  having no navigation at all; the sidebar itself collapses to a 64px rail on desktop, persisted in
+  `localStorage` with no layout flash on reload. A search entry ships with its `⌘K` hint, inert
+  until phase 7's command palette listens for the `unitati:command-palette` event it dispatches.
+  Each module's `.ut-count` comes from a new, permission-gated domain read — `assets.countActive`,
+  `service-desk.countOpen`, `directory.countPeople` — aggregated once in
+  `(app)/+layout.server.ts`.
+
 ## [0.13.0] - 2026-10-09
 
 ### Changed

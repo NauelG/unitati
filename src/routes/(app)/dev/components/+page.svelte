@@ -1,5 +1,11 @@
 <script lang="ts">
 	import Plus from '@lucide/svelte/icons/plus';
+	import PackageIcon from '@lucide/svelte/icons/package';
+	import TicketIcon from '@lucide/svelte/icons/ticket';
+	import FolderKanbanIcon from '@lucide/svelte/icons/folder-kanban';
+	import UsersIcon from '@lucide/svelte/icons/users';
+	import HouseIcon from '@lucide/svelte/icons/house';
+	import AppShell, { type AppShellNavLink } from '#lib/components/unitati/AppShell.svelte';
 	import AssetPicker from '#lib/components/unitati/AssetPicker.svelte';
 	import type { PickedAsset } from '#lib/components/unitati/asset-choice.js';
 	import Avatar from '#lib/components/unitati/Avatar.svelte';
@@ -65,6 +71,41 @@
 
 	let fieldValue = $state('');
 	let withError = $state('ada@');
+
+	const appShellLinks: AppShellNavLink[] = [
+		{ href: '#overview', label: 'Inicio', icon: HouseIcon },
+		{
+			href: '#assets',
+			label: 'Inventario',
+			icon: PackageIcon,
+			section: 'modules',
+			accent: 'var(--asset)',
+			count: 1284
+		},
+		{
+			href: '#service-desk',
+			label: 'Soporte',
+			icon: TicketIcon,
+			section: 'modules',
+			accent: 'var(--desk)',
+			count: 37
+		},
+		{
+			href: '#projects',
+			label: 'Proyectos',
+			icon: FolderKanbanIcon,
+			section: 'modules',
+			accent: 'var(--project)',
+			count: 6
+		},
+		{
+			href: '#directory',
+			label: 'Personas',
+			icon: UsersIcon,
+			section: 'directory',
+			count: 212
+		}
+	];
 
 	interface Asset {
 		id: string;
@@ -952,6 +993,28 @@
 			'EnvironmentBadge',
 			'Avisa de que no es producción. Un tono por entorno no productivo, para que una captura de desarrollo no se confunda con una de preproducción. En producción no dibuja nada.',
 			environments
+		)}
+
+		{#snippet appShellSpecimen()}
+			<!-- Fake counts: a static specimen, not wired to any domain query. -->
+			<div
+				class="relative isolate h-[420px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-strong)]"
+			>
+				<AppShell links={appShellLinks} showSearch>
+					{#snippet topbarEnd()}
+						<span class="text-sm text-[var(--ink)]">Ada Lovelace</span>
+					{/snippet}
+					<h1 class="font-display text-lg font-semibold text-[var(--ink)]">Soporte</h1>
+					<p class="mt-1 text-sm text-[var(--ink-muted)]">
+						37 abiertos · 4 esperando al usuario · 2 fuera de SLA
+					</p>
+				</AppShell>
+			</div>
+		{/snippet}
+		{@render section(
+			'AppShell',
+			'El marco de cada página de (app): barra lateral y cabecera. Buscar primero, luego MÓDULOS (con el punto de dominio y el contador por módulo) y DIRECTORIO. En menos de 768px pasa a un cajón; en escritorio se puede contraer a una regla de 64px.',
+			appShellSpecimen
 		)}
 	</div>
 </PageLayout>
