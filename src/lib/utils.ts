@@ -19,3 +19,11 @@ export function cn(...inputs: ClassValue[]): string {
 export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & {
 	ref?: U | null;
 };
+
+/**
+ * Strips `children` and the render-prop `child`: a primitive that renders its
+ * own markup around whatever is passed (shadcn-svelte's `sheet`, first vendored
+ * for #83) takes the rest of its caller's props but supplies both of those
+ * itself.
+ */
+export type WithoutChildrenOrChild<T> = Omit<T, 'children' | 'child'>;

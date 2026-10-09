@@ -153,6 +153,25 @@ export async function listTickets(
 	return page(rows, counted?.total ?? 0, window);
 }
 
+/**
+ * The count `AppShell` prints beside the Service desk link: every ticket not
+ * `resolved` or `closed`. Takes a bare `organisationId` rather than a
+ * `SessionUser` — nothing here is redacted per viewer, as with
+ * `listLocations` and `listManufacturers`.
+ */
+export async function countOpen(organisationId: string): Promise<number> {
+	const [row] = await getDb()
+		.select({ count: sql<number>`count(*)::int` })
+		.from(tickets)
+		.where(
+			and(
+				eq(tickets.organisationId, organisationId),
+				sql`${tickets.status} not in ('resolved', 'closed')`
+			)
+		);
+	return row?.count ?? 0;
+}
+
 /** The ticket behind a `/service-desk/TCK-1093` URL (ADR 0010). */
 export async function getTicketByTag(
 	viewer: SessionUser,

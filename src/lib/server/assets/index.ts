@@ -321,6 +321,20 @@ export async function listAssetChoices(
 		.limit(CHOICES);
 }
 
+/**
+ * The count `AppShell` prints beside the Assets link: every asset not
+ * `retired`. Takes a bare `organisationId` rather than a `SessionUser` — the
+ * sidebar link is already hidden from anyone without an asset-read permission,
+ * so nothing here needs redacting per viewer, as with `listManufacturers`.
+ */
+export async function countActive(organisationId: string): Promise<number> {
+	const [row] = await getDb()
+		.select({ count: sql<number>`count(*)::int` })
+		.from(assets)
+		.where(and(eq(assets.organisationId, organisationId), sql`${assets.state} <> 'retired'`));
+	return row?.count ?? 0;
+}
+
 /** The asset behind a `/assets/AST-0142` URL (ADR 0010), redacted for its viewer. */
 export async function getAssetByTag(
 	viewer: SessionUser,

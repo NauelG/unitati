@@ -29,7 +29,8 @@ export {
 	changeTicketStatus,
 	setTicketPriority,
 	assignTicket,
-	moveTicketToQueue
+	moveTicketToQueue,
+	countOpen
 } from './tickets';
 export type { Deps, TicketView, TicketListRequest, CreateTicketFailure } from './tickets';
 

@@ -1,18 +1,42 @@
 import { redirect } from '@sveltejs/kit';
 import { requireUser } from '#lib/server/auth/guards.js';
 import { permissionsFor } from '#lib/server/access/permissions.js';
-import { needsSetup } from '#lib/server/directory/index.js';
+import { ASSET_READ_PERMISSIONS, TICKET_READ_PERMISSIONS } from '#lib/domain/access.js';
+import { needsSetup, countPeople } from '#lib/server/directory/index.js';
+import { countActive } from '#lib/server/assets/index.js';
+import { countOpen } from '#lib/server/service-desk/index.js';
+import type { Permission } from '#lib/server/access/permissions.js';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	if (await needsSetup()) redirect(303, '/setup');
 
 	const user = requireUser(locals.user);
+	const permissions = permissionsFor(user.role);
+	const hasAnyPermission = (list: readonly Permission[]) =>
+		list.some((permission) => permissions.includes(permission));
+
+	/**
+	 * One query per domain module (ADR 0002: routes never query the database,
+	 * and neither does this layout — each count comes from its own domain's
+	 * public index). Resolved in parallel since none depends on another.
+	 *
+	 * Each count only runs for a module the viewer can actually see; a user
+	 * without the matching permission gets `undefined`, and `AppShell` already
+	 * hides the link, so an absent count never shows beside a link that isn't
+	 * there.
+	 */
+	const [assets, serviceDesk, directory] = await Promise.all([
+		hasAnyPermission(ASSET_READ_PERMISSIONS) ? countActive(user.organisationId) : undefined,
+		hasAnyPermission(TICKET_READ_PERMISSIONS) ? countOpen(user.organisationId) : undefined,
+		permissions.includes('people.view') ? countPeople(user.organisationId) : undefined
+	]);
 
 	// Sent to the client so navigation can hide what the user cannot reach.
 	// Hiding is a convenience; every route still guards itself server-side.
 	return {
 		user: { name: user.name, email: user.email, role: user.role },
-		permissions: permissionsFor(user.role)
+		permissions,
+		counts: { assets, serviceDesk, directory }
 	};
 };
