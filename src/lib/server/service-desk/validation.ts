@@ -20,6 +20,9 @@ export const RESERVED_TICKET_TAGS: ReadonlySet<string> = new Set(['new', 'queues
 
 const nonEmpty = z.string().trim().min(1);
 
+/** A ticket is about a handful of machines; a bound stops a posted array from becoming a query per id. */
+export const MAX_AFFECTED_ASSETS = 20;
+
 export const MAX_ATTACHMENTS_PER_COMMENT = 5;
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
@@ -36,7 +39,9 @@ export const createTicketInput = z.object({
 	queueId: z.uuid(),
 	/** Only honoured for staff; an employee is always their own requester. */
 	requesterPersonId: z.uuid().optional(),
-	priority: z.enum(PRIORITIES).optional()
+	priority: z.enum(PRIORITIES).optional(),
+	/** The assets the ticket is about. Whether each may be attached is `links`' call, not this schema's. */
+	assetIds: z.array(z.uuid()).max(MAX_AFFECTED_ASSETS).optional()
 });
 
 export const addCommentInput = z.object({

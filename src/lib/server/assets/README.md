@@ -29,6 +29,13 @@ Two different questions, answered in two different places:
   **name and location only** for a shared asset — in the payload, not merely in the markup, which
   is why `SharedAssetView` is a separate type with nowhere to put a serial.
 
+Two exports exist for other domains, so they never restate these rules: `requireAssetScope` (the
+`WHERE` for "may this person see this asset", which `links` composes when somebody attaches one)
+and `listAssetChoices` (id, tag and name for the pickers on the ticket forms). The second exists
+because a shared row carries no uuid and a link needs one; it only returns rows that passed the
+same scope, and matches partial words (`ilike`) because a picker filters as you type, on the same
+surface the viewer can see: an employee cannot discover a model through it.
+
 `redaction.db.spec.ts` and `view.spec.ts` are the proof; they are the most important tests here.
 
 ## Codes and search

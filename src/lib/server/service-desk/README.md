@@ -3,18 +3,18 @@
 Tickets, queues, public and internal comments, attachments, and the outbound mail that tells a
 requester somebody answered. Later: canned responses, SLAs, inbound email.
 
-| File             | Owns                                                                                           |
-| ---------------- | ---------------------------------------------------------------------------------------------- |
-| `schema.ts`      | `queues`, `tickets`, `ticket_comments`, `attachments`; the enums and the `TCK-####` sequence   |
-| `index.ts`       | The public surface: routes import from here and never from a file inside                       |
-| `tickets.ts`     | Scoped reads, `createTicket`, and the writes that are events (status, priority, assign, queue) |
-| `comments.ts`    | The thread (comments merged with `activity`), `addComment`, `getAttachment`                    |
-| `queues.ts`      | Queue CRUD and the default queue a portal ticket lands in                                      |
-| `transitions.ts` | The status workflow, as data                                                                   |
-| `scope.ts`       | Which tickets a viewer sees; who sees internal notes                                           |
-| `storage.ts`     | The `Storage` interface, local-filesystem and in-memory implementations                        |
-| `mail.ts`        | The SMTP mailer and `sendQuietly`, which logs a failure and never throws                       |
-| `runtime.ts`     | The only file that reads the environment; everything else takes collaborators as arguments     |
+| File             | Owns                                                                                                                                                                                     |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema.ts`      | `queues`, `tickets`, `ticket_comments`, `attachments`; the enums and the `TCK-####` sequence                                                                                             |
+| `index.ts`       | The public surface: routes import from here and never from a file inside                                                                                                                 |
+| `tickets.ts`     | Scoped reads, `createTicket` (which also links the assets a ticket is about, through `links`, in the same transaction), and the writes that are events (status, priority, assign, queue) |
+| `comments.ts`    | The thread (comments merged with `activity`), `addComment`, `getAttachment`                                                                                                              |
+| `queues.ts`      | Queue CRUD and the default queue a portal ticket lands in                                                                                                                                |
+| `transitions.ts` | The status workflow, as data                                                                                                                                                             |
+| `scope.ts`       | Which tickets a viewer sees; who sees internal notes                                                                                                                                     |
+| `storage.ts`     | The `Storage` interface, local-filesystem and in-memory implementations                                                                                                                  |
+| `mail.ts`        | The SMTP mailer and `sendQuietly`, which logs a failure and never throws                                                                                                                 |
+| `runtime.ts`     | The only file that reads the environment; everything else takes collaborators as arguments                                                                                               |
 
 ## Decisions worth knowing before changing this
 

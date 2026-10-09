@@ -2,7 +2,11 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 import { getDb } from '../db';
 import { activity } from '../activity';
+import { ticketAsset } from '../links';
+import { tickets } from './schema';
 import {
+	createAsset,
+	createCatalogue,
 	createOrganisation,
 	createPerson,
 	createViewer,
@@ -160,6 +164,143 @@ describe('opening a ticket', () => {
 		const rows = await getDb().select().from(activity).where(eq(activity.ticketId, id));
 
 		expect(rows.map((row) => row.verb)).toEqual(['ticket.created']);
+	});
+});
+
+describe('opening a ticket about assets', () => {
+	async function withAssets() {
+		const w = await workspace();
+		const { modelId } = await createCatalogue(w.organisation.id);
+		const mine = await createAsset(w.organisation.id, modelId, {
+			assetTag: 'AST-0001',
+			custodianPersonId: w.employee.personId
+		});
+		const printer = await createAsset(w.organisation.id, modelId, {
+			assetTag: 'AST-0002',
+			name: 'Floor printer',
+			shared: true
+		});
+		const stranger = await createAsset(w.organisation.id, modelId, {
+			assetTag: 'AST-0003',
+			custodianPersonId: w.other.personId
+		});
+		return { w, mine, printer, stranger };
+	}
+
+	const input = (w: Awaited<ReturnType<typeof workspace>>, assetIds: string[]) => ({
+		subject: 'La impresora no responde',
+		body: 'Se queda en cola',
+		queueId: w.queue.id,
+		assetIds
+	});
+
+	it('links every asset picked, and says so in the ticket thread', async () => {
+		const { w, mine, printer } = await withAssets();
+
+		const outcome = await createTicket(w.employee, input(w, [mine.id, printer.id]), [], w.deps);
+		if (!outcome.ok) throw new Error(outcome.error);
+
+		const links = await getDb().select().from(ticketAsset);
+		const thread = await ticketThread(w.technician, outcome.value.ticketTag);
+		const linked = thread.ok
+			? thread.value.flatMap((item) =>
+					item.kind === 'event' && item.entry.verb === 'link.asset.added'
+						? [item.entry.payload.assetTag]
+						: []
+				)
+			: [];
+
+		expect({ linked: links.map((link) => link.assetId).sort(), thread: linked.sort() }).toEqual({
+			linked: [mine.id, printer.id].sort(),
+			thread: ['AST-0001', 'AST-0002']
+		});
+	});
+
+	it('keeps the link event out of the requester’s thread, which is staff business', async () => {
+		const { w, mine } = await withAssets();
+		const outcome = await createTicket(w.employee, input(w, [mine.id]), [], w.deps);
+		if (!outcome.ok) throw new Error(outcome.error);
+
+		const thread = await ticketThread(w.employee, outcome.value.ticketTag);
+
+		expect(
+			thread.ok &&
+				thread.value.some((item) => item.kind === 'event' && item.entry.verb.startsWith('link.'))
+		).toBe(false);
+	});
+
+	it('opens a ticket with no assets exactly as before', async () => {
+		const { w } = await withAssets();
+
+		const outcome = await createTicket(w.employee, input(w, []), [], w.deps);
+
+		expect(outcome.ok).toBe(true);
+		expect(await getDb().select().from(ticketAsset)).toHaveLength(0);
+	});
+
+	it('links an asset once however many times the form posted it', async () => {
+		const { w, mine } = await withAssets();
+
+		const outcome = await createTicket(w.employee, input(w, [mine.id, mine.id]), [], w.deps);
+
+		expect(outcome.ok).toBe(true);
+		expect(await getDb().select().from(ticketAsset)).toHaveLength(1);
+	});
+
+	it('refuses an asset the employee may not attach, even by id, and opens nothing', async () => {
+		const { w, mine, stranger } = await withAssets();
+		const kept: string[] = [];
+		const deleted: string[] = [];
+		const storage = {
+			put: async (key: string) => void kept.push(key),
+			get: async () => null,
+			delete: async (key: string) => void deleted.push(key)
+		};
+		const file: UploadedFile = {
+			filename: 'captura.png',
+			contentType: 'image/png',
+			data: new Uint8Array([1, 2, 3])
+		};
+
+		const outcome = await createTicket(w.employee, input(w, [mine.id, stranger.id]), [file], {
+			...w.deps,
+			storage
+		});
+
+		expect({
+			outcome,
+			tickets: (await getDb().select().from(tickets)).length,
+			links: (await getDb().select().from(ticketAsset)).length,
+			entries: (await getDb().select().from(activity)).length,
+			orphanedFiles: kept.filter((key) => !deleted.includes(key))
+		}).toEqual({
+			outcome: { ok: false, error: 'asset_not_found' },
+			tickets: 0,
+			links: 0,
+			entries: 0,
+			orphanedFiles: []
+		});
+	});
+
+	it('lets staff attach any asset to a ticket they open for somebody', async () => {
+		const { w, stranger } = await withAssets();
+
+		const outcome = await createTicket(
+			w.technician,
+			{ ...input(w, [stranger.id]), requesterPersonId: w.employee.personId! },
+			[],
+			w.deps
+		);
+
+		expect(outcome.ok).toBe(true);
+		expect(await getDb().select().from(ticketAsset)).toHaveLength(1);
+	});
+
+	it('rejects an absurd number of assets before the database', async () => {
+		const { w } = await withAssets();
+		const ids = Array.from({ length: 21 }, () => crypto.randomUUID());
+
+		await expect(createTicket(w.employee, input(w, ids), [], w.deps)).rejects.toThrow();
 	});
 });
 

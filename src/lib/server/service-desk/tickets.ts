@@ -2,6 +2,7 @@ import { and, asc, desc, eq, exists, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Priority, TicketStatus } from '#lib/domain/status.js';
 import { recordActivity } from '../activity';
+import { linkAsset } from '../links';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
@@ -174,7 +175,24 @@ export type CreateTicketFailure =
 	| 'requester_required'
 	| 'attachments_too_many'
 	| 'attachments_too_large'
+	| 'asset_not_found'
 	| 'duplicate_ticket_tag';
+
+/**
+ * Thrown from inside the opening transaction to roll it back. A returned
+ * `failure` would commit: the ticket and its first comment are already written
+ * by the time an asset is found to be off-limits, and a ticket opened "about
+ * nothing" is not what the person asked for.
+ *
+ * Carries `linkAsset`'s own reason. Only `asset_not_found` is an expected
+ * outcome here; anything else is a broken assumption and propagates as the
+ * error it is.
+ *
+ * Known cost: the `TCK-####` sequence is not transactional, so a refused
+ * request still consumes a number. Checking the assets first would need the
+ * visibility rule outside `links`, and a gap in the numbering is cheaper.
+ */
+class AssetRefused extends Error {}
 
 /** A foreign key proves a row exists, not that it belongs to the actor's organisation. */
 async function sameOrganisation(organisationId: string, queueId: string, personId: string) {
@@ -281,11 +299,21 @@ export async function createTicket(
 				}
 			});
 
+			// A form can post the same id twice; the link is a set.
+			for (const assetId of new Set(values.assetIds ?? [])) {
+				const linked = await linkAsset(tx, actor, { ticketId: ticket.id, assetId });
+				if (!linked.ok) throw new AssetRefused(linked.error);
+			}
+
 			return success({ id: ticket.id, ticketTag: ticket.ticketTag });
 		});
 	} catch (error) {
 		// The bytes were written before the transaction; do not orphan them.
 		await Promise.all(stored.map((file) => storage.delete(file.row.storageKey)));
+
+		if (error instanceof AssetRefused && error.message === 'asset_not_found') {
+			return failure('asset_not_found');
+		}
 
 		if (uniqueConstraintName(error) === 'tickets_org_tag') return failure('duplicate_ticket_tag');
 		throw error;

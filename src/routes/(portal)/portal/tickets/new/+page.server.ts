@@ -13,7 +13,7 @@ import type { Actions } from './$types';
 export const actions: Actions = {
 	default: async ({ locals, request }) => {
 		const user = requirePermission(locals.user, 'tickets.create');
-		const { fields, files } = await readTicketForm(request);
+		const { fields, files, assetIds } = await readTicketForm(request);
 
 		// An employee does not pick a queue; the ticket lands in the first one.
 		const queue = await defaultQueue(user);
@@ -24,7 +24,9 @@ export const actions: Actions = {
 		const input = createTicketInput.safeParse({
 			subject: fields.subject ?? '',
 			body: fields.body ?? '',
-			queueId: queue.id
+			queueId: queue.id,
+			// Whether each one may be attached is decided in the domain, not here.
+			assetIds
 		});
 		if (!input.success) return fail(400, { message: m.ticket_error_invalid(), values: fields });
 

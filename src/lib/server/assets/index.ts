@@ -254,6 +254,73 @@ export async function listAssets(
 	return page(visible, counted?.total ?? 0, window);
 }
 
+/** What a picker needs of an asset, and nothing it does not. */
+export interface AssetChoice {
+	id: string;
+	assetTag: string;
+	name: string;
+}
+
+/**
+ * Partial matching for a box that filters as you type: "mac" has to find
+ * "MacBook", which the full-text search above, matching whole words, does not.
+ *
+ * **Same surface rule as `matchesSearch`.** A viewer who sees whole rows matches
+ * tag, name or model; one restricted to shared rows matches tag and name alone,
+ * the two things their view shows, so typing cannot reveal a model.
+ *
+ * `%`, `_` and the escape character are escaped, so the term is text and not a
+ * pattern: searching `%` finds nothing instead of everything.
+ */
+function containsTerm(term: string, wholeRows: boolean): SQL {
+	const pattern = `%${term.replace(/[\\%_]/g, '\\$&')}%`;
+	const tagOrName = or(
+		sql`${assets.assetTag} ilike ${pattern}`,
+		sql`${assets.name} ilike ${pattern}`
+	);
+
+	return (wholeRows ? or(tagOrName, sql`${assetModels.name} ilike ${pattern}`) : tagOrName) as SQL;
+}
+
+/** A picker shows a short list and asks again as the term narrows. */
+const CHOICES = 10;
+
+/** Nobody types a longer search; a bound keeps a pasted novel out of an `ilike`. */
+const MAX_TERM_LENGTH = 100;
+
+export interface AssetChoiceRequest {
+	search?: string;
+}
+
+/**
+ * The assets a viewer may pick from, for a form that attaches one to something
+ * (a ticket, #9). It exists apart from `listAssets` because a shared row there
+ * deliberately carries no uuid (ADR 0007) and a link needs one.
+ *
+ * **The id is safe to return here** because the row passed the viewer's own
+ * scope first: it is the id of an asset they can already see, handed back in
+ * the narrowest shape that works. Whether they may attach it is still decided
+ * again where the link is written, so a picker is a convenience and not a gate.
+ *
+ * Bounded in rows and in term length, since the term comes from a query string,
+ * and ordered by tag so the same search always answers in the same order.
+ */
+export async function listAssetChoices(
+	viewer: SessionUser,
+	request: AssetChoiceRequest = {}
+): Promise<AssetChoice[]> {
+	const wholeRows = can(viewer, 'assets.view');
+	const term = request.search?.trim().slice(0, MAX_TERM_LENGTH);
+
+	return getDb()
+		.select({ id: assets.id, assetTag: assets.assetTag, name: assets.name })
+		.from(assets)
+		.innerJoin(assetModels, eq(assets.assetModelId, assetModels.id))
+		.where(and(requireAssetScope(viewer), term ? containsTerm(term, wholeRows) : undefined))
+		.orderBy(asc(assets.assetTag))
+		.limit(CHOICES);
+}
+
 /** The asset behind a `/assets/AST-0142` URL (ADR 0010), redacted for its viewer. */
 export async function getAssetByTag(
 	viewer: SessionUser,

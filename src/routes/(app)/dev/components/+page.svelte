@@ -1,5 +1,7 @@
 <script lang="ts">
 	import Plus from '@lucide/svelte/icons/plus';
+	import AssetPicker from '#lib/components/unitati/AssetPicker.svelte';
+	import type { PickedAsset } from '#lib/components/unitati/asset-choice.js';
 	import Avatar from '#lib/components/unitati/Avatar.svelte';
 	import Button, {
 		type ButtonSize,
@@ -111,6 +113,15 @@
 	let selected = $state<string[]>(['2']);
 	let sort = $state<DataTableSort>({ key: 'code', direction: 'asc' });
 
+	let pickedNone = $state<PickedAsset[]>([]);
+	let pickedTwo = $state<PickedAsset[]>([
+		{ id: '5f0c0000-0000-4000-8000-000000000001', assetTag: 'AST-0001', name: 'MacBook Pro 14' },
+		{
+			id: '5f0c0000-0000-4000-8000-000000000002',
+			assetTag: 'AST-0002',
+			name: 'Impresora de planta'
+		}
+	]);
 	let selectValue = $state('');
 	let selectWithValue = $state('laptops');
 	const selectOptions = [
@@ -475,6 +486,27 @@
 		'SelectField',
 		'La misma etiqueta, ayuda y error que Field. Con `placeholder` hay una opción vacía seleccionable (lo que envía una columna anulable para «ninguno»); sin él, el valor siempre tiene respuesta.',
 		selects
+	)}
+
+	{#snippet pickers()}
+		<div class="grid gap-[var(--space-5)] sm:grid-cols-2">
+			<AssetPicker
+				label="Equipos afectados"
+				hint="Opcional. Pulsa en la caja para ver los primeros resultados."
+				searchUrl="/dev/components/assets"
+				bind:selected={pickedNone}
+			/>
+			<AssetPicker
+				label="Equipos afectados"
+				searchUrl="/dev/components/assets"
+				bind:selected={pickedTwo}
+			/>
+		</div>
+	{/snippet}
+	{@render section(
+		'AssetPicker',
+		'Elige varios activos buscando por etiqueta o nombre. Lo elegido queda como chips, cada uno con un campo oculto `assetIds`; lo ya elegido no vuelve a ofrecerse. Pide los resultados a un endpoint al dejar de teclear, no recibe una lista: con miles de activos una lista truncada ocultaría el que se busca sin avisar. Izquierda, vacío; derecha, con dos elegidos.',
+		pickers
 	)}
 
 	{#snippet pagers()}

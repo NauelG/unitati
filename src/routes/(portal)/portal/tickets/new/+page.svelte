@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import AssetPicker from '#lib/components/unitati/AssetPicker.svelte';
+	import type { PickedAsset } from '#lib/components/unitati/asset-choice.js';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
 	let { form }: PageProps = $props();
+
+	let affected = $state<PickedAsset[]>([]);
 
 	const values = $derived(form && 'values' in form ? form.values : {});
 </script>
@@ -35,6 +39,13 @@
 			>{values.body ?? ''}</textarea
 		>
 	</label>
+
+	<AssetPicker
+		label={m.ticket_form_assets()}
+		hint={m.ticket_form_assets_hint()}
+		searchUrl="/portal/tickets/new/assets"
+		bind:selected={affected}
+	/>
 
 	<label class="flex flex-col gap-[var(--space-1)]">
 		<span class="text-[13px] leading-4 font-medium text-[var(--ink)]">

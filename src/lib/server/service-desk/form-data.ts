@@ -10,14 +10,21 @@ import type { UploadedFile } from './validation';
  */
 export async function readTicketForm(
 	request: Request
-): Promise<{ fields: Record<string, string>; files: UploadedFile[] }> {
+): Promise<{ fields: Record<string, string>; files: UploadedFile[]; assetIds: string[] }> {
 	const data = await request.formData();
 	const fields: Record<string, string> = {};
 	const files: UploadedFile[] = [];
+	// The one field that repeats: a ticket can be about several assets, and
+	// `fields` keeps only the last value of a key.
+	const assetIds: string[] = [];
 
 	for (const [key, value] of data) {
 		if (typeof value === 'string') {
-			fields[key] = value;
+			if (key === 'assetIds') {
+				if (value !== '') assetIds.push(value);
+			} else {
+				fields[key] = value;
+			}
 		} else if (value.size > 0 && value.name !== '') {
 			files.push({
 				filename: value.name,
@@ -27,5 +34,5 @@ export async function readTicketForm(
 		}
 	}
 
-	return { fields, files };
+	return { fields, files, assetIds };
 }
