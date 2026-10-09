@@ -8,6 +8,7 @@
 	import TicketComposer from '#lib/components/unitati/TicketComposer.svelte';
 	import TicketDetailLayout from '#lib/components/unitati/TicketDetailLayout.svelte';
 	import TicketThread from '#lib/components/unitati/TicketThread.svelte';
+	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { PRIORITIES } from '#lib/domain/status.js';
 	import { m } from '#lib/paraglide/messages.js';
@@ -17,10 +18,6 @@
 	let { data, form }: PageProps = $props();
 
 	const ticket = $derived(data.ticket);
-
-	const panel =
-		'rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-4)]';
-	const panelTitle = 'text-sm font-semibold text-[var(--ink)]';
 
 	const provenance = $derived(
 		m.ticket_detail_opened({
@@ -80,15 +77,19 @@
 </svelte:head>
 
 <PageLayout variant="record">
-	<TicketDetailLayout
-		ticketTag={ticket.ticketTag}
-		subject={ticket.subject}
-		status={ticket.status}
-		priority={ticket.priority}
-		{provenance}
-	/>
+	<WorkPanel>
+		<TicketDetailLayout
+			ticketTag={ticket.ticketTag}
+			subject={ticket.subject}
+			status={ticket.status}
+			priority={ticket.priority}
+			{provenance}
+		/>
 
-	<TicketThread items={data.thread} attachmentHref={(id) => `/attachments/${id}`} />
+		<div class="mt-[var(--space-5)]">
+			<TicketThread items={data.thread} attachmentHref={(id) => `/attachments/${id}`} />
+		</div>
+	</WorkPanel>
 
 	<TicketComposer
 		action="?/reply"
@@ -98,9 +99,8 @@
 	/>
 
 	{#snippet side()}
-		<section class={panel}>
-			<h2 class={panelTitle}>{m.ticket_detail_details()}</h2>
-			<dl class="mt-[var(--space-2)] divide-y divide-[var(--border)]">
+		<WorkPanel heading={m.ticket_detail_details()}>
+			<dl class="divide-y divide-[var(--border)]">
 				{#snippet requester()}{ticket.requesterName}{/snippet}
 				{#snippet assignee()}{ticket.assigneeName ?? m.tickets_no_assignee()}{/snippet}
 				{#snippet queue()}{ticket.queueName}{/snippet}
@@ -108,7 +108,7 @@
 				{@render detailRow(m.ticket_detail_assignee(), assignee)}
 				{@render detailRow(m.ticket_detail_queue(), queue)}
 			</dl>
-		</section>
+		</WorkPanel>
 
 		<RelatedRecords
 			groups={data.related}
@@ -118,14 +118,8 @@
 
 		{#if data.canManage}
 			{#if statusOptions.length > 0}
-				<section class={panel}>
-					<h2 class={panelTitle}>{m.ticket_action_status()}</h2>
-					<form
-						method="POST"
-						action="?/status"
-						use:enhance
-						class="mt-[var(--space-3)] space-y-[var(--space-3)]"
-					>
+				<WorkPanel heading={m.ticket_action_status()}>
+					<form method="POST" action="?/status" use:enhance class="space-y-[var(--space-3)]">
 						<SelectField
 							label={m.ticket_detail_status()}
 							name="status"
@@ -135,17 +129,11 @@
 						{@render failure('status')}
 						<Button type="submit" variant="secondary" size="sm">{m.ticket_action_submit()}</Button>
 					</form>
-				</section>
+				</WorkPanel>
 			{/if}
 
-			<section class={panel}>
-				<h2 class={panelTitle}>{m.ticket_action_priority()}</h2>
-				<form
-					method="POST"
-					action="?/priority"
-					use:enhance
-					class="mt-[var(--space-3)] space-y-[var(--space-3)]"
-				>
+			<WorkPanel heading={m.ticket_action_priority()}>
+				<form method="POST" action="?/priority" use:enhance class="space-y-[var(--space-3)]">
 					<SelectField
 						label={m.ticket_detail_priority()}
 						name="priority"
@@ -155,16 +143,10 @@
 					{@render failure('priority')}
 					<Button type="submit" variant="secondary" size="sm">{m.ticket_action_submit()}</Button>
 				</form>
-			</section>
+			</WorkPanel>
 
-			<section class={panel}>
-				<h2 class={panelTitle}>{m.ticket_action_assign()}</h2>
-				<form
-					method="POST"
-					action="?/assign"
-					use:enhance
-					class="mt-[var(--space-3)] space-y-[var(--space-3)]"
-				>
+			<WorkPanel heading={m.ticket_action_assign()}>
+				<form method="POST" action="?/assign" use:enhance class="space-y-[var(--space-3)]">
 					<SelectField
 						label={m.ticket_detail_assignee()}
 						name="personId"
@@ -175,16 +157,10 @@
 					{@render failure('assign')}
 					<Button type="submit" variant="secondary" size="sm">{m.ticket_action_submit()}</Button>
 				</form>
-			</section>
+			</WorkPanel>
 
-			<section class={panel}>
-				<h2 class={panelTitle}>{m.ticket_action_queue()}</h2>
-				<form
-					method="POST"
-					action="?/queue"
-					use:enhance
-					class="mt-[var(--space-3)] space-y-[var(--space-3)]"
-				>
+			<WorkPanel heading={m.ticket_action_queue()}>
+				<form method="POST" action="?/queue" use:enhance class="space-y-[var(--space-3)]">
 					<SelectField
 						label={m.ticket_detail_queue()}
 						name="queueId"
@@ -194,7 +170,7 @@
 					{@render failure('queue')}
 					<Button type="submit" variant="secondary" size="sm">{m.ticket_action_submit()}</Button>
 				</form>
-			</section>
+			</WorkPanel>
 		{/if}
 	{/snippet}
 </PageLayout>

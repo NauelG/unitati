@@ -85,39 +85,44 @@
 		{/snippet}
 	</PageHeader>
 
-	<form
-		method="GET"
-		role="search"
-		class="mt-[var(--space-6)] flex flex-wrap items-end gap-[var(--space-3)]"
-	>
-		<!-- layout-ok: a bounded search field, not a page container -->
-		<Field
-			label={m.tickets_search_label()}
-			name="q"
-			type="search"
-			placeholder={m.tickets_search_placeholder()}
-			bind:value={term}
-			class="w-full max-w-md"
-		/>
-		<SelectField
-			label={m.tickets_filter_queue()}
-			name="queue"
-			options={queueOptions}
-			value={data.queueId}
-		/>
-		<SelectField
-			label={m.tickets_filter_status()}
-			name="status"
-			options={statusOptions}
-			value={data.status}
-		/>
-		<Button type="submit" variant="secondary">
-			<Search class="size-4" aria-hidden="true" />
-			{m.tickets_search_submit()}
-		</Button>
-	</form>
+	<div class="mt-[var(--space-6)]">
+		<!--
+			The toolbar borrows DataTable's own panel corners (ADR 0019) instead of
+			drawing a second, separate container: `rounded-t-*`/`border-b-0` here,
+			`rounded-t-none` on the table below, so one border reads as one panel.
+		-->
+		<form
+			method="GET"
+			role="search"
+			class="flex flex-wrap items-end gap-[var(--space-3)] rounded-t-[var(--radius-lg)] border border-b-0 border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-4)]"
+		>
+			<!-- layout-ok: a bounded search field, not a page container -->
+			<Field
+				label={m.tickets_search_label()}
+				name="q"
+				type="search"
+				placeholder={m.tickets_search_placeholder()}
+				bind:value={term}
+				class="w-full max-w-md"
+			/>
+			<SelectField
+				label={m.tickets_filter_queue()}
+				name="queue"
+				options={queueOptions}
+				value={data.queueId}
+			/>
+			<SelectField
+				label={m.tickets_filter_status()}
+				name="status"
+				options={statusOptions}
+				value={data.status}
+			/>
+			<Button type="submit" variant="secondary">
+				<Search class="size-4" aria-hidden="true" />
+				{m.tickets_search_submit()}
+			</Button>
+		</form>
 
-	<div class="mt-[var(--space-5)]">
 		<DataTable
 			{columns}
 			rows={data.result.rows}
@@ -125,6 +130,7 @@
 			rowLabel={(row) => row.subject}
 			href={(row) => `/service-desk/${encodeURIComponent(row.ticketTag)}`}
 			emptyMessage={filtering ? m.tickets_empty_search({ term: data.search }) : m.tickets_empty()}
+			class="rounded-t-none"
 		/>
 	</div>
 

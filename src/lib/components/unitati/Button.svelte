@@ -2,13 +2,15 @@
 	import { tv, type VariantProps } from 'tailwind-variants';
 
 	/**
-	 * The `.ut-btn` family from the design system, as a component: a pill, because
-	 * the brand mark has round caps. Colour only ever arrives through a token.
+	 * The `.ut-btn` family from the design system. Radius grammar (ADR 0019):
+	 * action buttons sit at `--radius-md` (8px), the same corner as an input or
+	 * a select trigger — full-pill geometry is reserved for badges and status
+	 * markers, not every control. Colour only ever arrives through a token.
 	 */
 	export const button = tv({
 		base: [
 			'relative inline-flex items-center justify-center gap-[var(--space-2)]',
-			'rounded-[var(--radius-full)] border-0 font-semibold whitespace-nowrap',
+			'rounded-[var(--radius-md)] border-0 font-semibold whitespace-nowrap',
 			'tracking-[0.005em] transition-[background-color,transform,box-shadow] duration-[120ms] ease-out',
 			'active:not-disabled:translate-y-px',
 			// `.ut-btn[disabled]` in the reference CSS: the shadow goes too, so a

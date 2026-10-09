@@ -29,6 +29,7 @@
 	import TicketComposer from '#lib/components/unitati/TicketComposer.svelte';
 	import TicketDetailLayout from '#lib/components/unitati/TicketDetailLayout.svelte';
 	import TicketThread from '#lib/components/unitati/TicketThread.svelte';
+	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import StatusBadge, { badge } from '#lib/components/unitati/StatusBadge.svelte';
 	import {
@@ -479,7 +480,7 @@
 		{/snippet}
 		{@render section(
 			'Button',
-			'Cuatro variantes por tres tamaños, más deshabilitado y solo icono. Con `href` el elemento es un enlace, no un botón: lleva a un sitio en vez de hacer algo. La forma es de pastilla porque las terminaciones de la marca son redondas.',
+			'Cuatro variantes por tres tamaños, más deshabilitado y solo icono. Con `href` el elemento es un enlace, no un botón: lleva a un sitio en vez de hacer algo. Radio de 8px (ADR 0019): la pastilla queda reservada a insignias y marcadores de estado.',
 			buttons
 		)}
 
@@ -856,32 +857,53 @@
 
 		{#snippet ticketLayouts()}
 			<PageLayout variant="record">
-				<TicketDetailLayout
-					ticketTag="TCK-0093"
-					subject="La impresora de la planta 2 no imprime"
-					status="in_progress"
-					priority="high"
-					provenance="Abierta por Laura Serra · 8 oct 2026, 09:15 · desde el portal"
-				/>
-				<TicketThread items={threadItems} attachmentHref={(id) => `#${id}`} />
+				<WorkPanel>
+					<TicketDetailLayout
+						ticketTag="TCK-0093"
+						subject="La impresora de la planta 2 no imprime"
+						status="in_progress"
+						priority="high"
+						provenance="Abierta por Laura Serra · 8 oct 2026, 09:15 · desde el portal"
+					/>
+					<div class="mt-[var(--space-5)]">
+						<TicketThread items={threadItems} attachmentHref={(id) => `#${id}`} />
+					</div>
+				</WorkPanel>
 				<TicketComposer action="?/reply" allowInternal />
 
 				{#snippet side()}
-					<section
-						class="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-4)]"
-					>
-						<h2 class="text-sm font-semibold text-[var(--ink)]">Detalles</h2>
-						<p class="mt-[var(--space-2)] text-sm text-[var(--ink-muted)]">
+					<WorkPanel heading="Detalles">
+						<p class="text-sm text-[var(--ink-muted)]">
 							Solicitante, asignación y cola. «Registros relacionados» llega con #9.
 						</p>
-					</section>
+					</WorkPanel>
 				{/snippet}
 			</PageLayout>
 		{/snippet}
 		{@render section(
 			'TicketDetailLayout',
-			'Cabecera de registro (código, estado, prioridad, título, procedencia), la conversación a la izquierda y las tarjetas laterales a 340px. Por debajo de 1100px la columna lateral pasa bajo la cabecera y el hilo sigue primero. La prioridad «normal» no dibuja insignia.',
+			'Cabecera de registro (código, estado, prioridad, título, procedencia) y la conversación, juntas dentro de un WorkPanel: el área de trabajo primaria (ADR 0019). Las tarjetas laterales a 340px son secundarias. Por debajo de 1100px la columna lateral pasa bajo la cabecera y el hilo sigue primero. La prioridad «normal» no dibuja insignia.',
 			ticketLayouts
+		)}
+
+		{#snippet workPanels()}
+			<div class="grid gap-[var(--space-5)] sm:grid-cols-2">
+				<WorkPanel heading="Detalles">
+					<p class="text-sm text-[var(--ink-muted)]">
+						Con cabecera: título y, opcionalmente, acciones alineadas a la derecha.
+					</p>
+				</WorkPanel>
+				<WorkPanel>
+					<p class="text-sm text-[var(--ink-muted)]">
+						Sin cabecera: solo el cuerpo con relleno, para una región secundaria sin título propio.
+					</p>
+				</WorkPanel>
+			</div>
+		{/snippet}
+		{@render section(
+			'WorkPanel',
+			'La región secundaria o contenida (ADR 0019): un panel blanco de 12px de radio con cabecera y acciones opcionales. Da forma a las tarjetas laterales de una ficha y a los grupos de acción; el área de trabajo primaria de una conversación la compone directamente, sin pasar por aquí.',
+			workPanels
 		)}
 
 		{#snippet shapeNote(label: string, note: string)}

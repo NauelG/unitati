@@ -224,9 +224,15 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
 		font-family: var(--font-sans);
 	}
 
-	/* The design system leans on the display face for headings only. */
-	h1,
-	h2 {
+	/*
+	 * Unbounded is reserved for the brand and a page's own primary title
+	 * (ADR 0019) — never a blanket heading-level rule. `h1` carries that
+	 * because every real page title already renders as one (`PageHeader`,
+	 * `TicketDetailLayout`, the auth screens); a secondary `h2` panel heading
+	 * (`RelatedRecords`, the ticket/asset detail side panels) stays Instrument
+	 * Sans and sets its own size through its component, not through the tag.
+	 */
+	h1 {
 		font-family: var(--font-display);
 	}
 

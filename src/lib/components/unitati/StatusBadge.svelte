@@ -2,14 +2,17 @@
 	import { tv } from 'tailwind-variants';
 
 	/**
-	 * The `.ut-badge` family. The dot is a `::before` pseudo-element inheriting
-	 * `currentColor`, exactly as the design system draws it, so the tone sets one
-	 * colour and the dot follows.
+	 * The `.ut-badge` family. Full-pill geometry (ADR 0019): a status marker is
+	 * the one shape in the radius grammar that stays a pill, visibly distinct
+	 * from the 8px buttons/inputs/selects and the 12px panels around it. The
+	 * dot is a `::before` pseudo-element inheriting `currentColor`, exactly as
+	 * the design system draws it, so the tone sets one colour and the dot
+	 * follows.
 	 */
 	export const badge = tv({
 		base: [
 			'inline-flex items-center gap-[var(--space-1)] h-[22px] px-[var(--space-2)]',
-			'rounded-[var(--radius-sm)] text-xs leading-4 font-semibold tracking-[0.04em] whitespace-nowrap',
+			'rounded-[var(--radius-full)] text-xs leading-4 font-semibold tracking-[0.04em] whitespace-nowrap',
 			"before:content-[''] before:size-1.5 before:rounded-[var(--radius-full)] before:bg-current"
 		],
 		variants: {
