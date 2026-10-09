@@ -28,21 +28,23 @@ export interface TicketAssetPair {
 export type LinkAssetFailure = 'ticket_not_found' | 'asset_not_found' | 'already_linked';
 
 /**
- * The ticket row the actor may attach things to: staff on any ticket of their
- * organisation, anybody else only on a ticket they opened. Answered as "not
- * found" rather than "forbidden", so a ticket id is not an oracle.
+ * The ticket, scoped to the actor's organisation and nothing more.
+ *
+ * Who may write to *which* ticket is `service-desk`'s rule, and this function
+ * does not restate it: the caller has already authorised the ticket (it just
+ * created it, or its route is gated by `tickets.manage`), exactly as the staff
+ * writes in `service-desk` trust the route and scope tenancy only. Importing
+ * that rule from `service-desk` would make the two domains depend on each other,
+ * because `createTicket` is the thing that calls `linkAsset`.
  */
-async function writableTicket(tx: Transaction, actor: SessionUser, ticketId: string) {
+async function ticketInOrganisation(tx: Transaction, actor: SessionUser, ticketId: string) {
 	const [ticket] = await tx
-		.select({ id: tickets.id, requesterPersonId: tickets.requesterPersonId })
+		.select({ id: tickets.id })
 		.from(tickets)
 		.where(and(eq(tickets.id, ticketId), eq(tickets.organisationId, actor.organisationId)))
 		.limit(1);
 
-	if (!ticket) return null;
-	if (can(actor, 'tickets.manage')) return ticket;
-
-	return actor.personId !== null && ticket.requesterPersonId === actor.personId ? ticket : null;
+	return ticket ?? null;
 }
 
 /** The asset as the actor may see it — the rule lives in `assets`, not here. */
@@ -59,7 +61,8 @@ async function visibleAsset(tx: Transaction, actor: SessionUser, assetId: string
 /**
  * Links an asset to a ticket.
  *
- * **The actor can only attach what they can see.** An employee attaches the
+ * **The ticket is the caller's to authorise; the asset is ours to check.** The
+ * actor can only attach what they can see: an employee attaches the
  * laptop they hold or a shared printer and nothing else, which is
  * `requireAssetScope` and is enforced here rather than in the form: a request
  * posted by hand with another asset's id meets the same check.
@@ -72,7 +75,7 @@ export async function linkAsset(
 	actor: SessionUser,
 	pair: TicketAssetPair
 ): Promise<Outcome<void, LinkAssetFailure>> {
-	const ticket = await writableTicket(tx, actor, pair.ticketId);
+	const ticket = await ticketInOrganisation(tx, actor, pair.ticketId);
 	if (!ticket) return failure('ticket_not_found');
 
 	const asset = await visibleAsset(tx, actor, pair.assetId);

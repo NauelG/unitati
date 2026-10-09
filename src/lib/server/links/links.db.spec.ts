@@ -207,19 +207,6 @@ describe('who may attach which asset', () => {
 		});
 	});
 
-	it('refuses an employee a ticket somebody else opened', async () => {
-		const { organisation, modelId, queue, ticket } = await workspace();
-		const other = await createViewer(organisation.id, 'employee', 'Oscar Other');
-		const shared = await createAsset(organisation.id, modelId, { shared: true });
-
-		const outcome = await getDb().transaction((tx) =>
-			linkAsset(tx, other, { ticketId: ticket.id, assetId: shared.id })
-		);
-
-		expect(outcome).toEqual({ ok: false, error: 'ticket_not_found' });
-		void queue;
-	});
-
 	it('lets staff attach any asset of their organisation to any ticket', async () => {
 		const { organisation, modelId, technician, ticket } = await workspace();
 		const stock = await createAsset(organisation.id, modelId);
