@@ -5,6 +5,30 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.15.0] - 2026-10-10
+
+### Changed
+
+- UI overhaul — visual language and work surfaces (#97, ADR 0019): revises the radius grammar
+  so `Button` moves from `--radius-full` to `--radius-md` (8px, matching `Field`/`SelectField`,
+  which were already correct) and `StatusBadge`/`EnvironmentBadge` move the other way, to a true
+  `--radius-full` pill — full-pill geometry is now reserved for status/environment markers, not
+  every control. `src/app.css`'s blanket `h1, h2 { font-family: var(--font-display) }` drops the
+  `h2` half: Unbounded is the brand/primary-title face, not a tag-level default, and five panel
+  headings on `/service-desk/[tag]` and `/assets/[tag]` were rendering in it by accident.
+  `RelatedRecords`'s group label grows from an arbitrary 11px to the named `text-xs` (12px) scale
+  with a 20px gap above each group. `TicketThread`'s public replies gain the same bordered
+  `surface-1` card the internal-note variant always had, instead of floating borderless on
+  whatever sits behind the thread. A new `WorkPanel` component (`src/lib/components/unitati/`)
+  gives the three-surface shape (canvas / primary work area / secondary panel) a real
+  implementation of the `.ut-panel` chrome the design system already named; `/service-desk/[tag]`
+  replaces its five hand-rolled `panel`/`panelTitle` template strings with it and composes its
+  ticket header + thread inside one `WorkPanel` as the record's primary work area. `/service-desk`
+  attaches its search/filter toolbar to `DataTable`'s own panel corners instead of floating it
+  separately above the table. `docs/design/assets/{tokens.json,css/tokens.css,css/components.css}`
+  are updated to match; `design-system.html` itself is not hand-edited, per `docs/design/README.md`
+  — it picks up the change at the next real handoff extraction.
+
 ## [0.14.2] - 2026-10-10
 
 ### Fixed
