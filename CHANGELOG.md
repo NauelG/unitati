@@ -5,6 +5,22 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.14.2] - 2026-10-10
+
+### Fixed
+
+- Asset registration (#102): `/assets/new`'s `load` seeded the register form with a default
+  `state`, which Superforms treats as a posted submission and validates immediately — on every
+  visit, before the user touched the form, it shipped Zod's raw English sentences ("Too small:
+  expected string to have >=1 characters" on Name, "Invalid UUID" on Model) as `$errors.name` /
+  `$errors.assetModelId`, and `AssetFields` rendered them unconditionally inside an otherwise
+  Spanish page. The load now passes `errors: false` to `superValidate`, matching the no-error
+  behaviour the inline model form already had; `localiseInvalid` continues to own the Spanish
+  text for every real submission failure. Regression tests drive the actual `load` and action
+  paths (not `localiseInvalid` in isolation) for the register form, the inline model form and
+  the edit form — a blank Name/Model, and a forged invalid-UUID Model, each come back Spanish
+  without reaching the database — rather than reasserting the fix on one screenshot alone.
+
 ## [0.14.1] - 2026-10-09
 
 ### Fixed

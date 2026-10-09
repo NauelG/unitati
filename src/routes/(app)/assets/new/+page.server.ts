@@ -53,8 +53,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		// A new asset starts in stock; the schema alone would start it `in_use`,
-		// the first key of the enum.
-		form: await superValidate({ state: 'in_stock' }, zod4(registerAssetForm), { id: 'asset' }),
+		// the first key of the enum. Seeding that one field makes Superforms
+		// treat this call as "posted" and validate it immediately — `errors:
+		// false` keeps that validation from shipping Zod's English sentences to
+		// the browser before the visitor has touched the form.
+		form: await superValidate({ state: 'in_stock' }, zod4(registerAssetForm), {
+			id: 'asset',
+			errors: false
+		}),
 		modelForm: await superValidate(zod4(modelForm), { id: 'model' }),
 		models,
 		locations,
