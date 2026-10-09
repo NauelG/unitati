@@ -22,11 +22,13 @@ phase closes gets removed.** No dependency sits in `package.json` "for later" �
 phase number, or the dependency is not in yet.
 
 Applied retroactively: `bits-ui` and `mode-watcher` have been installed since day one with no
-import anywhere in `src/`, from before this rule existed. Both are removed now. `mode-watcher`
-is not banned — phase 9 (#90, dark mode) assigns it a phase and a first import and will reinstall
-it there; removing it now closes the gap where it sat installed and unimported with nothing
-tracking when that was supposed to end. `bits-ui` carries no such phase assignment anywhere in
-the overhaul plan; if a future phase needs it, that phase installs it fresh, the same way.
+import anywhere in `src/`, from before this rule existed. Both are to be removed, in the pull
+request that next touches `package.json` (this ADR is docs-only and does not itself change
+dependencies). `mode-watcher` is not banned — phase 9 (#90, dark mode) assigns it a phase and a
+first import and reinstalls it there; removing it now closes the gap where it sat installed and
+unimported with nothing tracking when that was supposed to end. `bits-ui` carries no such phase
+assignment anywhere in the overhaul plan; if a future phase needs it, that phase installs it
+fresh, the same way.
 
 ### Selected
 
