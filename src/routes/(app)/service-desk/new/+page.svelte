@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import AssetPicker from '#lib/components/unitati/AssetPicker.svelte';
+	import type { PickedAsset } from '#lib/components/unitati/asset-choice.js';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
@@ -8,6 +10,8 @@
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	let affected = $state<PickedAsset[]>([]);
 
 	const values = $derived(form && 'values' in form ? form.values : {});
 	const queueOptions = $derived(data.queues.map((q) => ({ value: q.id, label: q.name })));
@@ -73,6 +77,13 @@
 			hint={m.ticket_form_requester_hint()}
 			options={requesterOptions}
 			value={values.requesterPersonId ?? ''}
+		/>
+
+		<AssetPicker
+			label={m.ticket_form_assets()}
+			hint={m.ticket_form_assets_hint()}
+			searchUrl="/service-desk/new/assets"
+			bind:selected={affected}
 		/>
 
 		<label class="flex flex-col gap-[var(--space-1)]">

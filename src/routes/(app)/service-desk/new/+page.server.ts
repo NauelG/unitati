@@ -27,7 +27,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
 	default: async ({ locals, request }) => {
 		const user = requirePermission(locals.user, 'tickets.manage');
-		const { fields, files } = await readTicketForm(request);
+		const { fields, files, assetIds } = await readTicketForm(request);
 
 		const priority = PRIORITIES.find((candidate) => candidate === fields.priority);
 		const input = {
@@ -36,7 +36,8 @@ export const actions: Actions = {
 			queueId: fields.queueId ?? '',
 			// Blank means "for me"; the domain decides whether the name is honoured.
 			requesterPersonId: fields.requesterPersonId || undefined,
-			priority
+			priority,
+			assetIds
 		};
 
 		const valid = createTicketInput.safeParse(input);
