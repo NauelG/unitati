@@ -5,6 +5,21 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.8.2] - 2026-10-09
+
+### Fixed
+
+- The server ignored `SIGTERM` after any request that had touched the database, and had to be
+  killed. `adapter-node` stops accepting, drains, and emits `sveltekit:shutdown`, but Node exits
+  only once no handles remain and the Postgres pool's sockets are handles — and nothing closed the
+  pool. `closeDb` now ends it on that event, which takes shutdown from never to 255 ms. This was a
+  production defect, not an inconvenience: `docker stop` allows ten seconds before `SIGKILL`, a
+  quarter of what the process previously needed to notice the signal at all, so every container
+  restart would have severed in-flight requests.
+- `closeDb` never calls `getDb()`. That getter is deliberately lazy, and opening a connection in
+  order to close it is exactly the connection nobody asked for that the laziness avoids. A process
+  that served no request still exits immediately.
+
 ## [0.8.1] - 2026-10-09
 
 ### Fixed
