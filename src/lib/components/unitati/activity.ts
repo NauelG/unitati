@@ -77,6 +77,12 @@ export function activitySentence(entry: ActivityEntry): string {
 				to: entry.payload.toQueueName
 			});
 
+		case 'link.asset.added':
+			return m.activity_link_asset_added({ assetTag: entry.payload.assetTag });
+
+		case 'link.asset.removed':
+			return m.activity_link_asset_removed({ assetTag: entry.payload.assetTag });
+
 		default: {
 			const unhandled: never = entry;
 			throw new Error(`Unhandled activity verb: ${JSON.stringify(unhandled)}`);

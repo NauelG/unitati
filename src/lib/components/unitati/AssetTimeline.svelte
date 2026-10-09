@@ -1,12 +1,14 @@
 <script lang="ts" module>
 	import Flag from '@lucide/svelte/icons/flag';
 	import Inbox from '@lucide/svelte/icons/inbox';
+	import Link from '@lucide/svelte/icons/link';
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import MessageSquare from '@lucide/svelte/icons/message-square';
 	import PackagePlus from '@lucide/svelte/icons/package-plus';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 	import Ticket from '@lucide/svelte/icons/ticket';
 	import Undo2 from '@lucide/svelte/icons/undo-2';
+	import Unlink from '@lucide/svelte/icons/unlink';
 	import UserCheck from '@lucide/svelte/icons/user-check';
 	import UserMinus from '@lucide/svelte/icons/user-minus';
 	import { tv } from 'tailwind-variants';
@@ -53,7 +55,9 @@
 		'ticket.assigned': UserCheck,
 		'ticket.unassigned': UserMinus,
 		'ticket.priority.changed': Flag,
-		'ticket.queue.changed': Inbox
+		'ticket.queue.changed': Inbox,
+		'link.asset.added': Link,
+		'link.asset.removed': Unlink
 	};
 </script>
 

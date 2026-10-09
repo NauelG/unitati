@@ -26,8 +26,8 @@ never existed.
 
 Five nullable target columns and a `CHECK` that **exactly one** is set, written as a sum of casts
 rather than a chain of `OR`s so that two targets are refused as well as none. `asset_id` and
-`person_id` carry their foreign keys now; `ticket_id`, `task_id` and `project_id` are columns
-waiting for #8 and #10, and they already satisfy the constraint.
+`person_id` and `ticket_id` carry their foreign keys now; `task_id` and `project_id` are columns
+waiting for #10, and they already satisfy the constraint.
 
 Both the `activity_verb` `pgEnum` and the `CHECK` are derived from `verbs.ts` — the enum from
 `ACTIVITY_VERBS`, the constraint from `ACTIVITY_TARGETS` indexed against the real columns, so a
@@ -41,4 +41,5 @@ cannot call it. The payload is validated with Zod on the way in, because `jsonb`
 shape and the union only binds data that came through that gate.
 
 `listActivity` reads a record's entries back, newest first. It is the _events_ half of a timeline
-only: ADR 0009 merges live relations in at read time, and #9 brings those.
+only: ADR 0009 merges live relations in at read time, from `links.relatedTo`. The two
+link verbs hang off the ticket, so an asset's timeline reads its tickets from the live relation.

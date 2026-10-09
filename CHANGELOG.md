@@ -5,6 +5,25 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.10.0] - 2026-10-09
+
+### Added
+
+- The first cross-domain relation (slice 4, part 1 of 3): `ticket_asset`, a join table with real
+  foreign keys to the ticket and to the asset and a unique constraint on the pair, so the database
+  refuses a link to an asset that does not exist and a ticket merge (#20) cannot land the same link
+  twice. Deleting an asset removes its links and leaves the tickets.
+- The `links` domain, which owns the relations and the one read interface over them:
+  `relatedTo(viewer, record)` returns groups of `RecordRef`-shaped items, oldest first, each with the
+  status its record has **today** rather than a status copied from the past. An employee sees only
+  the assets they could attach themselves; the tickets of an asset are shown to staff only.
+- `linkAsset` and `unlinkAsset`. An employee can attach an asset they hold or a shared one and
+  nothing else, whatever id the request carries; unlinking needs `tickets.manage`. Linking twice is a
+  typed `already_linked` failure and does not abort the transaction a ticket is being opened in.
+- Two activity verbs, `link.asset.added` and `link.asset.removed`, recorded against the **ticket**
+  with the asset's id, tag and name as they were. They are deliberately absent from the asset's own
+  timeline, which reads the live relation instead.
+
 ## [0.9.0] - 2026-10-09
 
 ### Added

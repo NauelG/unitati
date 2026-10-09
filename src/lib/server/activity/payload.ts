@@ -25,6 +25,13 @@ const ticketPriority = z.enum(PRIORITIES);
 /** A name that is present is a real name; a name that is absent is `null`. */
 const presentName = z.string().min(1);
 
+/** The id for the link, the tag and name as they read when it was made or undone. */
+const linkedAsset = z.object({
+	assetId: z.uuid(),
+	assetTag: presentName,
+	assetName: presentName
+});
+
 /**
  * The compile-time gate is the `satisfies` below: a verb added to
  * `ACTIVITY_VERBS` without an entry here is a missing property, reported on
@@ -97,7 +104,13 @@ export const PAYLOAD_SCHEMAS = {
 		fromQueueName: presentName,
 		toQueueId: z.uuid(),
 		toQueueName: presentName
-	})
+	}),
+
+	// Both hang off the **ticket**, never the asset (#9): the thread answers
+	// "when was this attached?", a past event, while the asset's timeline reads
+	// the live relation. Writing it on both would show the ticket twice, once stale.
+	'link.asset.added': linkedAsset,
+	'link.asset.removed': linkedAsset
 } satisfies Record<ActivityVerb, z.ZodType>;
 
 /** The payload belonging to one verb, inferred from its schema. */
