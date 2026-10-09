@@ -5,6 +5,8 @@
 	import DataTable, { type DataTableColumn } from '#lib/components/unitati/DataTable.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import Pager from '#lib/components/unitati/Pager.svelte';
+	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
+	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import { TICKET_STATUSES } from '#lib/domain/status.js';
@@ -67,14 +69,10 @@
 	<title>{m.tickets_title()} · {m.app_name()}</title>
 </svelte:head>
 
-<div class="mx-auto max-w-6xl">
-	<div class="flex flex-wrap items-start justify-between gap-[var(--space-4)]">
-		<div>
-			<h1 class="font-display text-2xl font-semibold text-[var(--ink)]">{m.tickets_title()}</h1>
-			<p class="mt-2 text-[var(--ink-muted)]">{m.tickets_lede()}</p>
-		</div>
-
-		<div class="flex items-center gap-[var(--space-2)]">
+<PageLayout variant="index">
+	<PageHeader title={m.tickets_title()}>
+		{#snippet summary()}{m.tickets_lede()}{/snippet}
+		{#snippet actions()}
 			{#if data.canManage}
 				<Button href="/service-desk/queues" variant="secondary">{m.tickets_queues()}</Button>
 			{/if}
@@ -84,14 +82,15 @@
 					{m.tickets_new()}
 				</Button>
 			{/if}
-		</div>
-	</div>
+		{/snippet}
+	</PageHeader>
 
 	<form
 		method="GET"
 		role="search"
 		class="mt-[var(--space-6)] flex flex-wrap items-end gap-[var(--space-3)]"
 	>
+		<!-- layout-ok: a bounded search field, not a page container -->
 		<Field
 			label={m.tickets_search_label()}
 			name="q"
@@ -139,4 +138,4 @@
 			href={pageHref}
 		/>
 	{/if}
-</div>
+</PageLayout>

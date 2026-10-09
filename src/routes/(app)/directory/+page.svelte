@@ -1,4 +1,6 @@
 <script lang="ts">
+	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
+	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
@@ -15,9 +17,10 @@
 	<title>{m.directory_title()} · {m.app_name()}</title>
 </svelte:head>
 
-<div class="mx-auto max-w-5xl">
-	<h1 class="font-display text-2xl font-semibold text-[var(--ink)]">{m.directory_title()}</h1>
-	<p class="mt-2 text-[var(--ink-muted)]">{m.directory_lede()}</p>
+<PageLayout variant="index">
+	<PageHeader title={m.directory_title()}>
+		{#snippet summary()}{m.directory_lede()}{/snippet}
+	</PageHeader>
 
 	<div
 		class="mt-6 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]"
@@ -49,4 +52,4 @@
 			</tbody>
 		</table>
 	</div>
-</div>
+</PageLayout>

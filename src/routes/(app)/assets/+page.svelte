@@ -5,6 +5,8 @@
 	import DataTable, { type DataTableColumn } from '#lib/components/unitati/DataTable.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import Pager from '#lib/components/unitati/Pager.svelte';
+	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
+	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { AssetView } from '#lib/server/assets/index.js';
@@ -81,26 +83,25 @@
 	<title>{m.assets_title()} · {m.app_name()}</title>
 </svelte:head>
 
-<div class="mx-auto max-w-6xl">
-	<div class="flex flex-wrap items-start justify-between gap-[var(--space-4)]">
-		<div>
-			<h1 class="font-display text-2xl font-semibold text-[var(--ink)]">{m.assets_title()}</h1>
-			<p class="mt-2 text-[var(--ink-muted)]">
-				{data.seesWholeInventory ? m.assets_lede() : m.assets_lede_limited()}
-			</p>
-		</div>
-
-		{#if data.canManage}
-			<Button href="/assets/new">
-				<Plus class="size-4" aria-hidden="true" />
-				{m.assets_register()}
-			</Button>
-		{/if}
-	</div>
+<PageLayout variant="index">
+	<PageHeader title={m.assets_title()}>
+		{#snippet summary()}
+			{data.seesWholeInventory ? m.assets_lede() : m.assets_lede_limited()}
+		{/snippet}
+		{#snippet actions()}
+			{#if data.canManage}
+				<Button href="/assets/new">
+					<Plus class="size-4" aria-hidden="true" />
+					{m.assets_register()}
+				</Button>
+			{/if}
+		{/snippet}
+	</PageHeader>
 
 	<AssetsNav showCatalogue={data.canManage} />
 
 	<form method="GET" role="search" class="mt-[var(--space-6)] flex items-end gap-[var(--space-3)]">
+		<!-- layout-ok: a bounded search field, not a page container -->
 		<Field
 			label={m.assets_search_label()}
 			name="q"
@@ -145,4 +146,4 @@
 			href={pageHref}
 		/>
 	{/if}
-</div>
+</PageLayout>

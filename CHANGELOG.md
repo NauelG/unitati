@@ -5,6 +5,21 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.13.0] - 2026-10-09
+
+### Changed
+
+- UI overhaul — phase 1 of #81: one page-layout vocabulary for the whole app. `PageLayout`
+  (`index` / `record` / `form`) and `PageHeader` replace every route file that declared its own
+  `max-w-*` container (six distinct page widths), plus a `--size-page-max: 2400px` ceiling token:
+  content is now fluid below it and centred beyond it, instead of capped at 1152px regardless of
+  viewport. `TicketDetailLayout` narrows to the record header it always rendered — the grid and
+  the width ceiling now live in `PageLayout`'s `record` variant. Both app shells' gutter is
+  `p-[var(--space-6)]` on every side. Login and setup gain a two-column brand panel (the three
+  domain colours as a motif) and compose `PageLayout`'s `form` variant for their card. A Vitest
+  guard fails the suite if a route under `(app)`, `(portal)` or `(auth)` declares its own
+  `max-w-*` again. See [ADR 0018](docs/adr/0018-page-layout-vocabulary.md).
+
 ## [0.12.0] - 2026-10-09
 
 ### Added

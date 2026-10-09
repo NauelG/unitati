@@ -4,6 +4,8 @@
 	import type { PickedAsset } from '#lib/components/unitati/asset-choice.js';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
+	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
+	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import { statusLabel } from '#lib/components/unitati/status.js';
 	import { m } from '#lib/paraglide/messages.js';
@@ -28,9 +30,10 @@
 	<title>{m.ticket_new_title()} · {m.app_name()}</title>
 </svelte:head>
 
-<div class="mx-auto max-w-2xl">
-	<h1 class="font-display text-2xl font-semibold text-[var(--ink)]">{m.ticket_new_title()}</h1>
-	<p class="mt-2 text-[var(--ink-muted)]">{m.ticket_new_lede()}</p>
+<PageLayout variant="form">
+	<PageHeader title={m.ticket_new_title()}>
+		{#snippet summary()}{m.ticket_new_lede()}{/snippet}
+	</PageHeader>
 
 	<form
 		method="POST"
@@ -105,4 +108,4 @@
 			<Button href="/service-desk" variant="ghost">{m.form_cancel()}</Button>
 		</div>
 	</form>
-</div>
+</PageLayout>

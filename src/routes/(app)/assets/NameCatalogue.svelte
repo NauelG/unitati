@@ -2,6 +2,8 @@
 	import { enhance } from '$app/forms';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import { field } from '#lib/components/unitati/Field.svelte';
+	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
+	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import AssetsNav from './AssetsNav.svelte';
 
@@ -26,9 +28,10 @@
 	<title>{title} · {m.app_name()}</title>
 </svelte:head>
 
-<div class="mx-auto max-w-3xl">
-	<h1 class="font-display text-2xl font-semibold text-[var(--ink)]">{title}</h1>
-	<p class="mt-2 text-[var(--ink-muted)]">{lede}</p>
+<PageLayout variant="form">
+	<PageHeader {title}>
+		{#snippet summary()}{lede}{/snippet}
+	</PageHeader>
 
 	<AssetsNav showCatalogue />
 
@@ -92,4 +95,4 @@
 			</ul>
 		{/if}
 	</div>
-</div>
+</PageLayout>

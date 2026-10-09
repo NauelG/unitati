@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import { statusLabel } from '#lib/components/unitati/status.js';
@@ -78,13 +79,15 @@
 	<title>{ticket.ticketTag} · {ticket.subject} · {m.app_name()}</title>
 </svelte:head>
 
-<TicketDetailLayout
-	ticketTag={ticket.ticketTag}
-	subject={ticket.subject}
-	status={ticket.status}
-	priority={ticket.priority}
-	{provenance}
->
+<PageLayout variant="record">
+	<TicketDetailLayout
+		ticketTag={ticket.ticketTag}
+		subject={ticket.subject}
+		status={ticket.status}
+		priority={ticket.priority}
+		{provenance}
+	/>
+
 	<TicketThread items={data.thread} attachmentHref={(id) => `/attachments/${id}`} />
 
 	<TicketComposer
@@ -194,4 +197,4 @@
 			</section>
 		{/if}
 	{/snippet}
-</TicketDetailLayout>
+</PageLayout>

@@ -149,7 +149,7 @@
 			</div>
 		</header>
 
-		<main class="flex-1 px-6 py-8">
+		<main class="flex-1 p-[var(--space-6)]">
 			{@render children()}
 		</main>
 	</div>
