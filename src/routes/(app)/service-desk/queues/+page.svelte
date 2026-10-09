@@ -2,6 +2,8 @@
 	import { enhance } from '$app/forms';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
+	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
+	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
@@ -21,9 +23,10 @@
 	<title>{m.queues_title()} · {m.app_name()}</title>
 </svelte:head>
 
-<div class="mx-auto max-w-2xl">
-	<h1 class="font-display text-2xl font-semibold text-[var(--ink)]">{m.queues_title()}</h1>
-	<p class="mt-2 text-[var(--ink-muted)]">{m.queues_lede()}</p>
+<PageLayout variant="form">
+	<PageHeader title={m.queues_title()}>
+		{#snippet summary()}{m.queues_lede()}{/snippet}
+	</PageHeader>
 
 	<form
 		method="POST"
@@ -68,4 +71,4 @@
 			{/each}
 		</ul>
 	{/if}
-</div>
+</PageLayout>

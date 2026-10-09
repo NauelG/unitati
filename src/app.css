@@ -89,6 +89,10 @@
 	--size-sidebar: 248px;
 	--size-icon-sm: 16px;
 	--size-icon-md: 20px;
+	/* Page content ceiling (ADR 0018): fluid below it, centred beyond. Only
+	   `PageLayout`'s `index` and `record` variants read this; `form` stays a
+	   fixed measure instead. */
+	--size-page-max: 2400px;
 }
 
 /* shadcn-svelte theme variables, mapped exactly as the design system prescribes

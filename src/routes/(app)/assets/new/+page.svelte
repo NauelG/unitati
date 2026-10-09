@@ -3,6 +3,8 @@
 	import { superForm } from 'sveltekit-superforms';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
+	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
+	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import AssetFields from '../AssetFields.svelte';
@@ -46,9 +48,10 @@
 	<title>{m.asset_new_title()} · {m.app_name()}</title>
 </svelte:head>
 
-<div class="mx-auto max-w-2xl">
-	<h1 class="font-display text-2xl font-semibold text-[var(--ink)]">{m.asset_new_title()}</h1>
-	<p class="mt-2 text-[var(--ink-muted)]">{m.asset_new_lede()}</p>
+<PageLayout variant="form">
+	<PageHeader title={m.asset_new_title()}>
+		{#snippet summary()}{m.asset_new_lede()}{/snippet}
+	</PageHeader>
 
 	<form
 		method="POST"
@@ -151,4 +154,4 @@
 			</p>
 		{/if}
 	</details>
-</div>
+</PageLayout>

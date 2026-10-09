@@ -2,6 +2,8 @@
 	import { untrack } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
+	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import AssetFields from '../../AssetFields.svelte';
 	import { options } from '../../options';
@@ -20,11 +22,10 @@
 	<title>{m.asset_edit_title({ tag: data.assetTag })} · {m.app_name()}</title>
 </svelte:head>
 
-<div class="mx-auto max-w-2xl">
-	<h1 class="font-display text-2xl font-semibold text-[var(--ink)]">
-		{m.asset_edit_title({ tag: data.assetTag })}
-	</h1>
-	<p class="mt-2 text-[var(--ink-muted)]">{m.asset_edit_lede()}</p>
+<PageLayout variant="form">
+	<PageHeader title={m.asset_edit_title({ tag: data.assetTag })}>
+		{#snippet summary()}{m.asset_edit_lede()}{/snippet}
+	</PageHeader>
 
 	<form method="POST" use:enhance class="mt-[var(--space-6)] space-y-[var(--space-5)]">
 		<AssetFields bind:values={$form} errors={$errors} {modelOptions} tagRequired />
@@ -38,4 +39,4 @@
 			</Button>
 		</div>
 	</form>
-</div>
+</PageLayout>
