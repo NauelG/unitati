@@ -5,6 +5,30 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.11.0] - 2026-10-09
+
+### Added
+
+- A ticket can be opened about one or several assets (slice 4, part 2 of 3). The portal form and the
+  staff form gain an **Equipos afectados** picker: a search box that asks the server as you type and
+  keeps what you choose as chips. It matches part of a word, so `mac` finds a MacBook, and it never
+  hands over the whole inventory, which at volume would either be slow or hide the asset you need.
+- `createTicket` links the picked assets inside the transaction that opens the ticket. If any is
+  refused, nothing is created: no ticket, no first comment, no history, and the uploaded files are
+  deleted. An employee can attach only what they hold or what is shared, whatever id the form
+  carries; staff can attach any asset of their organisation. A repeated id links once.
+- Staff see **"Vinculó el activo AST-0142"** in the ticket thread when an asset is attached. The
+  requester does not: who attached what is staff business.
+- `listAssetChoices` in `assets`: id, tag and name of the assets a viewer may pick, inside the same
+  scope as the inventory list. A viewer who sees only shared rows matches on tag and name alone, so
+  searching cannot reveal a model.
+- `AssetPicker`, in `/dev/components`.
+
+### Known
+
+- A request refused because of an asset still consumes a `TCK-####` number, since the sequence is not
+  transactional.
+
 ## [0.10.0] - 2026-10-09
 
 ### Added
