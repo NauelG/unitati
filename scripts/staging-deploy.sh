@@ -12,8 +12,10 @@
 #   $STAGING_ROOT/
 #     repo/                        a clone of origin, fetched on every run
 #     releases/<timestamp>-<sha>/  one unpacked, installed and built tree each
+#       .release-complete          written only once it served a healthy response
 #     current -> releases/...      the symlink the systemd unit points at
 #     unitati.env                  secrets, mode 600, never inside the clone
+#     .deploy.lock                 flock held for the length of a deploy
 #
 # The ref is resolved from `origin`, never from a working tree: staging proves
 # that what was pushed works, which is what catches the file nobody committed.
@@ -41,6 +43,10 @@ RELEASES="$STAGING_ROOT/releases"
 CURRENT="$STAGING_ROOT/current"
 ENV_FILE="$STAGING_ROOT/unitati.env"
 
+# Written into a release only once it has served a healthy response. Its absence
+# is what marks a release as having died mid-deploy.
+COMPLETE_MARKER='.release-complete'
+
 # Overridable so the rollback path can be exercised on purpose: point the check
 # at a port nothing serves and the deploy must revert the symlink and restart.
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3000/}"
@@ -62,6 +68,13 @@ step() {
 [ -d "$REPO/.git" ] || die "no clone at $REPO"
 systemctl --user cat "$SERVICE" >/dev/null 2>&1 || die "no systemd user unit '$SERVICE'"
 mkdir -p "$RELEASES"
+
+# systemd refuses to start the timer's oneshot while it is already running, but
+# nothing stops a hand-run deploy from racing one — which is exactly what
+# happened while this environment was being built. Two deploys sharing a clone,
+# a symlink and a database is not a race worth debugging later.
+exec 9>"$STAGING_ROOT/.deploy.lock"
+flock -n 9 || die "another deploy holds $STAGING_ROOT/.deploy.lock"
 
 # Exported for drizzle-kit (DATABASE_URL) and for the closing message
 # (BETTER_AUTH_URL). The release tree carries no .env, so these are the only
@@ -156,16 +169,35 @@ if [ "$healthy" != '1' ]; then
 	exit 1
 fi
 
+# This release has served a healthy response, which is the only thing that makes
+# it a valid rollback target. Everything downstream keys off this marker.
+touch "$RELEASE/$COMPLETE_MARKER"
+
 # ── prune ───────────────────────────────────────────────────────────────────
-step "pruning releases (keeping $KEEP_RELEASES)"
+# Incomplete releases do not occupy a slot in the quota. A deploy that dies
+# mid-build leaves a directory behind — one did, killed by the OOM killer during
+# `npm ci` — and counting those would let a run of failures evict the last
+# known-good release, which is the single thing this pattern exists to keep.
+step "pruning releases (keeping $KEEP_RELEASES complete)"
 keep_current="$(readlink -f "$CURRENT")"
-# shellcheck disable=SC2012
-ls -1d "$RELEASES"/*/ 2>/dev/null | sort | head -n -"$KEEP_RELEASES" | while read -r old; do
-	old="${old%/}"
-	[ "$(readlink -f "$old")" = "$keep_current" ] && continue
-	echo "removing $(basename "$old")"
-	rm -rf "$old"
-done
+
+prune() {
+	while read -r dir; do
+		[ -n "$dir" ] || continue
+		[ "$(readlink -f "$dir")" = "$keep_current" ] && continue
+		echo "removing $1$(basename "$dir")"
+		rm -rf "$dir"
+	done
+}
+
+find "$RELEASES" -mindepth 1 -maxdepth 1 -type d \
+	'!' -exec test -e "{}/$COMPLETE_MARKER" ';' -print |
+	prune 'incomplete '
+
+find "$RELEASES" -mindepth 1 -maxdepth 1 -type d \
+	-exec test -e "{}/$COMPLETE_MARKER" ';' -print |
+	sort | head -n -"$KEEP_RELEASES" |
+	prune ''
 
 step 'done'
 echo "$SHORT serving at ${BETTER_AUTH_URL:-$HEALTH_URL}"
