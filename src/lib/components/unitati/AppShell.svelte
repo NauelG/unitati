@@ -3,43 +3,59 @@
 
 	/**
 	 * The `.ut-shell` family: sidebar, nav rows, section headings and the
-	 * top bar around every `(app)` page. See `docs/adr/0015-appshell-and-responsive-navigation.md`.
+	 * top bar around every `(app)` page. See `docs/adr/0015-appshell-and-responsive-navigation.md`
+	 * and its post-merge addendum (issue #96) for the viewport-height shell,
+	 * independently scrolling `nav`/`main` and the brand-row collapse control.
 	 *
 	 * Row height is `--size-row-compact` (32px), not `--size-row` (40px, the
 	 * **table** row token) — the issue's own drift report (#83) is exactly this
 	 * mix-up, and the fix is to read the token that already means "compact",
-	 * not invent a new one.
+	 * not invent a new one. The *hit area* is taller than that (40px, #96): a
+	 * row can paint 32px tall while still offering a 40px click/tap target
+	 * through padding, the same distinction a table cell and its interactive
+	 * control already keep separate elsewhere in the design system.
 	 */
 	export const appShell = tv({
 		slots: {
-			sidebar: 'ut-sidebar flex shrink-0 flex-col gap-0.5 bg-[var(--surface-2)] p-[var(--space-3)]',
-			brandbar: 'mb-[var(--space-2)] flex h-10 items-center px-[var(--space-2)]',
+			sidebar: 'ut-sidebar flex h-full min-h-0 flex-col bg-[var(--surface-2)] p-[var(--space-3)]',
+			brandbar:
+				'flex shrink-0 items-center justify-between px-[var(--space-2)] py-[var(--space-2)]',
+			navItems:
+				'ut-scrollbar flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain',
 			navSection:
 				'ut-nav-label px-[var(--space-2)] pt-[var(--space-3)] pb-[var(--space-1)] text-xs font-semibold tracking-[0.04em] text-[var(--ink-muted)]',
 			navItem: [
-				'flex items-center gap-[var(--space-2)] rounded-[var(--radius-md)] px-[var(--space-2)]',
-				'text-[13px] leading-4 font-medium text-[var(--ink)] no-underline transition-colors',
+				'flex min-h-10 items-center gap-[var(--space-2)] rounded-[var(--radius-md)] px-[var(--space-2)]',
+				'text-sm leading-5 font-medium text-[var(--ink)] no-underline transition-colors',
 				'hover:bg-[var(--surface-1)]'
 			],
 			navIcon: 'size-[var(--size-icon-sm)] shrink-0',
 			navDot: 'size-2 shrink-0 rounded-[var(--radius-full)]',
 			navLabel: 'ut-nav-label truncate',
-			navCount: 'ut-nav-label ml-auto font-mono text-[11px] text-[var(--ink-muted)]',
+			navCount: 'ut-nav-label ml-auto font-mono text-xs tabular-nums text-[var(--ink-muted)]',
 			kbd: [
 				'ut-nav-label ml-auto rounded-[var(--radius-sm)] border border-[var(--border)]',
-				'px-[6px] font-mono text-[11px] text-[var(--ink-muted)]'
+				'px-[6px] font-mono text-xs text-[var(--ink-muted)]'
 			],
-			sidebarFooter: 'mt-auto flex flex-col gap-0.5 pt-[var(--space-2)]',
+			sidebarFooter: 'mt-auto flex shrink-0 flex-col gap-0.5 pt-[var(--space-2)]',
+			collapseButton: [
+				'grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)]',
+				'text-[var(--ink-muted)] transition-colors hover:bg-[var(--surface-1)] hover:text-[var(--ink)]'
+			],
 			topbar:
 				'flex h-14 shrink-0 items-center gap-[var(--space-3)] border-b border-[var(--border)] bg-[var(--surface-1)] px-[var(--space-6)]',
-			main: 'flex-1 p-[var(--space-6)]'
+			main: 'ut-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain p-[var(--space-6)]'
 		},
 		variants: {
 			active: {
 				true: { navItem: 'bg-[var(--brand-soft)] text-[var(--brand)]' }
 			},
 			rail: {
-				true: { sidebar: 'items-center', navItem: 'justify-center px-0' }
+				true: {
+					sidebar: 'items-center',
+					brandbar: 'flex-col gap-[var(--space-1)]',
+					navItem: 'justify-center px-0'
+				}
 			}
 		}
 	});
@@ -68,11 +84,13 @@
 	import type { LucideIcon } from '@lucide/svelte';
 	import { page } from '$app/state';
 	import { browser } from '$app/env';
+	import { afterNavigate, beforeNavigate } from '$app/navigation';
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import PanelLeftIcon from '@lucide/svelte/icons/panel-left';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import Logo from './Logo.svelte';
 	import AppVersion from '../AppVersion.svelte';
+	import { MainScrollRestoration } from './main-scroll-restoration.js';
 	import * as Sheet from '#lib/components/ui/sheet/index.js';
 	import { m } from '#lib/paraglide/messages.js';
 
@@ -102,6 +120,26 @@
 		browser && document.documentElement.hasAttribute('data-sidebar-collapsed')
 	);
 	let drawerOpen = $state(false);
+
+	/**
+	 * `<main>`, not the document, owns vertical scroll now (ADR 0015
+	 * addendum, #96). SvelteKit's built-in scroll restoration only targets
+	 * `window`, so a minimal route-keyed replacement lives here: remember
+	 * `<main>`'s `scrollTop` before leaving a route, restore it only when the
+	 * user came back via Back/Forward (`popstate`); every other navigation
+	 * starts the new route at the top, same as `window`'s own default.
+	 */
+	let mainEl: HTMLElement | undefined;
+	const scrollRestoration = new MainScrollRestoration();
+
+	beforeNavigate(({ from }) => {
+		if (from && mainEl) scrollRestoration.remember(from.url.pathname, mainEl.scrollTop);
+	});
+
+	afterNavigate(({ to, type }) => {
+		if (!to || !mainEl) return;
+		mainEl.scrollTop = scrollRestoration.resolve(to.url.pathname, type);
+	});
 
 	function toggleCollapsed() {
 		collapsed = !collapsed;
@@ -170,34 +208,36 @@
 	{/each}
 {/snippet}
 
-<div class="flex min-h-screen bg-[var(--surface-0)]">
+<div class="flex h-dvh overflow-hidden bg-[var(--surface-0)]">
 	<aside
-		class="hidden shrink-0 border-r border-[var(--border)] md:block"
+		class="hidden h-full shrink-0 border-r border-[var(--border)] md:block"
 		style:width="var(--size-sidebar-current)"
 	>
 		<nav class={appShell().sidebar()} aria-label={m.nav_main()}>
-			<div class={appShell().brandbar()}>
+			<div class={appShell({ rail: collapsed }).brandbar()}>
 				<a href="/" class="rounded-[var(--radius-sm)]" aria-label={m.app_name()}>
 					<Logo variant={collapsed ? 'mark' : 'lockup'} size="sm" />
 				</a>
-			</div>
-
-			{@render navList(collapsed)}
-
-			<div class={appShell().sidebarFooter()}>
-				{#if settings}{@render settings()}{/if}
 				<button
 					type="button"
-					class={appShell({ rail: collapsed }).navItem()}
+					class={appShell().collapseButton()}
 					onclick={toggleCollapsed}
-					aria-pressed={collapsed}
+					aria-expanded={!collapsed}
 					title={collapsed ? m.nav_expand_sidebar() : m.nav_collapse_sidebar()}
 				>
 					<PanelLeftIcon class={appShell().navIcon()} aria-hidden="true" />
-					<span class={appShell().navLabel()}>
+					<span class="sr-only">
 						{collapsed ? m.nav_expand_sidebar() : m.nav_collapse_sidebar()}
 					</span>
 				</button>
+			</div>
+
+			<div class={appShell().navItems()}>
+				{@render navList(collapsed)}
+			</div>
+
+			<div class={appShell().sidebarFooter()}>
+				{#if settings}{@render settings()}{/if}
 				<div class="ut-nav-label px-[var(--space-2)] font-mono text-[11px] text-[var(--ink-muted)]">
 					<AppVersion />
 				</div>
@@ -205,7 +245,7 @@
 		</nav>
 	</aside>
 
-	<div class="flex min-w-0 flex-1 flex-col">
+	<div class="flex h-full min-h-0 min-w-0 flex-1 flex-col">
 		<header class={appShell().topbar()}>
 			<button
 				type="button"
@@ -225,7 +265,7 @@
 			</div>
 		</header>
 
-		<main class={appShell().main()}>
+		<main bind:this={mainEl} class={appShell().main()}>
 			{@render children()}
 		</main>
 	</div>
@@ -233,11 +273,13 @@
 
 <Sheet.Root bind:open={drawerOpen}>
 	<Sheet.Content side="left" class="w-[85%] max-w-[300px] bg-[var(--surface-2)] p-[var(--space-3)]">
-		<nav class="flex h-full flex-col gap-0.5" aria-label={m.nav_main()}>
+		<nav class="flex h-full min-h-0 flex-col" aria-label={m.nav_main()}>
 			<div class={appShell().brandbar()}>
 				<Logo variant="lockup" size="sm" />
 			</div>
-			{@render navList(false)}
+			<div class={appShell().navItems()}>
+				{@render navList(false)}
+			</div>
 		</nav>
 	</Sheet.Content>
 </Sheet.Root>

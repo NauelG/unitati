@@ -5,6 +5,22 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.14.1] - 2026-10-09
+
+### Fixed
+
+- `AppShell` (#96, ADR 0015 addendum): the authenticated shell is now a `h-dvh overflow-hidden`
+  viewport-height workspace instead of a `min-h-screen` document — the sidebar and topbar stay put
+  while `<main>` scrolls on its own. The nav-items region (search entry and links) also scrolls
+  independently inside a stable brand row and footer, so the sidebar's `surface-2` background
+  paints to the bottom of the viewport regardless of how short the link list is. The desktop
+  collapse control moves out of the nav list and into the brand row as an icon-only button
+  (`aria-expanded`, `sr-only` label); nav labels grow to 14px/20px with a 40px hit area, and the
+  count/`⌘K` hint move from an ad-hoc 11px to 12px with tabular numerals. Both scrollports share a
+  `.ut-scrollbar` utility that themes the native scrollbar's appearance only. A new
+  `MainScrollRestoration` helper restores `<main>`'s scroll position on browser Back/Forward, since
+  SvelteKit's built-in restoration only targets `window`.
+
 ## [0.14.0] - 2026-10-09
 
 ### Changed
