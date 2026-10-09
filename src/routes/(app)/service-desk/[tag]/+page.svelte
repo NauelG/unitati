@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import { statusLabel } from '#lib/components/unitati/status.js';
 	import TicketComposer from '#lib/components/unitati/TicketComposer.svelte';
@@ -45,6 +46,12 @@
 	);
 	const peopleOptions = $derived(
 		data.people.map((person) => ({ value: person.id, label: person.fullName }))
+	);
+
+	const unlinkError = $derived(
+		form && 'action' in form && form.action === 'unlinkAsset' && 'message' in form
+			? form.message
+			: undefined
 	);
 
 	const replyError = $derived(
@@ -99,6 +106,12 @@
 				{@render detailRow(m.ticket_detail_queue(), queue)}
 			</dl>
 		</section>
+
+		<RelatedRecords
+			groups={data.related}
+			unlinkAction={data.canManage ? '?/unlinkAsset' : undefined}
+			error={unlinkError}
+		/>
 
 		{#if data.canManage}
 			{#if statusOptions.length > 0}

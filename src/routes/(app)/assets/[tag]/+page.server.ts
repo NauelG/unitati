@@ -20,6 +20,7 @@ import {
 	type SessionUser
 } from '#lib/server/auth/guards.js';
 import { listLocations, listPeople } from '#lib/server/directory/index.js';
+import { mergeAssetTimeline, recentTicketCount, relatedTo } from '#lib/server/links/index.js';
 import { fieldsOf, rejected } from '../form-data';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -34,6 +35,14 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	// shared asset's name and place, and explicitly not its history (ADR 0007).
 	const history = await assetTimeline(user, params.tag);
 
+	// The live half of the rail: tickets raised on this machine, with the status
+	// they have today. Asked only when the history itself is visible, and
+	// `relatedTo` withholds tickets from anybody without `tickets.view`.
+	const related =
+		history.ok && asset.visibility === 'full'
+			? await relatedTo(user, { kind: 'asset', id: asset.id })
+			: [];
+
 	const canManage = can(user, 'assets.manage');
 	const canCheckout = can(user, 'assets.checkout');
 
@@ -45,7 +54,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 
 	return {
 		asset,
-		timeline: history.ok ? history.value : null,
+		timeline: history.ok ? mergeAssetTimeline(history.value, related) : null,
+		recentTickets: recentTicketCount(related, new Date()),
 		canManage,
 		canCheckout,
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),

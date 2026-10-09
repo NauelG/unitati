@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import TicketComposer from '#lib/components/unitati/TicketComposer.svelte';
 	import TicketThread from '#lib/components/unitati/TicketThread.svelte';
@@ -31,6 +32,10 @@
 <h1 class="mt-1 font-display text-lg font-semibold text-[var(--ink)]">{ticket.subject}</h1>
 
 <div class="mt-[var(--space-6)] flex flex-col gap-[var(--space-5)]">
+	{#if data.related.length > 0}
+		<RelatedRecords groups={data.related} />
+	{/if}
+
 	<TicketThread items={data.thread} attachmentHref={(id) => `/attachments/${id}`} />
 
 	<section>

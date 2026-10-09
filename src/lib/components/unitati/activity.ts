@@ -78,10 +78,10 @@ export function activitySentence(entry: ActivityEntry): string {
 			});
 
 		case 'link.asset.added':
-			return m.activity_link_asset_added({ assetTag: entry.payload.assetTag });
+			return m.activity_link_asset_added();
 
 		case 'link.asset.removed':
-			return m.activity_link_asset_removed({ assetTag: entry.payload.assetTag });
+			return m.activity_link_asset_removed();
 
 		default: {
 			const unhandled: never = entry;

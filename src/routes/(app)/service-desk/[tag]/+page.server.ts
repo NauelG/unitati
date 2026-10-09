@@ -5,6 +5,7 @@ import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
 import { listPeople } from '#lib/server/directory/index.js';
+import { relatedTo, unlinkAsset } from '#lib/server/links/index.js';
 import {
 	addComment,
 	addCommentInput,
@@ -35,9 +36,14 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		? await Promise.all([listQueues(user), listPeople(user.organisationId)])
 		: [[], []];
 
+	// The viewer reached this ticket through a scoped read, so what is linked to
+	// it is read on that footing; `relatedTo` scopes the other side of each link.
+	const related = await relatedTo(user, { kind: 'ticket', id: found.value.id });
+
 	return {
 		ticket: found.value,
 		thread: thread.value,
+		related,
 		canManage,
 		canInternal: can(user, 'tickets.comment.internal'),
 		nextStatuses: nextStatuses(found.value.status),
@@ -101,6 +107,26 @@ export const actions: Actions = {
 			return rejected('assign', failureMessage(outcome.error));
 		}
 		return { action: 'assign' as const };
+	},
+
+	unlinkAsset: async ({ locals, request, params }) => {
+		const user = requirePermission(locals.user, 'tickets.manage');
+		const parsed = z.object({ recordId: z.uuid() }).safeParse(await fieldsOf(request));
+		if (!parsed.success) return rejected('unlinkAsset', m.related_unlink_failed());
+
+		const found = await getTicketByTag(user, params.tag);
+		if (!found.ok) error(404, 'Not found');
+
+		const outcome = await unlinkAsset(user, {
+			ticketId: found.value.id,
+			assetId: parsed.data.recordId
+		});
+		// Already gone, e.g. a second tab removed it first: the page reloads and
+		// shows the truth, so there is nothing to apologise for.
+		if (!outcome.ok && outcome.error !== 'not_linked') {
+			return rejected('unlinkAsset', m.related_unlink_failed());
+		}
+		return { action: 'unlinkAsset' as const };
 	},
 
 	queue: async ({ locals, request, params }) => {

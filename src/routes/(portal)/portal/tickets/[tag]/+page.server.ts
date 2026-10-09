@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { m } from '#lib/paraglide/messages.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
+import { relatedTo } from '#lib/server/links/index.js';
 import {
 	addComment,
 	addCommentInput,
@@ -22,7 +23,11 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	const thread = await ticketThread(user, params.tag);
 	if (!thread.ok) error(404, 'Not found');
 
-	return { ticket: found.value, thread: thread.value };
+	// For an employee `relatedTo` narrows to the equipment they could have
+	// attached themselves, so a colleague's laptop added by staff stays out.
+	const related = await relatedTo(user, { kind: 'ticket', id: found.value.id });
+
+	return { ticket: found.value, thread: thread.value, related };
 };
 
 export const actions: Actions = {

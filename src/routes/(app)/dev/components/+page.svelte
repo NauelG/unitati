@@ -16,6 +16,8 @@
 	import Field from '#lib/components/unitati/Field.svelte';
 	import Logo from '#lib/components/unitati/Logo.svelte';
 	import Pager from '#lib/components/unitati/Pager.svelte';
+	import RecordRef from '#lib/components/unitati/RecordRef.svelte';
+	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import TicketComposer from '#lib/components/unitati/TicketComposer.svelte';
 	import TicketDetailLayout from '#lib/components/unitati/TicketDetailLayout.svelte';
 	import TicketThread from '#lib/components/unitati/TicketThread.svelte';
@@ -27,6 +29,7 @@
 		type Priority
 	} from '#lib/components/unitati/status.js';
 	import type { TimelineEntry } from '#lib/server/activity/index.js';
+	import type { AssetTimelineItem, RelatedGroup } from '#lib/server/links/index.js';
 	import type { ThreadItem } from '#lib/server/service-desk/index.js';
 	import type { Snippet } from 'svelte';
 
@@ -140,6 +143,75 @@
 	 * A conversation with every kind of item: a reply with a file, an internal
 	 * note, a system event, and a reply from the technician.
 	 */
+	const ticketRecord = (tag: string, title: string) => ({
+		kind: 'ticket' as const,
+		id: `ticket-${tag}`,
+		tag,
+		title,
+		href: `#${tag}`
+	});
+
+	const affectedAssets: RelatedGroup[] = [
+		{
+			relation: 'affects',
+			icon: 'asset',
+			items: [
+				{
+					ref: {
+						kind: 'asset',
+						id: 'asset-1',
+						tag: 'AST-0001',
+						title: 'MacBook Pro 14',
+						href: '#AST-0001'
+					},
+					status: 'in_use',
+					linkedAt: at(8, 9)
+				}
+			]
+		}
+	];
+
+	const affectedSeveral: RelatedGroup[] = [
+		{
+			relation: 'affects',
+			icon: 'asset',
+			items: [
+				...affectedAssets[0].items,
+				{
+					ref: {
+						kind: 'asset',
+						id: 'asset-2',
+						tag: 'AST-0002',
+						title:
+							'Impresora de planta con un nombre especialmente largo para comprobar el recorte',
+						href: '#AST-0002'
+					},
+					status: 'in_repair',
+					linkedAt: at(8, 10)
+				}
+			]
+		}
+	];
+
+	const ticketsOnAsset: RelatedGroup[] = [
+		{
+			relation: 'affected_by',
+			icon: 'ticket',
+			items: [
+				{
+					ref: ticketRecord('TCK-0093', 'El portátil no despierta tras suspender'),
+					status: 'in_progress',
+					linkedAt: at(8, 9)
+				},
+				{
+					ref: ticketRecord('TCK-0071', 'La batería se agota por la noche'),
+					status: 'resolved',
+					linkedAt: at(3, 9)
+				}
+			]
+		}
+	];
+
 	const threadItems: ThreadItem[] = [
 		{
 			kind: 'comment',
@@ -158,6 +230,22 @@
 				id: 'e1',
 				verb: 'ticket.status.changed',
 				payload: { from: 'new', to: 'in_progress' },
+				occurredAt: at(8, 10),
+				actorPersonId: 'p2',
+				actorName: 'Grace Hopper'
+			}
+		},
+		{
+			kind: 'event',
+			at: at(8, 10),
+			entry: {
+				id: 'e2',
+				verb: 'link.asset.added',
+				payload: {
+					assetId: '5f0c0000-0000-4000-8000-000000000002',
+					assetTag: 'AST-0002',
+					assetName: 'Impresora de planta'
+				},
 				occurredAt: at(8, 10),
 				actorPersonId: 'p2',
 				actorName: 'Grace Hopper'
@@ -251,6 +339,30 @@
 			occurredAt: at(1, 9),
 			actorPersonId: 'p1',
 			actorName: 'Grace Hopper'
+		}
+	];
+
+	/** Past events and live relations on one rail: the ticket is dated by its link and shows today's status. */
+	const timelineItems: AssetTimelineItem[] = [
+		{
+			kind: 'ticket',
+			id: 'ticket-TCK-0093',
+			at: at(8, 10),
+			record: ticketRecord('TCK-0093', 'El portátil no despierta tras suspender'),
+			status: 'in_progress'
+		},
+		...timelineEntries.map((entry): AssetTimelineItem => ({
+			kind: 'activity',
+			id: entry.id,
+			at: entry.occurredAt,
+			entry
+		})),
+		{
+			kind: 'ticket',
+			id: 'ticket-TCK-0071',
+			at: at(1, 9),
+			record: ticketRecord('TCK-0071', 'La batería se agota por la noche'),
+			status: 'resolved'
 		}
 	];
 
@@ -524,24 +636,89 @@
 		pagers
 	)}
 
+	{#snippet refs()}
+		<div class="space-y-[var(--space-3)]">
+			{#snippet assetRef()}
+				<RecordRef
+					record={{
+						kind: 'asset',
+						tag: 'AST-0142',
+						title: 'MacBook Pro 14 · Laura Serra',
+						href: '#AST-0142'
+					}}
+				/>
+			{/snippet}
+			{#snippet ticketRef()}
+				<RecordRef record={ticketRecord('TCK-1093', 'El portátil no despierta tras suspender')} />
+			{/snippet}
+			{#snippet idOnly()}
+				<RecordRef record={ticketRecord('TCK-1093', 'Solo la etiqueta')} idOnly />
+			{/snippet}
+			{#snippet truncated()}
+				<RecordRef
+					class="max-w-64"
+					record={ticketRecord(
+						'TCK-1093',
+						'Un título larguísimo que tiene que recortarse con puntos suspensivos sin tocar la etiqueta'
+					)}
+				/>
+			{/snippet}
+			{@render row('asset', assetRef)}
+			{@render row('ticket', ticketRef)}
+			{@render row('idOnly', idOnly)}
+			{@render row('título largo', truncated)}
+		</div>
+	{/snippet}
+	{@render section(
+		'RecordRef',
+		'Referencia en línea a cualquier registro: icono, etiqueta en monoespaciada y título, teñida por dominio (activo en el color del activo, solicitud en el del servicio). La etiqueta nunca se recorta; el título sí. Con `idOnly` solo la etiqueta, para una celda de tabla.',
+		refs
+	)}
+
+	{#snippet relateds()}
+		<div class="grid gap-[var(--space-5)] sm:grid-cols-2">
+			<div class="space-y-[var(--space-2)]">
+				<p class="font-mono text-xs text-[var(--ink-muted)]">un equipo</p>
+				<RelatedRecords groups={affectedAssets} />
+			</div>
+			<div class="space-y-[var(--space-2)]">
+				<p class="font-mono text-xs text-[var(--ink-muted)]">varios (plural), con desvincular</p>
+				<RelatedRecords groups={affectedSeveral} unlinkAction="#" />
+			</div>
+			<div class="space-y-[var(--space-2)]">
+				<p class="font-mono text-xs text-[var(--ink-muted)]">solicitudes de un equipo</p>
+				<RelatedRecords groups={ticketsOnAsset} />
+			</div>
+			<div class="space-y-[var(--space-2)]">
+				<p class="font-mono text-xs text-[var(--ink-muted)]">vacío</p>
+				<RelatedRecords groups={[]} />
+			</div>
+		</div>
+	{/snippet}
+	{@render section(
+		'RelatedRecords',
+		'El panel lateral de una ficha: los registros vinculados, agrupados por relación. Lee lo que devuelve `relatedTo` sin saber de qué tabla viene. El título del grupo se pluraliza («Equipo afectado» / «Equipos afectados»); los grupos vacíos no se dibujan. Con `unlinkAction` cada elemento ofrece desvincular, que pide confirmación en línea porque destruye contexto, y el contexto es el producto.',
+		relateds
+	)}
+
 	{#snippet timelines()}
 		<div class="max-w-xl">
-			<AssetTimeline entries={timelineEntries} />
+			<AssetTimeline items={timelineItems} />
 		</div>
 
 		<h3 class="mt-[var(--space-8)] text-sm font-semibold text-[var(--ink)]">Un solo evento</h3>
 		<div class="mt-[var(--space-3)] max-w-xl">
-			<AssetTimeline entries={timelineEntries.slice(-1)} />
+			<AssetTimeline items={timelineItems.slice(1, 2)} />
 		</div>
 
 		<h3 class="mt-[var(--space-8)] text-sm font-semibold text-[var(--ink)]">Vacío</h3>
 		<div class="mt-[var(--space-3)] max-w-xl">
-			<AssetTimeline entries={[]} />
+			<AssetTimeline items={[]} />
 		</div>
 	{/snippet}
 	{@render section(
 		'AssetTimeline',
-		'La historia de un activo, del más reciente al más antiguo: una entrada por verbo. Lee solo del registro de actividad; la persona que actuó se resuelve en vivo y el hecho (a quién se asignó) viene congelado en la entrada.',
+		'La historia de un activo, del más reciente al más antiguo, en una sola línea: lo que pasó (registro de actividad, con el hecho congelado en la entrada) y las solicitudes abiertas sobre él (relación viva, con el estado que tienen hoy). Una solicitud se fecha por cuándo se vinculó y nunca aparece dos veces.',
 		timelines
 	)}
 

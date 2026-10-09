@@ -337,7 +337,7 @@ export async function getAssetByTag(
 
 /**
  * The events half of an asset's timeline (ADR 0009 merges in live relations at
- * read time; #9 brings those).
+ * read time: the page hands this and `links.relatedTo` to `mergeAssetTimeline`).
  *
  * Gated separately from the row itself, because ADR 0007 grants an employee
  * name and location of a shared asset and explicitly not its history. Holding

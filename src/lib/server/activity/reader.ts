@@ -11,8 +11,8 @@ import type { ActivityTarget, ActivityTargetColumn } from './verbs';
  *
  * ADR 0009 is explicit that a record's full timeline is *a merge at read time*:
  * past events from here, live relations from `links`. This function returns the
- * events half. #9 merges the other half in, which is why it does not pretend to
- * be the whole timeline.
+ * events half; `links.mergeAssetTimeline` merges the other half in, which is why
+ * it does not pretend to be the whole timeline.
  */
 
 /**

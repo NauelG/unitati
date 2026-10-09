@@ -16,9 +16,9 @@
 
 	/**
 	 * The `.ut-timeline` family: a rail of events, newest first, one dot per
-	 * entry. The dot is the asset colour because every event on this rail is an
-	 * event on an asset; #9 adds the ticket and project dots when their entries
-	 * start appearing here, and not before.
+	 * entry. An event on the asset itself has the asset's colour; a ticket raised
+	 * on it has the desk's, with the ticket as a `RecordRef` and the status it has
+	 * today. The project dot arrives with the first project entry, and not before.
 	 */
 	export const timeline = tv({
 		slots: {
@@ -29,13 +29,20 @@
 				// has nothing to connect to.
 				"after:absolute after:top-7 after:bottom-0 after:left-[13px] after:w-px after:bg-[var(--border)] after:content-[''] last:after:hidden"
 			],
-			dot: 'grid size-7 shrink-0 place-items-center rounded-[var(--radius-full)] bg-[var(--asset-soft)] text-[var(--asset)]',
+			dot: 'grid size-7 shrink-0 place-items-center rounded-[var(--radius-full)]',
 			body: 'min-w-0 flex-1',
 			head: 'text-sm leading-5 font-medium text-[var(--ink)]',
 			actor: 'font-normal text-[var(--ink-muted)]',
 			time: 'text-xs leading-4 text-[var(--ink-muted)] [font-variant-numeric:tabular-nums]',
 			note: 'mt-[var(--space-1)] text-sm leading-5 whitespace-pre-wrap text-[var(--ink-muted)]',
+			ticket: 'flex flex-wrap items-center gap-[var(--space-2)]',
 			empty: 'text-sm text-[var(--ink-muted)]'
+		},
+		variants: {
+			domain: {
+				asset: { dot: 'bg-[var(--asset-soft)] text-[var(--asset)]' },
+				ticket: { dot: 'bg-[var(--desk-soft)] text-[var(--desk)]' }
+			}
 		}
 	});
 
@@ -64,18 +71,26 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
-	import type { TimelineEntry } from '#lib/server/activity/index.js';
+	import type { AssetTimelineItem } from '#lib/server/links/index.js';
 	import { activitySentence } from './activity.js';
+	import RecordRef from './RecordRef.svelte';
+	import StatusBadge from './StatusBadge.svelte';
 
 	interface Props {
-		/** Newest first, as `assetTimeline` returns them. The component never reorders. */
-		entries: TimelineEntry[];
+		/**
+		 * Newest first, as `mergeAssetTimeline` returns them: past events and live
+		 * relations on one rail. The component never reorders.
+		 */
+		items: AssetTimelineItem[];
 		class?: string;
 	}
 
-	let { entries, class: className }: Props = $props();
+	let { items, class: className }: Props = $props();
 
 	const styles = timeline();
+	// Only the dot changes colour with the domain.
+	const assetDot = timeline({ domain: 'asset' }).dot();
+	const ticketDot = timeline({ domain: 'ticket' }).dot();
 
 	/**
 	 * Built per render rather than at module scope: the locale is a user
@@ -87,33 +102,53 @@
 	);
 </script>
 
-{#if entries.length === 0}
+{#if items.length === 0}
 	<p class={styles.empty({ class: className })}>{m.timeline_empty()}</p>
 {:else}
 	<ol class={styles.list({ class: className })}>
-		{#each entries as entry (entry.id)}
-			{@const Icon = ACTIVITY_ICONS[entry.verb]}
-			<li class={styles.item()}>
-				<span class={styles.dot()} aria-hidden="true"><Icon class="size-3.5" /></span>
-				<div class={styles.body()}>
-					<p class={styles.head()}>
-						{activitySentence(entry)}
-						{#if entry.actorName}
-							<span class={styles.actor()}>
-								{m.timeline_by({ name: entry.actorName })}
-							</span>
+		{#each items as item (item.id)}
+			{#if item.kind === 'ticket'}
+				<li class={styles.item()}>
+					<span class={ticketDot} aria-hidden="true">
+						<Ticket class="size-3.5" />
+					</span>
+					<div class={styles.body()}>
+						<p class={styles.ticket()}>
+							<RecordRef record={item.record} />
+							<StatusBadge status={item.status} />
+						</p>
+						<time class={styles.time()} datetime={item.at.toISOString()}>
+							{formatter.format(item.at)}
+						</time>
+					</div>
+				</li>
+			{:else}
+				{@const entry = item.entry}
+				{@const Icon = ACTIVITY_ICONS[entry.verb]}
+				<li class={styles.item()}>
+					<span class={assetDot} aria-hidden="true">
+						<Icon class="size-3.5" />
+					</span>
+					<div class={styles.body()}>
+						<p class={styles.head()}>
+							{activitySentence(entry)}
+							{#if entry.actorName}
+								<span class={styles.actor()}>
+									{m.timeline_by({ name: entry.actorName })}
+								</span>
+							{/if}
+						</p>
+
+						{#if entry.verb === 'note.added'}
+							<p class={styles.note()}>{entry.payload.text}</p>
 						{/if}
-					</p>
 
-					{#if entry.verb === 'note.added'}
-						<p class={styles.note()}>{entry.payload.text}</p>
-					{/if}
-
-					<time class={styles.time()} datetime={entry.occurredAt.toISOString()}>
-						{formatter.format(entry.occurredAt)}
-					</time>
-				</div>
-			</li>
+						<time class={styles.time()} datetime={entry.occurredAt.toISOString()}>
+							{formatter.format(entry.occurredAt)}
+						</time>
+					</div>
+				</li>
+			{/if}
 		{/each}
 	</ol>
 {/if}

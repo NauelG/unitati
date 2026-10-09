@@ -38,8 +38,10 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import type { ThreadItem } from '#lib/server/service-desk/index.js';
+	import type { TimelineEntry } from '#lib/server/activity/index.js';
 	import { activitySentence } from './activity.js';
 	import Avatar from './Avatar.svelte';
+	import RecordRef from './RecordRef.svelte';
 	import { badge } from './StatusBadge.svelte';
 
 	interface Props {
@@ -54,6 +56,23 @@
 
 	const styles = thread();
 
+	/**
+	 * The asset an entry is about, when it is a link event: every record a page
+	 * mentions is a `RecordRef` so the reader can jump to it, and the tag and
+	 * name come from the snapshot taken when the link was made, not from a lookup
+	 * that could have been renamed since.
+	 */
+	function linkedAsset(entry: TimelineEntry) {
+		if (entry.verb !== 'link.asset.added' && entry.verb !== 'link.asset.removed') return null;
+
+		return {
+			kind: 'asset' as const,
+			tag: entry.payload.assetTag,
+			title: entry.payload.assetName,
+			href: `/assets/${encodeURIComponent(entry.payload.assetTag)}`
+		};
+	}
+
 	// Per render, never at module scope: the locale is a per-request preference.
 	const formatter = $derived(
 		new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short' })
@@ -66,8 +85,12 @@
 	<ol class={styles.list({ class: className })} aria-label={m.thread_title()}>
 		{#each items as item (item.kind === 'comment' ? item.id : `${item.entry.id}`)}
 			{#if item.kind === 'event'}
+				{@const asset = linkedAsset(item.entry)}
 				<li class={styles.event()}>
 					{activitySentence(item.entry)}
+					{#if asset}
+						<RecordRef record={asset} />
+					{/if}
 					{#if item.entry.actorName}· {item.entry.actorName}{/if}
 					·
 					<time datetime={item.at.toISOString()}>{formatter.format(item.at)}</time>
