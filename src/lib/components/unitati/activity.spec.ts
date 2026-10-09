@@ -134,10 +134,17 @@ describe('activitySentence for tickets', () => {
 });
 
 describe('activitySentence for linked assets', () => {
-	it('names the asset by the tag it had when the link was made', () => {
-		const payload = { assetId: PERSON, assetTag: 'AST-0142', assetName: 'MacBook Pro' };
+	const payload = { assetId: PERSON, assetTag: 'AST-0142', assetName: 'MacBook Pro' };
 
-		expect(activitySentence({ verb: 'link.asset.added', payload })).toContain('AST-0142');
-		expect(activitySentence({ verb: 'link.asset.removed', payload })).toContain('AST-0142');
+	// The thread draws the asset itself, as a `RecordRef`, right after the
+	// sentence. Naming it here as well would print the tag twice on one line.
+	it('says what happened and leaves the asset to the reference beside it', () => {
+		const added = activitySentence({ verb: 'link.asset.added', payload });
+		const removed = activitySentence({ verb: 'link.asset.removed', payload });
+
+		expect({ added, removed }).toEqual({
+			added: 'Vinculó el activo',
+			removed: 'Desvinculó el activo'
+		});
 	});
 });

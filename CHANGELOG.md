@@ -5,6 +5,38 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.12.0] - 2026-10-09
+
+### Added
+
+- Related records (slice 4, part 3 of 3). The ticket detail gains a **Registros relacionados** panel
+  in its side column, listing the assets the ticket affects with the status each one has today. The
+  group title pluralises ("Equipo afectado" / "Equipos afectados"). The employee's ticket in the
+  portal shows the same panel, narrowed to the equipment they hold or that is shared.
+- **Unlinking** an asset from a ticket, for `tickets.manage` only and with an inline confirmation,
+  because it destroys context and context is the product. Focus moves into the prompt and comes back
+  to where the user was. A technician can; an employee gets no control and the action answers 404.
+- The asset page shows its tickets on the history rail, merged with the asset's own events and
+  newest first, each with the status it has **today**: resolving a ticket changes what the asset
+  page reads without anything being written to the asset. A line above the rail says how many
+  tickets were raised on the machine in the last six months, which is what turns it into a
+  replacement candidate.
+- `RecordRef` (an inline, clickable reference to any record, tinted by domain) and `RelatedRecords`,
+  both in `/dev/components` with every state, including the confirmation and a refused unlink.
+- In the ticket thread, "Vinculó el activo" / "Desvinculó el activo" now carries the asset as a
+  `RecordRef`, built from the tag and name recorded when it happened.
+
+### Changed
+
+- `AssetTimeline` takes the merged list (`mergeAssetTimeline`) instead of activity entries, and
+  draws a ticket with the desk colour. The link sentences no longer repeat the asset tag, since the
+  reference beside them shows it.
+
+### Known
+
+- There is no screen yet to attach an asset to a ticket that is already open; assets are picked when
+  the ticket is opened.
+
 ## [0.11.0] - 2026-10-09
 
 ### Added

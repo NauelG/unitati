@@ -19,3 +19,6 @@ export type {
 	RelatedItem,
 	RelationName
 } from './related';
+
+export { mergeAssetTimeline, recentTicketCount, RECENT_MONTHS } from './timeline';
+export type { AssetTimelineItem } from './timeline';
