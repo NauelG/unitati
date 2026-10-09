@@ -227,6 +227,8 @@
 	"activity_ticket_unassigned": "Quitó la asignación de {personName}",
 	"activity_ticket_priority_changed": "Cambió la prioridad de {from} a {to}",
 	"activity_ticket_queue_changed": "Movió la solicitud de {from} a {to}",
+	"activity_link_asset_added": "Vinculó el activo {assetTag}",
+	"activity_link_asset_removed": "Desvinculó el activo {assetTag}",
 	"nav_portal": "Mis solicitudes",
 	"tickets_title": "Soporte",
 	"tickets_lede": "Las solicitudes de todas las colas, de la más reciente a la más antigua.",

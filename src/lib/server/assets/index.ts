@@ -113,7 +113,12 @@ function visibleAssets(viewer: SessionUser): SQL | null {
 	return and(organisation, or(...clauses)) as SQL;
 }
 
-function requireScope(viewer: SessionUser): SQL {
+/**
+ * Exported for `links`, which has to ask "may this person see this asset?" when
+ * somebody attaches one to a ticket. The rule stays here, in one place: `links`
+ * composes it into its own query instead of restating who holds what (ADR 0002).
+ */
+export function requireAssetScope(viewer: SessionUser): SQL {
 	const scope = visibleAssets(viewer);
 	if (scope) return scope;
 
@@ -216,7 +221,10 @@ export async function listAssets(
 	const window = pageWindow(request);
 	const wholeRows = can(viewer, 'assets.view');
 	const term = request.search?.trim();
-	const where = and(requireScope(viewer), term ? matchesSearch(term, wholeRows) : undefined) as SQL;
+	const where = and(
+		requireAssetScope(viewer),
+		term ? matchesSearch(term, wholeRows) : undefined
+	) as SQL;
 
 	const rows = await assetsWithCatalogue()
 		.where(where)
@@ -252,7 +260,7 @@ export async function getAssetByTag(
 	assetTag: string
 ): Promise<Outcome<AssetView, 'asset_not_found'>> {
 	const [row] = await assetsWithCatalogue()
-		.where(and(requireScope(viewer), eq(assets.assetTag, assetTag)))
+		.where(and(requireAssetScope(viewer), eq(assets.assetTag, assetTag)))
 		.limit(1);
 
 	if (!row) return failure('asset_not_found');
@@ -275,7 +283,7 @@ export async function assetTimeline(
 	const [row] = await getDb()
 		.select({ id: assets.id, custodianPersonId: assets.custodianPersonId })
 		.from(assets)
-		.where(and(requireScope(viewer), eq(assets.assetTag, assetTag)))
+		.where(and(requireAssetScope(viewer), eq(assets.assetTag, assetTag)))
 		.limit(1);
 
 	if (!row) return failure('asset_not_found');

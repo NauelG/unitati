@@ -67,7 +67,15 @@ describe('activitySentence', () => {
 					toLocationName: null
 				}
 			},
-			{ verb: 'note.added', payload: { text: 'Cambiada la batería.' } }
+			{ verb: 'note.added', payload: { text: 'Cambiada la batería.' } },
+			{
+				verb: 'link.asset.added',
+				payload: { assetId: PERSON, assetTag: 'AST-0142', assetName: 'MacBook Pro' }
+			},
+			{
+				verb: 'link.asset.removed',
+				payload: { assetId: PERSON, assetTag: 'AST-0142', assetName: 'MacBook Pro' }
+			}
 		];
 
 		for (const entry of entries) {
@@ -122,5 +130,14 @@ describe('activitySentence for tickets', () => {
 
 		expect(sentence).toContain('Nuevo');
 		expect(sentence).toContain('En curso');
+	});
+});
+
+describe('activitySentence for linked assets', () => {
+	it('names the asset by the tag it had when the link was made', () => {
+		const payload = { assetId: PERSON, assetTag: 'AST-0142', assetName: 'MacBook Pro' };
+
+		expect(activitySentence({ verb: 'link.asset.added', payload })).toContain('AST-0142');
+		expect(activitySentence({ verb: 'link.asset.removed', payload })).toContain('AST-0142');
 	});
 });

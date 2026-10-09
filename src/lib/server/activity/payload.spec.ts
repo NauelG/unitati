@@ -70,6 +70,20 @@ describe('parsePayload', () => {
 		expect(() => parsePayload('note.added', { text: '' })).toThrow();
 	});
 
+	it('keeps the tag and name of a linked asset, so the entry survives a rename', () => {
+		expect(
+			parsePayload('link.asset.added', {
+				assetId: PERSON,
+				assetTag: 'AST-0142',
+				assetName: 'MacBook Pro'
+			})
+		).toEqual({ assetId: PERSON, assetTag: 'AST-0142', assetName: 'MacBook Pro' });
+	});
+
+	it('refuses a linked-asset entry with no snapshot', () => {
+		expect(() => parsePayload('link.asset.removed', { assetId: PERSON })).toThrow();
+	});
+
 	it('refuses a payload belonging to a different verb', () => {
 		expect(() => parsePayload('note.added', { assetTag: 'AST-0001', name: 'MacBook' })).toThrow();
 	});

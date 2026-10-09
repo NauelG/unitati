@@ -22,6 +22,13 @@
       "when": 1791530674608,
       "tag": "0002_service_desk",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791538267133,
+      "tag": "0003_ticket_asset",
+      "breakpoints": true
     }
   ]
 }
