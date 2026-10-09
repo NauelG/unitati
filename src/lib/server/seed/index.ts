@@ -4,6 +4,7 @@ import { applyPlan } from './apply';
 import { DEMO_PASSWORD, ensureDemoLogins, ensureWorkspace } from './accounts';
 import { assertLocalDatabase } from './guard';
 import { buildPlan } from './plan';
+import { seedTickets } from './tickets';
 
 /**
  * `npm run db:seed`: a believable inventory for development, deterministic from
@@ -12,7 +13,7 @@ import { buildPlan } from './plan';
  * domains rather than inside one (ADR 0002), and calls their public functions
  * rather than their tables.
  *
- * #13 brings it to volume and extends it to tickets and projects.
+ * #13 brings it to volume and extends it to projects.
  */
 export async function run(): Promise<void> {
 	assertLocalDatabase(DATABASE_URL);
@@ -23,9 +24,14 @@ export async function run(): Promise<void> {
 
 	await advanceAssetTagSequence(plan.assets.length);
 
+	const ticketCount = await seedTickets(workspace.actor);
+
 	const logins = await ensureDemoLogins(workspace.organisationId);
 
 	console.log(`Registered ${summary.registered} assets, skipped ${summary.skipped} already there.`);
+	console.log(
+		ticketCount > 0 ? `Opened ${ticketCount} tickets.` : 'Tickets already there, none opened.'
+	);
 	for (const line of summary.refused) console.warn(`  not seeded — ${line}`);
 
 	console.log('\nSign in (password for every demo account: ' + DEMO_PASSWORD + '):');

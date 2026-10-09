@@ -11,14 +11,20 @@
  * in English once #36 lands.
  */
 
-/** Slice 2's verbs. #8, #10 and #12 append their own. */
+/** Slice 2's and slice 3's verbs. #10 and #12 append their own. */
 export const ACTIVITY_VERBS = [
 	'asset.created',
 	'custody.assigned',
 	'custody.returned',
 	'state.changed',
 	'location.changed',
-	'note.added'
+	'note.added',
+	'ticket.created',
+	'ticket.status.changed',
+	'ticket.assigned',
+	'ticket.unassigned',
+	'ticket.priority.changed',
+	'ticket.queue.changed'
 ] as const;
 
 export type ActivityVerb = (typeof ACTIVITY_VERBS)[number];

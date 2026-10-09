@@ -3,6 +3,7 @@ import { check, index, jsonb, pgEnum, pgTable, timestamp, uuid } from 'drizzle-o
 import { timestamps } from '../shared/columns';
 import { organisations, people } from '../directory/schema';
 import { assets } from '../assets/schema';
+import { tickets } from '../service-desk/schema';
 import { ACTIVITY_TARGETS, ACTIVITY_VERBS } from './verbs';
 import type { ActivityEntry } from './payload';
 
@@ -62,8 +63,7 @@ export const activity = pgTable(
 		// and a term in the CHECK; at four principal entities that is cheap, and it
 		// buys a foreign key per target that a polymorphic `record_type` cannot.
 		assetId: uuid('asset_id').references(() => assets.id, { onDelete: 'cascade' }),
-		/** Column now, foreign key with the table in #8. */
-		ticketId: uuid('ticket_id'),
+		ticketId: uuid('ticket_id').references(() => tickets.id, { onDelete: 'cascade' }),
 		/** Column now, foreign key with the table in #10. */
 		taskId: uuid('task_id'),
 		/** Column now, foreign key with the table in #10. */
@@ -93,6 +93,7 @@ export const activity = pgTable(
 		// A timeline is always "this record, newest first", so the index carries the
 		// sort column: without it every timeline is a sequential scan plus a sort.
 		index('activity_asset_occurred').on(table.assetId, table.occurredAt),
+		index('activity_ticket_occurred').on(table.ticketId, table.occurredAt),
 		index('activity_person_occurred').on(table.personId, table.occurredAt),
 		index('activity_org_occurred').on(table.organisationId, table.occurredAt)
 	]

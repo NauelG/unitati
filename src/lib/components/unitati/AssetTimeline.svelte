@@ -1,10 +1,14 @@
 <script lang="ts" module>
+	import Flag from '@lucide/svelte/icons/flag';
+	import Inbox from '@lucide/svelte/icons/inbox';
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import MessageSquare from '@lucide/svelte/icons/message-square';
 	import PackagePlus from '@lucide/svelte/icons/package-plus';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+	import Ticket from '@lucide/svelte/icons/ticket';
 	import Undo2 from '@lucide/svelte/icons/undo-2';
 	import UserCheck from '@lucide/svelte/icons/user-check';
+	import UserMinus from '@lucide/svelte/icons/user-minus';
 	import { tv } from 'tailwind-variants';
 	import type { ActivityVerb } from '#lib/server/activity/index.js';
 
@@ -37,13 +41,19 @@
 	 * Exhaustive over the verbs, like `activitySentence`: a verb added without an
 	 * icon fails `npm run check` instead of rendering a dot with nothing in it.
 	 */
-	const ICONS: Record<ActivityVerb, typeof PackagePlus> = {
+	export const ACTIVITY_ICONS: Record<ActivityVerb, typeof PackagePlus> = {
 		'asset.created': PackagePlus,
 		'custody.assigned': UserCheck,
 		'custody.returned': Undo2,
 		'state.changed': RefreshCw,
 		'location.changed': MapPin,
-		'note.added': MessageSquare
+		'note.added': MessageSquare,
+		'ticket.created': Ticket,
+		'ticket.status.changed': RefreshCw,
+		'ticket.assigned': UserCheck,
+		'ticket.unassigned': UserMinus,
+		'ticket.priority.changed': Flag,
+		'ticket.queue.changed': Inbox
 	};
 </script>
 
@@ -78,7 +88,7 @@
 {:else}
 	<ol class={styles.list({ class: className })}>
 		{#each entries as entry (entry.id)}
-			{@const Icon = ICONS[entry.verb]}
+			{@const Icon = ACTIVITY_ICONS[entry.verb]}
 			<li class={styles.item()}>
 				<span class={styles.dot()} aria-hidden="true"><Icon class="size-3.5" /></span>
 				<div class={styles.body()}>

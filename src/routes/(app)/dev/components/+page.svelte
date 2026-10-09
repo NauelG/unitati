@@ -14,14 +14,18 @@
 	import Field from '#lib/components/unitati/Field.svelte';
 	import Logo from '#lib/components/unitati/Logo.svelte';
 	import Pager from '#lib/components/unitati/Pager.svelte';
+	import TicketComposer from '#lib/components/unitati/TicketComposer.svelte';
+	import TicketDetailLayout from '#lib/components/unitati/TicketDetailLayout.svelte';
+	import TicketThread from '#lib/components/unitati/TicketThread.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
-	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
+	import StatusBadge, { badge } from '#lib/components/unitati/StatusBadge.svelte';
 	import {
 		BADGED_STATUS_KEYS,
 		type AssetState,
 		type Priority
 	} from '#lib/components/unitati/status.js';
 	import type { TimelineEntry } from '#lib/server/activity/index.js';
+	import type { ThreadItem } from '#lib/server/service-desk/index.js';
 	import type { Snippet } from 'svelte';
 
 	/**
@@ -120,6 +124,56 @@
 	 * sentence. The last two exercise the nullable ends of `location.changed`.
 	 */
 	const at = (day: number, hour: number) => new Date(Date.UTC(2026, 9, day, hour, 15));
+
+	/**
+	 * A conversation with every kind of item: a reply with a file, an internal
+	 * note, a system event, and a reply from the technician.
+	 */
+	const threadItems: ThreadItem[] = [
+		{
+			kind: 'comment',
+			id: 'c1',
+			authorPersonId: 'p1',
+			authorName: 'Laura Serra',
+			body: 'La impresora de la planta 2 no imprime desde esta mañana.\nAdjunto una captura del error.',
+			visibility: 'public',
+			createdAt: at(8, 9),
+			attachments: [{ id: 'a1', filename: 'error.png', contentType: 'image/png', byteSize: 2048 }]
+		},
+		{
+			kind: 'event',
+			at: at(8, 10),
+			entry: {
+				id: 'e1',
+				verb: 'ticket.status.changed',
+				payload: { from: 'new', to: 'in_progress' },
+				occurredAt: at(8, 10),
+				actorPersonId: 'p2',
+				actorName: 'Grace Hopper'
+			}
+		},
+		{
+			kind: 'comment',
+			id: 'c2',
+			authorPersonId: 'p2',
+			authorName: 'Grace Hopper',
+			body: 'Parece el spooler otra vez. Reiniciar el servicio de impresión y avisar.',
+			visibility: 'internal',
+			createdAt: at(8, 11),
+			attachments: []
+		},
+		{
+			kind: 'comment',
+			id: 'c3',
+			authorPersonId: 'p2',
+			authorName: 'Grace Hopper',
+			body: 'Ya está arreglado: reinicié el servicio. Prueba y dime si sigue fallando.',
+			visibility: 'public',
+			createdAt: at(8, 12),
+			attachments: []
+		}
+	];
+
 	const timelineEntries: TimelineEntry[] = [
 		{
 			id: 't7',
@@ -457,6 +511,101 @@
 		'AssetTimeline',
 		'La historia de un activo, del más reciente al más antiguo: una entrada por verbo. Lee solo del registro de actividad; la persona que actuó se resuelve en vivo y el hecho (a quién se asignó) viene congelado en la entrada.',
 		timelines
+	)}
+
+	{#snippet threads()}
+		<div class="max-w-xl">
+			<TicketThread items={threadItems} attachmentHref={(id) => `#${id}`} />
+		</div>
+
+		<h3 class="mt-[var(--space-8)] text-sm font-semibold text-[var(--ink)]">
+			Vista del solicitante (sin nota interna)
+		</h3>
+		<div class="mt-[var(--space-3)] max-w-xl">
+			<TicketThread
+				items={threadItems.filter(
+					(item) => item.kind !== 'comment' || item.visibility === 'public'
+				)}
+				attachmentHref={(id) => `#${id}`}
+			/>
+		</div>
+
+		<h3 class="mt-[var(--space-8)] text-sm font-semibold text-[var(--ink)]">Vacío</h3>
+		<div class="mt-[var(--space-3)] max-w-xl">
+			<TicketThread items={[]} attachmentHref={(id) => `#${id}`} />
+		</div>
+	{/snippet}
+	{@render section(
+		'TicketThread',
+		'La conversación de una solicitud en un solo carril cronológico: respuestas con avatar, notas internas sobre fondo de aviso con su insignia, y los eventos del sistema como una línea atenuada. Un empleado nunca recibe una nota interna: no llega al navegador, no se oculta.',
+		threads
+	)}
+
+	{#snippet composers()}
+		{#snippet staff()}
+			<div class="max-w-xl">
+				<TicketComposer action="?/reply" allowInternal placeholder="Responde a Laura…" />
+			</div>
+		{/snippet}
+		{@render row('personal (con nota interna)', staff)}
+
+		{#snippet requester()}
+			<div class="max-w-xl">
+				<TicketComposer action="?/reply" />
+			</div>
+		{/snippet}
+		{@render row('solicitante (sin nota interna)', requester)}
+
+		{#snippet refused()}
+			<div class="max-w-xl">
+				<TicketComposer action="?/reply" allowInternal error="Un adjunto supera los 10 MB." />
+			</div>
+		{/snippet}
+		{@render row('con error', refused)}
+	{/snippet}
+	{@render section(
+		'TicketComposer',
+		'El cuadro al final del hilo. El conmutador «Nota interna» solo existe para quien puede escribirlas; al activarlo el cuadro cambia a tono de aviso y el botón pasa a «Guardar nota». ⌘↵ (o Ctrl+↵) envía.',
+		composers
+	)}
+
+	{#snippet plainBadges()}
+		<span class={badge({ tone: 'warning', plain: true })}>Nota interna</span>
+		<span class={badge({ tone: 'danger', plain: true })}>Fuera de plazo</span>
+	{/snippet}
+	{@render section(
+		'Insignia sin punto',
+		'Variante «plain» de la insignia: nombra un tipo de cosa (una nota interna), no un estado, así que no lleva punto.',
+		plainBadges
+	)}
+
+	{#snippet ticketLayouts()}
+		<TicketDetailLayout
+			ticketTag="TCK-0093"
+			subject="La impresora de la planta 2 no imprime"
+			status="in_progress"
+			priority="high"
+			provenance="Abierta por Laura Serra · 8 oct 2026, 09:15 · desde el portal"
+		>
+			<TicketThread items={threadItems} attachmentHref={(id) => `#${id}`} />
+			<TicketComposer action="?/reply" allowInternal />
+
+			{#snippet side()}
+				<section
+					class="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-4)]"
+				>
+					<h2 class="text-sm font-semibold text-[var(--ink)]">Detalles</h2>
+					<p class="mt-[var(--space-2)] text-sm text-[var(--ink-muted)]">
+						Solicitante, asignación y cola. «Registros relacionados» llega con #9.
+					</p>
+				</section>
+			{/snippet}
+		</TicketDetailLayout>
+	{/snippet}
+	{@render section(
+		'TicketDetailLayout',
+		'Cabecera de registro (código, estado, prioridad, título, procedencia), la conversación a la izquierda y las tarjetas laterales a 340px. Por debajo de 1100px la columna lateral pasa bajo la cabecera y el hilo sigue primero. La prioridad «normal» no dibuja insignia.',
+		ticketLayouts
 	)}
 
 	{#snippet logos()}

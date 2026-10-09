@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ASSET_STATES } from '#lib/domain/status.js';
+import { ASSET_STATES, PRIORITIES, TICKET_STATUSES } from '#lib/domain/status.js';
 import type { ActivityVerb } from './verbs';
 
 /**
@@ -19,6 +19,8 @@ import type { ActivityVerb } from './verbs';
 // The vocabulary comes from the one place that owns it, so a state the asset
 // domain accepts and a state this validates cannot drift apart.
 const assetState = z.enum(ASSET_STATES);
+const ticketStatus = z.enum(TICKET_STATUSES);
+const ticketPriority = z.enum(PRIORITIES);
 
 /** A name that is present is a real name; a name that is absent is `null`. */
 const presentName = z.string().min(1);
@@ -62,6 +64,39 @@ export const PAYLOAD_SCHEMAS = {
 
 	'note.added': z.object({
 		text: z.string().min(1)
+	}),
+
+	'ticket.created': z.object({
+		ticketTag: presentName,
+		subject: presentName,
+		channel: z.enum(['portal', 'agent'])
+	}),
+
+	'ticket.status.changed': z.object({
+		from: ticketStatus,
+		to: ticketStatus
+	}),
+
+	'ticket.assigned': z.object({
+		toPersonId: z.uuid(),
+		toPersonName: presentName
+	}),
+
+	'ticket.unassigned': z.object({
+		fromPersonId: z.uuid(),
+		fromPersonName: presentName
+	}),
+
+	'ticket.priority.changed': z.object({
+		from: ticketPriority,
+		to: ticketPriority
+	}),
+
+	'ticket.queue.changed': z.object({
+		fromQueueId: z.uuid(),
+		fromQueueName: presentName,
+		toQueueId: z.uuid(),
+		toQueueName: presentName
 	})
 } satisfies Record<ActivityVerb, z.ZodType>;
 

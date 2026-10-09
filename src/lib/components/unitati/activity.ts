@@ -1,6 +1,12 @@
 import { m } from '#lib/paraglide/messages.js';
 import type { ActivityEntry } from '#lib/server/activity/index.js';
+import type { Priority } from '#lib/domain/status.js';
 import { statusLabel } from './status.js';
+
+/** `normal` has no badge, but a sentence about changing from it needs the word. */
+function priorityWord(priority: Priority): string {
+	return priority === 'normal' ? m.priority_normal() : statusLabel(priority);
+}
 
 /**
  * Turns an activity entry into the sentence a reader sees (ADR 0009). It lives
@@ -43,6 +49,33 @@ export function activitySentence(entry: ActivityEntry): string {
 
 		case 'note.added':
 			return m.activity_note_added();
+
+		case 'ticket.created':
+			return m.activity_ticket_created();
+
+		case 'ticket.status.changed':
+			return m.activity_ticket_status_changed({
+				from: statusLabel(entry.payload.from),
+				to: statusLabel(entry.payload.to)
+			});
+
+		case 'ticket.assigned':
+			return m.activity_ticket_assigned({ personName: entry.payload.toPersonName });
+
+		case 'ticket.unassigned':
+			return m.activity_ticket_unassigned({ personName: entry.payload.fromPersonName });
+
+		case 'ticket.priority.changed':
+			return m.activity_ticket_priority_changed({
+				from: priorityWord(entry.payload.from),
+				to: priorityWord(entry.payload.to)
+			});
+
+		case 'ticket.queue.changed':
+			return m.activity_ticket_queue_changed({
+				from: entry.payload.fromQueueName,
+				to: entry.payload.toQueueName
+			});
 
 		default: {
 			const unhandled: never = entry;

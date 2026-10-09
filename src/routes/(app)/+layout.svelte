@@ -33,7 +33,7 @@
 					accent: 'var(--asset)'
 				},
 				{
-					href: '/tickets',
+					href: '/service-desk',
 					label: m.nav_service_desk(),
 					permission: 'tickets.view',
 					accent: 'var(--desk)'
