@@ -164,6 +164,45 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
 }
 
 /*
+ * The AppShell scrollports (ADR 0015 addendum, #96): `<nav>`'s nav-items
+ * region and `<main>` both scroll independently of the document now. This
+ * customizes the *native* scrollbar's appearance only — never
+ * `scrollbar-width: none` and never a JS overlay scrollbar, both of which
+ * would silently break wheel/touch/keyboard scrolling for someone relying on
+ * it. `scrollbar-color`'s track is transparent so it reads quiet against
+ * either surface; `forced-colors` gets the system's own scrollbar back,
+ * since a custom thin thumb can disappear entirely under some high-contrast
+ * palettes.
+ */
+.ut-scrollbar {
+	scrollbar-width: thin;
+	scrollbar-color: var(--border-strong) transparent;
+}
+
+.ut-scrollbar::-webkit-scrollbar {
+	width: 8px;
+}
+
+.ut-scrollbar::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.ut-scrollbar::-webkit-scrollbar-thumb {
+	background-color: var(--border-strong);
+	border-radius: var(--radius-full);
+}
+
+.ut-scrollbar::-webkit-scrollbar-thumb:hover {
+	background-color: var(--ink-muted);
+}
+
+@media (forced-colors: active) {
+	.ut-scrollbar {
+		scrollbar-color: auto;
+	}
+}
+
+/*
  * The vendored `ui/sheet` (ADR 0011: never hand-edited) ships `bg-black/10` on
  * its overlay. Retheming it is a selector here, in the one file that already
  * maps shadcn's tokens onto ours, rather than a fork of the vendored file —

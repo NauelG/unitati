@@ -129,6 +129,79 @@ A static `AppShell` specimen under a fixed-height, `overflow-hidden` wrapper —
 "fake counts" instruction — in `(app)/dev/components/+page.svelte`, same `section()` pattern every
 other entry on that page uses.
 
+## Addendum: viewport-height shell, independent scroll, brand-row collapse (#96)
+
+Measured from `v0.14.0` screenshots: the sidebar's `surface-2` background painted only as tall as
+`<nav>`'s content (the `flex` column, not the `<aside>` it sits in, carried the colour), and
+`min-h-screen` on the root `<div>` let the _document_ grow with page content — a long record page
+scrolled the brand row and topbar off-screen along with everything else. The collapse button also
+lived inside `sidebarFooter`, styled as a full nav row (`navItem`), which read as a sixth
+navigation entry rather than a shell control.
+
+**Viewport height, not minimum height.** The root becomes `h-dvh overflow-hidden` — the dynamic
+viewport unit rather than `100vh`, so mobile browser chrome showing/hiding does not leave a
+scrollbar gap or clip content. `<aside>` and the right-column flex wrapper both get `h-full`; the
+topbar keeps `shrink-0` (unchanged — it was already a stable row, just one the document could
+carry off-screen).
+
+**`<main>` and the nav-items region are the scrollers, not the document.** `<main>` is `min-h-0
+min-w-0 flex-1 overflow-y-auto overscroll-y-contain`: `min-h-0` overrides flexbox's default
+`min-height: auto`, the one-line reason a flex child refuses to shrink below its content's height
+and the scrollport never activates. `<nav>`'s content splits into three stacked regions instead of
+one flowing column: a `shrink-0` brand row, a new `min-h-0 flex-1 overflow-y-auto` nav-items region
+(the search entry and every link), and the existing `shrink-0 mt-auto` footer (settings slot,
+version). `sidebar`'s own background moves with this split implicitly — it was already on `<nav>`,
+and `<nav>` is now genuinely `h-full`, so the colour reaches the bottom regardless of how short the
+link list is.
+
+**Collapse moves to the brand row, as an icon button.** `brandbar` gains a `rail` variant
+(`flex-col`, so the 64px rail stacks logo over button instead of trying to fit both side by side)
+and a new `collapseButton` slot — a bare icon button, `aria-expanded` reflecting state, an
+`sr-only` label carrying the same expand/collapse string the tooltip shows, no visible text. The
+old `sidebarFooter` button is removed outright, not kept as a duplicate; `aria-pressed` becomes
+`aria-expanded`, the correct ARIA state for a control that reveals/hides content (the sidebar's
+labels) rather than toggling a persistent setting.
+
+**Typography:** `navItem` moves from `text-[13px] leading-4` to `text-sm leading-5` (14px/20px) and
+gains `min-h-10` — the hit area is 40px even though the row's own padding still reads as the
+32px-token rhythm `--size-row-compact` established; a row's paint height and its tap target are
+two different numbers, the same distinction a table cell and its interactive control already keep
+separate. `navCount` and `kbd` move from a hand-picked `text-[11px]` to `text-xs` (12px) with
+`tabular-nums` on the count, so digits do not jitter width as they change. `navSection` headings
+were already `text-xs` (12px/16px) — no change.
+
+**Scrollbar:** a `.ut-scrollbar` utility in `src/app.css`, applied to both `<main>` and the
+nav-items region, themes the _native_ scrollbar (`scrollbar-width: thin`, `scrollbar-color`, the
+`::-webkit-scrollbar*` pseudo-elements) rather than replacing the scrolling engine — the issue's
+own prohibition on a JS overlay scrollbar or `scrollbar-width: none`. `forced-colors` resets to
+`scrollbar-color: auto`, since a thin custom thumb can disappear under some high-contrast palettes
+where the system's own scrollbar would not.
+
+**Scroll restoration.** SvelteKit's built-in scroll restoration targets `window`; with `<main>` as
+the scroller, a browser Back to a long list would otherwise always land at the top. A new
+`MainScrollRestoration` class (`src/lib/components/unitati/main-scroll-restoration.ts`, unit
+tested) remembers `<main>`'s `scrollTop` keyed by pathname in `beforeNavigate` and resolves it in
+`afterNavigate`: a `popstate` navigation (Back/Forward) restores the remembered value, every other
+navigation type — link, `goto`, a fresh load — starts at the top, matching `window`'s own default
+behaviour. The topbar is not `position: sticky` over `<main>`; it is a sibling flex row above a
+separate scrollport, so a hash-targeted heading is never hidden behind it the way a sticky header
+would hide one — no `scroll-margin-top` compensation was needed.
+
+**Gallery specimen unaffected.** The `/dev/components` AppShell specimen already wraps the
+component in a fixed-height, `overflow-hidden` container (`h-[420px]`) to show a static slice
+without the component dictating the gallery page's own height; swapping `min-h-screen` for
+`h-dvh` on `AppShell`'s own root does not change that — the wrapper still clips it the same way it
+clipped `min-h-screen`. Its description now names the independently-scrolling nav and main.
+
+**Scroll-ownership audit.** No route under `(app)` sets its own `min-h-screen`/`h-screen` or a
+document-level scroll assumption that would conflict with `<main>` becoming the scroller: the
+`overflow-hidden` seen on `DataTable`, `NameCatalogue` and the directory/model catalogue pages is
+corner-clipping for a rounded card border, not a second scroll container. The asset record,
+ticket record and gallery pages render inside `PageLayout` (ADR 0018) with no height assumption of
+their own, so they inherit `<main>`'s scrollport unchanged. Wide tables still overflow the
+viewport horizontally with no scroll affordance of their own — a pre-existing gap, out of this
+issue's scope the same way sticky table headers are (#86).
+
 ## Consequences
 
 `(app)/+layout.svelte` goes from owning the sidebar and header markup to building a links array,

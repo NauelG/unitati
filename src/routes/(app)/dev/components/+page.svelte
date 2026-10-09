@@ -1013,7 +1013,7 @@
 		{/snippet}
 		{@render section(
 			'AppShell',
-			'El marco de cada página de (app): barra lateral y cabecera. Buscar primero, luego MÓDULOS (con el punto de dominio y el contador por módulo) y DIRECTORIO. En menos de 768px pasa a un cajón; en escritorio se puede contraer a una regla de 64px.',
+			'El marco de cada página de (app): barra lateral y cabecera fijas, con su propio scroll independiente del documento. Buscar primero, luego MÓDULOS (con el punto de dominio y el contador por módulo) y DIRECTORIO. En menos de 768px pasa a un cajón; en escritorio se puede contraer a una regla de 64px con el botón junto al logo.',
 			appShellSpecimen
 		)}
 	</div>
