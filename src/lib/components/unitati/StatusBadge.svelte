@@ -20,7 +20,9 @@
 				warning: 'bg-[var(--warning-soft)] text-[var(--warning)]',
 				danger: 'bg-[var(--danger-soft)] text-[var(--danger)]',
 				neutral: 'bg-[var(--surface-2)] text-[var(--ink-muted)]'
-			}
+			},
+			/** `ut-badge-plain`: no dot, for a label that names a kind of thing rather than a state. */
+			plain: { true: 'before:hidden' }
 		}
 		// No `defaultVariants`: the tone is always derived from the status, so a
 		// default would be a value nothing can reach.

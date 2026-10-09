@@ -86,3 +86,41 @@ describe('activitySentence', () => {
 		expect(activitySentence(entry)).not.toContain('hunter2');
 	});
 });
+
+describe('activitySentence for tickets', () => {
+	it('names the queue ends from the snapshot', () => {
+		const entry: ActivityEntry = {
+			verb: 'ticket.queue.changed',
+			payload: {
+				fromQueueId: PERSON,
+				fromQueueName: 'Hardware',
+				toQueueId: LOCATION,
+				toQueueName: 'Redes'
+			}
+		};
+		const sentence = activitySentence(entry);
+
+		expect(sentence).toContain('Hardware');
+		expect(sentence).toContain('Redes');
+	});
+
+	it('says "Normal" in a priority change even though it renders no badge', () => {
+		const entry: ActivityEntry = {
+			verb: 'ticket.priority.changed',
+			payload: { from: 'normal', to: 'urgent' }
+		};
+
+		expect(activitySentence(entry)).toContain('Normal');
+	});
+
+	it('names the status ends through their labels', () => {
+		const entry: ActivityEntry = {
+			verb: 'ticket.status.changed',
+			payload: { from: 'new', to: 'in_progress' }
+		};
+		const sentence = activitySentence(entry);
+
+		expect(sentence).toContain('Nuevo');
+		expect(sentence).toContain('En curso');
+	});
+});

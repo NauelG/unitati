@@ -51,8 +51,13 @@ here because this is the folder they govern.
 
 ## What is deliberately missing
 
-`RecordRef`, `RelatedRecords`, `GlobalSearch` and `TicketDetailLayout` are specified in the design
-system and not built: each needs a domain that does not exist yet. See issues #8, #9 and #12.
+`RecordRef`, `RelatedRecords` and `GlobalSearch` are specified in the design system and not built:
+each needs a domain that does not exist yet. See issues #9 and #12. `TicketDetailLayout` leaves its
+side column to the caller, so `RelatedRecords` slots in with #9.
+
+`TicketThread`, `TicketComposer` and `TicketDetailLayout` are built (#8). The thread renders what
+`ticketThread` returns — comments merged with `activity` events at read time; it never reorders and never decides who sees an internal note —
+the query already did.
 
 `AssetTimeline` is built, and reads the `activity` table only. The ticket and project dots, and
 the live relations ADR 0009 merges in at read time, arrive with #9 — not before, because a variant

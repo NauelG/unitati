@@ -1,7 +1,6 @@
 import { sql, type SQL } from 'drizzle-orm';
 import {
 	boolean,
-	customType,
 	index,
 	pgEnum,
 	pgSequence,
@@ -13,6 +12,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { ASSET_STATES } from '#lib/domain/status.js';
 import { timestamps } from '../shared/columns';
+import { searchVector as sharedSearchVector, tsvector } from '../shared/search-vector';
 import { locations, organisations, people } from '../directory/schema';
 
 /**
@@ -27,17 +27,6 @@ import { locations, organisations, people } from '../directory/schema';
  * one depends on it (ADR 0002). Nothing here points at `service-desk` or
  * `projects`: those relate through `links` (ADR 0005).
  */
-
-/**
- * `tsvector` has no Drizzle column type, so it gets a custom one. Typed as a
- * plain string: nothing in the application reads the vector, it only matches
- * against it in SQL, and pretending to parse it would be a lie about the value.
- */
-const tsvector = customType<{ data: string; driverData: string }>({
-	dataType() {
-		return 'tsvector';
-	}
-});
 
 /**
  * `simple` and `unaccent`, never the Spanish dictionary. Model names, serials,
@@ -57,9 +46,7 @@ const tsvector = customType<{ data: string; driverData: string }>({
  * purpose: Drizzle renders a reference as `"assets"."name"`, and Postgres
  * rejects a qualified name inside a generated-column expression.
  */
-function searchVector(expression: string): SQL {
-	return sql.raw(`to_tsvector('simple', immutable_unaccent(${expression}))`);
-}
+const searchVector = (expression: string): SQL => sharedSearchVector('simple', expression);
 
 /** `AST-####` comes from here (ADR 0010). One sequence per entity type. */
 export const assetCodeSequence = pgSequence('asset_code_seq');

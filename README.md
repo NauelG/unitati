@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.8.2-1d5cf0" alt="Version 0.8.2" />
+  <img src="https://img.shields.io/badge/version-0.9.0-1d5cf0" alt="Version 0.9.0" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
 </p>
@@ -87,7 +87,7 @@ src/
       assets/         inventory, custody, catalogue
       activity/       the history every domain writes to
       seed/           development seed (npm run db:seed)
-      service-desk/   tickets, queues, comments      — stub
+      service-desk/   tickets, queues, comments, mail, uploads
       projects/       projects, milestones, tasks    — stub
       links/          typed cross-domain relations   — stub
       db/             connection + aggregated Drizzle schema
@@ -139,8 +139,11 @@ cp .env.example .env   # then set BETTER_AUTH_SECRET: openssl rand -base64 32
 
 npm run db:start     # Postgres 17 in Docker (waits until healthy)
 npm run db:migrate   # create the schema
-npm run db:seed      # 200 assets, people and history; prints demo logins (localhost only)
+npm run db:seed      # 200 assets, people, history and a few tickets; prints demo logins (localhost only)
 npm run db:stop      # stop it
+
+# Outbound mail is optional. To see it locally: docker compose up -d mailpit, set
+# SMTP_HOST=localhost and SMTP_PORT=1025 in .env, read it at http://localhost:8025
 
 npm run dev          # dev server on http://localhost:5173
 npm run dev -- --open

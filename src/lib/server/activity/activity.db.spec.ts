@@ -9,6 +9,7 @@ import {
 	createOrganisation,
 	createPerson
 } from '../assets/testing/fixtures';
+import { createQueue, createTicket } from '../service-desk/testing/fixtures';
 import { activity } from './schema';
 import { recordActivity } from './writer';
 import { listActivity } from './reader';
@@ -29,7 +30,10 @@ async function scenario() {
 	const asset = await createAsset(organisation.id, modelId, { assetTag: 'AST-0001' });
 	const person = await createPerson(organisation.id, 'Ada Lovelace');
 
-	return { organisation, asset, person };
+	const queue = await createQueue(organisation.id);
+	const ticket = await createTicket(organisation.id, queue.id, person.id);
+
+	return { organisation, asset, person, ticket };
 }
 
 describe('the exactly-one-target CHECK', () => {
@@ -85,9 +89,9 @@ describe('the exactly-one-target CHECK', () => {
 	});
 
 	/**
-	 * The columns #8 and #10 will attach their tables to still count towards the
-	 * constraint today, so an entry about a ticket is already well-formed before
-	 * the ticket table exists.
+	 * The columns #10 will attach its tables to still count towards the
+	 * constraint today, so an entry about a task is already well-formed before
+	 * the task table exists.
 	 */
 	it('counts a target that has no foreign key yet', async () => {
 		const { organisation } = await scenario();
@@ -98,8 +102,8 @@ describe('the exactly-one-target CHECK', () => {
 				.values({
 					organisationId: organisation.id,
 					verb: 'note.added',
-					payload: { text: 'About a ticket' },
-					ticketId: crypto.randomUUID()
+					payload: { text: 'About a task' },
+					taskId: crypto.randomUUID()
 				})
 		);
 
@@ -108,11 +112,11 @@ describe('the exactly-one-target CHECK', () => {
 
 	/** Every target column named in `verbs.ts` must satisfy the constraint alone. */
 	it('accepts each of the five targets on its own', async () => {
-		const { organisation, asset, person } = await scenario();
+		const { organisation, asset, person, ticket } = await scenario();
 		const ids: Record<string, string> = {
 			assetId: asset.id,
 			personId: person.id,
-			ticketId: crypto.randomUUID(),
+			ticketId: ticket.id,
 			taskId: crypto.randomUUID(),
 			projectId: crypto.randomUUID()
 		};

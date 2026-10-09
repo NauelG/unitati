@@ -12,6 +12,9 @@ node_modules
 .DS_Store
 Thumbs.db
 
+# Ticket attachments (UPLOADS_DIR default)
+/uploads
+
 # Env
 .env
 .env.*
