@@ -5,6 +5,22 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.8.1] - 2026-10-09
+
+### Fixed
+
+- Staging retention counted releases that never finished deploying. A release now carries a
+  `.release-complete` marker, written only once it has served a healthy response, and only
+  marked releases count toward the five kept; unmarked ones are removed on the next run. The
+  previous behaviour would have let a run of failed deploys evict the last known-good release,
+  which is the single thing the releases layout exists to keep — and it was not hypothetical: a
+  deploy was killed by the OOM killer during `npm ci` and left a directory behind that occupied
+  a slot.
+- `scripts/staging-deploy.sh` holds an `flock` for the length of a deploy. systemd will not start
+  the timer's oneshot while it is already running, but nothing stopped a hand-run deploy from
+  racing one, and two deploys sharing a clone, a symlink and a database is not a race worth
+  debugging after the fact.
+
 ## [0.8.0] - 2026-10-08
 
 ### Added

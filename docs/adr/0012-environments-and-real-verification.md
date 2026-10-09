@@ -53,6 +53,17 @@ available for the day a pilot exists.
    was serving, so a broken build cannot take staging down. Deploying from `origin` is what
    catches the file that was never committed.
 
+   **A release becomes a rollback target only once it has served a healthy response**, recorded as
+   a `.release-complete` marker inside it. Retention counts complete releases only, and incomplete
+   ones are removed on the next run. Without that distinction a run of failed deploys would evict
+   the last known-good release — the one thing this layout exists to keep. It is not hypothetical:
+   a deploy was killed by the OOM killer during `npm ci` and left a directory behind.
+
+   One deploy runs at a time, enforced with an `flock` on `.deploy.lock`. systemd will not start
+   the timer's oneshot while it is already running, but nothing stops a hand-run deploy from
+   racing one, and two deploys sharing a clone, a symlink and a database is not a race worth
+   debugging after the fact.
+
 6. **Staging updates itself, gated on CI.** `unitati-staging-update.timer` polls `origin/main`
    every five minutes and deploys it only when every check run for that exact commit has
    completed with `success`, `skipped` or `neutral`. Without the gate a broken push would deploy
