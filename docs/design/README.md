@@ -8,6 +8,14 @@ area / secondary panel) are recorded as a decision in
 [ADR 0019](../adr/0019-visual-language-and-work-surfaces.md); the files under `assets/` below
 are the implementation of that decision, not a second description of it.
 
+**`design-system.html` is the handoff's own reference; `/dev/components` is where that
+reference becomes enforced.** The gallery ([ADR 0011](../adr/0011-component-layers-and-the-gallery.md))
+renders every `unitati/` component's real variants and states, derives its coverage page from
+`assets/css/components.css` directly, and a regression guard fails the build if a new component
+ships without a gallery page. The two are meant to agree; when they do not, `/dev/components`
+describes the decisions reviewers have actually approved, and this reference is what is due to
+catch up at the next handoff.
+
 ## Layout
 
 ```
