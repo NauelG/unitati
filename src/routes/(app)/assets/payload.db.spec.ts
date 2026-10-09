@@ -13,7 +13,7 @@ import { load as loadList } from './+page.server';
 import { load as loadDetail } from './[tag]/+page.server';
 import { load as loadModels } from './models/+page.server';
 import { load as loadNew } from './new/+page.server';
-import { load as loadEdit } from './[tag]/edit/+page.server';
+import { load as loadEdit, actions as editActions } from './[tag]/edit/+page.server';
 import type { AssetView } from '#lib/server/assets/index.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 import type { Page } from '#lib/server/shared/pagination.js';
@@ -201,6 +201,63 @@ describe('the screens an employee cannot reach', () => {
 		await expect(
 			loadEdit({ locals: { user: eva }, params: { tag: 'AST-0002' } } as Event<typeof loadEdit>)
 		).rejects.toMatchObject({ status: 404 });
+	});
+});
+
+interface NewFormData {
+	form: { errors: Record<string, unknown> };
+	modelForm: { errors: Record<string, unknown> };
+}
+
+describe('the register form a technician is sent', () => {
+	it('carries no validation errors on first load, in any language', async () => {
+		// `load` seeds the asset form with `{ state: 'in_stock' }` so the select
+		// starts on a real value. Superforms treats any seed data as "posted",
+		// which — unless `errors: false` is set — validates it immediately and
+		// ships Zod's English sentences (`Too small: expected string to have
+		// >=1 characters`, `Invalid UUID`) as `$errors.name` / `$errors.assetModelId`
+		// before the visitor has touched the form. `AssetFields` renders
+		// `error={$errors.name?.[0]}` unconditionally, so this is the exact seam
+		// that painted the leaked English on `/assets/new`.
+		const { organisation } = await floor();
+		const technician = await createViewer(organisation.id, 'technician', 'Grace Technician');
+
+		const data = await loaded<NewFormData>(
+			loadNew({ locals: { user: technician } } as Event<typeof loadNew>)
+		);
+
+		expect(data.form.errors).toEqual({});
+		expect(data.modelForm.errors).toEqual({});
+	});
+
+	it('answers in Spanish, not raw Zod, for a blank Name/Model submitted to the edit action', async () => {
+		// Same leak, other form surface (issue #102's "Done when" asks for
+		// both): `editActions.default` runs `targetOf` — a real database read —
+		// before validating the form, so this one needs the `floor()` fixture
+		// and belongs in the DB project, not alongside the plain action specs.
+		const { organisation } = await floor();
+		const technician = await createViewer(organisation.id, 'technician', 'Grace Technician');
+
+		const fd = new FormData();
+		fd.set('name', '');
+		const request = new Request('http://localhost/assets/AST-0001/edit', {
+			method: 'POST',
+			body: fd
+		});
+
+		const result = (await editActions.default({
+			request,
+			locals: { user: technician },
+			params: { tag: 'AST-0001' }
+		} as Event<typeof editActions.default>)) as unknown as {
+			status: number;
+			data: { form: { errors: Record<string, string[]> } };
+		};
+
+		expect(result.status).toBe(400);
+		expect(result.data.form.errors.name).toEqual(['Escribe un nombre.']);
+		expect(result.data.form.errors.assetModelId).toEqual(['Elige un modelo.']);
+		expect(JSON.stringify(result)).not.toContain('Too small');
 	});
 });
 
