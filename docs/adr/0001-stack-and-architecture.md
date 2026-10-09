@@ -41,4 +41,5 @@ The planned items follow `renyst` (Postgres, Drizzle, better-auth, shadcn-svelte
 
 - One language, one deploy, one database.
 - SvelteKit config lives inline in `vite.config.ts` (the `sv` default, as in `renyst`).
+- The app is served at the root of its origin, with no `kit.paths.base` ([ADR 0014](0014-served-at-the-root-of-the-origin.md)).
 - Domain boundaries are enforced by convention ([ADR 0002](0002-server-modules-by-domain.md)), not by packages. If a domain ever needs to be extracted, its folder is already the unit to move.
