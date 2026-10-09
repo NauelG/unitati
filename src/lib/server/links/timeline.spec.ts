@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { TicketStatus } from '#lib/domain/status.js';
 import type { TimelineEntry } from '../activity';
 import type { RelatedGroup, RelatedItem } from './related';
 import { mergeAssetTimeline, recentTicketCount } from './timeline';
@@ -18,7 +19,7 @@ function note(id: string, occurredAt: string, text = 'Nota'): TimelineEntry {
 	};
 }
 
-function ticket(tag: string, linkedAt: string, status: RelatedItem['status'] = 'new'): RelatedItem {
+function ticket(tag: string, linkedAt: string, status: TicketStatus = 'new'): RelatedItem {
 	return {
 		ref: {
 			kind: 'ticket',
@@ -29,7 +30,7 @@ function ticket(tag: string, linkedAt: string, status: RelatedItem['status'] = '
 		},
 		status,
 		linkedAt: at(linkedAt)
-	} as RelatedItem;
+	};
 }
 
 const tickets = (...items: RelatedItem[]): RelatedGroup[] => [
@@ -126,6 +127,19 @@ describe('recentTicketCount', () => {
 		const groups = tickets(ticket('TCK-0001', '2025-01-01T00:00:00Z'));
 
 		expect(recentTicketCount(groups, now)).toBe(0);
+	});
+
+	// 31 August minus six months is not 3 March. Month arithmetic that lets the
+	// day overflow moves the window by days, silently dropping a ticket that was
+	// inside it.
+	it('keeps the window at the end of a long month, not past it', () => {
+		const lateAugust = at('2026-08-31T12:00:00Z');
+		const groups = tickets(
+			ticket('TCK-0001', '2026-03-01T00:00:00Z'),
+			ticket('TCK-0002', '2026-02-20T00:00:00Z')
+		);
+
+		expect(recentTicketCount(groups, lateAugust)).toBe(1);
 	});
 
 	it('is zero with no ticket group', () => {

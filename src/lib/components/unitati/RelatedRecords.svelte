@@ -32,14 +32,13 @@
 </script>
 
 <script lang="ts">
-	import Laptop from '@lucide/svelte/icons/laptop';
-	import Ticket from '@lucide/svelte/icons/ticket';
 	import Unlink from '@lucide/svelte/icons/unlink';
+	import { tick } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { RelatedGroup } from '#lib/server/links/index.js';
 	import Button from './Button.svelte';
-	import RecordRef from './RecordRef.svelte';
+	import RecordRef, { KIND_ICONS } from './RecordRef.svelte';
 	import StatusBadge from './StatusBadge.svelte';
 
 	interface Props {
@@ -52,39 +51,65 @@
 		unlinkAction?: string;
 		/** Shown under the panel when the last unlink was refused. */
 		error?: string;
+		/**
+		 * The record asking "are you sure?", if any: one at a time. Bindable so a
+		 * parent can open it, which is also how the gallery shows that state.
+		 */
+		confirming?: string | null;
 		class?: string;
 	}
 
-	let { groups, unlinkAction, error, class: className }: Props = $props();
+	let {
+		groups,
+		unlinkAction,
+		error,
+		confirming = $bindable(null),
+		class: className
+	}: Props = $props();
 
 	const styles = related();
+	const panelId = $props.id();
+	let heading: HTMLElement | undefined = $state();
 
-	/** The record asking "are you sure?", if any. One at a time. */
-	let confirming = $state<string | null>(null);
+	/** Singular and plural wording of each relation: "Equipo afectado" / "Equipos afectados". */
+	const LABELS = {
+		affects: [() => m.related_affects_one(), () => m.related_affects_other()],
+		affected_by: [() => m.related_affected_by_one(), () => m.related_affected_by_other()]
+	} as const;
 
-	/** Pluralised by count: "Equipo afectado" for one, "Equipos afectados" for several. */
 	function label(group: RelatedGroup): string {
-		const one = group.items.length === 1;
+		const [one, other] = LABELS[group.relation];
+		return group.items.length === 1 ? one() : other();
+	}
 
-		return group.relation === 'affects'
-			? one
-				? m.related_affects_one()
-				: m.related_affects_other()
-			: one
-				? m.related_affected_by_one()
-				: m.related_affected_by_other();
+	const triggerId = (recordId: string) => `${panelId}-unlink-${recordId}`;
+
+	/** Puts focus on the safe choice when the prompt opens, so a keyboard user lands inside it. */
+	function focusOnMount(node: HTMLElement) {
+		node.focus();
+	}
+
+	/**
+	 * The button that was pressed leaves the DOM whichever way this ends, and
+	 * focus would fall to the page. It goes back to the trigger if the record is
+	 * still there (cancelled, or refused), and to the panel heading if it is gone.
+	 */
+	async function close(recordId: string) {
+		confirming = null;
+		await tick();
+		(document.getElementById(triggerId(recordId)) ?? heading)?.focus();
 	}
 </script>
 
 <section class={styles.root({ class: className })}>
-	<h2 class={styles.title()}>{m.related_title()}</h2>
+	<h2 class={styles.title()} tabindex="-1" bind:this={heading}>{m.related_title()}</h2>
 
 	{#if groups.length === 0}
 		<p class={styles.empty()}>{m.related_empty()}</p>
 	{/if}
 
 	{#each groups as group (group.relation)}
-		{@const Icon = group.icon === 'asset' ? Laptop : Ticket}
+		{@const Icon = KIND_ICONS[group.icon]}
 		<div class={styles.group()}>
 			<h3 class={styles.label()}>
 				<Icon class="size-3.5" aria-hidden="true" />
@@ -99,6 +124,7 @@
 
 						{#if unlinkAction && confirming !== item.ref.id}
 							<Button
+								id={triggerId(item.ref.id)}
 								type="button"
 								variant="ghost"
 								size="sm"
@@ -116,14 +142,18 @@
 								method="POST"
 								action={unlinkAction}
 								class={styles.confirm()}
+								role="group"
+								aria-labelledby="{triggerId(item.ref.id)}-ask"
+								tabindex="-1"
+								use:focusOnMount
 								use:enhance={() =>
 									async ({ update }) => {
 										await update();
-										confirming = null;
+										await close(item.ref.id);
 									}}
 							>
 								<input type="hidden" name="recordId" value={item.ref.id} />
-								<p class={styles.ask()} role="alert">
+								<p id="{triggerId(item.ref.id)}-ask" class={styles.ask()}>
 									{m.related_unlink_ask({ tag: item.ref.tag })}
 								</p>
 								<div class={styles.actions()}>
@@ -134,7 +164,7 @@
 										type="button"
 										variant="ghost"
 										size="sm"
-										onclick={() => (confirming = null)}
+										onclick={() => close(item.ref.id)}
 									>
 										{m.form_cancel()}
 									</Button>

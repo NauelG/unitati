@@ -227,8 +227,11 @@
 				{#if data.recentTickets > 0}
 					<p class="mt-[var(--space-1)] text-sm font-medium text-[var(--ink)]">
 						{data.recentTickets === 1
-							? m.asset_tickets_recent_one()
-							: m.asset_tickets_recent_other({ count: data.recentTickets })}
+							? m.asset_tickets_recent_one({ months: data.recentMonths })
+							: m.asset_tickets_recent_other({
+									count: data.recentTickets,
+									months: data.recentMonths
+								})}
 					</p>
 				{/if}
 				<div class="mt-[var(--space-4)]">

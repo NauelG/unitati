@@ -1,4 +1,5 @@
 import { and, asc, eq } from 'drizzle-orm';
+import { assetHref, ticketHref } from '#lib/domain/routes.js';
 import type { AssetState, TicketStatus } from '#lib/domain/status.js';
 import { can } from '../access/permissions';
 import { requireAssetScope } from '../assets';
@@ -88,7 +89,7 @@ async function assetsAffectedBy(viewer: SessionUser, ticketId: string): Promise<
 			id: row.id,
 			tag: row.tag,
 			title: row.title,
-			href: `/assets/${encodeURIComponent(row.tag)}`
+			href: assetHref(row.tag)
 		},
 		status: row.status,
 		linkedAt: row.linkedAt
@@ -122,7 +123,7 @@ async function ticketsAffecting(viewer: SessionUser, assetId: string): Promise<R
 			id: row.id,
 			tag: row.tag,
 			title: row.title,
-			href: `/service-desk/${encodeURIComponent(row.tag)}`
+			href: ticketHref(row.tag)
 		},
 		status: row.status,
 		linkedAt: row.linkedAt

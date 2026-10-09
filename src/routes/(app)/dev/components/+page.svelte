@@ -651,9 +651,6 @@
 			{#snippet ticketRef()}
 				<RecordRef record={ticketRecord('TCK-1093', 'El portátil no despierta tras suspender')} />
 			{/snippet}
-			{#snippet idOnly()}
-				<RecordRef record={ticketRecord('TCK-1093', 'Solo la etiqueta')} idOnly />
-			{/snippet}
 			{#snippet truncated()}
 				<RecordRef
 					class="max-w-64"
@@ -665,13 +662,12 @@
 			{/snippet}
 			{@render row('asset', assetRef)}
 			{@render row('ticket', ticketRef)}
-			{@render row('idOnly', idOnly)}
 			{@render row('título largo', truncated)}
 		</div>
 	{/snippet}
 	{@render section(
 		'RecordRef',
-		'Referencia en línea a cualquier registro: icono, etiqueta en monoespaciada y título, teñida por dominio (activo en el color del activo, solicitud en el del servicio). La etiqueta nunca se recorta; el título sí. Con `idOnly` solo la etiqueta, para una celda de tabla.',
+		'Referencia en línea a cualquier registro: icono, etiqueta en monoespaciada y título, teñida por dominio (activo en el color del activo, solicitud en el del servicio). La etiqueta nunca se recorta; el título sí.',
 		refs
 	)}
 
@@ -684,6 +680,18 @@
 			<div class="space-y-[var(--space-2)]">
 				<p class="font-mono text-xs text-[var(--ink-muted)]">varios (plural), con desvincular</p>
 				<RelatedRecords groups={affectedSeveral} unlinkAction="#" />
+			</div>
+			<div class="space-y-[var(--space-2)]">
+				<p class="font-mono text-xs text-[var(--ink-muted)]">pidiendo confirmación</p>
+				<RelatedRecords groups={affectedSeveral} unlinkAction="#" confirming="asset-2" />
+			</div>
+			<div class="space-y-[var(--space-2)]">
+				<p class="font-mono text-xs text-[var(--ink-muted)]">tras un desvincular rechazado</p>
+				<RelatedRecords
+					groups={affectedAssets}
+					unlinkAction="#"
+					error="No se ha podido desvincular. Inténtalo de nuevo."
+				/>
 			</div>
 			<div class="space-y-[var(--space-2)]">
 				<p class="font-mono text-xs text-[var(--ink-muted)]">solicitudes de un equipo</p>

@@ -35,6 +35,7 @@
 
 <script lang="ts">
 	import Paperclip from '@lucide/svelte/icons/paperclip';
+	import { assetHref } from '#lib/domain/routes.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import type { ThreadItem } from '#lib/server/service-desk/index.js';
@@ -69,7 +70,7 @@
 			kind: 'asset' as const,
 			tag: entry.payload.assetTag,
 			title: entry.payload.assetName,
-			href: `/assets/${encodeURIComponent(entry.payload.assetTag)}`
+			href: assetHref(entry.payload.assetTag)
 		};
 	}
 

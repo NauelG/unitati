@@ -20,7 +20,12 @@ import {
 	type SessionUser
 } from '#lib/server/auth/guards.js';
 import { listLocations, listPeople } from '#lib/server/directory/index.js';
-import { mergeAssetTimeline, recentTicketCount, relatedTo } from '#lib/server/links/index.js';
+import {
+	mergeAssetTimeline,
+	RECENT_MONTHS,
+	recentTicketCount,
+	relatedTo
+} from '#lib/server/links/index.js';
 import { fieldsOf, rejected } from '../form-data';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -56,6 +61,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		asset,
 		timeline: history.ok ? mergeAssetTimeline(history.value, related) : null,
 		recentTickets: recentTicketCount(related, new Date()),
+		recentMonths: RECENT_MONTHS,
 		canManage,
 		canCheckout,
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),

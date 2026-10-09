@@ -1,6 +1,12 @@
 <script lang="ts" module>
 	import { tv } from 'tailwind-variants';
 
+	import Laptop from '@lucide/svelte/icons/laptop';
+	import Ticket from '@lucide/svelte/icons/ticket';
+
+	/** The icon of each kind of record: spelled once, for every place that draws one. */
+	export const KIND_ICONS = { asset: Laptop, ticket: Ticket };
+
 	/**
 	 * The `.ut-ref` family: an inline, clickable reference to a record. It is the
 	 * visual unit of the product's core idea — the relations between records — so
@@ -34,27 +40,20 @@
 </script>
 
 <script lang="ts">
-	import Laptop from '@lucide/svelte/icons/laptop';
-	import Ticket from '@lucide/svelte/icons/ticket';
-
 	interface Props {
 		/** The record, as `relatedTo` returns it: `kind`, `tag`, `title`, `href`. */
 		record: { kind: 'asset' | 'ticket'; tag: string; title: string; href: string };
-		/** The tag alone, for a table cell where the title is the next column. */
-		idOnly?: boolean;
 		class?: string;
 	}
 
-	let { record, idOnly = false, class: className }: Props = $props();
+	let { record, class: className }: Props = $props();
 
 	const styles = $derived(recordRef({ kind: record.kind }));
-	const Icon = $derived(record.kind === 'asset' ? Laptop : Ticket);
+	const Icon = $derived(KIND_ICONS[record.kind]);
 </script>
 
 <a href={record.href} class={styles.root({ class: className })}>
 	<Icon class={styles.icon()} aria-hidden="true" />
 	<span class={styles.tag()}>{record.tag}</span>
-	{#if !idOnly}
-		<span class={styles.title()}>{record.title}</span>
-	{/if}
+	<span class={styles.title()}>{record.title}</span>
 </a>

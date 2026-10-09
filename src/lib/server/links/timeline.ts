@@ -27,7 +27,7 @@ export type AssetTimelineItem =
 			status: TicketStatus;
 	  };
 
-type TicketItem = RelatedItem & { ref: RecordRef<'ticket'>; status: TicketStatus };
+type TicketItem = Extract<RelatedItem, { ref: { kind: 'ticket' } }>;
 
 function isTicket(item: RelatedItem): item is TicketItem {
 	return item.ref.kind === 'ticket';
@@ -65,13 +65,34 @@ export function mergeAssetTimeline(
 export const RECENT_MONTHS = 6;
 
 /**
+ * The instant `months` before `now`, with the day clamped to the target
+ * month: 31 August minus six months is 28 February, not 3 March.
+ */
+function monthsBefore(now: Date, months: number): Date {
+	const lastDayOfTarget = new Date(
+		Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - months + 1, 0)
+	).getUTCDate();
+
+	return new Date(
+		Date.UTC(
+			now.getUTCFullYear(),
+			now.getUTCMonth() - months,
+			Math.min(now.getUTCDate(), lastDayOfTarget),
+			now.getUTCHours(),
+			now.getUTCMinutes(),
+			now.getUTCSeconds(),
+			now.getUTCMilliseconds()
+		)
+	);
+}
+
+/**
  * How many tickets were raised on this machine lately: the figure that turns
  * an asset into a replacement candidate. Counted from the relation, by when it
  * was linked.
  */
 export function recentTicketCount(related: readonly RelatedGroup[], now: Date): number {
-	const since = new Date(now);
-	since.setUTCMonth(since.getUTCMonth() - RECENT_MONTHS);
+	const since = monthsBefore(now, RECENT_MONTHS);
 
 	return ticketsIn(related).filter((item) => item.linkedAt >= since).length;
 }
