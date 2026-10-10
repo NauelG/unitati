@@ -5,6 +5,53 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.23.0] - 2026-10-10
+
+### Added
+
+- The motion system (#87): three tokens (`--motion-fast` 120ms, `--motion-base` 160ms,
+  `--motion-slow` 240ms, nothing above that ceiling) plus `--ease-out`/`--ease-in-out`, read by
+  every transition and animation that used to hardcode a duration — Button, Field, Pager,
+  AppShell's nav/collapse button, DataTable's sort button, AssetsNav's tabs, both app/portal
+  sign-out links.
+- `prefers-reduced-motion` kills all non-essential motion in one global CSS layer
+  (`src/app.css`), not per-component goodwill: every `animation`/`transition` collapses to
+  `0.01ms`. The one thing CSS cannot reach — `document.startViewTransition()` — is guarded in
+  JS instead, in the root `+layout.svelte`'s `onNavigate` hook (`prefersReducedMotion()`,
+  `src/lib/motion.ts`).
+- View Transitions on same-origin navigation (feature-detected; Firefox degrades to an instant
+  swap, no polyfill, no error — D12). `AppShell`'s sidebar and topbar carry their own
+  `view-transition-name` (`shell-sidebar` / `shell-topbar`), pulled out of the default root
+  capture and held motionless, so only the content between them crossfades.
+- S1, the record morph: `DataTable`'s first cell gets `view-transition-name: record-{tag}`
+  when the row links somewhere (`toViewTransitionName`, `src/lib/motion.ts`); the asset and
+  ticket detail headers' code chips, and every `RecordRef` chip, carry the same name for their
+  record. Clicking in travels the tag into place; Back reverses it.
+- List physics: `DataTable` rows glide to their new position on a sort toggle via
+  `animate:flip` (Svelte's directive only attaches to a real DOM element, so the row is a plain
+  `<tr>` replicating `ui/table`'s own styling rather than `Table.Row` — ADR 0011, compose
+  around the vendored primitive) and fade in via `tw-animate-css`'s `animate-in fade-in`, the
+  app's first real import of that package outside the vendored `ui/` primitives.
+- The vendored dropdown/popover/dialog/sheet primitives (`ui/select`, `ui/popover`,
+  `ui/dialog`, `ui/alert-dialog`, `ui/sheet` — ADR 0011: never hand-edited) get a consistent
+  120ms-in/160ms-out open/close duration through an attribute-selector override in `app.css`,
+  the same retheming move already used for the sheet overlay's colour; `ui/sheet-content`'s own
+  plain (non-state-gated) `transition duration-200` gets the same treatment separately.
+- `AppShell`'s `<main>` scroll restoration (ADR 0015 addendum, #96) now waits for any in-flight
+  View Transition to finish before writing `scrollTop` (`afterViewTransitionSettles`,
+  `src/lib/motion.ts`) — restoring it mid-animation would otherwise bake the jump into the
+  browser's "new" snapshot instead of landing after the morph settles, as the issue specifies.
+- `StatusBadge` pulses once (a ≤160ms scale keyframe) when its `status` prop changes after
+  mount — never on the badge's own first render, which would explain nothing.
+- A "Motion" gallery page (`/dev/components/motion`): the constitution's six rules, the three
+  tokens rendered live, the current `prefers-reduced-motion` read, a local S1 demo pair, and a
+  reorderable FLIP list.
+- `.ut-transition-fast` (`src/app.css`): the micro-feedback duration/easing pairing
+  (`--motion-fast` + `--ease-out`), shared by every hover/press/toggle transition instead of
+  each one spelling out `duration-[var(--motion-fast)] ease-[var(--ease-out)]` by hand.
+  `AssetsNav`'s tab styling also moves from a conditional baked into a template literal to a
+  `tv()` variant (ADR 0011 rule 2).
+
 ## [0.22.0] - 2026-10-10
 
 ### Added
