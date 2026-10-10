@@ -5,6 +5,28 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.18.0] - 2026-10-10
+
+### Added
+
+- `SelectField` and the new `SearchSelectField` replace browser-painted dropdowns with
+  accessible, token-styled components (#98). `select`, `popover` and `command` are vendored
+  through the project's shadcn-svelte/bits-ui pipeline into `src/lib/components/ui/` (ADR 0011);
+  `SelectField` keeps its existing consumer contract (`name`, `label`, `options`, `value`,
+  `required`, `disabled`, `hint`, `error`, `autocomplete`, a new `labelHidden` for a dense row
+  whose column heading already names the field) but now renders the vendored primitive instead
+  of a native `<select>`, so the options menu is painted by the application on every platform.
+  `SearchSelectField` adds a combobox for a long or remote list: it filters a fixed `options`
+  list client-side, or asks a permission-scoped `searchUrl` as the user types, the same
+  debounced/abortable contract `AssetPicker` already used for its multi-select search. Both
+  components post through a named hidden input under normal HTML form semantics (Superforms
+  enhanced submissions and plain route-action POSTs included). The four raw `<select>` elements
+  on the asset models catalogue page (`assets/models/+page.svelte`) are migrated to `SelectField`.
+  `utils.ts` gains the `WithoutChild`/`WithoutChildren` type helpers the vendored primitives
+  expect, alongside the existing `WithoutChildrenOrChild`. Gallery specimens document both
+  components' states (required/disabled/error/selected/long text for `SelectField`; local,
+  remote, pre-selected-remote and clearable for `SearchSelectField`).
+
 ## [0.17.0] - 2026-10-10
 
 ### Added

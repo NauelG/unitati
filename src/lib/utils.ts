@@ -21,9 +21,18 @@ export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & {
 };
 
 /**
- * Strips `children` and the render-prop `child`: a primitive that renders its
- * own markup around whatever is passed (shadcn-svelte's `sheet`, first vendored
- * for #83) takes the rest of its caller's props but supplies both of those
- * itself.
+ * Strips the render-prop `child`: a primitive that renders its own element
+ * around whatever is passed (`select`, `command`, first vendored for #98)
+ * takes the rest of its caller's props but supplies the element itself.
  */
-export type WithoutChildrenOrChild<T> = Omit<T, 'children' | 'child'>;
+export type WithoutChild<T> = T extends { child?: unknown } ? Omit<T, 'child'> : T;
+
+/**
+ * Strips `children`: a primitive that renders its own markup around whatever
+ * is passed (shadcn-svelte's `sheet`, first vendored for #83) takes the rest
+ * of its caller's props but supplies the children itself.
+ */
+export type WithoutChildren<T> = T extends { children?: unknown } ? Omit<T, 'children'> : T;
+
+/** Strips both `children` and the render-prop `child` in one pass. */
+export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;

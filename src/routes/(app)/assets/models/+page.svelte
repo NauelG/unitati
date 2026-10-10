@@ -4,18 +4,25 @@
 	import { field } from '#lib/components/unitati/Field.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
+	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import AssetsNav from '../AssetsNav.svelte';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
-	// Same input styling as `Field`, labelled by `aria-label` rather than a
-	// visible caption: a column header names the control in a dense list.
+	// Same input styling as `Field`.
 	const control = field().input();
 	const label = field().label();
 
 	const canCreate = $derived(data.manufacturers.length > 0 && data.categories.length > 0);
+
+	const manufacturerOptions = $derived(
+		data.manufacturers.map((manufacturer) => ({ value: manufacturer.id, label: manufacturer.name }))
+	);
+	const categoryOptions = $derived(
+		data.categories.map((category) => ({ value: category.id, label: category.name }))
+	);
 </script>
 
 {#snippet failure(id: string | null)}
@@ -48,24 +55,20 @@
 				<span class={label}>{m.catalogue_new_model()}</span>
 				<input name="name" class={control} required />
 			</label>
-			<label class="flex flex-col gap-[var(--space-1)]">
-				<span class={label}>{m.catalogue_column_manufacturer()}</span>
-				<select name="manufacturerId" class={control} required>
-					<option value="">{m.model_form_choose_manufacturer()}</option>
-					{#each data.manufacturers as manufacturer (manufacturer.id)}
-						<option value={manufacturer.id}>{manufacturer.name}</option>
-					{/each}
-				</select>
-			</label>
-			<label class="flex flex-col gap-[var(--space-1)]">
-				<span class={label}>{m.catalogue_column_category()}</span>
-				<select name="categoryId" class={control} required>
-					<option value="">{m.model_form_choose_category()}</option>
-					{#each data.categories as category (category.id)}
-						<option value={category.id}>{category.name}</option>
-					{/each}
-				</select>
-			</label>
+			<SelectField
+				label={m.catalogue_column_manufacturer()}
+				name="manufacturerId"
+				placeholder={m.model_form_choose_manufacturer()}
+				options={manufacturerOptions}
+				required
+			/>
+			<SelectField
+				label={m.catalogue_column_category()}
+				name="categoryId"
+				placeholder={m.model_form_choose_category()}
+				options={categoryOptions}
+				required
+			/>
 			<Button type="submit">{m.catalogue_create()}</Button>
 		</form>
 		{@render failure(null)}
@@ -104,33 +107,22 @@
 								class={control}
 								required
 							/>
-							<select
+							<SelectField
+								label={m.catalogue_column_manufacturer()}
+								labelHidden
 								name="manufacturerId"
-								aria-label={m.catalogue_column_manufacturer()}
-								class={control}
+								options={manufacturerOptions}
+								value={model.manufacturerId}
 								required
-							>
-								{#each data.manufacturers as manufacturer (manufacturer.id)}
-									<option
-										value={manufacturer.id}
-										selected={manufacturer.id === model.manufacturerId}
-									>
-										{manufacturer.name}
-									</option>
-								{/each}
-							</select>
-							<select
+							/>
+							<SelectField
+								label={m.catalogue_column_category()}
+								labelHidden
 								name="categoryId"
-								aria-label={m.catalogue_column_category()}
-								class={control}
+								options={categoryOptions}
+								value={model.categoryId}
 								required
-							>
-								{#each data.categories as category (category.id)}
-									<option value={category.id} selected={category.id === model.categoryId}>
-										{category.name}
-									</option>
-								{/each}
-							</select>
+							/>
 							<Button type="submit" formaction="?/update" variant="secondary" size="sm">
 								{m.catalogue_save()}
 							</Button>

@@ -2,16 +2,19 @@
 	export interface SelectOption {
 		value: string;
 		label: string;
+		disabled?: boolean;
 	}
 </script>
 
 <script lang="ts">
-	import type { HTMLSelectAttributes } from 'svelte/elements';
+	import type { HTMLInputAttributes } from 'svelte/elements';
+	import * as Select from '#lib/components/ui/select/index.js';
 	import { field } from './Field.svelte';
 
-	interface Props extends Omit<HTMLSelectAttributes, 'value' | 'class' | 'children'> {
+	interface Props {
 		label: string;
 		options: SelectOption[];
+		name?: string;
 		/**
 		 * Text of the empty choice. Without it the control has no empty option, so
 		 * it is for a value that always has an answer; with it, `''` is selectable
@@ -23,21 +26,35 @@
 		hint?: string;
 		/** `null` is what a nullable column hands over; it selects the empty choice. */
 		value?: string | null;
+		id?: string;
+		required?: boolean;
+		disabled?: boolean;
+		autocomplete?: HTMLInputAttributes['autocomplete'];
+		/**
+		 * Keeps the label in the accessibility tree but hides it visually, for a
+		 * dense row (a table cell) where a column heading already names the field.
+		 * Prefer a visible `label` whenever there is room for one.
+		 */
+		labelHidden?: boolean;
 		class?: string;
 	}
 
 	let {
 		label,
 		options,
+		name,
 		placeholder,
 		error,
 		hint,
 		id,
+		required,
+		disabled,
+		autocomplete,
+		labelHidden = false,
 		// No fallback: a form library hands over `undefined` for an optional field,
 		// and Svelte refuses `bind:value={undefined}` into a prop that has one.
 		value = $bindable(),
-		class: className,
-		...rest
+		class: className
 	}: Props = $props();
 
 	// Same reasoning as `Field`: the id has to agree between server and client.
@@ -51,26 +68,49 @@
 	);
 
 	const styles = $derived(field({ invalid: Boolean(error) }));
+
+	// bits-ui's single-select wants a string, never `null`/`undefined`; the empty
+	// string is the placeholder item's value, matching what the native `<select>`
+	// this replaces submitted for "none".
+	const selectValue = $derived(value ?? '');
+
+	function onValueChange(next: string) {
+		value = next === '' ? null : next;
+	}
 </script>
 
 <div class={styles.root({ class: className })}>
-	<label for={selectId} class={styles.label()}>{label}</label>
+	<label for={selectId} class={labelHidden ? 'sr-only' : styles.label()}>{label}</label>
 
-	<select
-		id={selectId}
-		bind:value
-		aria-invalid={error ? 'true' : undefined}
-		aria-describedby={describedBy}
-		class={styles.input()}
-		{...rest}
+	<Select.Root
+		type="single"
+		{name}
+		{required}
+		{disabled}
+		{autocomplete}
+		items={options}
+		value={selectValue}
+		{onValueChange}
 	>
-		{#if placeholder !== undefined}
-			<option value="">{placeholder}</option>
-		{/if}
-		{#each options as option (option.value)}
-			<option value={option.value}>{option.label}</option>
-		{/each}
-	</select>
+		<Select.Trigger
+			id={selectId}
+			aria-invalid={error ? 'true' : undefined}
+			aria-describedby={describedBy}
+			class={styles.input()}
+		>
+			<Select.Value {placeholder} />
+		</Select.Trigger>
+		<Select.Content>
+			{#if placeholder !== undefined}
+				<Select.Item value="" label={placeholder}>{placeholder}</Select.Item>
+			{/if}
+			{#each options as option (option.value)}
+				<Select.Item value={option.value} label={option.label} disabled={option.disabled}>
+					{option.label}
+				</Select.Item>
+			{/each}
+		</Select.Content>
+	</Select.Root>
 
 	{#if hint}
 		<p id={hintId} class={styles.help()}>{hint}</p>

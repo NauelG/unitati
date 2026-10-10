@@ -21,14 +21,19 @@ at zero imports. Nothing forced that choice to be revisited, and without a rule 
 phase closes gets removed.** No dependency sits in `package.json` "for later" — "later" is a
 phase number, or the dependency is not in yet.
 
-Applied retroactively: `bits-ui` and `mode-watcher` have been installed since day one with no
-import anywhere in `src/`, from before this rule existed. Both are to be removed, in the pull
-request that next touches `package.json` (this ADR is docs-only and does not itself change
-dependencies). `mode-watcher` is not banned — phase 9 (#90, dark mode) assigns it a phase and a
-first import and reinstalls it there; removing it now closes the gap where it sat installed and
-unimported with nothing tracking when that was supposed to end. `bits-ui` carries no such phase
-assignment anywhere in the overhaul plan; if a future phase needs it, that phase installs it
-fresh, the same way.
+Applied retroactively: `bits-ui` and `mode-watcher` were installed since day one with no import
+anywhere in `src/`, from before this rule existed. `mode-watcher` is not banned — phase 9 (#90,
+dark mode) assigns it a phase and a first import and reinstalls it there; until then it is removed
+in the next pull request that touches `package.json` (this ADR is docs-only and does not itself
+change dependencies), closing the gap where it sat installed and unimported with nothing tracking
+when that was supposed to end.
+
+`bits-ui` carried no phase assignment anywhere in the overhaul plan — until #98 (outside #81's
+phases) claimed it: `select`, `popover` and `command`, vendored through `shadcn-svelte add` for
+#98's accessible `SelectField`/`SearchSelectField`, are themselves built on `bits-ui`, giving it
+its first real import in `src/lib/components/ui/select`, `.../popover` and `.../command`. D12 is
+satisfied by that import, not by a future-phase promise; `bits-ui` is no longer scheduled for
+removal.
 
 ### Selected
 
@@ -56,7 +61,8 @@ decision 1. There is one pipeline for "a component arrived from outside," not on
 The dependency rule is retroactive policy, not a one-time cleanup: the next unimported dependency
 found at a phase boundary gets removed the same way, without a separate decision each time.
 
-Three additions (`layerchart`, `svelte-sonner`, `@number-flow/svelte`) and two removals
-(`bits-ui`, `mode-watcher`) are scheduled against specific phases of #81, not installed yet. Each
-phase's pull request is where the version actually lands in `package.json` and where D12 is
-checked against what that phase actually imported.
+Three additions (`layerchart`, `svelte-sonner`, `@number-flow/svelte`) are scheduled against
+specific phases of #81, not installed yet; `mode-watcher` is scheduled for removal until phase 9
+reinstalls it with its own first import. `bits-ui` is no longer on that removal list — #98 (outside
+#81) claimed it ahead of schedule. Each phase's pull request is where the version actually lands
+in `package.json` and where D12 is checked against what that phase actually imported.
