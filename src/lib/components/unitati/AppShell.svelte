@@ -26,8 +26,8 @@
 				'ut-nav-label px-[var(--space-2)] pt-[var(--space-3)] pb-[var(--space-1)] text-xs font-semibold tracking-[0.04em] text-[var(--ink-muted)]',
 			navItem: [
 				'flex min-h-10 items-center gap-[var(--space-2)] rounded-[var(--radius-md)] px-[var(--space-2)]',
-				'text-sm leading-5 font-medium text-[var(--ink)] no-underline transition-colors',
-				'hover:bg-[var(--surface-1)]'
+				'text-sm leading-5 font-medium text-[var(--ink)] no-underline',
+				'transition-colors ut-transition-fast hover:bg-[var(--surface-1)]'
 			],
 			navIcon: 'size-[var(--size-icon-sm)] shrink-0',
 			navDot: 'size-2 shrink-0 rounded-[var(--radius-full)]',
@@ -40,7 +40,8 @@
 			sidebarFooter: 'mt-auto flex shrink-0 flex-col gap-0.5 pt-[var(--space-2)]',
 			collapseButton: [
 				'grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)]',
-				'text-[var(--ink-muted)] transition-colors hover:bg-[var(--surface-1)] hover:text-[var(--ink)]'
+				'text-[var(--ink-muted)] transition-colors ut-transition-fast',
+				'hover:bg-[var(--surface-1)] hover:text-[var(--ink)]'
 			],
 			topbar:
 				'flex h-14 shrink-0 items-center gap-[var(--space-3)] border-b border-[var(--border)] bg-[var(--surface-1)] px-[var(--space-6)]',
@@ -91,6 +92,7 @@
 	import Logo from './Logo.svelte';
 	import AppVersion from '../AppVersion.svelte';
 	import { MainScrollRestoration } from './main-scroll-restoration.js';
+	import { afterViewTransitionSettles } from '#lib/motion.js';
 	import * as Sheet from '#lib/components/ui/sheet/index.js';
 	import { m } from '#lib/paraglide/messages.js';
 
@@ -139,7 +141,15 @@
 	afterNavigate(({ to, type }) => {
 		drawerOpen = false;
 		if (!to || !mainEl) return;
-		mainEl.scrollTop = scrollRestoration.resolve(to.url.pathname, type);
+		// Deferred past any in-flight View Transition (#87): a scroll jump
+		// applied while the browser is still animating the old-vs-new crossfade
+		// would land inside the "new" snapshot it already captured, instead of
+		// after the morph settles. `afterViewTransitionSettles` is a same-tick
+		// no-op when there is nothing to wait for.
+		const target = scrollRestoration.resolve(to.url.pathname, type);
+		afterViewTransitionSettles(() => {
+			if (mainEl) mainEl.scrollTop = target;
+		});
 	});
 
 	function toggleCollapsed() {
@@ -213,6 +223,7 @@
 	<aside
 		class="hidden h-full shrink-0 border-r border-[var(--border)] md:block"
 		style:width="var(--size-sidebar-current)"
+		style:view-transition-name="shell-sidebar"
 	>
 		<nav class={appShell().sidebar()} aria-label={m.nav_main()}>
 			<div class={appShell({ rail: collapsed }).brandbar()}>
@@ -247,7 +258,7 @@
 	</aside>
 
 	<div class="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-		<header class={appShell().topbar()}>
+		<header class={appShell().topbar()} style:view-transition-name="shell-topbar">
 			<button
 				type="button"
 				class="grid size-8 place-items-center rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] md:hidden"

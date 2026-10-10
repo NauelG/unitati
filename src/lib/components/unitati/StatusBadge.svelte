@@ -25,7 +25,14 @@
 				neutral: 'bg-[var(--surface-2)] text-[var(--ink-muted)]'
 			},
 			/** `ut-badge-plain`: no dot, for a label that names a kind of thing rather than a state. */
-			plain: { true: 'before:hidden' }
+			plain: { true: 'before:hidden' },
+			/**
+			 * The change pulse (#87): a ≤160ms scale keyframe (`app.css`), fired
+			 * only by `status` actually changing after mount — see the `$effect`
+			 * below. Never a mount animation: that would pulse every badge on
+			 * every page load, which explains nothing about a causal change.
+			 */
+			pulsing: { true: 'animate-[ut-badge-pulse_160ms_var(--ease-out)]' }
 		}
 		// No `defaultVariants`: the tone is always derived from the status, so a
 		// default would be a value nothing can reach.
@@ -34,6 +41,7 @@
 
 <script lang="ts">
 	import { statusBadge, type StatusKey } from './status.js';
+	import { MOTION_BASE_MS } from '#lib/motion.js';
 
 	interface Props {
 		/**
@@ -47,8 +55,36 @@
 	let { status, class: className }: Props = $props();
 
 	const resolved = $derived(statusBadge(status));
+
+	let pulsing = $state(false);
+	/**
+	 * `undefined` until the effect below has run once: that first run is
+	 * always the mount, which must never count as a "change" — a badge that
+	 * pulsed on every page load would explain nothing, which the constitution
+	 * (rule 6) rules out outright.
+	 */
+	let previousStatus: typeof status | undefined = undefined;
+	let pulseTimeout: ReturnType<typeof setTimeout> | undefined;
+
+	$effect(() => {
+		const changed = previousStatus !== undefined && status !== previousStatus;
+		previousStatus = status;
+		if (!changed) return;
+
+		pulsing = false;
+		clearTimeout(pulseTimeout);
+		// Reset before reapplying: two changes within 160ms must restart the
+		// keyframe from its first frame, not let the first run finish quietly
+		// while the badge already reads the new tone.
+		requestAnimationFrame(() => {
+			pulsing = true;
+		});
+		pulseTimeout = setTimeout(() => {
+			pulsing = false;
+		}, MOTION_BASE_MS);
+	});
 </script>
 
 {#if resolved}
-	<span class={badge({ tone: resolved.tone, class: className })}>{resolved.label}</span>
+	<span class={badge({ tone: resolved.tone, pulsing, class: className })}>{resolved.label}</span>
 {/if}

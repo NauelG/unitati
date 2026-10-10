@@ -11,7 +11,7 @@
 		base: [
 			'relative inline-flex items-center justify-center gap-[var(--space-2)]',
 			'rounded-[var(--radius-md)] border-0 font-semibold whitespace-nowrap',
-			'tracking-[0.005em] transition-[background-color,transform,box-shadow] duration-[120ms] ease-out',
+			'tracking-[0.005em] transition-[background-color,transform,box-shadow] ut-transition-fast',
 			'active:not-disabled:translate-y-px',
 			// `.ut-btn[disabled]` in the reference CSS: the shadow goes too, so a
 			// disabled button reads as flat rather than merely faded.

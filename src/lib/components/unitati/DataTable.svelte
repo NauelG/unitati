@@ -93,11 +93,13 @@
 
 <script lang="ts" generics="Row">
 	import type { LucideIcon } from '@lucide/svelte';
+	import { flip } from 'svelte/animate';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ChevronUp from '@lucide/svelte/icons/chevron-up';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import * as Table from '#lib/components/ui/table/index.js';
 	import EmptyState from './EmptyState.svelte';
+	import { MOTION_BASE_MS, toViewTransitionName } from '#lib/motion.js';
 	import { m } from '#lib/paraglide/messages.js';
 
 	interface Props {
@@ -211,7 +213,7 @@
 								{@const SortIcon = sortIcon(column.key)}
 								<button
 									type="button"
-									class="inline-flex items-center gap-1 transition-colors hover:text-[var(--ink)]"
+									class="ut-transition-fast inline-flex items-center gap-1 transition-colors hover:text-[var(--ink)]"
 									onclick={() => (sort = nextSort(column.key))}
 								>
 									{column.header}
@@ -230,8 +232,23 @@
 					{@const key = rowKey(row)}
 					{@const isSelected = selected?.includes(key) ?? false}
 					{@const isLastRow = rowIndex === rows.length - 1}
-					<Table.Row
-						class="relative last:border-b-0 hover:bg-[var(--surface-2)] aria-selected:bg-[var(--brand-soft)]"
+					<!--
+						List physics (#87): `animate:flip` glides a row to its new position
+						when `rows` reorders without adding or removing — a sort toggle, say
+						— instead of teleporting it there. A Svelte directive only attaches
+						to a real DOM element, never to a component, so this is a plain `<tr>`
+						instead of `Table.Row` (ADR 0011: compose around the vendored
+						primitive rather than hand-edit it) — `border-b`/`data-slot` below
+						replicate exactly what that primitive would otherwise have supplied.
+						`animate-in fade-in` is this component's first real `tw-animate-css`
+						import: a page swap (a new search, a new page of results) still
+						replaces the whole row set, so each new row fades in rather than
+						popping in instantly.
+					-->
+					<tr
+						data-slot="table-row"
+						animate:flip={{ duration: MOTION_BASE_MS }}
+						class="relative animate-in border-b border-[var(--border)] transition-colors duration-[var(--motion-base)] fade-in last:border-b-0 hover:bg-[var(--surface-2)] aria-selected:bg-[var(--brand-soft)]"
 						aria-selected={selectable ? isSelected : undefined}
 					>
 						{#if selectable}
@@ -270,9 +287,15 @@
 									<!-- One real link per row, stretched over the row so a pointer can
 									     click anywhere. The checkbox is lifted above it; any other
 									     interactive control in a cell would sit underneath, which is
-									     why a table with a row `href` keeps its cells inert. -->
+									     why a table with a row `href` keeps its cells inert.
+
+									     S1, the record morph (#87): this is the code/tag cell, named
+									     `record-{key}` so the detail page's own code chip — carrying
+									     the identical name — can claim the same view-transition group
+									     and visually travel into place on navigation. -->
 									<a
 										href={href(row)}
+										style:view-transition-name={toViewTransitionName('record', key)}
 										class="after:absolute after:inset-0 hover:underline focus-visible:underline"
 									>
 										{#if column.cell}{@render column.cell(row)}{/if}
@@ -282,7 +305,7 @@
 								{/if}
 							</Table.Cell>
 						{/each}
-					</Table.Row>
+					</tr>
 				{/each}
 			</Table.Body>
 		</Table.Root>

@@ -102,6 +102,21 @@
 	   `PageLayout`'s `index` and `record` variants read this; `form` stays a
 	   fixed measure instead. */
 	--size-page-max: 2400px;
+
+	/*
+	 * Motion (#87, docs/design/design-system.html "States and motion"): three
+	 * durations and nothing above `--motion-slow`, ever. `--motion-fast` is
+	 * micro-feedback (hover, press, toggle); `--motion-base` is the default
+	 * macro step (content cross-fade, menu/dialog/sheet exit); `--motion-slow`
+	 * is the ceiling, reserved for the record morph (S1) and panel entry.
+	 * `src/lib/motion.ts` mirrors `--motion-base` as a JS literal for
+	 * `animate:flip`, which cannot read a custom property.
+	 */
+	--motion-fast: 120ms;
+	--motion-base: 160ms;
+	--motion-slow: 240ms;
+	--ease-out: cubic-bezier(0.2, 0, 0, 1);
+	--ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* shadcn-svelte theme variables, mapped exactly as the design system prescribes
@@ -203,6 +218,20 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
 }
 
 /*
+ * The micro-feedback pairing (#87): `--motion-fast` + `--ease-out`, read by
+ * every hover/press/toggle transition in the app (Button, Field, Pager,
+ * AppShell's nav/collapse button, DataTable's sort button, AssetsNav's
+ * tabs, both app/portal sign-out links) instead of each one spelling out
+ * `duration-[var(--motion-fast)] ease-[var(--ease-out)]` by hand. Still pairs
+ * with `transition-colors`/`transition-[...]` for *which* properties move —
+ * this utility only ever sets *how fast* and *with what curve*.
+ */
+.ut-transition-fast {
+	transition-duration: var(--motion-fast);
+	transition-timing-function: var(--ease-out);
+}
+
+/*
  * The vendored `ui/sheet` (ADR 0011: never hand-edited) ships `bg-black/10` on
  * its overlay. Retheming it is a selector here, in the one file that already
  * maps shadcn's tokens onto ours, rather than a fork of the vendored file —
@@ -211,6 +240,138 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
  */
 [data-slot='sheet-overlay'] {
 	background-color: var(--scrim);
+}
+
+/*
+ * Motion constitution rule 5 (#87): `prefers-reduced-motion` kills all
+ * non-essential motion globally, one layer, not per-component goodwill. Every
+ * `transition`/`animation` in the app — the badge pulse, FLIP, tw-animate-css
+ * enter/exit, the vendored `ui/` primitives' own open/close animations — is
+ * collapsed to effectively nothing here. `0.01ms` rather than `0` because a
+ * zero duration drops some browsers' `transitionend`/`animationend` events
+ * entirely, which would silently break anything still listening for one.
+ *
+ * This cannot stop `document.startViewTransition()` itself — that is a JS
+ * call, not a style — so the `onNavigate` hook in the root `+layout.svelte`
+ * checks `prefersReducedMotion()` (`src/lib/motion.ts`) before ever calling
+ * it. `html`'s own `view-transition-name: none` is the belt-and-suspenders
+ * half of that: if anything called `startViewTransition` anyway, the root
+ * capture still would not travel.
+ */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+
+	html {
+		view-transition-name: none;
+	}
+}
+
+/*
+ * View Transitions (#87): the root `+layout.svelte`'s `onNavigate` wraps
+ * every same-origin navigation in `document.startViewTransition`. Without any
+ * named element the whole viewport is one pseudo-element pair (`root`) and
+ * crossfades — sidebar and topbar included, which is the "shell flickers"
+ * failure the issue calls out. `AppShell` instead names its `<aside>` and
+ * `<header>` `shell-sidebar` / `shell-topbar` so they are captured as their
+ * own static groups, pulled out of `root`; disabling animation on exactly
+ * those two groups is what keeps them motionless while the content around
+ * them morphs.
+ *
+ * `::view-transition-group(*)` is the one pseudo-element selector that
+ * accepts a wildcard name — there is no way to target "every name starting
+ * with record-" instead, since pseudo-elements take no attribute selectors.
+ * The record morph (S1: `DataTable`'s first cell → the detail header's code
+ * chip, and `RecordRef` chips) rides the macro budget (`--motion-slow`); the
+ * unnamed root crossfade (plain content swap) stays at the default macro
+ * step (`--motion-base`), the "content cross-fade 160ms" the issue specifies.
+ */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+	animation-duration: var(--motion-slow);
+	animation-timing-function: var(--ease-out);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: var(--motion-base);
+}
+
+::view-transition-group(shell-sidebar),
+::view-transition-group(shell-topbar),
+::view-transition-old(shell-sidebar),
+::view-transition-new(shell-sidebar),
+::view-transition-old(shell-topbar),
+::view-transition-new(shell-topbar) {
+	animation: none;
+}
+
+/*
+ * The vendored `ui/` primitives (ADR 0011: never hand-edited) ship their own
+ * open/close durations — `duration-100`/`duration-200` baked into the class
+ * string by `shadcn-svelte add`. Retheming those durations is a selector
+ * here, the same move already used above for the sheet overlay's colour:
+ * bits-ui marks the open/closed state as a boolean `data-open`/`data-closed`
+ * attribute on the element itself, so the two states get two different
+ * token durations — 120ms in, 160ms out — instead of one borrowed number
+ * reused for both, which is what "dropdown/popover/sheet enter-exit
+ * standardised" means in the issue.
+ */
+[data-slot='popover-content'][data-open],
+[data-slot='select-content'][data-open],
+[data-slot='dialog-content'][data-open],
+[data-slot='dialog-overlay'][data-open],
+[data-slot='alert-dialog-content'][data-open],
+[data-slot='alert-dialog-overlay'][data-open],
+[data-slot='sheet-content'][data-open],
+[data-slot='sheet-overlay'][data-open] {
+	animation-duration: var(--motion-fast);
+}
+
+[data-slot='popover-content'][data-closed],
+[data-slot='select-content'][data-closed],
+[data-slot='dialog-content'][data-closed],
+[data-slot='dialog-overlay'][data-closed],
+[data-slot='alert-dialog-content'][data-closed],
+[data-slot='alert-dialog-overlay'][data-closed],
+[data-slot='sheet-content'][data-closed],
+[data-slot='sheet-overlay'][data-closed] {
+	animation-duration: var(--motion-base);
+}
+
+/*
+ * `ui/sheet-content` additionally ships a plain `transition duration-200
+ * ease-in-out` (not state-gated, unlike the `animate-in`/`animate-out`
+ * classes above) for the side-drawer's own slide. Same override, same
+ * reasoning — it is the one remaining hardcoded, non-token duration the
+ * issue's own `rg 'duration-(75|100|150|200|300|500|700|1000)'` check would
+ * otherwise still catch outside `src/lib/components/ui/`.
+ */
+[data-slot='sheet-content'] {
+	transition-duration: var(--motion-base);
+	transition-timing-function: var(--ease-out);
+}
+
+/*
+ * `StatusBadge`'s change pulse (#87): a scale keyframe under 160ms, fired by
+ * the component only when `status` actually changes after mount (never on
+ * first render) — see the `pulsing` variant in `StatusBadge.svelte`.
+ */
+@keyframes ut-badge-pulse {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(1.12);
+	}
 }
 
 @layer base {

@@ -6,6 +6,7 @@
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import { statusLabel } from '#lib/components/unitati/status.js';
+	import { toViewTransitionName } from '#lib/motion.js';
 	import TicketComposer from '#lib/components/unitati/TicketComposer.svelte';
 	import TicketDetailLayout from '#lib/components/unitati/TicketDetailLayout.svelte';
 	import TicketThread from '#lib/components/unitati/TicketThread.svelte';
@@ -90,6 +91,7 @@
 	<WorkPanel>
 		<TicketDetailLayout
 			ticketTag={ticket.ticketTag}
+			ticketTagViewTransitionName={toViewTransitionName('record', ticket.ticketTag)}
 			subject={ticket.subject}
 			status={ticket.status}
 			priority={ticket.priority}
