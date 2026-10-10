@@ -28,7 +28,9 @@
 				'fixed top-1/2 left-1/2 z-50 w-[calc(100%-2*var(--space-4))] max-w-[480px]',
 				'-translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-lg)] border border-[var(--border)]',
 				'bg-[var(--surface-1)] p-[var(--space-5)] shadow-[var(--shadow-lg)] outline-none',
-				'max-h-[calc(100vh-2*var(--space-6))] overflow-y-auto'
+				// `.ut-scrollbar` (ADR 0015 addendum, #96): same native, thin
+				// scrollbar styling as `Sheet`'s own scroll region.
+				'ut-scrollbar max-h-[calc(100vh-2*var(--space-6))] overflow-y-auto'
 			],
 			title: 'text-base font-semibold text-[var(--ink)]',
 			description: 'mt-[var(--space-2)] text-sm leading-[22px] text-[var(--ink-muted)]'

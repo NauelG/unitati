@@ -29,7 +29,10 @@
 			header: 'shrink-0 border-b border-[var(--border)] px-[var(--space-5)] py-[var(--space-4)]',
 			title: 'text-base font-semibold text-[var(--ink)]',
 			description: 'mt-[var(--space-1)] text-sm leading-[22px] text-[var(--ink-muted)]',
-			body: 'min-h-0 flex-1 overflow-y-auto p-[var(--space-5)]'
+			// `.ut-scrollbar` (ADR 0015 addendum, #96): the app's own thin,
+			// native scrollbar styling, the same one `AppShell`'s `main` and
+			// nav regions use — never a JS overlay scrollbar.
+			body: 'ut-scrollbar min-h-0 flex-1 overflow-y-auto p-[var(--space-5)]'
 		}
 	});
 </script>
