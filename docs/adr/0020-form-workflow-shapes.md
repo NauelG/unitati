@@ -50,18 +50,31 @@ catalogue routes move from `form` to `index`, and the guard, gallery and this AD
 that classification lives — ADR 0018's three-shape vocabulary (`index`/`record`/`form`) itself does
 not change.
 
-### Sheet — contextual edit (deferred to a follow-up slice of #100)
+### Sheet — contextual edit
 
-Editing an existing record (an asset, from its detail page or a list row) without leaving the page
-that already had it in context belongs in a `Sheet` built the same way `AppShell`'s mobile drawer
-composes `Sheet.Root`/`Sheet.Content` (ADR 0011) — not `ConfirmDialog`'s pattern, which is
-destructive-only, and not a new `Dialog`, which this ADR scopes to one-to-three-field creates. The
-canonical `/assets/[tag]/edit` route stays the source of truth for direct navigation, reload and
-no-JS; a sheet is progressive enhancement on top of the same form content and the same POST action,
-never a second copy of either. This ADR records the shape the component must take; wiring it onto
-`/assets/[tag]` is tracked as the next slice of #100 rather than claimed done here, since the
-dirty-check confirmation (`ConfirmDialog` reused for "discard changes?") and focus-return contract
-need their own review.
+`unitati/Sheet.svelte` composes `ui/sheet`'s own `Sheet.Root`/`Sheet.Content` the same way
+`AppShell`'s mobile drawer already does (ADR 0011) — not `ConfirmDialog`'s pattern, which is
+destructive-only, and not `Dialog`, which this ADR scopes to one-to-three-field creates.
+Right-anchored, `sm:max-w-[760px]`, full width below that breakpoint. Like `Dialog`, it owns no
+footer: `children` is the whole `<form>`, which gets a sticky-looking action row for free from a
+plain `flex h-full min-h-0 flex-col` layout (fields in a `flex-1 overflow-y-auto` wrapper, the
+button row `shrink-0` after it) — no extra prop needed for that shape.
+
+`/assets/[tag]` wires this onto the record it already has open: the `Editar` button's `href` still
+points at the canonical `/assets/[tag]/edit` route (so a no-JS visitor, or one who opens it in a
+new tab, still gets the full page), but a click with JS available opens the `Sheet` instead,
+reusing the exact same `editAssetForm` validation and posting to the exact same action
+(`action="/assets/{tag}/edit"`) — never a second copy of either. The record page's own `load` asks
+for the same `superValidate` starting point the canonical edit route asks for, once, for a manager
+viewing a non-shared row.
+
+**Closing it is the caller's decision, not the component's.** `Sheet` only blocks Escape, the
+overlay and its close button while `pending`, the same as `Dialog`. Discarding a dirty edit is a
+bigger decision than discarding an empty one, so `/assets/[tag]` reads Superforms' own `tainted`
+store at the moment of closing (`get(form.tainted)`, not a `$`-subscribed store — the check only
+runs when something tries to close, not on every keystroke) and routes a dirty close through
+`ConfirmDialog` ("¿descartar cambios?", non-destructive tone) instead of closing immediately. A
+clean close — nothing typed, or already saved — closes straight away.
 
 ### Full page: `record`'s side column is not detail-only
 
@@ -96,3 +109,11 @@ criteria's own "Editing an existing model opens the same dialogue prefilled from
 longer say "record detail" exclusively — both are updated to describe the shape by what it does
 (a 340px side column above 1100px for genuinely secondary content) rather than by the one kind of
 page that first used it.
+
+`/assets/[tag]`'s `load` now runs one extra `superValidate` and one extra `listAssetModels` call
+for a manager viewing a non-shared asset — the same cost the canonical `/assets/[tag]/edit` route
+already paid on its own `load`, now paid twice per visit to the record with its sheet available
+rather than once per navigation to the separate edit page. Measuring whether that trade is worth
+reconsidering is future work, not a regression this ADR hides: the alternative (lazy-loading the
+form data only when the sheet opens, over `fetch`) adds a network round trip and a loading state
+to every open instead.

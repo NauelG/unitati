@@ -122,6 +122,15 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/Dialog.svelte')
 	},
 	{
+		id: 'sheet',
+		name: 'Sheet',
+		category: 'feedback',
+		summary:
+			'Edición contextual de un registro ya abierto (ADR 0020), sobre Sheet de shadcn-svelte.',
+		sourceFile: 'Sheet.svelte',
+		load: () => import('./specs/Sheet.svelte')
+	},
+	{
 		id: 'confirm-dialog',
 		name: 'ConfirmDialog',
 		category: 'feedback',

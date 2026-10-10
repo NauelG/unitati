@@ -29,10 +29,16 @@ minor bumps carry features and patch bumps carry fixes.
   "record detail" to any page with a genuinely secondary task, since this is its first non-detail
   consumer.
 
+- A `Sheet` shape joins `Dialog`: contextual editing of a record already open in its own page,
+  composed around `ui/sheet`'s `Sheet.Root`/`Sheet.Content` the same way `AppShell`'s mobile
+  drawer already does. `/assets/[tag]`'s `Editar` button opens it over the exact same
+  `editAssetForm` validation and the exact same `/assets/[tag]/edit` POST action — the canonical
+  route's own `href` stays the fallback for no-JS and direct navigation. Closing a dirty edit
+  (Escape, the overlay, or Cancel) routes through `ConfirmDialog` instead of discarding silently,
+  read from Superforms' own `tainted` store at the moment of closing.
+
 ### Deferred (tracked as the next slice of #100)
 
-- The contextual `Sheet` shape for editing an existing asset from its record/list without leaving
-  the page — `/assets/[tag]/edit` stays the canonical standalone route for now, per ADR 0020.
 - The composition-patterns gallery page's decision table for choosing among Dialog/Sheet/full
   page, and visual-token polish for `service-desk/new`.
 

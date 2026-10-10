@@ -1,4 +1,6 @@
 import { error } from '@sveltejs/kit';
+import { superValidate } from 'sveltekit-superforms';
+import { zod4 } from 'sveltekit-superforms/adapters';
 import { z } from 'zod';
 import { ASSET_READ_PERMISSIONS } from '#lib/domain/access.js';
 import { ASSET_STATES } from '#lib/domain/status.js';
@@ -11,6 +13,7 @@ import {
 	changeLocation,
 	changeState,
 	getAssetByTag,
+	listAssetModels,
 	returnCustody,
 	type FullAssetView
 } from '#lib/server/assets/index.js';
@@ -26,6 +29,7 @@ import {
 	recentTicketCount,
 	relatedTo
 } from '#lib/server/links/index.js';
+import { editAssetForm } from '../forms';
 import { fieldsOf, rejected } from '../form-data';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -57,6 +61,27 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			? await Promise.all([listPeople(user.organisationId), listLocations(user.organisationId)])
 			: [[], []];
 
+	// The contextual edit `Sheet` (ADR 0020) reuses `/assets/[tag]/edit`'s own
+	// form shape and action, so it needs the same validated starting point
+	// and model catalogue — asked only for a manager, same gate the canonical
+	// edit route itself enforces.
+	const editable = asset.visibility === 'full' && canManage;
+	const [editForm, editModels] = editable
+		? await Promise.all([
+				superValidate(
+					{
+						name: asset.name,
+						assetTag: asset.assetTag,
+						serial: asset.serial,
+						assetModelId: asset.assetModelId,
+						shared: asset.shared
+					},
+					zod4(editAssetForm)
+				),
+				listAssetModels(user.organisationId)
+			])
+		: [null, []];
+
 	return {
 		asset,
 		timeline: history.ok ? mergeAssetTimeline(history.value, related) : null,
@@ -65,7 +90,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		canManage,
 		canCheckout,
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
-		locations
+		locations,
+		editForm,
+		editModels
 	};
 };
 
