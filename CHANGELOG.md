@@ -5,6 +5,23 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.22.0] - 2026-10-10
+
+### Added
+
+- `/assets/[tag]` finishes the `WorkPanel` rollout ADR 0019 deferred: its six hand-rolled
+  `panel`/`panelTitle` template-string sections (details, custody, state, location, note,
+  timeline) now compose `WorkPanel` the same way `/service-desk/[tag]` already did, closing the
+  one page ADR 0019 explicitly left one step behind the new grammar.
+- `/dev/components/patterns` gains composed screen specimens (#101, following the gallery
+  contract from #85): a list index at one row and fifty rows, a ticket detail with both public
+  and internal messages next to a related-asset panel carrying a 70-character asset name at the
+  320px rail width, an asset detail with long model/location values, and a catalogue list at one
+  row and fifty rows. Each specimen reuses the real route's own composition (a single `WorkPanel`
+  where the real page has one, a bare list where the catalogue page has one) rather than wrapping
+  already-bounded panels in another — no second, nested border repeating the seam ADR 0019 just
+  eliminated.
+
 ## [0.20.1] - 2026-10-10
 
 ### Fixed
