@@ -14,6 +14,53 @@
 		why: string;
 	}
 
+	interface WorkflowRule {
+		situation: string;
+		use: string;
+		why: string;
+	}
+
+	/**
+	 * The form-workflow decision table #100/ADR 0020 asks for: which of the
+	 * three shapes a given task needs. Order matters — narrowest scope first,
+	 * so a reader checks "is this short enough for a Dialog?" before reaching
+	 * for a heavier shape by habit.
+	 */
+	const FORM_WORKFLOW_TABLE: WorkflowRule[] = [
+		{
+			situation: 'Crear o editar una entrada de catálogo (nueva categoría, editar un modelo)',
+			use: 'Dialog',
+			why: 'Una a tres campos, una sola acción primaria, un único contenedor de scroll — nunca una subtarea anidada dentro.'
+		},
+		{
+			situation: 'Editar un registro que la visita ya tenía abierto (una ficha, una fila de lista)',
+			use: 'Sheet',
+			why: 'No navega fuera de la página que ya daba el contexto; la ruta canónica sigue existiendo para navegación directa y envío sin JS — el Sheet es progressive enhancement sobre la misma validación y la misma action, nunca una segunda copia.'
+		},
+		{
+			situation:
+				'Crear un registro con una subtarea propia (un activo que puede necesitar crear su modelo)',
+			use: 'PageLayout variant="record" + WorkPanel en side',
+			why: 'La subtarea es un trabajo genuino, no una nota al margen: merece su propia columna de 340px, no un <details> colapsado compitiendo por los mismos 672px que el formulario principal.'
+		},
+		{
+			situation: 'Crear un registro con un solo formulario, sin subtarea (la mayoría de altas)',
+			use: 'PageLayout variant="form"',
+			why: 'Una medida fija de 672px es la que ADR 0018 reserva para esto — ensanchar sin una razón solo deja el formulario flotando en un canvas vacío.'
+		},
+		{
+			situation:
+				'Un formulario largo con descripción, selección de activos y adjuntos (abrir un ticket)',
+			use: 'Página completa (full page), sin Dialog ni Sheet',
+			why: 'Excede el ámbito de un Dialog (una a tres campos) y el de un Sheet (editar algo que ya existía); el portal de empleado necesita seguir siendo independientemente simple.'
+		},
+		{
+			situation: 'Eliminar, desvincular, o cualquier consecuencia irreversible',
+			use: 'ConfirmDialog, no Dialog',
+			why: 'Dialog es para un formulario real con su propio envío; ConfirmDialog ya construye el botón de confirmar, su tono y el bloqueo de Cancelar/Escape mientras la mutación está en curso.'
+		}
+	];
+
 	/**
 	 * The feedback decision table #99 asks for: which of the taxonomy's pieces
 	 * answers which situation. #89's toast row is a placeholder — the row
@@ -79,9 +126,14 @@
 			]
 		},
 		{
-			title: 'Dialog corto vs Sheet largo vs formulario de página completa',
-			body: 'Una confirmación destructiva o de desvincular es un ConfirmDialog (RelatedRecords y el catálogo de Categorías/Fabricantes ya lo usan): un modal corto, nunca un formulario inline con confirm/cancel suelto en mitad de una lista. Un formulario corto que no necesita su propio ancho de página es un Sheet (el drawer móvil de AppShell usa el mismo primitivo de ui/sheet). Un formulario con varios campos relacionados es PageLayout variant="form" — la medida fija de ADR 0018. Qué formulario de ticket/alta usa cuál todavía depende de la decisión pendiente en #100: esta página documenta la regla, no la implementación de esa pantalla.',
-			links: [{ id: 'page-layout', label: 'PageLayout' }]
+			title: 'Dialog corto vs Sheet contextual vs página completa',
+			body: 'Tres formas de tarea (#100, ADR 0020), elegidas por lo que la tarea necesita, no por costumbre: Dialog para una a tres campos con una sola acción (las catálogos de categorías, fabricantes y modelos ya lo usan tanto para crear como para editar), Sheet para editar un registro que la visita ya tenía abierto sin navegar fuera de él (la ficha de un activo ya lo usa, encima de la misma ruta canónica y la misma action que su página de edición), página completa — con o sin columna lateral de PageLayout variant="record" — para una creación con su propia subtarea o un formulario largo. La tabla de abajo es la fuente de verdad.',
+			links: [
+				{ id: 'dialog', label: 'Dialog' },
+				{ id: 'sheet', label: 'Sheet' },
+				{ id: 'page-layout', label: 'PageLayout' },
+				{ id: 'work-panel', label: 'WorkPanel' }
+			]
 		},
 		{
 			title: 'Select vs SearchSelect (AssetPicker)',
@@ -122,6 +174,29 @@
 					>
 				{/each}
 			</div>
+
+			{#if pattern.title === 'Dialog corto vs Sheet contextual vs página completa'}
+				<div class="mt-[var(--space-4)] overflow-x-auto">
+					<table class="ut-table w-full text-sm">
+						<thead>
+							<tr>
+								<th class="px-[var(--space-3)] py-2 text-left">Situación</th>
+								<th class="px-[var(--space-3)] py-2 text-left">Usa</th>
+								<th class="px-[var(--space-3)] py-2 text-left">Por qué</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each FORM_WORKFLOW_TABLE as rule (rule.situation)}
+								<tr>
+									<td class="px-[var(--space-3)] py-2">{rule.situation}</td>
+									<td class="px-[var(--space-3)] py-2 font-medium">{rule.use}</td>
+									<td class="px-[var(--space-3)] py-2 text-[var(--ink-muted)]">{rule.why}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
 
 			{#if pattern.title === 'Alert vs ConfirmDialog vs Toast'}
 				<div class="mt-[var(--space-4)] overflow-x-auto">

@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import { catalogueDialog } from '#lib/components/unitati/catalogue-dialog.svelte.js';
 	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
 	import { confirmSubmit } from '#lib/components/unitati/confirm-submit.js';
+	import Dialog from '#lib/components/unitati/Dialog.svelte';
 	import { field } from '#lib/components/unitati/Field.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
+	import type { AssetModelEntry } from '#lib/server/assets/index.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import AssetsNav from '../AssetsNav.svelte';
 	import type { PageProps } from './$types';
@@ -15,7 +18,6 @@
 
 	// Same input styling as `Field`.
 	const control = field().input();
-	const label = field().label();
 
 	const canCreate = $derived(data.manufacturers.length > 0 && data.categories.length > 0);
 
@@ -26,6 +28,35 @@
 		data.categories.map((category) => ({ value: category.id, label: category.name }))
 	);
 
+	type Model = AssetModelEntry;
+
+	/**
+	 * ADR 0020: the catalogue is the list (`index`), and create/edit is a
+	 * `Dialog` instead of an inline create row plus three always-live edit
+	 * inputs per model row.
+	 */
+	const dialog = catalogueDialog<Model>({ createAction: 'create', editAction: 'update' });
+	let draftName = $state('');
+	let draftManufacturerId: string | null = $state(null);
+	let draftCategoryId: string | null = $state(null);
+
+	function openCreate() {
+		draftName = '';
+		draftManufacturerId = null;
+		draftCategoryId = null;
+		dialog.openCreate();
+	}
+
+	function openEdit(model: Model) {
+		draftName = model.name;
+		draftManufacturerId = model.manufacturerId;
+		draftCategoryId = model.categoryId;
+		dialog.openEdit(model);
+	}
+
+	const dialogAction = $derived(dialog.editingId ? '?/update' : '?/create');
+	const dialogFailure = $derived(dialog.failureFrom(form));
+
 	/** The model asking "are you sure?", if any: one at a time. */
 	let confirmingId: string | null = $state(null);
 	/** The model whose delete POST is in flight: blocks Cancel/Escape on its dialog. */
@@ -33,7 +64,7 @@
 </script>
 
 {#snippet failure(id: string | null)}
-	{#if form?.message && (form.id ?? null) === id}
+	{#if form?.message && (form.id ?? null) === id && confirmingId !== id}
 		<p class="mt-[var(--space-2)] text-[13px] leading-[18px] text-[var(--danger)]" role="alert">
 			{form.message}
 		</p>
@@ -44,42 +75,19 @@
 	<title>{m.catalogue_models_title()} · {m.app_name()}</title>
 </svelte:head>
 
-<PageLayout variant="form">
+<PageLayout variant="index">
 	<PageHeader title={m.catalogue_models_title()}>
 		{#snippet summary()}{m.catalogue_models_lede()}{/snippet}
+		{#snippet actions()}
+			{#if canCreate}
+				<Button onclick={openCreate}>{m.catalogue_new_model()}</Button>
+			{/if}
+		{/snippet}
 	</PageHeader>
 
 	<AssetsNav showCatalogue />
 
-	{#if canCreate}
-		<form
-			method="POST"
-			action="?/create"
-			use:enhance
-			class="mt-[var(--space-6)] grid items-end gap-[var(--space-3)] sm:grid-cols-[1fr_1fr_1fr_auto]"
-		>
-			<label class="flex flex-col gap-[var(--space-1)]">
-				<span class={label}>{m.catalogue_new_model()}</span>
-				<input name="name" class={control} required />
-			</label>
-			<SelectField
-				label={m.catalogue_column_manufacturer()}
-				name="manufacturerId"
-				placeholder={m.model_form_choose_manufacturer()}
-				options={manufacturerOptions}
-				required
-			/>
-			<SelectField
-				label={m.catalogue_column_category()}
-				name="categoryId"
-				placeholder={m.model_form_choose_category()}
-				options={categoryOptions}
-				required
-			/>
-			<Button type="submit">{m.catalogue_create()}</Button>
-		</form>
-		{@render failure(null)}
-	{:else}
+	{#if !canCreate}
 		<p class="mt-[var(--space-6)] text-sm text-[var(--ink-muted)]">
 			{m.model_inline_needs_catalogue()}
 			<a href="/assets/manufacturers" class="underline">{m.assets_nav_manufacturers()}</a>
@@ -100,38 +108,15 @@
 		{:else}
 			<ul class="divide-y divide-[var(--border)]">
 				{#each data.models as model (model.id)}
-					<li class="p-[var(--space-3)]">
-						<form
-							method="POST"
-							use:enhance
-							class="grid items-center gap-[var(--space-3)] sm:grid-cols-[1fr_1fr_1fr_auto_auto]"
-						>
-							<input type="hidden" name="id" value={model.id} />
-							<input
-								name="name"
-								value={model.name}
-								aria-label={m.catalogue_column_name()}
-								class={control}
-								required
-							/>
-							<SelectField
-								label={m.catalogue_column_manufacturer()}
-								labelHidden
-								name="manufacturerId"
-								options={manufacturerOptions}
-								value={model.manufacturerId}
-								required
-							/>
-							<SelectField
-								label={m.catalogue_column_category()}
-								labelHidden
-								name="categoryId"
-								options={categoryOptions}
-								value={model.categoryId}
-								required
-							/>
-							<Button type="submit" formaction="?/update" variant="secondary" size="sm">
-								{m.catalogue_save()}
+					<li class="flex items-center justify-between gap-[var(--space-3)] p-[var(--space-3)]">
+						<div class="grid min-w-0 flex-1 gap-[var(--space-1)] sm:grid-cols-3">
+							<span class="truncate text-sm font-medium text-[var(--ink)]">{model.name}</span>
+							<span class="truncate text-sm text-[var(--ink-muted)]">{model.manufacturerName}</span>
+							<span class="truncate text-sm text-[var(--ink-muted)]">{model.categoryName}</span>
+						</div>
+						<div class="flex shrink-0 items-center gap-[var(--space-2)]">
+							<Button variant="secondary" size="sm" onclick={() => openEdit(model)}>
+								{m.catalogue_edit()}
 							</Button>
 							<Button
 								type="button"
@@ -141,7 +126,7 @@
 							>
 								{m.catalogue_delete()}
 							</Button>
-						</form>
+						</div>
 
 						<ConfirmDialog
 							open={confirmingId === model.id}
@@ -170,13 +155,73 @@
 								</form>
 							{/snippet}
 						</ConfirmDialog>
-
-						{#if confirmingId !== model.id}
-							{@render failure(model.id)}
-						{/if}
 					</li>
+					{@render failure(model.id)}
 				{/each}
 			</ul>
 		{/if}
 	</div>
+
+	<Dialog
+		open={dialog.open}
+		onOpenChange={(next) => {
+			if (!next) dialog.close();
+		}}
+		title={dialog.editing
+			? m.catalogue_edit_title({ name: dialog.editing.name })
+			: m.catalogue_new_model()}
+	>
+		<form
+			method="POST"
+			action={dialogAction}
+			use:enhance={() => {
+				return async ({ result: submitResult, update }) => {
+					await update();
+					if (submitResult.type === 'success') dialog.close();
+				};
+			}}
+			class="space-y-[var(--space-4)]"
+		>
+			{#if dialog.editingId}
+				<input type="hidden" name="id" value={dialog.editingId} />
+			{/if}
+
+			<label class="flex flex-col gap-[var(--space-1)]">
+				<span class="text-[13px] leading-4 font-medium text-[var(--ink)]"
+					>{m.catalogue_column_name()}</span
+				>
+				<input name="name" bind:value={draftName} class={control} required />
+			</label>
+
+			<SelectField
+				label={m.catalogue_column_manufacturer()}
+				name="manufacturerId"
+				placeholder={m.model_form_choose_manufacturer()}
+				options={manufacturerOptions}
+				bind:value={draftManufacturerId}
+				required
+			/>
+			<SelectField
+				label={m.catalogue_column_category()}
+				name="categoryId"
+				placeholder={m.model_form_choose_category()}
+				options={categoryOptions}
+				bind:value={draftCategoryId}
+				required
+			/>
+
+			{#if dialogFailure}
+				<p class="text-[13px] leading-[18px] text-[var(--danger)]" role="alert">
+					{dialogFailure}
+				</p>
+			{/if}
+
+			<div class="flex justify-end gap-[var(--space-2)]">
+				<Button type="button" variant="ghost" size="sm" onclick={dialog.close}>
+					{m.form_cancel()}
+				</Button>
+				<Button type="submit" size="sm">{m.catalogue_save()}</Button>
+			</div>
+		</form>
+	</Dialog>
 </PageLayout>

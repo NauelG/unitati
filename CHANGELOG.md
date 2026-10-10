@@ -5,6 +5,45 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.20.0] - 2026-10-10
+
+### Added
+
+- Task-sized form workflows (#100, ADR 0020): a `Dialog` shape joins `Alert`/`ConfirmDialog` for
+  short, one-to-three-field creates and edits, composed directly around shadcn-svelte's vendored
+  `ui/dialog` the same way `ConfirmDialog` composes `ui/alert-dialog` — the app's own typography
+  and radius, one scroll container, no nested dialog or sheet. Unlike `ConfirmDialog`, it owns no
+  footer: `children` is the whole `<form>`, including its own Guardar/Cancelar row, since a
+  create/edit form already knows its own submit label and `use:enhance` shape.
+- The three asset catalogues — `NameCatalogue` (categories, manufacturers) and `assets/models` —
+  reclassify from `PageLayout`'s `form` variant to `index` (ADR 0020 supersedes ADR 0018's
+  "catalogues are forms"): the list is the page, a header `Nuevo…` action opens the new `Dialog`
+  to create, and each row's `Editar` opens the same dialog prefilled from that row instead of
+  three always-live inline inputs per model and two per category/manufacturer. `Eliminar` keeps
+  `ConfirmDialog`, unchanged.
+- `/assets/new` moves from `PageLayout`'s `form` variant alone to `record`: the inline
+  `<details>` "create a model here" subflow becomes a `WorkPanel` (ADR 0019) in the 340px side
+  column, visible instead of collapsed, so registering an asset and creating its missing model
+  are two legible tasks side by side above 1100px instead of one collapsed block fighting the
+  asset fields for a 672px column. `PageLayout`'s `record` variant documentation widens from
+  "record detail" to any page with a genuinely secondary task, since this is its first non-detail
+  consumer.
+
+- A `Sheet` shape joins `Dialog`: contextual editing of a record already open in its own page,
+  composed around `ui/sheet`'s `Sheet.Root`/`Sheet.Content` the same way `AppShell`'s mobile
+  drawer already does. `/assets/[tag]`'s `Editar` button opens it over the exact same
+  `editAssetForm` validation and the exact same `/assets/[tag]/edit` POST action — the canonical
+  route's own `href` stays the fallback for no-JS and direct navigation. Closing a dirty edit
+  (Escape, the overlay, or Cancel) routes through `ConfirmDialog` instead of discarding silently,
+  read from Superforms' own `tainted` store at the moment of closing.
+
+- The composition-patterns gallery page (`/dev/components/patterns`) gains the Dialog/Sheet/full
+  page decision table, replacing the row that pointed at #100 as a still-pending decision.
+
+### Deferred (tracked as the next slice of #100)
+
+- Visual-token polish for `service-desk/new`.
+
 ## [0.19.0] - 2026-10-10
 
 ### Added

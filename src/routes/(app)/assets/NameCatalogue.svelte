@@ -1,20 +1,27 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import { catalogueDialog } from '#lib/components/unitati/catalogue-dialog.svelte.js';
 	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
 	import { confirmSubmit } from '#lib/components/unitati/confirm-submit.js';
+	import Dialog from '#lib/components/unitati/Dialog.svelte';
 	import { field } from '#lib/components/unitati/Field.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import AssetsNav from './AssetsNav.svelte';
 
+	interface Entry {
+		id: string;
+		name: string;
+	}
+
 	interface Props {
 		title: string;
 		lede: string;
 		newLabel: string;
 		emptyMessage: string;
-		entries: { id: string; name: string }[];
+		entries: Entry[];
 		/** The last action's result: a failure carries the message and, for a row, its id. */
 		result: { action: string; message: string | null; id: string | null } | null | undefined;
 	}
@@ -25,40 +32,53 @@
 	// labelled by its position, and a visible "Nombre" above every line is noise.
 	const input = field().input();
 
+	/**
+	 * ADR 0020: the catalogue is the list (`index`), and create/edit is a
+	 * `Dialog` — one name field, one action — instead of an always-live inline
+	 * form and three always-live edit rows.
+	 */
+	const dialog = catalogueDialog<Entry>({ createAction: 'create', editAction: 'rename' });
+	let editingName = $state('');
+
+	function openCreate() {
+		editingName = '';
+		dialog.openCreate();
+	}
+
+	function openEdit(entry: Entry) {
+		editingName = entry.name;
+		dialog.openEdit(entry);
+	}
+
+	const dialogFailure = $derived(dialog.failureFrom(result));
+
 	/** The entry asking "are you sure?", if any: one at a time. */
 	let confirmingId: string | null = $state(null);
 	/** The entry whose delete POST is in flight: blocks Cancel/Escape on its dialog. */
 	let pendingId: string | null = $state(null);
 </script>
 
-<svelte:head>
-	<title>{title} · {m.app_name()}</title>
-</svelte:head>
-
-<PageLayout variant="form">
-	<PageHeader {title}>
-		{#snippet summary()}{lede}{/snippet}
-	</PageHeader>
-
-	<AssetsNav showCatalogue />
-
-	<form
-		method="POST"
-		action="?/create"
-		use:enhance
-		class="mt-[var(--space-6)] flex items-end gap-[var(--space-3)]"
-	>
-		<label class="flex flex-1 flex-col gap-[var(--space-1)]">
-			<span class="text-[13px] leading-4 font-medium text-[var(--ink)]">{newLabel}</span>
-			<input name="name" class={input} required />
-		</label>
-		<Button type="submit">{m.catalogue_create()}</Button>
-	</form>
-	{#if result?.action === 'create' && result.message}
+{#snippet failure(id: string | null)}
+	{#if result?.message && (result.id ?? null) === id && confirmingId !== id}
 		<p class="mt-[var(--space-2)] text-[13px] leading-[18px] text-[var(--danger)]" role="alert">
 			{result.message}
 		</p>
 	{/if}
+{/snippet}
+
+<svelte:head>
+	<title>{title} · {m.app_name()}</title>
+</svelte:head>
+
+<PageLayout variant="index">
+	<PageHeader {title}>
+		{#snippet summary()}{lede}{/snippet}
+		{#snippet actions()}
+			<Button onclick={openCreate}>{newLabel}</Button>
+		{/snippet}
+	</PageHeader>
+
+	<AssetsNav showCatalogue />
 
 	<div
 		class="mt-[var(--space-6)] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]"
@@ -72,23 +92,11 @@
 		{:else}
 			<ul class="divide-y divide-[var(--border)]">
 				{#each entries as entry (entry.id)}
-					<li class="p-[var(--space-3)]">
-						<form
-							method="POST"
-							action="?/rename"
-							use:enhance
-							class="flex items-center gap-[var(--space-3)]"
-						>
-							<input type="hidden" name="id" value={entry.id} />
-							<input
-								name="name"
-								value={entry.name}
-								aria-label={m.catalogue_column_name()}
-								class={input}
-								required
-							/>
-							<Button type="submit" variant="secondary" size="sm">
-								{m.catalogue_save()}
+					<li class="flex items-center justify-between gap-[var(--space-3)] p-[var(--space-3)]">
+						<span class="min-w-0 truncate text-sm text-[var(--ink)]">{entry.name}</span>
+						<div class="flex shrink-0 items-center gap-[var(--space-2)]">
+							<Button variant="secondary" size="sm" onclick={() => openEdit(entry)}>
+								{m.catalogue_edit()}
 							</Button>
 							<Button
 								type="button"
@@ -98,7 +106,7 @@
 							>
 								{m.catalogue_delete()}
 							</Button>
-						</form>
+						</div>
 
 						<ConfirmDialog
 							open={confirmingId === entry.id}
@@ -127,18 +135,51 @@
 								</form>
 							{/snippet}
 						</ConfirmDialog>
-
-						{#if result?.id === entry.id && result.message && confirmingId !== entry.id}
-							<p
-								class="mt-[var(--space-2)] text-[13px] leading-[18px] text-[var(--danger)]"
-								role="alert"
-							>
-								{result.message}
-							</p>
-						{/if}
 					</li>
+					{@render failure(entry.id)}
 				{/each}
 			</ul>
 		{/if}
 	</div>
+
+	<Dialog
+		open={dialog.open}
+		onOpenChange={(next) => {
+			if (!next) dialog.close();
+		}}
+		title={dialog.editingId ? m.catalogue_edit_title({ name: editingName }) : newLabel}
+	>
+		<form
+			method="POST"
+			action={dialog.editingId ? '?/rename' : '?/create'}
+			use:enhance={() => {
+				return async ({ result: submitResult, update }) => {
+					await update();
+					if (submitResult.type === 'success') dialog.close();
+				};
+			}}
+			class="space-y-[var(--space-4)]"
+		>
+			{#if dialog.editingId}
+				<input type="hidden" name="id" value={dialog.editingId} />
+			{/if}
+			<label class="flex flex-col gap-[var(--space-1)]">
+				<span class="text-[13px] leading-4 font-medium text-[var(--ink)]">{newLabel}</span>
+				<input name="name" bind:value={editingName} class={input} required />
+			</label>
+
+			{#if dialogFailure}
+				<p class="text-[13px] leading-[18px] text-[var(--danger)]" role="alert">
+					{dialogFailure}
+				</p>
+			{/if}
+
+			<div class="flex justify-end gap-[var(--space-2)]">
+				<Button type="button" variant="ghost" size="sm" onclick={dialog.close}>
+					{m.form_cancel()}
+				</Button>
+				<Button type="submit" size="sm">{m.catalogue_save()}</Button>
+			</div>
+		</form>
+	</Dialog>
 </PageLayout>

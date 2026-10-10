@@ -1,16 +1,22 @@
 <script lang="ts">
 	import Pencil from '@lucide/svelte/icons/pencil';
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
+	import { get } from 'svelte/store';
+	import { superForm } from 'sveltekit-superforms';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
+	import Sheet from '#lib/components/unitati/Sheet.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import type { PageProps } from './$types';
+	import AssetFields from '../AssetFields.svelte';
 	import AssetsNav from '../AssetsNav.svelte';
 	import { options, stateOptions } from '../options';
 
@@ -20,10 +26,68 @@
 	const stateChoices = stateOptions();
 	const personOptions = $derived(options(data.people, (person) => person.fullName));
 	const locationOptions = $derived(options(data.locations, (entry) => entry.name));
+	const editModelOptions = $derived(
+		options(data.editModels, (entry) => `${entry.manufacturerName} · ${entry.name}`)
+	);
 
 	const panel =
 		'rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-5)]';
 	const panelTitle = 'text-sm font-semibold text-[var(--ink)]';
+
+	/**
+	 * ADR 0020: a `Sheet` contextual edit over the same `/assets/[tag]/edit`
+	 * form and POST action, instead of navigating away from the record the
+	 * visitor already had open. Without JS, `edit`'s own `href` still
+	 * navigates there — this is progressive enhancement on top of it, never
+	 * a second copy of the validation or the action.
+	 */
+	let editOpen = $state(false);
+	let confirmDiscard = $state(false);
+
+	// Called unconditionally, same rule `$state`/`$derived` already follow: a
+	// store Svelte must auto-subscribe to (`$editValues` etc. below) has to
+	// come from a top-level call, not one gated behind `{#if ...}`.
+	// `data.editForm` is always present (the server's `load` runs
+	// `superValidate` unconditionally — see its own comment for why a
+	// client-side fallback built from the raw schema isn't an option here).
+	const edit = superForm(
+		untrack(() => data.editForm),
+		{
+			id: 'asset-edit-sheet',
+			resetForm: false,
+			onUpdated({ form: updated }) {
+				if (updated.valid) editOpen = false;
+			}
+		}
+	);
+	const {
+		form: editValues,
+		errors: editErrors,
+		enhance: editEnhance,
+		submitting: editSubmitting
+	} = edit;
+
+	function openEdit(event: Event) {
+		event.preventDefault();
+		editOpen = true;
+	}
+
+	/** Escape, overlay or the Cancel button: only close straight away if nothing changed. */
+	function requestClose(next: boolean) {
+		if (next) {
+			editOpen = true;
+			return;
+		}
+		// `tainted` is a store: `get()` reads its current snapshot without
+		// needing its own `$`-subscribed top-level binding just for this check.
+		const taintedFields = get(edit.tainted);
+		const dirty = Boolean(taintedFields && Object.values(taintedFields).some(Boolean));
+		if (dirty) {
+			confirmDiscard = true;
+			return;
+		}
+		editOpen = false;
+	}
 </script>
 
 {#snippet failure(action: string)}
@@ -47,7 +111,11 @@
 	<PageHeader title={asset.name} code={asset.assetTag}>
 		{#snippet actions()}
 			{#if data.canManage && asset.visibility === 'full'}
-				<Button href="/assets/{encodeURIComponent(asset.assetTag)}/edit" variant="secondary">
+				<Button
+					href="/assets/{encodeURIComponent(asset.assetTag)}/edit"
+					variant="secondary"
+					onclick={openEdit}
+				>
 					<Pencil class="size-4" aria-hidden="true" />
 					{m.asset_detail_edit()}
 				</Button>
@@ -234,3 +302,63 @@
 		{/if}
 	{/snippet}
 </PageLayout>
+
+{#if data.canManage && asset.visibility === 'full'}
+	<Sheet
+		open={editOpen}
+		onOpenChange={requestClose}
+		pending={$editSubmitting}
+		title={m.asset_edit_title({ tag: asset.assetTag })}
+		description={m.asset_edit_lede()}
+	>
+		<form
+			method="POST"
+			action="/assets/{encodeURIComponent(asset.assetTag)}/edit"
+			use:editEnhance
+			class="flex h-full min-h-0 flex-col"
+		>
+			<div class="min-h-0 flex-1 space-y-[var(--space-5)] overflow-y-auto">
+				<AssetFields
+					bind:values={$editValues}
+					errors={$editErrors}
+					modelOptions={editModelOptions}
+					tagRequired
+				/>
+			</div>
+
+			<div
+				class="mt-[var(--space-4)] flex shrink-0 items-center gap-[var(--space-3)] border-t border-[var(--border)] pt-[var(--space-4)]"
+			>
+				<Button type="submit" disabled={$editSubmitting}>
+					{$editSubmitting ? m.form_saving() : m.asset_form_submit_edit()}
+				</Button>
+				<Button type="button" variant="ghost" onclick={() => requestClose(false)}>
+					{m.form_cancel()}
+				</Button>
+			</div>
+		</form>
+	</Sheet>
+
+	<ConfirmDialog
+		open={confirmDiscard}
+		onOpenChange={(next) => {
+			if (!next) confirmDiscard = false;
+		}}
+		title={m.asset_edit_discard_title()}
+		description={m.asset_edit_discard_ask()}
+		confirmLabel={m.asset_edit_discard_confirm()}
+		danger={false}
+	>
+		{#snippet action(confirm)}
+			<form
+				onsubmit={(event) => {
+					event.preventDefault();
+					confirmDiscard = false;
+					editOpen = false;
+				}}
+			>
+				{@render confirm()}
+			</form>
+		{/snippet}
+	</ConfirmDialog>
+{/if}

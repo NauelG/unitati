@@ -1,4 +1,6 @@
 import { error } from '@sveltejs/kit';
+import { superValidate } from 'sveltekit-superforms';
+import { zod4 } from 'sveltekit-superforms/adapters';
 import { z } from 'zod';
 import { ASSET_READ_PERMISSIONS } from '#lib/domain/access.js';
 import { ASSET_STATES } from '#lib/domain/status.js';
@@ -11,6 +13,7 @@ import {
 	changeLocation,
 	changeState,
 	getAssetByTag,
+	listAssetModels,
 	returnCustody,
 	type FullAssetView
 } from '#lib/server/assets/index.js';
@@ -26,6 +29,7 @@ import {
 	recentTicketCount,
 	relatedTo
 } from '#lib/server/links/index.js';
+import { editAssetForm } from '../forms';
 import { fieldsOf, rejected } from '../form-data';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -57,6 +61,43 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			? await Promise.all([listPeople(user.organisationId), listLocations(user.organisationId)])
 			: [[], []];
 
+	// The contextual edit `Sheet` (ADR 0020) reuses `/assets/[tag]/edit`'s own
+	// form shape and action. `superValidate` runs unconditionally — it is a
+	// pure, no-DB call, and the client-side `superForm()` rune on the
+	// `+page.svelte` side must itself run unconditionally (Svelte's rune
+	// rule), so it cannot fall back to building this shape from the raw
+	// validation schema: that schema lives under `#lib/server/`, and
+	// importing it into a `+page.svelte` leaks server-only code into the
+	// client bundle (caught only by `npm run build`, not `svelte-check`).
+	// The model catalogue stays gated on `editable`: it is a real DB call,
+	// and only a manager viewing a non-shared row ever renders the Sheet
+	// that needs it.
+	const editable = asset.visibility === 'full' && canManage;
+	// `asset` is `FullAssetView | SharedAssetView`: only the full view carries
+	// `serial`/`assetModelId`/`shared`, so the seed narrows on `visibility`
+	// explicitly rather than relying on `editable` (which `superValidate`
+	// itself, called unconditionally below, cannot see).
+	const editSeed =
+		asset.visibility === 'full'
+			? {
+					name: asset.name,
+					assetTag: asset.assetTag,
+					serial: asset.serial,
+					assetModelId: asset.assetModelId,
+					shared: asset.shared
+				}
+			: {
+					name: asset.name,
+					assetTag: asset.assetTag,
+					serial: null,
+					assetModelId: '',
+					shared: false
+				};
+	const [editForm, editModels] = await Promise.all([
+		superValidate(editSeed, zod4(editAssetForm)),
+		editable ? listAssetModels(user.organisationId) : Promise.resolve([])
+	]);
+
 	return {
 		asset,
 		timeline: history.ok ? mergeAssetTimeline(history.value, related) : null,
@@ -65,7 +106,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		canManage,
 		canCheckout,
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
-		locations
+		locations,
+		editForm,
+		editModels
 	};
 };
 

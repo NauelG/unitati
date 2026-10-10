@@ -19,7 +19,12 @@
 				index: {
 					root: 'max-w-[var(--size-page-max)]'
 				},
-				/** Record detail: the same ceiling, plus a 340px side column above 1100px. */
+				/**
+				 * The same ceiling, plus a 340px side column above 1100px (falls
+				 * below `main` under it) for genuinely secondary content — a
+				 * record's own panels, or (ADR 0020) a create flow's own subflow,
+				 * like `/assets/new`'s model-creation helper. Not detail-only.
+				 */
 				record: {
 					root: [
 						'max-w-[var(--size-page-max)] grid items-start gap-[var(--space-6)]',

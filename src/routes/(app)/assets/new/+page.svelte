@@ -6,6 +6,7 @@
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
+	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import AssetFields from '../AssetFields.svelte';
 	import { options, stateOptions } from '../options';
@@ -48,7 +49,7 @@
 	<title>{m.asset_new_title()} · {m.app_name()}</title>
 </svelte:head>
 
-<PageLayout variant="form">
+<PageLayout variant="record">
 	<PageHeader title={m.asset_new_title()}>
 		{#snippet summary()}{m.asset_new_lede()}{/snippet}
 	</PageHeader>
@@ -57,8 +58,12 @@
 		method="POST"
 		action="?/register"
 		use:enhance
-		class="mt-[var(--space-6)] space-y-[var(--space-5)]"
+		class="mt-[var(--space-6)] max-w-2xl space-y-[var(--space-5)]"
 	>
+		<!-- layout-ok: the fields themselves stay a readable measure; the ADR
+		     0020 record-variant side column is where the width this page gained
+		     actually goes (the model-creation helper), not into stretching a
+		     name/tag/serial form across the full ceiling. -->
 		<AssetFields
 			bind:values={$form}
 			errors={$errors}
@@ -96,30 +101,23 @@
 		</div>
 	</form>
 
-	<details
-		class="mt-[var(--space-8)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-5)]"
-		open={Boolean($modelErrors.name || $modelErrors.manufacturerId || $modelErrors.categoryId)}
-	>
-		<summary class="cursor-pointer text-sm font-medium text-[var(--ink)]">
-			{m.model_inline_summary()}
-		</summary>
+	{#snippet side()}
+		<WorkPanel heading={m.model_inline_summary()}>
+			{#if canCreateModel}
+				<form
+					method="POST"
+					action="?/createModel"
+					use:modelEnhance
+					class="space-y-[var(--space-4)]"
+				>
+					<Field
+						label={m.model_form_name()}
+						name="name"
+						bind:value={$modelValues.name}
+						error={$modelErrors.name?.[0]}
+						required
+					/>
 
-		{#if canCreateModel}
-			<form
-				method="POST"
-				action="?/createModel"
-				use:modelEnhance
-				class="mt-[var(--space-4)] space-y-[var(--space-4)]"
-			>
-				<Field
-					label={m.model_form_name()}
-					name="name"
-					bind:value={$modelValues.name}
-					error={$modelErrors.name?.[0]}
-					required
-				/>
-
-				<div class="grid gap-[var(--space-4)] sm:grid-cols-2">
 					<SelectField
 						label={m.model_form_manufacturer()}
 						name="manufacturerId"
@@ -139,19 +137,19 @@
 						error={$modelErrors.categoryId?.[0]}
 						required
 					/>
-				</div>
 
-				<Button type="submit" variant="secondary" disabled={$modelSubmitting}>
-					{m.model_form_submit()}
-				</Button>
-			</form>
-		{:else}
-			<p class="mt-[var(--space-3)] text-sm text-[var(--ink-muted)]">
-				{m.model_inline_needs_catalogue()}
-				<a href="/assets/manufacturers" class="underline">{m.assets_nav_manufacturers()}</a>
-				·
-				<a href="/assets/categories" class="underline">{m.assets_nav_categories()}</a>
-			</p>
-		{/if}
-	</details>
+					<Button type="submit" variant="secondary" disabled={$modelSubmitting}>
+						{m.model_form_submit()}
+					</Button>
+				</form>
+			{:else}
+				<p class="text-sm text-[var(--ink-muted)]">
+					{m.model_inline_needs_catalogue()}
+					<a href="/assets/manufacturers" class="underline">{m.assets_nav_manufacturers()}</a>
+					·
+					<a href="/assets/categories" class="underline">{m.assets_nav_categories()}</a>
+				</p>
+			{/if}
+		</WorkPanel>
+	{/snippet}
 </PageLayout>
