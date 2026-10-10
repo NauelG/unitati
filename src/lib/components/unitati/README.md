@@ -11,14 +11,29 @@ nothing here imports it.
 `Avatar` renders three different ways depending on `meta` and `imageUrl`, so the gallery shows
 all three.
 
-[`/dev/components`](<../../../routes/(app)/dev/components/+page.svelte>) renders every variant and
-every state of everything in this folder. Adding a component means adding its section; adding a
-variant means adding its example. The gallery is the only place where a reviewer sees the whole
-set at once, so a component missing from it is a component nobody will notice has rotted.
+[`/dev/components`](<../../../routes/(app)/dev/components/+page.svelte>) is a category index over
+one page per component (`/dev/components/[component]`), each built from the shared template in
+[`gallery/ComponentDocPage.svelte`](<../../../routes/(app)/dev/components/gallery/ComponentDocPage.svelte>):
+purpose, when to use it, props, every live variant and state, and a copyable usage snippet.
+Adding a component means adding its entry to
+[`gallery/manifest.ts`](<../../../routes/(app)/dev/components/gallery/manifest.ts>) and its spec
+under `gallery/specs/`; adding a variant means adding its example to that spec. A regression test,
+[`gallery/gallery.guard.spec.ts`](<../../../routes/(app)/dev/components/gallery/gallery.guard.spec.ts>),
+fails `npm test` if a `unitati/*.svelte` file has neither a manifest entry nor a documented
+exception — so a component missing from the gallery is caught in CI, not noticed by a reviewer
+days later.
 
-The route exists in every environment but production (`APP_ENV`, see
+The gallery also has a token page (`/dev/components/tokens`, rendered straight from
+`tokens.json`), a coverage page (`/dev/components/coverage`, deriving the `ut-*` vocabulary from
+`components.css`) and a composition-patterns page (`/dev/components/patterns`).
+
+Every route under `/dev/components` exists in every environment but production (`APP_ENV`, see
 [ADR 0013](../../../../docs/adr/0013-app-env-and-the-non-production-surface.md)) and answers 404
-there. It is not a surface to secure, document or keep accessible — it is a workbench.
+there — a runtime check in the shared
+[`+layout.server.ts`](<../../../routes/(app)/dev/components/+layout.server.ts>), not a
+build-time `dev` flag and not one copy per page. `assets/+server.ts` keeps its own check: it is
+an API endpoint, not a page, so a parent layout's `load` never runs for it. It is not a surface
+to secure, document or keep accessible — it is a workbench.
 
 ## Two folders, two owners
 
@@ -75,9 +90,10 @@ not before.
 
 ## The gallery and the production build
 
-`+page.server.ts` returns 404 unless `dev`, and the markup sits behind `{#if dev}`, so a
-production build collapses the load to an unconditional 404, drops the nav entry from the app
-shell, and ships none of the fixtures. The route **entry** survives as a stub: SvelteKit
-discovers routes from the filesystem and its config has no route-exclusion option, so "no file,
-no route" is the only way to make one truly absent. The 404 is the guarantee; the stub is
-unreachable weight.
+Each route's `+page.server.ts` checks `isProduction(APP_ENV)` and returns 404 there (ADR 0013);
+nothing in the markup is conditional on it. A production build still ships the fixtures and the
+route **entries** as unreachable weight: SvelteKit discovers routes from the filesystem and its
+config has no route-exclusion option, so "no file, no route" is the only way to make one truly
+absent. The 404 is the guarantee; the stub is the cost of not having that option. The app shell's
+nav entry is hidden in production as a convenience (`src/routes/(app)/+layout.svelte`), not the
+guard — every nested route 404s on its own even if the link were still shown.

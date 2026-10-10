@@ -5,6 +5,36 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.16.0] - 2026-10-10
+
+### Changed
+
+- UI overhaul — Phase 4: the gallery as the design-system conformance surface (#85, following
+  the corrective shell (#96) and visual-language (#97) phases). The 1042-line
+  `/dev/components/+page.svelte` monolith is replaced with a category index (Actions, Fields,
+  Feedback, Data, Relations, Conversation, Navigation, Layout) over one page per component at
+  `/dev/components/[component]`, resolved from a static manifest
+  (`gallery/manifest.ts`) with compile-time discovery instead of 20 hand-written route folders.
+  Each page uses a shared template (`gallery/ComponentDocPage.svelte`): purpose, when to use it
+  and when not to, its exact semantic role, live variants and states (focus/disabled/error/empty/
+  long strings, as the component has them), a props table and a copyable usage snippet. A
+  regression test (`gallery/gallery.guard.spec.ts`) fails `npm test` if a new
+  `src/lib/components/unitati/*.svelte` file has neither a manifest entry nor a documented
+  exception in `GALLERY_EXCEPTIONS` — the "not in the gallery, not finished" rule (ADR 0011) is
+  now enforced in CI, not just convention.
+  `/dev/components/tokens` renders the surface/ink, typography ladder, spacing, radius, elevation
+  and size tokens straight from `docs/design/assets/tokens.json` at request time, with a
+  long-text specimen and a one-row "low-data" `DataTable` specimen alongside it.
+  `/dev/components/coverage` derives the `ut-*` vocabulary from
+  `docs/design/assets/css/components.css` and marks each class implemented or not-yet-built
+  against the manifest, instead of asserting the old reference's classes are all still required.
+  `/dev/components/patterns` documents composition — the nav shell's independent scroll, a list
+  toolbar inside one work panel, the ticket thread/composer as the primary surface with
+  `RelatedRecords` as the secondary rail, and today's single confirmation pattern (RelatedRecords'
+  inline ask/confirm, since this system has no `Alert`/`ConfirmDialog`/`Toast` yet) — rather than
+  only documenting atoms. Every nested route keeps the same `isProduction(APP_ENV)` 404 guard
+  (ADR 0013) the index already had.
+
 ## [0.15.0] - 2026-10-10
 
 ### Changed
