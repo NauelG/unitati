@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import { catalogueDialog } from '#lib/components/unitati/catalogue-dialog.svelte.js';
 	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
 	import { confirmSubmit } from '#lib/components/unitati/confirm-submit.js';
 	import Dialog from '#lib/components/unitati/Dialog.svelte';
@@ -32,56 +33,29 @@
 	/**
 	 * ADR 0020: the catalogue is the list (`index`), and create/edit is a
 	 * `Dialog` instead of an inline create row plus three always-live edit
-	 * inputs per model row. `editing` holds the row being edited, or `null`
-	 * while creating.
+	 * inputs per model row.
 	 */
-	let editing: Model | null = $state(null);
-	let dialogVisible = $state(false);
+	const dialog = catalogueDialog<Model>({ createAction: 'create', editAction: 'update' });
 	let draftName = $state('');
 	let draftManufacturerId: string | null = $state(null);
 	let draftCategoryId: string | null = $state(null);
 
 	function openCreate() {
-		editing = null;
 		draftName = '';
 		draftManufacturerId = null;
 		draftCategoryId = null;
-		dialogVisible = true;
+		dialog.openCreate();
 	}
 
 	function openEdit(model: Model) {
-		editing = model;
 		draftName = model.name;
 		draftManufacturerId = model.manufacturerId;
 		draftCategoryId = model.categoryId;
-		dialogVisible = true;
+		dialog.openEdit(model);
 	}
 
-	function closeDialog() {
-		dialogVisible = false;
-	}
-
-	const dialogAction = $derived(editing ? '?/update' : '?/create');
-	// A plain function parameter narrows cleanly; `editing` itself is a
-	// reassignable `let` captured by the closure `$derived` wraps its
-	// expression in, so TS widens it back to `Model | null` before a
-	// property access on the same mutable binding — a known rough edge with
-	// Svelte 5 runes, not a real type error.
-	function idOf(entry: Model | null): string | null {
-		return entry === null ? null : entry.id;
-	}
-	const editingId = $derived(idOf(editing));
-	// Destructured first: comparing `form.id`/`form.action` directly inside one
-	// `&&` chain makes TS try to narrow `form`'s own union by the `action`
-	// check, which collapses to `never` here because the server's failure
-	// shape types `action` as a plain `string`. Reading each field through its
-	// own `$derived` sidesteps that narrowing entirely.
-	const formId = $derived(form?.id ?? null);
-	const formAction = $derived(form?.action ?? null);
-	const formMessage = $derived(form?.message ?? null);
-	const dialogFailure = $derived(
-		dialogVisible && formAction !== 'delete' && formId === editingId ? formMessage : null
-	);
+	const dialogAction = $derived(dialog.editingId ? '?/update' : '?/create');
+	const dialogFailure = $derived(dialog.failureFrom(form));
 
 	/** The model asking "are you sure?", if any: one at a time. */
 	let confirmingId: string | null = $state(null);
@@ -189,11 +163,13 @@
 	</div>
 
 	<Dialog
-		open={dialogVisible}
+		open={dialog.open}
 		onOpenChange={(next) => {
-			if (!next) closeDialog();
+			if (!next) dialog.close();
 		}}
-		title={editing ? m.catalogue_edit_title({ name: editing.name }) : m.catalogue_new_model()}
+		title={dialog.editing
+			? m.catalogue_edit_title({ name: dialog.editing.name })
+			: m.catalogue_new_model()}
 	>
 		<form
 			method="POST"
@@ -201,13 +177,13 @@
 			use:enhance={() => {
 				return async ({ result: submitResult, update }) => {
 					await update();
-					if (submitResult.type === 'success') closeDialog();
+					if (submitResult.type === 'success') dialog.close();
 				};
 			}}
 			class="space-y-[var(--space-4)]"
 		>
-			{#if editing}
-				<input type="hidden" name="id" value={editing.id} />
+			{#if dialog.editingId}
+				<input type="hidden" name="id" value={dialog.editingId} />
 			{/if}
 
 			<label class="flex flex-col gap-[var(--space-1)]">
@@ -241,7 +217,7 @@
 			{/if}
 
 			<div class="flex justify-end gap-[var(--space-2)]">
-				<Button type="button" variant="ghost" size="sm" onclick={closeDialog}>
+				<Button type="button" variant="ghost" size="sm" onclick={dialog.close}>
 					{m.form_cancel()}
 				</Button>
 				<Button type="submit" size="sm">{m.catalogue_save()}</Button>

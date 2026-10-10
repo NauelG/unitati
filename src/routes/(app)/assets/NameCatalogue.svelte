@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import { catalogueDialog } from '#lib/components/unitati/catalogue-dialog.svelte.js';
 	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
 	import { confirmSubmit } from '#lib/components/unitati/confirm-submit.js';
 	import Dialog from '#lib/components/unitati/Dialog.svelte';
@@ -10,12 +11,17 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import AssetsNav from './AssetsNav.svelte';
 
+	interface Entry {
+		id: string;
+		name: string;
+	}
+
 	interface Props {
 		title: string;
 		lede: string;
 		newLabel: string;
 		emptyMessage: string;
-		entries: { id: string; name: string }[];
+		entries: Entry[];
 		/** The last action's result: a failure carries the message and, for a row, its id. */
 		result: { action: string; message: string | null; id: string | null } | null | undefined;
 	}
@@ -29,42 +35,27 @@
 	/**
 	 * ADR 0020: the catalogue is the list (`index`), and create/edit is a
 	 * `Dialog` — one name field, one action — instead of an always-live inline
-	 * form and three always-live edit rows. `null` means "create"; an id means
-	 * "editing that entry", prefilled from its current name.
+	 * form and three always-live edit rows.
 	 */
-	let editingId: string | null = $state(null);
+	const dialog = catalogueDialog<Entry>({ createAction: 'create', editAction: 'rename' });
 	let editingName = $state('');
+
+	function openCreate() {
+		editingName = '';
+		dialog.openCreate();
+	}
+
+	function openEdit(entry: Entry) {
+		editingName = entry.name;
+		dialog.openEdit(entry);
+	}
+
+	const dialogFailure = $derived(dialog.failureFrom(result));
 
 	/** The entry asking "are you sure?", if any: one at a time. */
 	let confirmingId: string | null = $state(null);
 	/** The entry whose delete POST is in flight: blocks Cancel/Escape on its dialog. */
 	let pendingId: string | null = $state(null);
-
-	// `editingId` alone cannot distinguish "closed" from "creating" (both start
-	// at `null`), so a separate flag owns the dialog's open state.
-	let dialogVisible = $state(false);
-
-	function openCreate() {
-		editingId = null;
-		editingName = '';
-		dialogVisible = true;
-	}
-
-	function openEdit(entry: { id: string; name: string }) {
-		editingId = entry.id;
-		editingName = entry.name;
-		dialogVisible = true;
-	}
-
-	function closeDialog() {
-		dialogVisible = false;
-	}
-
-	const dialogFailure = $derived(
-		dialogVisible && result?.action === (editingId ? 'rename' : 'create') && result.id === editingId
-			? result.message
-			: null
-	);
 </script>
 
 {#snippet failure(id: string | null)}
@@ -152,25 +143,25 @@
 	</div>
 
 	<Dialog
-		open={dialogVisible}
+		open={dialog.open}
 		onOpenChange={(next) => {
-			if (!next) closeDialog();
+			if (!next) dialog.close();
 		}}
-		title={editingId ? m.catalogue_edit_title({ name: editingName }) : newLabel}
+		title={dialog.editingId ? m.catalogue_edit_title({ name: editingName }) : newLabel}
 	>
 		<form
 			method="POST"
-			action={editingId ? '?/rename' : '?/create'}
+			action={dialog.editingId ? '?/rename' : '?/create'}
 			use:enhance={() => {
 				return async ({ result: submitResult, update }) => {
 					await update();
-					if (submitResult.type === 'success') closeDialog();
+					if (submitResult.type === 'success') dialog.close();
 				};
 			}}
 			class="space-y-[var(--space-4)]"
 		>
-			{#if editingId}
-				<input type="hidden" name="id" value={editingId} />
+			{#if dialog.editingId}
+				<input type="hidden" name="id" value={dialog.editingId} />
 			{/if}
 			<label class="flex flex-col gap-[var(--space-1)]">
 				<span class="text-[13px] leading-4 font-medium text-[var(--ink)]">{newLabel}</span>
@@ -184,7 +175,7 @@
 			{/if}
 
 			<div class="flex justify-end gap-[var(--space-2)]">
-				<Button type="button" variant="ghost" size="sm" onclick={closeDialog}>
+				<Button type="button" variant="ghost" size="sm" onclick={dialog.close}>
 					{m.form_cancel()}
 				</Button>
 				<Button type="submit" size="sm">{m.catalogue_save()}</Button>
