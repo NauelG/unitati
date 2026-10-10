@@ -14,7 +14,7 @@
 			link: [
 				'inline-flex h-[var(--size-control-sm)] items-center gap-[var(--space-1)] px-[var(--space-3)]',
 				'rounded-[var(--radius-full)] text-xs font-semibold text-[var(--ink)]',
-				'shadow-[inset_0_0_0_1px_var(--border-strong)] transition-colors hover:bg-[var(--surface-2)]'
+				'shadow-[inset_0_0_0_1px_var(--border-strong)] transition-colors ut-transition-fast hover:bg-[var(--surface-2)]'
 			],
 			// A link that cannot be followed is not a link: `aria-disabled` on a
 			// span says so to assistive technology, where a dimmed anchor would

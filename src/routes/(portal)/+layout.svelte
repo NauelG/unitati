@@ -26,7 +26,7 @@
 			<form method="POST" action="/sign-out">
 				<button
 					type="submit"
-					class="text-sm text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
+					class="ut-transition-fast text-sm text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
 				>
 					{m.nav_sign_out()}
 				</button>

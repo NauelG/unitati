@@ -26,6 +26,12 @@
 
 	interface Props {
 		ticketTag: string;
+		/**
+		 * S1, the record morph (#87): the same `view-transition-name` `DataTable`
+		 * put on the ticket row's code cell, so navigating in from the list
+		 * visually travels the tag into this chip.
+		 */
+		ticketTagViewTransitionName?: string;
 		subject: string;
 		status: TicketStatus;
 		priority: Priority;
@@ -38,6 +44,7 @@
 
 	let {
 		ticketTag,
+		ticketTagViewTransitionName,
 		subject,
 		status,
 		priority,
@@ -52,7 +59,9 @@
 <div class={styles.root({ class: className })}>
 	<div class="min-w-0">
 		<div class={styles.chips()}>
-			<span class={styles.tag()}>{ticketTag}</span>
+			<span class={styles.tag()} style:view-transition-name={ticketTagViewTransitionName}
+				>{ticketTag}</span
+			>
 			<StatusBadge {status} />
 			<StatusBadge status={priority} />
 		</div>

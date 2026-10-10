@@ -28,6 +28,13 @@
 		title: string;
 		/** Mono, above the title, as in the asset detail. */
 		code?: string;
+		/**
+		 * S1, the record morph (#87): the same `view-transition-name` `DataTable`
+		 * put on the list row's code cell (`toViewTransitionName('record', tag)`),
+		 * so navigating from the list visually travels the tag into this spot.
+		 * Meaningless without `code`.
+		 */
+		codeViewTransitionName?: string;
 		/** One line, `ink-muted`. Until phase 3 feeds it live data, the existing lede strings pass through. */
 		summary?: Snippet;
 		/** Right-aligned. */
@@ -35,7 +42,7 @@
 		class?: string;
 	}
 
-	let { title, code, summary, actions, class: className }: Props = $props();
+	let { title, code, codeViewTransitionName, summary, actions, class: className }: Props = $props();
 
 	const styles = pageHeader();
 </script>
@@ -43,7 +50,7 @@
 <div class={styles.root({ class: className })}>
 	<div class={styles.heading()}>
 		{#if code}
-			<p class={styles.code()}>{code}</p>
+			<p class={styles.code()} style:view-transition-name={codeViewTransitionName}>{code}</p>
 		{/if}
 		<h1 class={styles.title({ class: code ? 'mt-1' : undefined })}>{title}</h1>
 		{#if summary}

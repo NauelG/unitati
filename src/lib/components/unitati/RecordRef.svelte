@@ -40,6 +40,8 @@
 </script>
 
 <script lang="ts">
+	import { toViewTransitionName } from '#lib/motion.js';
+
 	interface Props {
 		/** The record, as `relatedTo` returns it: `kind`, `tag`, `title`, `href`. */
 		record: { kind: 'asset' | 'ticket'; tag: string; title: string; href: string };
@@ -52,7 +54,16 @@
 	const Icon = $derived(KIND_ICONS[record.kind]);
 </script>
 
-<a href={record.href} class={styles.root({ class: className })}>
+<!--
+	S1, the record morph (#87): same name as `DataTable`'s code cell and the
+	detail header's code chip for the same record — clicking this chip morphs
+	the tag into place exactly as clicking the list row would.
+-->
+<a
+	href={record.href}
+	style:view-transition-name={toViewTransitionName('record', record.tag)}
+	class={styles.root({ class: className })}
+>
 	<Icon class={styles.icon()} aria-hidden="true" />
 	<span class={styles.tag()}>{record.tag}</span>
 	<span class={styles.title()}>{record.title}</span>

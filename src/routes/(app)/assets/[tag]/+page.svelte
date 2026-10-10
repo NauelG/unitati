@@ -9,6 +9,7 @@
 	import Button from '#lib/components/unitati/Button.svelte';
 	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
+	import { toViewTransitionName } from '#lib/motion.js';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
@@ -111,7 +112,11 @@
 		segments={[{ label: m.assets_nav_assets(), href: '/assets' }, { label: asset.assetTag }]}
 	/>
 
-	<PageHeader title={asset.name} code={asset.assetTag}>
+	<PageHeader
+		title={asset.name}
+		code={asset.assetTag}
+		codeViewTransitionName={toViewTransitionName('record', asset.assetTag)}
+	>
 		{#snippet actions()}
 			{#if data.canManage && asset.visibility === 'full'}
 				<Button
