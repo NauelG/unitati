@@ -14,6 +14,7 @@
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import Sheet from '#lib/components/unitati/Sheet.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
+	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import type { PageProps } from './$types';
@@ -30,10 +31,6 @@
 	const editModelOptions = $derived(
 		options(data.editModels, (entry) => `${entry.manufacturerName} · ${entry.name}`)
 	);
-
-	const panel =
-		'rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-5)]';
-	const panelTitle = 'text-sm font-semibold text-[var(--ink)]';
 
 	/**
 	 * ADR 0020: a `Sheet` contextual edit over the same `/assets/[tag]/edit`
@@ -141,10 +138,8 @@
 	<AssetsNav showCatalogue={data.canManage} />
 
 	<div class="mt-[var(--space-6)] space-y-[var(--space-6)]">
-		<section class={panel}>
-			<h2 class={panelTitle}>{m.asset_detail_details()}</h2>
-
-			<dl class="mt-[var(--space-3)] divide-y divide-[var(--border)]">
+		<WorkPanel heading={m.asset_detail_details()}>
+			<dl class="divide-y divide-[var(--border)]">
 				{#if asset.visibility === 'full'}
 					{#snippet serial()}{asset.serial ?? '—'}{/snippet}
 					{#snippet model()}{asset.modelName}{/snippet}
@@ -176,14 +171,13 @@
 					{m.asset_detail_shared_notice()}
 				</p>
 			{/if}
-		</section>
+		</WorkPanel>
 
 		{#if asset.visibility === 'full' && (data.canCheckout || data.canManage)}
 			<div class="grid gap-[var(--space-4)] sm:grid-cols-2">
 				{#if data.canCheckout}
-					<section class={panel}>
-						<h2 class={panelTitle}>{m.action_custody_title()}</h2>
-						<p class="mt-1 text-sm text-[var(--ink-muted)]">
+					<WorkPanel heading={m.action_custody_title()}>
+						<p class="text-sm text-[var(--ink-muted)]">
 							{asset.custodianName
 								? m.action_custody_held({ name: asset.custodianName })
 								: m.action_custody_free()}
@@ -217,18 +211,12 @@
 								</Button>
 							</form>
 						{/if}
-					</section>
+					</WorkPanel>
 				{/if}
 
 				{#if data.canManage}
-					<section class={panel}>
-						<h2 class={panelTitle}>{m.action_state_title()}</h2>
-						<form
-							method="POST"
-							action="?/changeState"
-							use:enhance
-							class="mt-[var(--space-4)] space-y-[var(--space-3)]"
-						>
+					<WorkPanel heading={m.action_state_title()}>
+						<form method="POST" action="?/changeState" use:enhance class="space-y-[var(--space-3)]">
 							<SelectField
 								label={m.asset_detail_state()}
 								name="state"
@@ -240,15 +228,14 @@
 								{m.action_state_submit()}
 							</Button>
 						</form>
-					</section>
+					</WorkPanel>
 
-					<section class={panel}>
-						<h2 class={panelTitle}>{m.action_location_title()}</h2>
+					<WorkPanel heading={m.action_location_title()}>
 						<form
 							method="POST"
 							action="?/changeLocation"
 							use:enhance
-							class="mt-[var(--space-4)] space-y-[var(--space-3)]"
+							class="space-y-[var(--space-3)]"
 						>
 							<SelectField
 								label={m.asset_detail_location()}
@@ -262,23 +249,17 @@
 								{m.action_location_submit()}
 							</Button>
 						</form>
-					</section>
+					</WorkPanel>
 
-					<section class={panel}>
-						<h2 class={panelTitle}>{m.action_note_title()}</h2>
-						<form
-							method="POST"
-							action="?/addNote"
-							use:enhance
-							class="mt-[var(--space-4)] space-y-[var(--space-3)]"
-						>
+					<WorkPanel heading={m.action_note_title()}>
+						<form method="POST" action="?/addNote" use:enhance class="space-y-[var(--space-3)]">
 							<Field label={m.action_note_label()} name="text" required />
 							{@render failure('addNote')}
 							<Button type="submit" variant="secondary" size="sm">
 								{m.action_note_submit()}
 							</Button>
 						</form>
-					</section>
+					</WorkPanel>
 				{/if}
 			</div>
 		{/if}
@@ -286,13 +267,12 @@
 
 	{#snippet side()}
 		{#if data.timeline}
-			<section class={panel}>
-				<div class="flex items-baseline justify-between gap-[var(--space-3)]">
-					<h2 class={panelTitle}>{m.timeline_title()}</h2>
-					<span class="font-mono text-xs text-[var(--ink-muted)]">{asset.assetTag}</span>
-				</div>
+			{#snippet timelineTag()}
+				<span class="font-mono text-xs text-[var(--ink-muted)]">{asset.assetTag}</span>
+			{/snippet}
+			<WorkPanel heading={m.timeline_title()} actions={timelineTag}>
 				{#if data.recentTickets > 0}
-					<p class="mt-[var(--space-1)] text-sm font-medium text-[var(--ink)]">
+					<p class="text-sm font-medium text-[var(--ink)]">
 						{data.recentTickets === 1
 							? m.asset_tickets_recent_one({ months: data.recentMonths })
 							: m.asset_tickets_recent_other({
@@ -301,10 +281,10 @@
 								})}
 					</p>
 				{/if}
-				<div class="mt-[var(--space-4)]">
+				<div class={data.recentTickets > 0 ? 'mt-[var(--space-4)]' : ''}>
 					<AssetTimeline items={data.timeline} />
 				</div>
-			</section>
+			</WorkPanel>
 		{/if}
 	{/snippet}
 </PageLayout>

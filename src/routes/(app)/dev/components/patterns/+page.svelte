@@ -1,6 +1,13 @@
 <script lang="ts">
+	import DataTable, { type DataTableColumn } from '#lib/components/unitati/DataTable.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
+	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
+	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
+	import TicketDetailLayout from '#lib/components/unitati/TicketDetailLayout.svelte';
+	import TicketThread from '#lib/components/unitati/TicketThread.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
+	import type { RelatedGroup } from '#lib/server/links/related.js';
+	import type { ThreadItem } from '#lib/server/service-desk/comments.js';
 
 	interface Pattern {
 		title: string;
@@ -153,7 +160,101 @@
 			]
 		}
 	];
+
+	/**
+	 * Composed screen specimens for #101: not individual components (each
+	 * already has its own gallery page) but the same real screens the issue's
+	 * four reported v0.14.0 screenshots named, at the row counts/edge cases
+	 * the issue's "Done when" checklist asks to prove — one row, fifty rows,
+	 * a 70-character related-asset name at the 320px rail width, long asset
+	 * detail values.
+	 */
+	interface IndexRow {
+		tag: string;
+		subject: string;
+		status: 'in_progress' | 'resolved';
+	}
+
+	function indexRows(count: number): IndexRow[] {
+		return Array.from({ length: count }, (_, index) => ({
+			tag: `TCK-${String(index + 1).padStart(4, '0')}`,
+			subject:
+				index === 0 ? 'El portátil no enciende tras la actualización' : `Incidencia ${index + 1}`,
+			status: index % 3 === 0 ? 'resolved' : 'in_progress'
+		}));
+	}
+
+	const indexColumns: DataTableColumn<IndexRow>[] = [
+		{ key: 'tag', header: 'Código', cell: indexTagCell },
+		{ key: 'subject', header: 'Asunto', cell: indexSubjectCell },
+		{ key: 'status', header: 'Estado', cell: indexStatusCell }
+	];
+
+	const longAssetName =
+		'Estación de acoplamiento USB-C de repuesto para portátiles de desarrollo, almacén central';
+
+	const threadWithLongAsset: ThreadItem[] = [
+		{
+			kind: 'comment',
+			id: 'c1',
+			authorPersonId: 'p1',
+			authorName: 'Ada Lovelace',
+			body: 'El equipo no enciende desde esta mañana, ya lo he cargado toda la noche.',
+			visibility: 'public',
+			createdAt: new Date('2026-03-01T09:05:00Z'),
+			attachments: []
+		},
+		{
+			kind: 'comment',
+			id: 'c2',
+			authorPersonId: 'p2',
+			authorName: 'Soporte técnico',
+			body: 'Nota interna: comprobar garantía antes de ofrecer sustitución.',
+			visibility: 'internal',
+			createdAt: new Date('2026-03-01T10:00:00Z'),
+			attachments: []
+		}
+	];
+
+	const relatedWithLongName: RelatedGroup[] = [
+		{
+			relation: 'affects',
+			icon: 'asset',
+			items: [
+				{
+					linkedAt: new Date('2026-03-01T09:00:00Z'),
+					ref: { kind: 'asset', id: '1', tag: 'AST-0231', title: longAssetName, href: '#' },
+					status: 'in_use'
+				},
+				{
+					linkedAt: new Date('2026-03-01T09:00:00Z'),
+					ref: { kind: 'asset', id: '2', tag: 'AST-0232', title: 'Monitor Dell 27"', href: '#' },
+					status: 'in_repair'
+				}
+			]
+		}
+	];
+
+	interface CatalogueRow {
+		id: string;
+		name: string;
+		manufacturerName: string;
+		categoryName: string;
+	}
+
+	function catalogueRows(count: number): CatalogueRow[] {
+		return Array.from({ length: count }, (_, index) => ({
+			id: String(index + 1),
+			name: index === 0 ? 'MacBook Pro 14" (M3 Pro)' : `Modelo ${index + 1}`,
+			manufacturerName: 'Apple',
+			categoryName: 'Portátil'
+		}));
+	}
 </script>
+
+{#snippet indexTagCell(row: IndexRow)}<span class="font-mono text-xs">{row.tag}</span>{/snippet}
+{#snippet indexSubjectCell(row: IndexRow)}{row.subject}{/snippet}
+{#snippet indexStatusCell(row: IndexRow)}<StatusBadge status={row.status} />{/snippet}
 
 <div class="flex flex-col gap-[var(--space-6)]">
 	<PageHeader title="Patrones de composición">
@@ -222,4 +323,131 @@
 			{/if}
 		</WorkPanel>
 	{/each}
+
+	<PageHeader title="Especímenes compuestos">
+		{#snippet summary()}
+			Las cuatro pantallas que el issue #101 pidió probar, con los mismos componentes que las rutas
+			reales — una fila, cincuenta filas, un nombre de activo de 70 caracteres en el rail de 320px,
+			valores largos de ficha. No son componentes nuevos: cada pieza ya tiene su propia página de
+			galería; esto es la composición final, así que ningún especimen aquí envuelve con un WorkPanel
+			adicional lo que ya es su propio panel — el mismo "no double border" que el issue pide en las
+			pantallas reales.
+		{/snippet}
+	</PageHeader>
+
+	<section>
+		<h3 class="text-[15px] leading-[22px] font-semibold text-[var(--ink)]">
+			Índice de lista — una fila y cincuenta filas
+		</h3>
+		<div class="mt-[var(--space-3)] grid gap-[var(--space-5)] lg:grid-cols-2">
+			<div>
+				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">Una fila</p>
+				<DataTable
+					columns={indexColumns}
+					rows={indexRows(1)}
+					rowKey={(row) => row.tag}
+					rowLabel={(row) => row.subject}
+					emptyMessage="Todavía no hay tickets."
+				/>
+			</div>
+			<div>
+				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+					Cincuenta filas
+				</p>
+				<DataTable
+					columns={indexColumns}
+					rows={indexRows(50)}
+					rowKey={(row) => row.tag}
+					rowLabel={(row) => row.subject}
+					emptyMessage="Todavía no hay tickets."
+					compact
+				/>
+			</div>
+		</div>
+	</section>
+
+	<section>
+		<h3 class="text-[15px] leading-[22px] font-semibold text-[var(--ink)]">
+			Ficha de ticket — mensajes públicos/internos y activo relacionado largo
+		</h3>
+		<div class="mt-[var(--space-3)] grid gap-[var(--space-5)] lg:grid-cols-[1fr_320px]">
+			<WorkPanel>
+				<TicketDetailLayout
+					ticketTag="TCK-0042"
+					subject="No enciende el portátil"
+					status="in_progress"
+					priority="high"
+					provenance="Abierto por Ada Lovelace · 1 mar 2026, 09:00 · vía portal"
+				/>
+				<div class="mt-[var(--space-5)]">
+					<TicketThread items={threadWithLongAsset} attachmentHref={(id) => `#${id}`} />
+				</div>
+			</WorkPanel>
+			<div class="w-full max-w-[320px]">
+				<RelatedRecords groups={relatedWithLongName} />
+			</div>
+		</div>
+	</section>
+
+	<section>
+		<h3 class="text-[15px] leading-[22px] font-semibold text-[var(--ink)]">
+			Ficha de activo — valores largos
+		</h3>
+		<div class="mt-[var(--space-3)] grid gap-[var(--space-4)] sm:grid-cols-2">
+			<WorkPanel heading="Detalles">
+				<dl class="divide-y divide-[var(--border)]">
+					<div class="flex justify-between gap-[var(--space-4)] py-[var(--space-2)] text-sm">
+						<dt class="text-[var(--ink-muted)]">Modelo</dt>
+						<dd class="text-right text-[var(--ink)]">{longAssetName}</dd>
+					</div>
+					<div class="flex justify-between gap-[var(--space-4)] py-[var(--space-2)] text-sm">
+						<dt class="text-[var(--ink-muted)]">Ubicación</dt>
+						<dd class="text-right text-[var(--ink)]">
+							Almacén central, planta -1, pasillo de reposición de periféricos
+						</dd>
+					</div>
+				</dl>
+			</WorkPanel>
+			<WorkPanel heading="Estado">
+				<p class="text-sm text-[var(--ink-muted)]">
+					Un valor largo no rompe el ancho fijo del panel — se envuelve, nunca desborda.
+				</p>
+			</WorkPanel>
+		</div>
+	</section>
+
+	<section>
+		<h3 class="text-[15px] leading-[22px] font-semibold text-[var(--ink)]">
+			Fila de catálogo — una fila y cincuenta filas
+		</h3>
+		<div class="mt-[var(--space-3)] grid gap-[var(--space-5)] lg:grid-cols-2">
+			{#each [1, 50] as count (count)}
+				<div>
+					<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+						{count}
+						{count === 1 ? 'fila' : 'filas'}
+					</p>
+					<div
+						class="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]"
+					>
+						<ul class="divide-y divide-[var(--border)]">
+							{#each catalogueRows(count) as row (row.id)}
+								<li
+									class="flex items-center justify-between gap-[var(--space-3)] p-[var(--space-3)]"
+								>
+									<div class="grid min-w-0 flex-1 gap-[var(--space-1)] sm:grid-cols-3">
+										<span class="truncate text-sm font-medium text-[var(--ink)]">{row.name}</span>
+										<span class="truncate text-sm text-[var(--ink-muted)]"
+											>{row.manufacturerName}</span
+										>
+										<span class="truncate text-sm text-[var(--ink-muted)]">{row.categoryName}</span>
+									</div>
+								</li>
+							{/each}
+						</ul>
+					</div>
+				</div>
+			{/each}
+		</div>
+	</section>
 </div>
