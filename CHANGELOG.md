@@ -5,6 +5,18 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.20.1] - 2026-10-10
+
+### Fixed
+
+- `AppShell`'s mobile drawer stayed open after tapping a nav link, since nothing ever flipped
+  `drawerOpen` back to `false` once SvelteKit's client-side router took over — `afterNavigate`
+  now closes it on every navigation, the same hook that already resets `<main>`'s scroll
+  position.
+- `AppVersion` was rendered only inside the desktop `<aside>` (`hidden md:block`), so the mobile
+  drawer's `<nav>` never showed it. It now also renders in the drawer's own footer, same markup
+  as the desktop sidebar's.
+
 ## [0.20.0] - 2026-10-10
 
 ### Added
