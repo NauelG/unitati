@@ -5,6 +5,42 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.17.0] - 2026-10-10
+
+### Added
+
+- UI overhaul — Phase 3: information layer (#84): the Overview at `/` stops being a static
+  greeting and gains two real modes. An **empty organisation** sees a four-step onboarding
+  checklist (register an asset, define a queue, open the portal, add a person beyond the
+  registering admin), each step with its own description, one action link, and completion
+  derived from real counts — not a dismissible flag. A **working organisation** sees four KPI
+  cards (open tickets, waiting on user, active assets, unassigned), "Your work" (the viewer's
+  own open assignment, top 5), and recent activity (the organisation's latest 8 events, merged
+  across assets and tickets, newest first). A **partially populated** organisation gets the
+  working dashboard plus a secondary strip of whichever onboarding steps remain — the checklist
+  never hard-switches away after the first record.
+  `KpiCard.svelte` (`src/lib/components/unitati/`) is the new primitive: a label and a tabular
+  Instrument Sans number, with an optional left accent border reserved for a count that is
+  waiting (`warning`) or wrong (`danger`) — never decoration on a plain count. It has a gallery
+  page under `/dev/components/kpi-card` (#85's per-component template) covering the empty,
+  normal and warning states, and a slot for phase #90's sparkline.
+  The domain layer grows four scoped aggregate queries, each living with the table it counts
+  (ADR 0002): `assetSummary` and `ticketSummary` take the viewer and reuse the same
+  `requireAssetScope`/`requireTicketScope` the record lists already enforce, so a redacted
+  viewer's summary agrees with the list it describes; `countTeams` sits beside `countPeople`;
+  `hasPortalActivity` and `myOpenTickets` round out the service-desk module. `activity` gains
+  `listRecentActivity`, an organisation-wide feed distinct from `listActivity`'s per-record
+  timeline, joined into `assets`/`tickets` for the `RecordRef` each entry links to.
+  The live summary lands on `PageHeader` for `/assets` ("50 activos · 4 sin asignar"),
+  `/service-desk` ("1 solicitud abierta · 0 esperando respuesta") and `/directory`
+  ("12 personas · 3 equipos"), replacing the static lede the moment there is anything to count,
+  and falling back to it for a genuinely empty list. Message keys follow the `_one`/`_other`
+  pattern already used by `related_affects_*`, with the two counts composed through `·` rather
+  than concatenated as raw tokens (ADR 0008).
+  Known gap, documented rather than worked around: the directory has no self-serve "add a
+  person" screen yet, so that checklist action links to `/directory` itself; a real create-person
+  form is its own future ticket.
+
 ## [0.16.0] - 2026-10-10
 
 ### Changed

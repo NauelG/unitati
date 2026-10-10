@@ -1,7 +1,7 @@
 import { getDb } from '../db';
 import { describe, expect, it } from 'vitest';
-import { organisations, people } from './schema';
-import { countPeople } from '.';
+import { organisations, people, teams } from './schema';
+import { countPeople, countTeams } from '.';
 
 async function createOrganisation(name: string, slug: string) {
 	const [organisation] = await getDb().insert(organisations).values({ name, slug }).returning();
@@ -27,5 +27,27 @@ describe('countPeople', () => {
 	it('returns zero for an organisation with no people', async () => {
 		const acme = await createOrganisation('Acme', 'acme-people-counts-empty');
 		expect(await countPeople(acme.id)).toBe(0);
+	});
+});
+
+describe('countTeams', () => {
+	it('counts only the requested organisation’s teams', async () => {
+		const acme = await createOrganisation('Acme', 'acme-teams-counts');
+		const globex = await createOrganisation('Globex', 'globex-teams-counts');
+		await getDb()
+			.insert(teams)
+			.values([
+				{ organisationId: acme.id, name: 'Soporte' },
+				{ organisationId: acme.id, name: 'Infraestructura' },
+				{ organisationId: globex.id, name: 'Soporte' }
+			]);
+
+		expect(await countTeams(acme.id)).toBe(2);
+		expect(await countTeams(globex.id)).toBe(1);
+	});
+
+	it('returns zero for an organisation with no teams', async () => {
+		const acme = await createOrganisation('Acme', 'acme-teams-counts-empty');
+		expect(await countTeams(acme.id)).toBe(0);
 	});
 });

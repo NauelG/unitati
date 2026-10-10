@@ -71,7 +71,11 @@
 
 <PageLayout variant="index">
 	<PageHeader title={m.tickets_title()}>
-		{#snippet summary()}{m.tickets_lede()}{/snippet}
+		{#snippet summary()}
+			{data.summary.open === 0
+				? m.tickets_lede()
+				: `${data.summary.open === 1 ? m.tickets_summary_open_one() : m.tickets_summary_open_other({ count: data.summary.open })} · ${data.summary.waitingOnUser === 1 ? m.tickets_summary_waiting_one() : m.tickets_summary_waiting_other({ count: data.summary.waitingOnUser })}`}
+		{/snippet}
 		{#snippet actions()}
 			{#if data.canManage}
 				<Button href="/service-desk/queues" variant="secondary">{m.tickets_queues()}</Button>

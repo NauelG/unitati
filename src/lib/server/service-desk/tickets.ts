@@ -172,6 +172,75 @@ export async function countOpen(organisationId: string): Promise<number> {
 	return row?.count ?? 0;
 }
 
+export interface TicketSummary {
+	/** Every ticket not `resolved` or `closed`. */
+	open: number;
+	/** `waiting_on_user`, a subset of `open` singled out because it is the queue waiting on somebody *else*. */
+	waitingOnUser: number;
+}
+
+/**
+ * The Overview KPI and the live `PageHeader` summary on `/service-desk` (#84):
+ * both counts in one round trip, scoped by `requireTicketScope` rather than a
+ * bare organisation id — unlike `countOpen`, which `AppShell` always calls for
+ * a viewer who already holds `tickets.view` or `tickets.view.own`, this is also
+ * reachable for a narrower scope and must agree with the list it summarises.
+ */
+export async function ticketSummary(viewer: SessionUser): Promise<TicketSummary> {
+	const [row] = await getDb()
+		.select({
+			open: sql<number>`count(*) filter (where ${tickets.status} not in ('resolved', 'closed'))::int`,
+			waitingOnUser: sql<number>`count(*) filter (where ${tickets.status} = 'waiting_on_user')::int`
+		})
+		.from(tickets)
+		.where(requireTicketScope(viewer));
+
+	return { open: row?.open ?? 0, waitingOnUser: row?.waitingOnUser ?? 0 };
+}
+
+/**
+ * True once any ticket has ever arrived through the employee portal — the
+ * Overview onboarding checklist's "open the portal" step (#84). Channel, not
+ * requester, is the signal: a technician can raise a ticket on an employee's
+ * behalf without the employee ever having reached the portal themselves.
+ *
+ * A bare `organisationId`, like `countOpen`: the checklist is an
+ * organisation-wide fact, not something that varies by who is looking at it.
+ */
+export async function hasPortalActivity(organisationId: string): Promise<boolean> {
+	const [row] = await getDb()
+		.select({ count: sql<number>`count(*)::int` })
+		.from(tickets)
+		.where(and(eq(tickets.organisationId, organisationId), eq(tickets.channel, 'portal')))
+		.limit(1);
+	return (row?.count ?? 0) > 0;
+}
+
+/**
+ * The Overview's "Your work": a viewer's own open assignment, newest-updated
+ * first. Scoped by `requireTicketScope` first and the assignee second, so an
+ * employee who somehow held `tickets.view.own` and an assignment still only
+ * ever sees tickets they are entitled to see at all.
+ *
+ * Empty for a viewer with no directory record — nothing can be assigned to a
+ * `personId` that does not exist — rather than falling through to "every
+ * unassigned ticket", which `eq(assigneePersonId, null)` would silently become.
+ */
+export async function myOpenTickets(viewer: SessionUser, limit = 5): Promise<TicketView[]> {
+	if (viewer.personId === null) return [];
+
+	const where = and(
+		requireTicketScope(viewer),
+		eq(tickets.assigneePersonId, viewer.personId),
+		sql`${tickets.status} not in ('resolved', 'closed')`
+	) as SQL;
+
+	return ticketsWithRelations()
+		.where(where)
+		.orderBy(desc(tickets.updatedAt), asc(tickets.id))
+		.limit(limit);
+}
+
 /** The ticket behind a `/service-desk/TCK-1093` URL (ADR 0010). */
 export async function getTicketByTag(
 	viewer: SessionUser,

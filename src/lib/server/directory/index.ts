@@ -2,7 +2,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { users } from '../auth/schema';
 import type { SessionUser } from '../auth/guards';
-import { departments, locations, organisations, people } from './schema';
+import { departments, locations, organisations, people, teams } from './schema';
 
 export { organisations, people, departments, locations, teams } from './schema';
 export type { Organisation, Person, Department, Location, Team } from './schema';
@@ -95,5 +95,14 @@ export async function countPeople(organisationId: string): Promise<number> {
 		.select({ count: sql<number>`count(*)::int` })
 		.from(people)
 		.where(eq(people.organisationId, organisationId));
+	return row?.count ?? 0;
+}
+
+/** The Overview KPI's `teams` half (#84), alongside `countPeople`'s `people` half. */
+export async function countTeams(organisationId: string): Promise<number> {
+	const [row] = await getDb()
+		.select({ count: sql<number>`count(*)::int` })
+		.from(teams)
+		.where(eq(teams.organisationId, organisationId));
 	return row?.count ?? 0;
 }

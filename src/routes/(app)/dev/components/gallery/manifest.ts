@@ -123,6 +123,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/Avatar.svelte')
 	},
 	{
+		id: 'kpi-card',
+		name: 'KpiCard',
+		category: 'data',
+		summary: 'Un recuento de un vistazo: etiqueta corta y número tabular, sin decoración.',
+		sourceFile: 'KpiCard.svelte',
+		load: () => import('./specs/KpiCard.svelte')
+	},
+	{
 		id: 'data-table',
 		name: 'DataTable',
 		category: 'data',

@@ -1,6 +1,6 @@
 import { ASSET_READ_PERMISSIONS } from '#lib/domain/access.js';
 import { can } from '#lib/server/access/permissions.js';
-import { listAssets } from '#lib/server/assets/index.js';
+import { assetSummary, listAssets } from '#lib/server/assets/index.js';
 import { requireAnyPermission } from '#lib/server/auth/guards.js';
 import { pageWindowFrom } from '#lib/server/shared/pagination.js';
 import type { PageServerLoad } from './$types';
@@ -13,15 +13,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const window = pageWindowFrom(url.searchParams);
 	const search = url.searchParams.get('q')?.trim() ?? '';
 
-	const result = await listAssets(user, {
-		page: window.page,
-		perPage: window.perPage,
-		search
-	});
+	const [result, summary] = await Promise.all([
+		listAssets(user, { page: window.page, perPage: window.perPage, search }),
+		// The same scope as the list (#84): a search narrows `result`, not this.
+		assetSummary(user)
+	]);
 
 	return {
 		result,
 		search,
+		summary,
 		// Drives copy and columns, never access: the rows above are already redacted.
 		seesWholeInventory: can(user, 'assets.view'),
 		canManage: can(user, 'assets.manage')

@@ -335,6 +335,38 @@ export async function countActive(organisationId: string): Promise<number> {
 	return row?.count ?? 0;
 }
 
+export interface AssetSummary {
+	/** Every asset the viewer may see, every state included — unlike `countActive`, which drops `retired`. */
+	total: number;
+	/** `in_use`: deployed to someone or somewhere, as opposed to sitting `in_stock` or `in_repair`. */
+	inService: number;
+	/** No custodian at all, regardless of state — a retired asset nobody holds still counts. */
+	unassigned: number;
+}
+
+/**
+ * The Overview KPI and the live `PageHeader` summary on `/assets` (#84): three
+ * counts in one round trip, scoped by `requireAssetScope` so an employee
+ * restricted to their own and shared rows reads a summary that agrees with
+ * the list they are looking at, not the whole inventory.
+ */
+export async function assetSummary(viewer: SessionUser): Promise<AssetSummary> {
+	const [row] = await getDb()
+		.select({
+			total: sql<number>`count(*)::int`,
+			inService: sql<number>`count(*) filter (where ${assets.state} = 'in_use')::int`,
+			unassigned: sql<number>`count(*) filter (where ${assets.custodianPersonId} is null)::int`
+		})
+		.from(assets)
+		.where(requireAssetScope(viewer));
+
+	return {
+		total: row?.total ?? 0,
+		inService: row?.inService ?? 0,
+		unassigned: row?.unassigned ?? 0
+	};
+}
+
 /** The asset behind a `/assets/AST-0142` URL (ADR 0010), redacted for its viewer. */
 export async function getAssetByTag(
 	viewer: SessionUser,
