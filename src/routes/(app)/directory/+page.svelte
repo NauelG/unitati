@@ -19,7 +19,11 @@
 
 <PageLayout variant="index">
 	<PageHeader title={m.directory_title()}>
-		{#snippet summary()}{m.directory_lede()}{/snippet}
+		{#snippet summary()}
+			{data.people.length === 0
+				? m.directory_lede()
+				: `${data.people.length === 1 ? m.directory_summary_people_one() : m.directory_summary_people_other({ count: data.people.length })} · ${data.teams === 1 ? m.directory_summary_teams_one() : m.directory_summary_teams_other({ count: data.teams })}`}
+		{/snippet}
 	</PageHeader>
 
 	<div

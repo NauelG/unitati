@@ -86,7 +86,11 @@
 <PageLayout variant="index">
 	<PageHeader title={m.assets_title()}>
 		{#snippet summary()}
-			{data.seesWholeInventory ? m.assets_lede() : m.assets_lede_limited()}
+			{data.summary.total === 0
+				? data.seesWholeInventory
+					? m.assets_lede()
+					: m.assets_lede_limited()
+				: `${data.summary.total === 1 ? m.assets_summary_total_one() : m.assets_summary_total_other({ count: data.summary.total })} · ${data.summary.unassigned === 1 ? m.assets_summary_unassigned_one() : m.assets_summary_unassigned_other({ count: data.summary.unassigned })}`}
 		{/snippet}
 		{#snippet actions()}
 			{#if data.canManage}

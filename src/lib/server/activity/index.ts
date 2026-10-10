@@ -20,5 +20,5 @@ export type { ActivityRow } from './schema';
 export { recordActivity } from './writer';
 export type { ActivityWrite } from './writer';
 
-export { listActivity } from './reader';
-export type { ActivityQuery, TimelineEntry } from './reader';
+export { listActivity, listRecentActivity } from './reader';
+export type { ActivityQuery, TimelineEntry, OrgActivityEntry } from './reader';

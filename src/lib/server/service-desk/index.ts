@@ -30,9 +30,18 @@ export {
 	setTicketPriority,
 	assignTicket,
 	moveTicketToQueue,
-	countOpen
+	countOpen,
+	ticketSummary,
+	hasPortalActivity,
+	myOpenTickets
 } from './tickets';
-export type { Deps, TicketView, TicketListRequest, CreateTicketFailure } from './tickets';
+export type {
+	Deps,
+	TicketView,
+	TicketListRequest,
+	CreateTicketFailure,
+	TicketSummary
+} from './tickets';
 
 export { ticketThread, addComment, getAttachment } from './comments';
 export type { ThreadItem, ThreadAttachment, AddCommentFailure } from './comments';

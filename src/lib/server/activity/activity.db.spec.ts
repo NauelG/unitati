@@ -12,7 +12,7 @@ import {
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
 import { activity } from './schema';
 import { recordActivity } from './writer';
-import { listActivity } from './reader';
+import { listActivity, listRecentActivity } from './reader';
 import { ACTIVITY_TARGETS, ACTIVITY_VERBS } from './verbs';
 
 /**
@@ -378,5 +378,77 @@ describe('listActivity', () => {
 		});
 
 		expect(entries).toEqual([]);
+	});
+});
+
+describe('listRecentActivity', () => {
+	it('merges every target into one organisation-wide feed, newest first, each linked to its record', async () => {
+		const { organisation, asset, ticket } = await scenario();
+
+		await getDb().transaction(async (tx) => {
+			await recordActivity(tx, {
+				organisationId: organisation.id,
+				target: { assetId: asset.id },
+				verb: 'note.added',
+				payload: { text: 'inspected' },
+				occurredAt: new Date('2026-01-01T09:00:00Z')
+			});
+			await recordActivity(tx, {
+				organisationId: organisation.id,
+				target: { ticketId: ticket.id },
+				verb: 'ticket.created',
+				payload: { ticketTag: ticket.ticketTag, subject: ticket.subject, channel: ticket.channel },
+				occurredAt: new Date('2026-01-02T09:00:00Z')
+			});
+		});
+
+		const feed = await listRecentActivity(organisation.id);
+
+		expect(feed).toHaveLength(2);
+		expect(feed[0].record).toEqual({
+			kind: 'ticket',
+			tag: ticket.ticketTag,
+			title: ticket.subject,
+			href: `/service-desk/${ticket.ticketTag}`
+		});
+		expect(feed[1].record).toEqual({
+			kind: 'asset',
+			tag: asset.assetTag,
+			title: asset.name,
+			href: `/assets/${asset.assetTag}`
+		});
+	});
+
+	it('does not return another organisation’s entries', async () => {
+		const { organisation, asset } = await scenario();
+		const globex = await createOrganisation('Globex', 'globex-recent');
+
+		await getDb()
+			.insert(activity)
+			.values({
+				organisationId: organisation.id,
+				verb: 'note.added',
+				payload: { text: 'private to Acme' },
+				assetId: asset.id
+			});
+
+		expect(await listRecentActivity(globex.id)).toEqual([]);
+	});
+
+	it('caps the feed at the requested limit', async () => {
+		const { organisation, asset } = await scenario();
+
+		await getDb().transaction(async (tx) => {
+			for (let i = 0; i < 3; i++) {
+				await recordActivity(tx, {
+					organisationId: organisation.id,
+					target: { assetId: asset.id },
+					verb: 'note.added',
+					payload: { text: `note ${i}` }
+				});
+			}
+		});
+
+		expect(await listRecentActivity(organisation.id, 2)).toHaveLength(2);
 	});
 });

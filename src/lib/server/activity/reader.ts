@@ -1,5 +1,7 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { getDb } from '../db';
+import { assets } from '../assets/schema';
+import { tickets } from '../service-desk/schema';
 import { people } from '../directory/schema';
 import { activity } from './schema';
 import type { ActivityEntry } from './payload';
@@ -77,4 +79,71 @@ export async function listActivity(query: ActivityQuery): Promise<TimelineEntry[
 	// The row's `verb` and `payload` came out of the same column pair, so they
 	// belong to the same arm of the union; the select cannot express that.
 	return rows as TimelineEntry[];
+}
+
+/** What a feed item links to, in `RecordRef`'s own shape. Absent for the handful of verbs with no asset or ticket to point at. */
+export type OrgActivityEntry = TimelineEntry & {
+	record: { kind: 'asset' | 'ticket'; tag: string; title: string; href: string } | null;
+};
+
+/**
+ * The Overview's "recent activity" (#84): the organisation's whole feed,
+ * newest first, not one record's timeline. `listActivity` above answers "what
+ * happened to this asset/ticket/person"; this answers "what happened here" —
+ * a different query, not a parameter this one was missing.
+ *
+ * Joins straight into `assets` and `tickets` for the `RecordRef` each entry
+ * links to. That is not a domain reaching into another domain's table: ADR
+ * 0002's rule binds the domains, and `activity` is cross-cutting, exactly as
+ * `schema.ts` already is by carrying both tables' foreign keys.
+ *
+ * Unfiltered by role on purpose, for now: every caller today is staff who
+ * already holds `assets.view` and `tickets.view` in full (ADR 0007's table has
+ * no narrower role reaching the Overview), so there is nothing left to redact.
+ * An employee-facing feed would need a real per-row visibility rule, not this
+ * function with a flag bolted on.
+ */
+export async function listRecentActivity(
+	organisationId: string,
+	limit = 8
+): Promise<OrgActivityEntry[]> {
+	const rows = await getDb()
+		.select({
+			id: activity.id,
+			verb: activity.verb,
+			payload: activity.payload,
+			occurredAt: activity.occurredAt,
+			actorPersonId: activity.actorPersonId,
+			actorName: people.fullName,
+			assetTag: assets.assetTag,
+			assetName: assets.name,
+			ticketTag: tickets.ticketTag,
+			ticketSubject: tickets.subject
+		})
+		.from(activity)
+		.leftJoin(people, eq(activity.actorPersonId, people.id))
+		.leftJoin(assets, eq(activity.assetId, assets.id))
+		.leftJoin(tickets, eq(activity.ticketId, tickets.id))
+		.where(eq(activity.organisationId, organisationId))
+		.orderBy(desc(activity.occurredAt), desc(activity.id))
+		.limit(limit);
+
+	return rows.map(({ assetTag, assetName, ticketTag, ticketSubject, ...entry }) => ({
+		...entry,
+		record: assetTag
+			? {
+					kind: 'asset' as const,
+					tag: assetTag,
+					title: assetName ?? assetTag,
+					href: `/assets/${assetTag}`
+				}
+			: ticketTag
+				? {
+						kind: 'ticket' as const,
+						tag: ticketTag,
+						title: ticketSubject ?? ticketTag,
+						href: `/service-desk/${ticketTag}`
+					}
+				: null
+	})) as OrgActivityEntry[];
 }
