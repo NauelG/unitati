@@ -82,9 +82,17 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		id: 'select-field',
 		name: 'SelectField',
 		category: 'fields',
-		summary: 'El `Field` de un `<select>`, comparte sus estilos.',
+		summary: 'El `Field` de una lista desplegable, vendorizada sobre el primitivo `select`.',
 		sourceFile: 'SelectField.svelte',
 		load: () => import('./specs/SelectField.svelte')
+	},
+	{
+		id: 'search-select-field',
+		name: 'SearchSelectField',
+		category: 'fields',
+		summary: 'Combobox buscable de una sola opción, para listas largas o remotas.',
+		sourceFile: 'SearchSelectField.svelte',
+		load: () => import('./specs/SearchSelectField.svelte')
 	},
 	{
 		id: 'asset-picker',
