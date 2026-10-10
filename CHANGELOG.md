@@ -41,6 +41,11 @@ minor bumps carry features and patch bumps carry fixes.
   the current, unlinked record. `/assets/[tag]` and `/service-desk/[tag]` both gain one: asset →
   its catalogue, ticket → its queue (linking to `/service-desk?queue=…`) → the ticket itself. It
   sits beside the existing `PageHeader`/`TicketDetailLayout`, not a second copy of either.
+- `shadcn-svelte add tabs` (#86): `ui/tabs` joins the other vendored primitives (`ui/dialog`,
+  `ui/select`, …) in `.prettierignore`'s byte-identical-to-upstream set. No `unitati/Tabs.svelte`
+  wrapper yet and no gallery page — same footing as `ui/table`, `ui/popover` or `ui/textarea`
+  today, none of which have one either: the gallery's coverage guard only binds `unitati/*.svelte`
+  files, and the issue's own text allows deferring a themed wrapper until a real page needs one.
 - The queues catalogue (`/service-desk/queues`) moves to the same `Dialog`/`ConfirmDialog` shape
   (ADR 0020) the three asset catalogues already use, replacing its always-live inline rename
   field and bare, unconfirmed delete form — the one catalogue screen that had not yet migrated.
