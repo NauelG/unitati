@@ -62,25 +62,41 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			: [[], []];
 
 	// The contextual edit `Sheet` (ADR 0020) reuses `/assets/[tag]/edit`'s own
-	// form shape and action, so it needs the same validated starting point
-	// and model catalogue — asked only for a manager, same gate the canonical
-	// edit route itself enforces.
+	// form shape and action. `superValidate` runs unconditionally — it is a
+	// pure, no-DB call, and the client-side `superForm()` rune on the
+	// `+page.svelte` side must itself run unconditionally (Svelte's rune
+	// rule), so it cannot fall back to building this shape from the raw
+	// validation schema: that schema lives under `#lib/server/`, and
+	// importing it into a `+page.svelte` leaks server-only code into the
+	// client bundle (caught only by `npm run build`, not `svelte-check`).
+	// The model catalogue stays gated on `editable`: it is a real DB call,
+	// and only a manager viewing a non-shared row ever renders the Sheet
+	// that needs it.
 	const editable = asset.visibility === 'full' && canManage;
-	const [editForm, editModels] = editable
-		? await Promise.all([
-				superValidate(
-					{
-						name: asset.name,
-						assetTag: asset.assetTag,
-						serial: asset.serial,
-						assetModelId: asset.assetModelId,
-						shared: asset.shared
-					},
-					zod4(editAssetForm)
-				),
-				listAssetModels(user.organisationId)
-			])
-		: [null, []];
+	// `asset` is `FullAssetView | SharedAssetView`: only the full view carries
+	// `serial`/`assetModelId`/`shared`, so the seed narrows on `visibility`
+	// explicitly rather than relying on `editable` (which `superValidate`
+	// itself, called unconditionally below, cannot see).
+	const editSeed =
+		asset.visibility === 'full'
+			? {
+					name: asset.name,
+					assetTag: asset.assetTag,
+					serial: asset.serial,
+					assetModelId: asset.assetModelId,
+					shared: asset.shared
+				}
+			: {
+					name: asset.name,
+					assetTag: asset.assetTag,
+					serial: null,
+					assetModelId: '',
+					shared: false
+				};
+	const [editForm, editModels] = await Promise.all([
+		superValidate(editSeed, zod4(editAssetForm)),
+		editable ? listAssetModels(user.organisationId) : Promise.resolve([])
+	]);
 
 	return {
 		asset,

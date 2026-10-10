@@ -3,8 +3,7 @@
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { get } from 'svelte/store';
-	import { defaults, superForm } from 'sveltekit-superforms';
-	import { zod4 } from 'sveltekit-superforms/adapters';
+	import { superForm } from 'sveltekit-superforms';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
@@ -19,7 +18,6 @@
 	import type { PageProps } from './$types';
 	import AssetFields from '../AssetFields.svelte';
 	import AssetsNav from '../AssetsNav.svelte';
-	import { editAssetForm } from '../forms';
 	import { options, stateOptions } from '../options';
 
 	let { data, form }: PageProps = $props();
@@ -48,13 +46,12 @@
 
 	// Called unconditionally, same rule `$state`/`$derived` already follow: a
 	// store Svelte must auto-subscribe to (`$editValues` etc. below) has to
-	// come from a top-level call, not one gated behind `{#if data.editForm}`.
-	// `data.editForm` is only absent for a viewer who never sees the Edit
-	// button that opens this sheet (no `assets.manage`, or a shared row) —
-	// `defaults()` gives this unreachable case a valid, unused starting point
-	// instead of a conditional call that would break the `$`-subscription.
+	// come from a top-level call, not one gated behind `{#if ...}`.
+	// `data.editForm` is always present (the server's `load` runs
+	// `superValidate` unconditionally — see its own comment for why a
+	// client-side fallback built from the raw schema isn't an option here).
 	const edit = superForm(
-		untrack(() => data.editForm ?? defaults(zod4(editAssetForm))),
+		untrack(() => data.editForm),
 		{
 			id: 'asset-edit-sheet',
 			resetForm: false,
