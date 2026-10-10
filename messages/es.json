@@ -218,6 +218,8 @@
 	"catalogue_column_category": "Categoría",
 	"catalogue_create": "Crear",
 	"catalogue_save": "Guardar",
+	"catalogue_edit": "Editar",
+	"catalogue_edit_title": "Editar {name}",
 	"catalogue_delete": "Eliminar",
 	"catalogue_empty_models": "Todavía no hay modelos.",
 	"catalogue_empty_categories": "Todavía no hay categorías.",

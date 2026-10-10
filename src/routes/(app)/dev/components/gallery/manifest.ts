@@ -113,6 +113,15 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/Alert.svelte')
 	},
 	{
+		id: 'dialog',
+		name: 'Dialog',
+		category: 'feedback',
+		summary:
+			'Diálogo corto de una a tres campos (ADR 0020): crear o editar una entrada de catálogo.',
+		sourceFile: 'Dialog.svelte',
+		load: () => import('./specs/Dialog.svelte')
+	},
+	{
 		id: 'confirm-dialog',
 		name: 'ConfirmDialog',
 		category: 'feedback',
