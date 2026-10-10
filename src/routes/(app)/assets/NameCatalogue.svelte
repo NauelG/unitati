@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
+	import { confirmSubmit } from '#lib/components/unitati/confirm-submit.js';
 	import { field } from '#lib/components/unitati/Field.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
@@ -22,6 +24,11 @@
 	// The same input styling as `Field`, without its label: a row in a list is
 	// labelled by its position, and a visible "Nombre" above every line is noise.
 	const input = field().input();
+
+	/** The entry asking "are you sure?", if any: one at a time. */
+	let confirmingId: string | null = $state(null);
+	/** The entry whose delete POST is in flight: blocks Cancel/Escape on its dialog. */
+	let pendingId: string | null = $state(null);
 </script>
 
 <svelte:head>
@@ -66,7 +73,12 @@
 			<ul class="divide-y divide-[var(--border)]">
 				{#each entries as entry (entry.id)}
 					<li class="p-[var(--space-3)]">
-						<form method="POST" use:enhance class="flex items-center gap-[var(--space-3)]">
+						<form
+							method="POST"
+							action="?/rename"
+							use:enhance
+							class="flex items-center gap-[var(--space-3)]"
+						>
 							<input type="hidden" name="id" value={entry.id} />
 							<input
 								name="name"
@@ -75,14 +87,48 @@
 								class={input}
 								required
 							/>
-							<Button type="submit" formaction="?/rename" variant="secondary" size="sm">
+							<Button type="submit" variant="secondary" size="sm">
 								{m.catalogue_save()}
 							</Button>
-							<Button type="submit" formaction="?/delete" variant="ghost" size="sm">
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								onclick={() => (confirmingId = entry.id)}
+							>
 								{m.catalogue_delete()}
 							</Button>
 						</form>
-						{#if result?.id === entry.id && result.message}
+
+						<ConfirmDialog
+							open={confirmingId === entry.id}
+							onOpenChange={(next) => {
+								if (!next) confirmingId = null;
+							}}
+							title={m.catalogue_delete_title({ name: entry.name })}
+							description={m.catalogue_delete_ask()}
+							confirmLabel={m.catalogue_delete()}
+							pending={pendingId === entry.id}
+							error={confirmingId === entry.id && result?.id === entry.id ? result.message : null}
+						>
+							{#snippet action(confirm)}
+								<form
+									method="POST"
+									action="?/delete"
+									use:enhance={confirmSubmit({
+										onPending: (pending) => (pendingId = pending ? entry.id : null),
+										onSettled: (succeeded) => {
+											if (succeeded) confirmingId = null;
+										}
+									})}
+								>
+									<input type="hidden" name="id" value={entry.id} />
+									{@render confirm()}
+								</form>
+							{/snippet}
+						</ConfirmDialog>
+
+						{#if result?.id === entry.id && result.message && confirmingId !== entry.id}
 							<p
 								class="mt-[var(--space-2)] text-[13px] leading-[18px] text-[var(--danger)]"
 								role="alert"

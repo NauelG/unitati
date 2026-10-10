@@ -105,6 +105,22 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 
 	// Feedback
 	{
+		id: 'alert',
+		name: 'Alert',
+		category: 'feedback',
+		summary: 'Feedback persistente: error de formulario, aviso operativo, nota permanente.',
+		sourceFile: 'Alert.svelte',
+		load: () => import('./specs/Alert.svelte')
+	},
+	{
+		id: 'confirm-dialog',
+		name: 'ConfirmDialog',
+		category: 'feedback',
+		summary: 'Confirmación destructiva o de desvincular, sobre alert-dialog de shadcn-svelte.',
+		sourceFile: 'ConfirmDialog.svelte',
+		load: () => import('./specs/ConfirmDialog.svelte')
+	},
+	{
 		id: 'status-badge',
 		name: 'StatusBadge',
 		category: 'feedback',

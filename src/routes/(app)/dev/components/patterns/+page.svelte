@@ -8,6 +8,51 @@
 		links: { id: string; label: string }[];
 	}
 
+	interface FeedbackRule {
+		situation: string;
+		use: string;
+		why: string;
+	}
+
+	/**
+	 * The feedback decision table #99 asks for: which of the taxonomy's pieces
+	 * answers which situation. #89's toast row is a placeholder — the row
+	 * exists so the table is complete, but the component behind it is not
+	 * built here.
+	 */
+	const FEEDBACK_TABLE: FeedbackRule[] = [
+		{
+			situation: 'Error de un campo concreto',
+			use: 'Field / SelectField (prop error)',
+			why: 'Ya asociado con aria-describedby; un Alert al lado duplicaría el anuncio.'
+		},
+		{
+			situation: 'Error a nivel de formulario (no de un campo)',
+			use: 'Alert tone="danger"',
+			why: 'role="alert"/aria-live="assertive": interrumpe, porque el envío falló.'
+		},
+		{
+			situation: 'Aviso operativo que se queda en contexto',
+			use: 'Alert tone="warning" o "info"',
+			why: 'role="status"/polite: informa sin interrumpir cada vez que la página se repinta.'
+		},
+		{
+			situation: 'Acción destructiva o que rompe una relación (eliminar, desvincular)',
+			use: 'ConfirmDialog',
+			why: 'Nombra el registro concreto, bloquea Cancelar/Escape mientras hay una mutación en curso y nunca se cierra solo antes de que el servidor responda.'
+		},
+		{
+			situation: 'Éxito/fallo puntual de una acción de red',
+			use: 'Toast (#89, todavía sin construir)',
+			why: 'Transitorio por definición: ni Alert ni ConfirmDialog se quedan ni desaparecen solos.'
+		},
+		{
+			situation: 'Guardar, asignar, filtrar — cualquier interacción rutinaria',
+			use: 'Ningún diálogo de confirmación',
+			why: 'window.confirm()/alert() no se usan en este sistema; una confirmación solo cuando la consecuencia lo merece.'
+		}
+	];
+
 	const patterns: Pattern[] = [
 		{
 			title: 'Shell de navegación con scroll independiente',
@@ -35,7 +80,7 @@
 		},
 		{
 			title: 'Dialog corto vs Sheet largo vs formulario de página completa',
-			body: 'Una confirmación de una frase vive donde se pide (RelatedRecords ya muestra el patrón: un formulario inline con confirm/cancel, no un diálogo modal). Un formulario corto que no necesita su propio ancho de página es un Sheet (el drawer móvil de AppShell usa el mismo primitivo de ui/sheet). Un formulario con varios campos relacionados es PageLayout variant="form" — la medida fija de ADR 0018. Qué formulario de ticket/alta usa cuál todavía depende de la decisión pendiente en #100: esta página documenta la regla, no la implementación de esa pantalla.',
+			body: 'Una confirmación destructiva o de desvincular es un ConfirmDialog (RelatedRecords y el catálogo de Categorías/Fabricantes ya lo usan): un modal corto, nunca un formulario inline con confirm/cancel suelto en mitad de una lista. Un formulario corto que no necesita su propio ancho de página es un Sheet (el drawer móvil de AppShell usa el mismo primitivo de ui/sheet). Un formulario con varios campos relacionados es PageLayout variant="form" — la medida fija de ADR 0018. Qué formulario de ticket/alta usa cuál todavía depende de la decisión pendiente en #100: esta página documenta la regla, no la implementación de esa pantalla.',
 			links: [{ id: 'page-layout', label: 'PageLayout' }]
 		},
 		{
@@ -47,9 +92,13 @@
 			]
 		},
 		{
-			title: 'Alert vs ConfirmDialog (hoy: confirmación inline) vs Toast',
-			body: 'Este sistema no tiene todavía un componente Alert ni un Toast (ninguno de los dos está en el design system actual). El único patrón de confirmación hoy es el inline de RelatedRecords: un botón "pedir" (ghost) seguido de un formulario con el mensaje de la pregunta y dos botones (danger para confirmar, ghost para cancelar) — nunca un diálogo modal para una sola frase. Cuando Alert/Toast lleguen, esta sección se actualiza para distinguir los tres; mientras tanto, el patrón inline es la única fuente de verdad.',
-			links: [{ id: 'related-records', label: 'RelatedRecords' }]
+			title: 'Alert vs ConfirmDialog vs Toast',
+			body: 'Tres piezas distintas de la misma taxonomía de feedback (#99), nunca intercambiables: Alert para lo que se queda en contexto, ConfirmDialog para lo que pide una decisión antes de una consecuencia irreversible, Toast (#89, todavía sin construir) para lo transitorio. La tabla de abajo es la fuente de verdad — RelatedRecords (desvincular) y el catálogo de Categorías/Fabricantes (eliminar) ya usan ConfirmDialog; service-desk/new ya usa Alert para su error de formulario.',
+			links: [
+				{ id: 'alert', label: 'Alert' },
+				{ id: 'confirm-dialog', label: 'ConfirmDialog' },
+				{ id: 'related-records', label: 'RelatedRecords' }
+			]
 		}
 	];
 </script>
@@ -73,6 +122,29 @@
 					>
 				{/each}
 			</div>
+
+			{#if pattern.title === 'Alert vs ConfirmDialog vs Toast'}
+				<div class="mt-[var(--space-4)] overflow-x-auto">
+					<table class="ut-table w-full text-sm">
+						<thead>
+							<tr>
+								<th class="px-[var(--space-3)] py-2 text-left">Situación</th>
+								<th class="px-[var(--space-3)] py-2 text-left">Usa</th>
+								<th class="px-[var(--space-3)] py-2 text-left">Por qué</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each FEEDBACK_TABLE as rule (rule.situation)}
+								<tr>
+									<td class="px-[var(--space-3)] py-2">{rule.situation}</td>
+									<td class="px-[var(--space-3)] py-2 font-medium">{rule.use}</td>
+									<td class="px-[var(--space-3)] py-2 text-[var(--ink-muted)]">{rule.why}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
 		</WorkPanel>
 	{/each}
 </div>

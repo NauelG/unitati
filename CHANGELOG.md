@@ -5,6 +5,34 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.19.0] - 2026-10-10
+
+### Added
+
+- Reusable feedback taxonomy for persistent alerts and destructive confirmation (#99), with toast
+  ownership staying on #89. `unitati/Alert.svelte` wraps shadcn-svelte's `alert` with four tones
+  (`info`/`success`/`warning`/`danger`), neutral surfaces for `info` instead of `--brand` so a
+  notice never reads as the asset domain, and a `role`/`aria-live` chosen from the tone:
+  `alert`/assertive for a form-level validation failure, `status`/polite for a persistent warning
+  or notice that must not interrupt on every repaint. `unitati/ConfirmDialog.svelte` is composed
+  around the vendored shadcn-svelte `ui/alert-dialog` (bits-ui underneath, the same `Sheet.Root`/
+  `Sheet.Content` composition `AppShell` already uses per ADR 0011) for a destructive or
+  relationship-changing action: it never submits anything itself — the caller's real
+  `<form method="POST">` lives in its `action` snippet, which receives the confirm button (label
+  and danger tone owned by the dialog) as a parameter to place inside — and `pending` disables
+  Cancel/Confirm and blocks Escape/the overlay while that POST is in flight, so a slow network
+  never leaves the dialog ambiguous about whether it closed because the mutation succeeded.
+  `RelatedRecords`' unlink confirmation and all three catalogues' delete actions (the shared
+  Categories/Manufacturers `NameCatalogue.svelte` and `assets/models`) migrate to it, preserving
+  their exact POST payloads and permission guards, through a shared `confirmSubmit()` helper
+  instead of three copies of the same `use:enhance` shape; a forced server failure now keeps the
+  dialog open with the error shown in place instead of closing unconditionally.
+  `service-desk/new`'s form-level error becomes the first `Alert tone="danger"` specimen. Both
+  components join the gallery (`/dev/components/alert`, `/dev/components/confirm-dialog`), and
+  the composition-patterns page gains the feedback decision table the taxonomy needed: which of
+  Field/SelectField's own error, Alert, ConfirmDialog or the still-unbuilt Toast (#89) answers
+  which situation, and why.
+
 ## [0.18.0] - 2026-10-10
 
 ### Added

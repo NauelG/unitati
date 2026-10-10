@@ -21,10 +21,6 @@
 			],
 			items: 'mt-[var(--space-2)] m-0 flex list-none flex-col gap-[var(--space-2)] p-0',
 			item: 'flex flex-wrap items-center gap-[var(--space-2)]',
-			confirm:
-				'flex w-full flex-col gap-[var(--space-2)] rounded-[var(--radius-md)] bg-[var(--warning-soft)] p-[var(--space-3)]',
-			ask: 'text-[13px] leading-[18px] text-[var(--ink)]',
-			actions: 'flex flex-wrap items-center gap-[var(--space-2)]',
 			empty: 'mt-[var(--space-2)] text-sm text-[var(--ink-muted)]',
 			error: 'mt-[var(--space-2)] text-[13px] leading-[18px] text-[var(--danger)]'
 		}
@@ -33,11 +29,12 @@
 
 <script lang="ts">
 	import Unlink from '@lucide/svelte/icons/unlink';
-	import { tick } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { RelatedGroup } from '#lib/server/links/index.js';
 	import Button from './Button.svelte';
+	import ConfirmDialog from './ConfirmDialog.svelte';
+	import { confirmSubmit } from './confirm-submit.js';
 	import RecordRef, { KIND_ICONS } from './RecordRef.svelte';
 	import StatusBadge from './StatusBadge.svelte';
 
@@ -49,7 +46,12 @@
 		 * the domain refuses them anyway, but a button that can only fail is noise.
 		 */
 		unlinkAction?: string;
-		/** Shown under the panel when the last unlink was refused. */
+		/**
+		 * Shown when the last unlink was refused: inside the still-open
+		 * `ConfirmDialog` while JS re-submitted it, or under the panel for a
+		 * plain full-page POST (no `confirming` survives a reload, so there is
+		 * no dialog left to put it in).
+		 */
 		error?: string;
 		/**
 		 * The record asking "are you sure?", if any: one at a time. Bindable so a
@@ -68,8 +70,6 @@
 	}: Props = $props();
 
 	const styles = related();
-	const panelId = $props.id();
-	let heading: HTMLElement | undefined = $state();
 
 	/** Singular and plural wording of each relation: "Equipo afectado" / "Equipos afectados". */
 	const LABELS = {
@@ -82,27 +82,12 @@
 		return group.items.length === 1 ? one() : other();
 	}
 
-	const triggerId = (recordId: string) => `${panelId}-unlink-${recordId}`;
-
-	/** Puts focus on the safe choice when the prompt opens, so a keyboard user lands inside it. */
-	function focusOnMount(node: HTMLElement) {
-		node.focus();
-	}
-
-	/**
-	 * The button that was pressed leaves the DOM whichever way this ends, and
-	 * focus would fall to the page. It goes back to the trigger if the record is
-	 * still there (cancelled, or refused), and to the panel heading if it is gone.
-	 */
-	async function close(recordId: string) {
-		confirming = null;
-		await tick();
-		(document.getElementById(triggerId(recordId)) ?? heading)?.focus();
-	}
+	/** The record whose unlink POST is in flight: blocks Cancel/Escape on its dialog. */
+	let pendingId: string | null = $state(null);
 </script>
 
 <section class={styles.root({ class: className })}>
-	<h2 class={styles.title()} tabindex="-1" bind:this={heading}>{m.related_title()}</h2>
+	<h2 class={styles.title()}>{m.related_title()}</h2>
 
 	{#if groups.length === 0}
 		<p class={styles.empty()}>{m.related_empty()}</p>
@@ -122,9 +107,8 @@
 						<RecordRef record={item.ref} />
 						<StatusBadge status={item.status} />
 
-						{#if unlinkAction && confirming !== item.ref.id}
+						{#if unlinkAction}
 							<Button
-								id={triggerId(item.ref.id)}
 								type="button"
 								variant="ghost"
 								size="sm"
@@ -135,41 +119,34 @@
 								{m.related_unlink()}
 								<span class="sr-only">{item.ref.tag}</span>
 							</Button>
-						{/if}
 
-						{#if unlinkAction && confirming === item.ref.id}
-							<form
-								method="POST"
-								action={unlinkAction}
-								class={styles.confirm()}
-								role="group"
-								aria-labelledby="{triggerId(item.ref.id)}-ask"
-								tabindex="-1"
-								use:focusOnMount
-								use:enhance={() =>
-									async ({ update }) => {
-										await update();
-										await close(item.ref.id);
-									}}
+							<ConfirmDialog
+								open={confirming === item.ref.id}
+								onOpenChange={(next) => {
+									if (!next) confirming = null;
+								}}
+								title={m.related_unlink()}
+								description={m.related_unlink_ask({ tag: item.ref.tag })}
+								confirmLabel={m.related_unlink_confirm()}
+								pending={pendingId === item.ref.id}
+								error={confirming === item.ref.id ? error : null}
 							>
-								<input type="hidden" name="recordId" value={item.ref.id} />
-								<p id="{triggerId(item.ref.id)}-ask" class={styles.ask()}>
-									{m.related_unlink_ask({ tag: item.ref.tag })}
-								</p>
-								<div class={styles.actions()}>
-									<Button type="submit" variant="danger" size="sm">
-										{m.related_unlink_confirm()}
-									</Button>
-									<Button
-										type="button"
-										variant="ghost"
-										size="sm"
-										onclick={() => close(item.ref.id)}
+								{#snippet action(confirm)}
+									<form
+										method="POST"
+										action={unlinkAction}
+										use:enhance={confirmSubmit({
+											onPending: (pending) => (pendingId = pending ? item.ref.id : null),
+											onSettled: (succeeded) => {
+												if (succeeded) confirming = null;
+											}
+										})}
 									>
-										{m.form_cancel()}
-									</Button>
-								</div>
-							</form>
+										<input type="hidden" name="recordId" value={item.ref.id} />
+										{@render confirm()}
+									</form>
+								{/snippet}
+							</ConfirmDialog>
 						{/if}
 					</li>
 				{/each}
@@ -177,7 +154,7 @@
 		</div>
 	{/each}
 
-	{#if error}
+	{#if error && !confirming}
 		<p class={styles.error()} role="alert">{error}</p>
 	{/if}
 </section>
