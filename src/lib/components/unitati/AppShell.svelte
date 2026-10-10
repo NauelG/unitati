@@ -137,6 +137,7 @@
 	});
 
 	afterNavigate(({ to, type }) => {
+		drawerOpen = false;
 		if (!to || !mainEl) return;
 		mainEl.scrollTop = scrollRestoration.resolve(to.url.pathname, type);
 	});
@@ -279,6 +280,11 @@
 			</div>
 			<div class={appShell().navItems()}>
 				{@render navList(false)}
+			</div>
+			<div class={appShell().sidebarFooter()}>
+				<div class="ut-nav-label px-[var(--space-2)] font-mono text-[11px] text-[var(--ink-muted)]">
+					<AppVersion />
+				</div>
 			</div>
 		</nav>
 	</Sheet.Content>
