@@ -37,10 +37,12 @@ minor bumps carry features and patch bumps carry fixes.
   (Escape, the overlay, or Cancel) routes through `ConfirmDialog` instead of discarding silently,
   read from Superforms' own `tainted` store at the moment of closing.
 
+- The composition-patterns gallery page (`/dev/components/patterns`) gains the Dialog/Sheet/full
+  page decision table, replacing the row that pointed at #100 as a still-pending decision.
+
 ### Deferred (tracked as the next slice of #100)
 
-- The composition-patterns gallery page's decision table for choosing among Dialog/Sheet/full
-  page, and visual-token polish for `service-desk/new`.
+- Visual-token polish for `service-desk/new`.
 
 ## [0.19.0] - 2026-10-10
 

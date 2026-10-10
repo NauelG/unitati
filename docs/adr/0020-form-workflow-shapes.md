@@ -87,6 +87,14 @@ create flow with a genuine secondary task (here, "the model doesn't exist yet") 
 case the side column exists for. `/assets/new` is the first non-detail page to use it; a future
 route with no secondary content keeps the plain `form` variant, no side slot.
 
+### The gallery's composition-patterns page is the decision table
+
+`/dev/components/patterns` carried a placeholder row since before this ADR existed, pointing at
+#100 as a still-open decision. It now carries the actual table above — the same situation/use/why
+shape the feedback taxonomy's own table (#99) already established — so a reviewer asking "which
+shape does my new screen need" has one page to check instead of re-deriving the rule from this
+ADR's prose each time.
+
 ### Ticket creation stays full-page, unchanged
 
 `service-desk/new` keeps its current full-page `form` composition: a substantial description,
