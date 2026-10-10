@@ -2,7 +2,10 @@
 	import { enhance } from '$app/forms';
 	import Alert from '#lib/components/unitati/Alert.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
-	import { catalogueDialog } from '#lib/components/unitati/catalogue-dialog.svelte.js';
+	import {
+		catalogueDialog,
+		deleteFailureFrom
+	} from '#lib/components/unitati/catalogue-dialog.svelte.js';
 	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
 	import { confirmSubmit } from '#lib/components/unitati/confirm-submit.js';
 	import Dialog from '#lib/components/unitati/Dialog.svelte';
@@ -59,14 +62,7 @@
 	/** The entry whose delete POST is in flight: blocks Cancel/Escape on its dialog. */
 	let pendingId: string | null = $state(null);
 
-	/** A delete refusal (the entry is still in use) surfaces at the list level,
-	 * not only inside the now-closed confirm dialog — the row that caused it
-	 * may no longer have an open dialog once the user dismisses it. */
-	const deleteFailure = $derived(
-		result?.action === 'delete' && result.message && confirmingId !== result.id
-			? result.message
-			: null
-	);
+	const deleteFailure = $derived(deleteFailureFrom(result, confirmingId));
 </script>
 
 <svelte:head>

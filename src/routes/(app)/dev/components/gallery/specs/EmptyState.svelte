@@ -9,10 +9,10 @@
 <ComponentDocPage
 	name="EmptyState"
 	summary="La rejilla vacía compartida: título opcional, una frase, icono en un disco suave y una acción."
-	role="&quot;Todavía no hay nada&quot; y &quot;ningún resultado coincide con el filtro&quot; son dos frases distintas, nunca la misma: el caller decide cuál es pasando title/description/action diferentes — este componente no tiene opinión sobre cuál es, solo sobre cómo se enmarca una. size=&quot;hero&quot; reserva el rol tipográfico display (36px/700) para la vacuidad de página completa; size=&quot;compact&quot; (por defecto) es la forma en línea que usa el grid vacío de una DataTable."
+	role="&quot;Todavía no hay nada&quot; y &quot;ningún resultado coincide con el filtro&quot; son dos frases distintas, nunca la misma: el caller decide cuál es pasando title/description/action diferentes — este componente no tiene opinión sobre cuál es, solo sobre cómo se enmarca una. Deliberadamente compacto: la queja original de #86 era una tarjeta de 450px para una sola frase, así que no hay una forma «hero» a pantalla completa — ninguna página de la app la necesita todavía."
 	whenToUse={[
-		'El grid vacío de una DataTable o un catálogo: usa el tamaño por defecto (compact).',
-		'Una página índice entera sin datos todavía: size="hero", con icono y acción de alta.',
+		'El grid vacío de una DataTable o un catálogo entero.',
+		'Una página índice sin datos todavía: icono y acción de alta.',
 		'Una búsqueda/filtro sin resultados: title distinto al de "sin datos", acción de limpiar filtro en vez de "crear el primero".'
 	]}
 	whenNotToUse={[
@@ -31,12 +31,6 @@
 			description: 'Omítelo para la forma compacta sin titular, la que usa DataTable.'
 		},
 		{ name: 'description', type: 'string', description: 'Una frase. Lo único que es obligatorio.' },
-		{
-			name: 'size',
-			type: "'compact' | 'hero'",
-			default: "'compact'",
-			description: '"hero" reserva el rol display (36px/700), una vez por pantalla.'
-		},
 		{
 			name: 'action',
 			type: 'Snippet',
@@ -58,7 +52,7 @@
   {/snippet}
 </EmptyState>`}
 	referenceHref="https://github.com/NauelG/unitati/blob/main/docs/design/design-system.html"
-	referenceLabel="Design system — rol tipográfico display"
+	referenceLabel="Design system — estados vacíos"
 >
 	{#snippet demo()}
 		<div>
@@ -71,11 +65,10 @@
 		</div>
 		<div>
 			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
-				Hero — sin datos todavía
+				Con título e icono, sin datos todavía
 			</p>
 			<div class="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]">
 				<EmptyState
-					size="hero"
 					icon={Inbox}
 					title="Todavía no hay activos"
 					description="Registra el primero para empezar a llevar el inventario."

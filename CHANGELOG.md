@@ -23,11 +23,11 @@ minor bumps carry features and patch bumps carry fixes.
 
 - `EmptyState`, a shared empty-grid shape (#86): an optional title, one required sentence, a
   Lucide icon in a soft `--brand-soft` disc, a primary action and an optional keyboard-shortcut
-  hint. `size="hero"` reserves the design tokens' `display` type role (36px/700) for a true
-  "no data yet" page; `size="compact"` (the default) is the inline shape `DataTable`'s own empty
-  grid now composes instead of its former bare `<p>`. The assets index distinguishes "no data
-  yet" from "no matching filtered results" with different icon/title/action — the latter offers
-  a "clear filter" link instead of "register the first asset".
+  hint — deliberately one modest size, never the oversized card the issue itself complained
+  about. `DataTable`'s own empty grid composes it instead of its former bare `<p>`, as do the
+  four catalogues. The assets index distinguishes "no data yet" from "no matching filtered
+  results" with different icon/title/action — the latter offers a "clear filter" link instead of
+  "register the first asset".
 - `DataTable`'s header is `position: sticky` against `main` — the shell's own scrollport — while
   a wide table scrolls horizontally without losing its rounded panel corners: `panel` drops
   `overflow-hidden` (which would have made the panel itself the sticky header's scrolling
@@ -35,11 +35,12 @@ minor bumps carry features and patch bumps carry fixes.
   visual corners round by hand on whichever head/body cell is first or last in its row.
 - The asset inventory renders at the existing `compact` row density (`--size-row-compact`),
   unused until now.
-- `Breadcrumbs`, a data-driven, 56px record-detail trail (#86): segments come from the page's own
-  `+page.server.ts` — never parsed back out of the URL, which a reserved route segment or a
-  custom tag would make unreliable — and the last segment is always the current, unlinked
-  record. `/assets/[tag]` and `/service-desk/[tag]` both gain one: asset → its catalogue, ticket
-  → its queue (linking to `/service-desk?queue=…`) → the ticket itself.
+- `Breadcrumbs`, a data-driven, 56px local nav bar above a record's own header (#86): segments
+  come from the page's own `+page.server.ts` — never parsed back out of the URL, which a
+  reserved route segment or a custom tag would make unreliable — and the last segment is always
+  the current, unlinked record. `/assets/[tag]` and `/service-desk/[tag]` both gain one: asset →
+  its catalogue, ticket → its queue (linking to `/service-desk?queue=…`) → the ticket itself. It
+  sits beside the existing `PageHeader`/`TicketDetailLayout`, not a second copy of either.
 - The queues catalogue (`/service-desk/queues`) moves to the same `Dialog`/`ConfirmDialog` shape
   (ADR 0020) the three asset catalogues already use, replacing its always-live inline rename
   field and bare, unconfirmed delete form — the one catalogue screen that had not yet migrated.
