@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Alert from '#lib/components/unitati/Alert.svelte';
 	import AssetPicker from '#lib/components/unitati/AssetPicker.svelte';
 	import type { PickedAsset } from '#lib/components/unitati/asset-choice.js';
 	import Button from '#lib/components/unitati/Button.svelte';
@@ -100,7 +101,7 @@
 		</label>
 
 		{#if form && 'message' in form}
-			<p class="text-[13px] leading-[18px] text-[var(--danger)]" role="alert">{form.message}</p>
+			<Alert tone="danger">{form.message}</Alert>
 		{/if}
 
 		<div class="flex items-center gap-[var(--space-3)]">

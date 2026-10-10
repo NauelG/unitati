@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
+	import { confirmSubmit } from '#lib/components/unitati/confirm-submit.js';
 	import { field } from '#lib/components/unitati/Field.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
@@ -23,6 +25,11 @@
 	const categoryOptions = $derived(
 		data.categories.map((category) => ({ value: category.id, label: category.name }))
 	);
+
+	/** The model asking "are you sure?", if any: one at a time. */
+	let confirmingId: string | null = $state(null);
+	/** The model whose delete POST is in flight: blocks Cancel/Escape on its dialog. */
+	let pendingId: string | null = $state(null);
 </script>
 
 {#snippet failure(id: string | null)}
@@ -126,11 +133,47 @@
 							<Button type="submit" formaction="?/update" variant="secondary" size="sm">
 								{m.catalogue_save()}
 							</Button>
-							<Button type="submit" formaction="?/delete" variant="ghost" size="sm">
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								onclick={() => (confirmingId = model.id)}
+							>
 								{m.catalogue_delete()}
 							</Button>
 						</form>
-						{@render failure(model.id)}
+
+						<ConfirmDialog
+							open={confirmingId === model.id}
+							onOpenChange={(next) => {
+								if (!next) confirmingId = null;
+							}}
+							title={m.catalogue_delete_title({ name: model.name })}
+							description={m.catalogue_delete_ask()}
+							confirmLabel={m.catalogue_delete()}
+							pending={pendingId === model.id}
+							error={confirmingId === model.id && form?.id === model.id ? form.message : null}
+						>
+							{#snippet action(confirm)}
+								<form
+									method="POST"
+									action="?/delete"
+									use:enhance={confirmSubmit({
+										onPending: (pending) => (pendingId = pending ? model.id : null),
+										onSettled: (succeeded) => {
+											if (succeeded) confirmingId = null;
+										}
+									})}
+								>
+									<input type="hidden" name="id" value={model.id} />
+									{@render confirm()}
+								</form>
+							{/snippet}
+						</ConfirmDialog>
+
+						{#if confirmingId !== model.id}
+							{@render failure(model.id)}
+						{/if}
 					</li>
 				{/each}
 			</ul>

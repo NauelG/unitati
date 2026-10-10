@@ -105,6 +105,7 @@
 	"validation_field_invalid": "Revisa este campo.",
 	"form_cancel": "Cancelar",
 	"form_saving": "Guardando…",
+	"alert_dismiss": "Descartar",
 
 	"assets_title": "Inventario",
 	"assets_lede": "Los equipos de la organización: quién los tiene, dónde están y en qué estado.",
@@ -228,6 +229,8 @@
 	"catalogue_error_in_use_manufacturer": "No se puede eliminar: hay modelos de este fabricante.",
 	"catalogue_error_in_use_category": "No se puede eliminar: hay modelos en esta categoría.",
 	"catalogue_error_in_use_model": "No se puede eliminar: hay activos de este modelo.",
+	"catalogue_delete_title": "Eliminar {name}",
+	"catalogue_delete_ask": "Esta acción no se puede deshacer.",
 
 	"overview_title": "Inicio",
 	"overview_greeting": "Hola, {name}.",
