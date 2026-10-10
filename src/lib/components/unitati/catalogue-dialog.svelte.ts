@@ -85,3 +85,18 @@ export function catalogueDialog<Entry extends { id: string }>(options: Catalogue
 		failureFrom
 	};
 }
+
+/**
+ * A delete refusal (the row is still in use) that should surface at the
+ * list level, not only inside the now-closed `ConfirmDialog` — the row that
+ * caused it may no longer have a dialog open once the user dismisses it.
+ * `NameCatalogue`, `assets/models` and `service-desk/queues` each wrote this
+ * same check out by hand before this existed (#86 code review).
+ */
+export function deleteFailureFrom(
+	result: CatalogueDialogResult | null | undefined,
+	confirmingId: string | null
+): string | null {
+	if (!result || result.action !== 'delete' || !result.message) return null;
+	return confirmingId !== result.id ? result.message : null;
+}

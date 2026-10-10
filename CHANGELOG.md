@@ -17,6 +17,42 @@ minor bumps carry features and patch bumps carry fixes.
   drawer's `<nav>` never showed it. It now also renders in the drawer's own footer, same markup
   as the desktop sidebar's.
 
+## [0.21.0] - 2026-10-10
+
+### Added
+
+- `EmptyState`, a shared empty-grid shape (#86): an optional title, one required sentence, a
+  Lucide icon in a soft `--brand-soft` disc, a primary action and an optional keyboard-shortcut
+  hint — deliberately one modest size, never the oversized card the issue itself complained
+  about. `DataTable`'s own empty grid composes it instead of its former bare `<p>`, as do the
+  four catalogues. The assets index distinguishes "no data yet" from "no matching filtered
+  results" with different icon/title/action — the latter offers a "clear filter" link instead of
+  "register the first asset".
+- `DataTable`'s header is `position: sticky` against `main` — the shell's own scrollport — while
+  a wide table scrolls horizontally without losing its rounded panel corners: `panel` drops
+  `overflow-hidden` (which would have made the panel itself the sticky header's scrolling
+  ancestor instead of `main`) in favour of `overflow-x-auto overflow-y-visible`, and the four
+  visual corners round by hand on whichever head/body cell is first or last in its row.
+- The asset inventory renders at the existing `compact` row density (`--size-row-compact`),
+  unused until now.
+- `Breadcrumbs`, a data-driven, 56px local nav bar above a record's own header (#86): segments
+  come from the page's own `+page.server.ts` — never parsed back out of the URL, which a
+  reserved route segment or a custom tag would make unreliable — and the last segment is always
+  the current, unlinked record. `/assets/[tag]` and `/service-desk/[tag]` both gain one: asset →
+  its catalogue, ticket → its queue (linking to `/service-desk?queue=…`) → the ticket itself. It
+  sits beside the existing `PageHeader`/`TicketDetailLayout`, not a second copy of either.
+- `shadcn-svelte add tabs` (#86): `ui/tabs` joins the other vendored primitives (`ui/dialog`,
+  `ui/select`, …) in `.prettierignore`'s byte-identical-to-upstream set. No `unitati/Tabs.svelte`
+  wrapper yet and no gallery page — same footing as `ui/table`, `ui/popover` or `ui/textarea`
+  today, none of which have one either: the gallery's coverage guard only binds `unitati/*.svelte`
+  files, and the issue's own text allows deferring a themed wrapper until a real page needs one.
+- The queues catalogue (`/service-desk/queues`) moves to the same `Dialog`/`ConfirmDialog` shape
+  (ADR 0020) the three asset catalogues already use, replacing its always-live inline rename
+  field and bare, unconfirmed delete form — the one catalogue screen that had not yet migrated.
+  A delete refusal (a queue with open tickets) now surfaces through `Alert`'s `danger` tone
+  instead of a raw, un-styled `<p role="alert">`, on queues and consistently across the asset
+  catalogues too.
+
 ## [0.20.0] - 2026-10-10
 
 ### Added

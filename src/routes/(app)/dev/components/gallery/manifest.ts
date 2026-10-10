@@ -154,6 +154,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		sourceFile: 'EnvironmentBadge.svelte',
 		load: () => import('./specs/EnvironmentBadge.svelte')
 	},
+	{
+		id: 'empty-state',
+		name: 'EmptyState',
+		category: 'feedback',
+		summary: 'El grid vacío compartido: título, frase, icono en disco suave y acción.',
+		sourceFile: 'EmptyState.svelte',
+		load: () => import('./specs/EmptyState.svelte')
+	},
 
 	// Data
 	{
@@ -257,6 +265,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		summary: 'Marca de la app: símbolo solo o símbolo + logotipo.',
 		sourceFile: 'Logo.svelte',
 		load: () => import('./specs/Logo.svelte')
+	},
+	{
+		id: 'breadcrumbs',
+		name: 'Breadcrumbs',
+		category: 'navigation',
+		summary: 'Rastro de ruta de 56px en la ficha de un registro, con segmentos del servidor.',
+		sourceFile: 'Breadcrumbs.svelte',
+		load: () => import('./specs/Breadcrumbs.svelte')
 	},
 
 	// Layout

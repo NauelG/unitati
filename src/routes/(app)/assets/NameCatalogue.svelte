@@ -1,10 +1,15 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Alert from '#lib/components/unitati/Alert.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
-	import { catalogueDialog } from '#lib/components/unitati/catalogue-dialog.svelte.js';
+	import {
+		catalogueDialog,
+		deleteFailureFrom
+	} from '#lib/components/unitati/catalogue-dialog.svelte.js';
 	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
 	import { confirmSubmit } from '#lib/components/unitati/confirm-submit.js';
 	import Dialog from '#lib/components/unitati/Dialog.svelte';
+	import EmptyState from '#lib/components/unitati/EmptyState.svelte';
 	import { field } from '#lib/components/unitati/Field.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
@@ -56,15 +61,9 @@
 	let confirmingId: string | null = $state(null);
 	/** The entry whose delete POST is in flight: blocks Cancel/Escape on its dialog. */
 	let pendingId: string | null = $state(null);
-</script>
 
-{#snippet failure(id: string | null)}
-	{#if result?.message && (result.id ?? null) === id && confirmingId !== id}
-		<p class="mt-[var(--space-2)] text-[13px] leading-[18px] text-[var(--danger)]" role="alert">
-			{result.message}
-		</p>
-	{/if}
-{/snippet}
+	const deleteFailure = $derived(deleteFailureFrom(result, confirmingId));
+</script>
 
 <svelte:head>
 	<title>{title} · {m.app_name()}</title>
@@ -80,15 +79,15 @@
 
 	<AssetsNav showCatalogue />
 
+	{#if deleteFailure}
+		<Alert tone="danger" class="mt-[var(--space-6)]">{deleteFailure}</Alert>
+	{/if}
+
 	<div
 		class="mt-[var(--space-6)] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]"
 	>
 		{#if entries.length === 0}
-			<p
-				class="px-[var(--space-6)] py-[var(--space-12)] text-center text-sm text-[var(--ink-muted)]"
-			>
-				{emptyMessage}
-			</p>
+			<EmptyState description={emptyMessage} />
 		{:else}
 			<ul class="divide-y divide-[var(--border)]">
 				{#each entries as entry (entry.id)}
@@ -136,7 +135,6 @@
 							{/snippet}
 						</ConfirmDialog>
 					</li>
-					{@render failure(entry.id)}
 				{/each}
 			</ul>
 		{/if}
