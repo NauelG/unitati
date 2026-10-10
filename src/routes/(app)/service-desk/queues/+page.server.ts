@@ -28,7 +28,7 @@ export const actions: Actions = {
 
 		const outcome = await createQueue(user, parsed.data);
 		if (!outcome.ok) return rejected('create', failureMessage(outcome.error));
-		return { action: 'create' as const };
+		return { action: 'create' as const, message: null, id: null };
 	},
 
 	rename: async ({ locals, request }) => {
@@ -40,7 +40,7 @@ export const actions: Actions = {
 
 		const outcome = await renameQueue(user, id.data.id, parsed.data);
 		if (!outcome.ok) return rejected('rename', failureMessage(outcome.error), id.data.id);
-		return { action: 'rename' as const };
+		return { action: 'rename' as const, message: null, id: null };
 	},
 
 	delete: async ({ locals, request }) => {
@@ -50,6 +50,6 @@ export const actions: Actions = {
 
 		const outcome = await deleteQueue(user, id.data.id);
 		if (!outcome.ok) return rejected('delete', failureMessage(outcome.error), id.data.id);
-		return { action: 'delete' as const };
+		return { action: 'delete' as const, message: null, id: null };
 	}
 };

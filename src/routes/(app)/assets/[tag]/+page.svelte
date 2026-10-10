@@ -5,6 +5,7 @@
 	import { get } from 'svelte/store';
 	import { superForm } from 'sveltekit-superforms';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
+	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
@@ -108,6 +109,11 @@
 </svelte:head>
 
 <PageLayout variant="record">
+	<Breadcrumbs
+		class="mb-[var(--space-5)]"
+		segments={[{ label: m.assets_nav_assets(), href: '/assets' }, { label: asset.assetTag }]}
+	/>
+
 	<PageHeader title={asset.name} code={asset.assetTag}>
 		{#snippet actions()}
 			{#if data.canManage && asset.visibility === 'full'}

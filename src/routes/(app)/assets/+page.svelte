@@ -1,6 +1,8 @@
 <script lang="ts">
+	import Inbox from '@lucide/svelte/icons/inbox';
 	import Plus from '@lucide/svelte/icons/plus';
 	import Search from '@lucide/svelte/icons/search';
+	import SearchX from '@lucide/svelte/icons/search-x';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import DataTable, { type DataTableColumn } from '#lib/components/unitati/DataTable.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
@@ -50,6 +52,12 @@
 				? m.assets_empty()
 				: m.assets_empty_limited()
 	);
+	// "No matching filtered results" is a different empty shape from "no data
+	// yet" (#86): the icon and title say which one this is, and only the
+	// no-results case offers a clear-filter action — not "register the first
+	// asset", which would be a non-sequitur once a search is active.
+	const emptyTitle = $derived(data.search ? m.assets_empty_search_title() : m.assets_empty_title());
+	const emptyIcon = $derived(data.search ? SearchX : Inbox);
 
 	function pageHref(target: number): string {
 		// Built by hand rather than with `URLSearchParams`: this is a pure string
@@ -123,8 +131,10 @@
 	</form>
 
 	<div class="mt-[var(--space-5)]">
-		{#snippet registerAction()}
-			{#if data.canManage && !data.search}
+		{#snippet emptyAction()}
+			{#if data.search}
+				<Button href="?" variant="secondary" size="sm">{m.assets_clear_filter()}</Button>
+			{:else if data.canManage}
 				<Button href="/assets/new" size="sm">{m.assets_register()}</Button>
 			{/if}
 		{/snippet}
@@ -135,8 +145,11 @@
 			rowKey={(row) => row.assetTag}
 			rowLabel={(row) => row.name}
 			href={(row) => `/assets/${encodeURIComponent(row.assetTag)}`}
+			compact
 			{emptyMessage}
-			emptyAction={registerAction}
+			{emptyTitle}
+			{emptyIcon}
+			{emptyAction}
 		/>
 	</div>
 

@@ -89,7 +89,17 @@
 		{
 			name: 'emptyMessage',
 			type: 'string',
-			description: 'Una frase, en vez de una rejilla vacía que no dice nada.'
+			description: 'Una frase, pasada a EmptyState como description.'
+		},
+		{
+			name: 'emptyTitle',
+			type: 'string',
+			description: 'Opcional: distingue "sin datos" de "sin resultados de filtro".'
+		},
+		{
+			name: 'emptyIcon',
+			type: 'LucideIcon',
+			description: 'Opcional: el icono del disco de EmptyState.'
 		},
 		{
 			name: 'emptyAction',

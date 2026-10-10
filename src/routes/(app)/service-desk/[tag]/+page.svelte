@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
@@ -77,6 +78,15 @@
 </svelte:head>
 
 <PageLayout variant="record">
+	<Breadcrumbs
+		class="mb-[var(--space-5)]"
+		segments={[
+			{ label: m.nav_service_desk(), href: '/service-desk' },
+			{ label: ticket.queueName, href: `/service-desk?queue=${ticket.queueId}` },
+			{ label: ticket.ticketTag }
+		]}
+	/>
+
 	<WorkPanel>
 		<TicketDetailLayout
 			ticketTag={ticket.ticketTag}

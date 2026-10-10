@@ -25,11 +25,17 @@
 	 */
 	export const dataTable = tv({
 		slots: {
+			// No `overflow-hidden` here: that would establish this element as the
+			// sticky header's scrolling ancestor instead of `main` (#86) — a
+			// header that "sticks" to a box that never itself scrolls just sits
+			// still, which looks identical to not being sticky at all. Horizontal
+			// overflow still needs a container, so only the x-axis gets one; the
+			// y-axis stays `visible` so stickiness resolves against `main`.
 			panel:
-				'w-full overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]',
+				'w-full overflow-x-auto overflow-y-visible rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]',
 			table: 'w-full border-separate border-spacing-0 text-sm',
 			head: [
-				'h-8 px-[var(--space-3)] py-0 text-left align-middle',
+				'sticky top-0 z-10 h-8 px-[var(--space-3)] py-0 text-left align-middle',
 				'text-xs leading-4 font-semibold tracking-[0.04em] text-[var(--ink-muted)]',
 				'bg-[var(--surface-2)] border-b border-[var(--border)]'
 			],
@@ -37,14 +43,22 @@
 			// otherwise add to the row height the design system fixes at 40px. The
 			// row rule comes from `ui/table`'s own `border-b`, not from here: two
 			// borders on the same edge draw a 2px line.
-			cell: 'px-[var(--space-3)] py-0 align-middle whitespace-nowrap',
-			empty:
-				'flex flex-col items-center gap-[var(--space-4)] px-[var(--space-6)] py-[var(--space-12)] text-center'
+			cell: 'px-[var(--space-3)] py-0 align-middle whitespace-nowrap'
 		},
 		variants: {
 			compact: {
 				true: { cell: 'h-[var(--size-row-compact)]' },
 				false: { cell: 'h-[var(--size-row)]' }
+			},
+			// Rounds the header/body corners by hand instead of clipping them with
+			// `overflow-hidden` on `panel`, which the sticky header above needs to
+			// avoid. Applied to whichever cell is visually first/last in its row.
+			corner: {
+				'top-start': { head: 'rounded-tl-[var(--radius-lg)]' },
+				'top-end': { head: 'rounded-tr-[var(--radius-lg)]' },
+				'bottom-start': { cell: 'rounded-bl-[var(--radius-lg)]' },
+				'bottom-end': { cell: 'rounded-br-[var(--radius-lg)]' },
+				none: {}
 			},
 			align: {
 				start: {},
@@ -67,7 +81,7 @@
 				muted: { cell: 'text-[var(--ink-muted)]' }
 			}
 		},
-		defaultVariants: { compact: false, align: 'start', emphasis: 'muted' }
+		defaultVariants: { compact: false, align: 'start', emphasis: 'muted', corner: 'none' }
 	});
 
 	/** Position decides the emphasis, exactly as the design system assigns it. */
@@ -78,10 +92,12 @@
 </script>
 
 <script lang="ts" generics="Row">
+	import type { LucideIcon } from '@lucide/svelte';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ChevronUp from '@lucide/svelte/icons/chevron-up';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import * as Table from '#lib/components/ui/table/index.js';
+	import EmptyState from './EmptyState.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 
 	interface Props {
@@ -108,6 +124,10 @@
 		compact?: boolean;
 		/** One sentence. Shown instead of an empty grid, which tells nobody anything. */
 		emptyMessage: string;
+		/** Above the sentence, for the "no data yet" shape — omit for a flatter "no results" shape. */
+		emptyTitle?: string;
+		/** A Lucide icon for the empty grid's soft disc. */
+		emptyIcon?: LucideIcon;
 		/** The primary action that resolves the emptiness, usually a Button. */
 		emptyAction?: Snippet;
 		class?: string;
@@ -123,6 +143,8 @@
 		sort = $bindable(),
 		compact = false,
 		emptyMessage,
+		emptyTitle,
+		emptyIcon,
 		emptyAction,
 		class: className
 	}: Props = $props();
@@ -154,25 +176,35 @@
 
 <div class={styles.panel({ class: className })}>
 	{#if rows.length === 0}
-		<div class={styles.empty()}>
-			<p class="text-sm text-[var(--ink-muted)]">{emptyMessage}</p>
-			{#if emptyAction}
-				{@render emptyAction()}
-			{/if}
-		</div>
+		<EmptyState
+			title={emptyTitle}
+			description={emptyMessage}
+			icon={emptyIcon}
+			action={emptyAction}
+		/>
 	{:else}
 		<Table.Root class={styles.table()}>
 			<Table.Header>
 				<Table.Row class="hover:bg-transparent">
 					{#if selectable}
-						<Table.Head class={styles.head({ class: 'w-10' })}>
+						<Table.Head
+							class={styles.head({
+								class: 'w-10',
+								corner: columns.length === 0 ? 'top-start' : 'none'
+							})}
+						>
 							<span class="sr-only">{m.table_select_column()}</span>
 						</Table.Head>
 					{/if}
 
-					{#each columns as column (column.key)}
+					{#each columns as column, index (column.key)}
+						{@const isFirst = index === 0 && !selectable}
+						{@const isLast = index === columns.length - 1}
 						<Table.Head
-							class={styles.head({ align: column.align ?? 'start' })}
+							class={styles.head({
+								align: column.align ?? 'start',
+								corner: isFirst ? 'top-start' : isLast ? 'top-end' : 'none'
+							})}
 							aria-sort={column.sortable ? ariaSort(column.key) : undefined}
 						>
 							{#if column.sortable}
@@ -194,15 +226,20 @@
 			</Table.Header>
 
 			<Table.Body>
-				{#each rows as row (rowKey(row))}
+				{#each rows as row, rowIndex (rowKey(row))}
 					{@const key = rowKey(row)}
 					{@const isSelected = selected?.includes(key) ?? false}
+					{@const isLastRow = rowIndex === rows.length - 1}
 					<Table.Row
 						class="relative last:border-b-0 hover:bg-[var(--surface-2)] aria-selected:bg-[var(--brand-soft)]"
 						aria-selected={selectable ? isSelected : undefined}
 					>
 						{#if selectable}
-							<Table.Cell class={styles.cell()}>
+							<Table.Cell
+								class={styles.cell({
+									corner: isLastRow && columns.length === 0 ? 'bottom-start' : 'none'
+								})}
+							>
 								<input
 									type="checkbox"
 									class="relative z-10 size-4 accent-[var(--brand)]"
@@ -214,10 +251,19 @@
 						{/if}
 
 						{#each columns as column, index (column.key)}
+							{@const isFirst = index === 0 && !selectable}
+							{@const isLast = index === columns.length - 1}
 							<Table.Cell
 								class={styles.cell({
 									align: column.align ?? 'start',
-									emphasis: emphasisFor(index)
+									emphasis: emphasisFor(index),
+									corner: isLastRow
+										? isFirst
+											? 'bottom-start'
+											: isLast
+												? 'bottom-end'
+												: 'none'
+										: 'none'
 								})}
 							>
 								{#if index === 0 && href}
