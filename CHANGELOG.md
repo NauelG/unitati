@@ -5,6 +5,16 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.23.1] - 2026-10-11
+
+### Fixed
+
+- iOS Safari's auto-zoom on input focus (triggered by a `font-size` under 16px), which showed up
+  as a mini zoom and horizontal scroll on mobile whenever a form field or the command palette
+  search got focus. `Field` (the app's own text input, used across login/setup/record forms) and
+  `command-input` (the command palette search) now use `text-base md:text-sm`, the same
+  mobile-safe pattern the vendored shadcn-svelte `Input` already carried.
+
 ## [0.23.0] - 2026-10-10
 
 ### Added

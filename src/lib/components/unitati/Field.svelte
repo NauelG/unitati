@@ -13,7 +13,7 @@
 			input: [
 				'h-[var(--size-control-md)] w-full box-border px-[var(--space-3)]',
 				'rounded-[var(--radius-md)] border bg-[var(--surface-1)]',
-				'text-sm leading-5 text-[var(--ink)] transition-colors ut-transition-fast',
+				'text-base md:text-sm leading-5 text-[var(--ink)] transition-colors ut-transition-fast',
 				'placeholder:text-[var(--ink-muted)] disabled:opacity-50'
 			],
 			help: 'text-[13px] leading-[18px]'
