@@ -14,6 +14,7 @@
 		type PendingThreadItem
 	} from '#lib/components/unitati/TicketThread.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
+	import { focusFirstField } from '#lib/keymap.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { PRIORITIES } from '#lib/domain/status.js';
 	import { m } from '#lib/paraglide/messages.js';
@@ -22,6 +23,12 @@
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	/** The keymap's `s` row verb (#88) lands here with `#action-status`. */
+	$effect(() => {
+		if (!location.hash) return;
+		focusFirstField(document.querySelector(location.hash));
+	});
 
 	const ticket = $derived(data.ticket);
 
@@ -194,7 +201,7 @@
 
 		{#if data.canManage}
 			{#if statusOptions.length > 0}
-				<WorkPanel heading={m.ticket_action_status()}>
+				<WorkPanel id="action-status" heading={m.ticket_action_status()}>
 					<form
 						method="POST"
 						action="?/status"

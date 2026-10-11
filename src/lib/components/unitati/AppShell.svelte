@@ -33,10 +33,7 @@
 			navDot: 'size-2 shrink-0 rounded-[var(--radius-full)]',
 			navLabel: 'ut-nav-label truncate',
 			navCount: 'ut-nav-label ml-auto font-mono text-xs tabular-nums text-[var(--ink-muted)]',
-			kbd: [
-				'ut-nav-label ml-auto rounded-[var(--radius-sm)] border border-[var(--border)]',
-				'px-[6px] font-mono text-xs text-[var(--ink-muted)]'
-			],
+			kbd: 'ut-kbd ut-nav-label ml-auto',
 			sidebarFooter: 'mt-auto flex shrink-0 flex-col gap-0.5 pt-[var(--space-2)]',
 			collapseButton: [
 				'grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)]',
@@ -86,13 +83,24 @@
 	import { page } from '$app/state';
 	import { browser } from '$app/env';
 	import { afterNavigate, beforeNavigate } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import PanelLeftIcon from '@lucide/svelte/icons/panel-left';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import Logo from './Logo.svelte';
 	import AppVersion from '../AppVersion.svelte';
+	import CommandPalette from './CommandPalette.svelte';
+	import KeymapOverlay from './KeymapOverlay.svelte';
 	import { MainScrollRestoration } from './main-scroll-restoration.js';
 	import { afterViewTransitionSettles } from '#lib/motion.js';
+	import {
+		isOverlayOpen,
+		isTypingTarget,
+		keymapRegistry,
+		KeymapRouter,
+		activeScope,
+		type KeymapScope
+	} from '#lib/keymap.js';
 	import * as Sheet from '#lib/components/ui/sheet/index.js';
 	import { m } from '#lib/paraglide/messages.js';
 
@@ -104,10 +112,22 @@
 		settings?: Snippet;
 		/** The topbar's right-hand side: environment badge, user, sign-out — all route-specific. */
 		topbarEnd?: Snippet;
+		/** The keymap's permission gate (#88) — same vocabulary `links` is already filtered by. */
+		permissions?: readonly string[];
+		/** The viewer's own directory record, passed through to the palette's "Asignar a mí". */
+		personId?: string | null;
 		children: Snippet;
 	}
 
-	let { links, showSearch = false, settings, topbarEnd, children }: Props = $props();
+	let {
+		links,
+		showSearch = false,
+		settings,
+		topbarEnd,
+		permissions = [],
+		personId = null,
+		children
+	}: Props = $props();
 
 	const SIDEBAR_STORAGE_KEY = 'unitati:sidebar';
 
@@ -168,7 +188,6 @@
 		return href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href);
 	}
 
-	/** Phase 7 (#P7) owns the palette; until then this only no-ops with a tooltip. */
 	function openCommandPalette() {
 		window.dispatchEvent(new CustomEvent('unitati:command-palette'));
 	}
@@ -177,6 +196,83 @@
 		modules: () => m.nav_modules_section(),
 		directory: () => m.nav_directory_section()
 	} as const;
+
+	/**
+	 * The keymap layer (#88). `AppShell` is the one place every `(app)` route
+	 * passes through, so it is the one place that installs the listener and
+	 * the global entries every page shares (`g`-prefix navigation, `/`, `?`).
+	 * Row-level verbs, `n`-in-context and anything else that depends on a
+	 * specific page's own state register themselves into the same
+	 * `keymapRegistry` from that page instead.
+	 */
+	let keymapOverlayOpen = $state(false);
+
+	const router = new KeymapRouter(() => keymapRegistry.snapshot());
+
+	function onGlobalKeydown(event: KeyboardEvent) {
+		router.handle(event, {
+			scope: currentScope(),
+			permissions,
+			overlayOpen: isOverlayOpen(browser ? document : undefined),
+			typingTarget: isTypingTarget(event.target)
+		});
+	}
+
+	let scopeValue: KeymapScope = 'global';
+	$effect(() => activeScope.subscribe((value) => (scopeValue = value)));
+	function currentScope(): KeymapScope {
+		return scopeValue;
+	}
+
+	/** `g a` / `g s` / `g d` / `g o`: one sequence entry per nav link that carries one of these targets. */
+	const NAV_SHORTCUTS = $derived([
+		{ href: '/assets', key: 'a', label: m.keymap_entry_go_assets() },
+		{ href: '/service-desk', key: 's', label: m.keymap_entry_go_service_desk() },
+		{ href: '/directory', key: 'd', label: m.keymap_entry_go_directory() },
+		{ href: '/', key: 'o', label: m.keymap_entry_go_overview() }
+	]);
+
+	$effect(() => {
+		const linkHrefs = new Set(links.map((link) => link.href));
+		const unregisters = NAV_SHORTCUTS.filter((shortcut) => linkHrefs.has(shortcut.href)).map(
+			(shortcut) =>
+				keymapRegistry.register({
+					id: `global.nav.${shortcut.href}`,
+					keys: ['g', shortcut.key],
+					scope: 'global',
+					group: m.keymap_group_navigation(),
+					label: shortcut.label,
+					run: () => goto(shortcut.href)
+				})
+		);
+		return () => unregisters.forEach((unregister) => unregister());
+	});
+
+	$effect(() => {
+		return keymapRegistry.register({
+			id: 'global.focus-filter',
+			keys: ['/'],
+			scope: 'global',
+			group: m.keymap_group_general(),
+			label: m.keymap_entry_focus_filter(),
+			run: () => {
+				const field = document.querySelector<HTMLInputElement>('input[name="q"]');
+				field?.focus();
+				field?.select();
+			}
+		});
+	});
+
+	$effect(() => {
+		return keymapRegistry.register({
+			id: 'global.keymap-overlay',
+			keys: ['?'],
+			scope: 'global',
+			group: m.keymap_group_general(),
+			label: m.keymap_entry_open_overlay(),
+			run: () => (keymapOverlayOpen = true)
+		});
+	});
 </script>
 
 {#snippet navList(rail: boolean)}
@@ -185,7 +281,7 @@
 		<button
 			type="button"
 			class={styles.navItem()}
-			title={m.nav_search_soon()}
+			title={m.nav_search()}
 			onclick={openCommandPalette}
 		>
 			<SearchIcon class={styles.navIcon()} aria-hidden="true" />
@@ -311,3 +407,7 @@
 		</nav>
 	</Sheet.Content>
 </Sheet.Root>
+
+<svelte:window onkeydown={onGlobalKeydown} />
+<CommandPalette {permissions} {personId} />
+<KeymapOverlay bind:open={keymapOverlayOpen} />

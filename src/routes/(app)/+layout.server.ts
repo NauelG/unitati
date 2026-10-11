@@ -35,7 +35,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	// Sent to the client so navigation can hide what the user cannot reach.
 	// Hiding is a convenience; every route still guards itself server-side.
 	return {
-		user: { name: user.name, email: user.email, role: user.role },
+		user: { name: user.name, email: user.email, role: user.role, personId: user.personId },
 		permissions,
 		counts: { assets, serviceDesk, directory }
 	};

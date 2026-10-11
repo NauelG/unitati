@@ -100,6 +100,7 @@
 	import * as Table from '#lib/components/ui/table/index.js';
 	import EmptyState from './EmptyState.svelte';
 	import { MOTION_BASE_MS, toViewTransitionName } from '#lib/motion.js';
+	import { activeScope } from '#lib/keymap.js';
 	import { m } from '#lib/paraglide/messages.js';
 
 	interface Props {
@@ -118,6 +119,13 @@
 		/** Presence enables the checkbox column. Bind it to read the selection. */
 		selected?: string[];
 		/**
+		 * Roving focus (#88): which row the `ArrowUp`/`ArrowDown` grammar and
+		 * the keymap's row-level verbs (`a`/`e`/`l`/`s`…) act on. Bind it to read
+		 * which row is active, or to drive the verbs from the page that owns
+		 * what those letters mean — `DataTable` itself has no opinion on that.
+		 */
+		activeKey?: string | null;
+		/**
 		 * Current sort, for the header's `aria-sort` and affordance. The table
 		 * never reorders `rows`: ordering belongs to whoever fetched them, and
 		 * #7 gives that a server-side contract. Bind it and re-query.
@@ -132,6 +140,8 @@
 		emptyIcon?: LucideIcon;
 		/** The primary action that resolves the emptiness, usually a Button. */
 		emptyAction?: Snippet;
+		/** A keyboard shortcut hint next to the empty action — see `EmptyState`. */
+		emptyKbdHint?: Snippet;
 		class?: string;
 	}
 
@@ -142,21 +152,67 @@
 		rowLabel,
 		href,
 		selected = $bindable(),
+		activeKey = $bindable(null),
 		sort = $bindable(),
 		compact = false,
 		emptyMessage,
 		emptyTitle,
 		emptyIcon,
 		emptyAction,
+		emptyKbdHint,
 		class: className
 	}: Props = $props();
 
 	const selectable = $derived(selected !== undefined);
 	const styles = $derived(dataTable({ compact }));
 
+	/** The row whose link/checkbox gets `tabindex="0"` — a roving-focus grid has exactly one. */
+	const tabbableKey = $derived(activeKey ?? (rows.length > 0 ? rowKey(rows[0]) : null));
+
+	/** The anchor (or, link-less, the row) each row's primary focusable element binds to. */
+	const focusTargets: Record<string, HTMLElement> = {};
+
 	function toggle(key: string) {
 		const current = selected ?? [];
 		selected = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+	}
+
+	/** `focusin` bubbles, so one listener on the panel tracks which row is active. */
+	function onFocusIn(event: FocusEvent) {
+		const target = event.target as HTMLElement | null;
+		const key = target?.closest<HTMLElement>('[data-row-key]')?.dataset.rowKey;
+		if (key) activeKey = key;
+		activeScope.set('list');
+	}
+
+	function onFocusOut() {
+		activeScope.set('global');
+	}
+
+	/**
+	 * `ArrowUp`/`ArrowDown` move the roving tab stop; `Enter` is left to the
+	 * browser's native anchor activation (focus already sits on the row's own
+	 * `<a>`). `x` toggles the focused row's selection — the keyboard path to
+	 * the checkbox `toggle()` already wires up for the mouse.
+	 */
+	function onKeydown(event: KeyboardEvent) {
+		if (rows.length === 0) return;
+		const currentIndex = rows.findIndex((row) => rowKey(row) === tabbableKey);
+
+		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+			const delta = event.key === 'ArrowDown' ? 1 : -1;
+			const nextIndex = Math.min(Math.max(currentIndex + delta, 0), rows.length - 1);
+			const nextKey = rowKey(rows[nextIndex]);
+			activeKey = nextKey;
+			focusTargets[nextKey]?.focus();
+			event.preventDefault();
+			return;
+		}
+
+		if (event.key.toLowerCase() === 'x' && selectable && currentIndex >= 0) {
+			toggle(rowKey(rows[currentIndex]));
+			event.preventDefault();
+		}
 	}
 
 	function nextSort(key: string): DataTableSort {
@@ -183,9 +239,15 @@
 			description={emptyMessage}
 			icon={emptyIcon}
 			action={emptyAction}
+			kbdHint={emptyKbdHint}
 		/>
 	{:else}
-		<Table.Root class={styles.table()}>
+		<Table.Root
+			class={styles.table()}
+			onkeydown={onKeydown}
+			onfocusin={onFocusIn}
+			onfocusout={onFocusOut}
+		>
 			<Table.Header>
 				<Table.Row class="hover:bg-transparent">
 					{#if selectable}
@@ -247,6 +309,7 @@
 					-->
 					<tr
 						data-slot="table-row"
+						data-row-key={key}
 						animate:flip={{ duration: MOTION_BASE_MS }}
 						class="relative animate-in border-b border-[var(--border)] transition-colors duration-[var(--motion-base)] fade-in last:border-b-0 hover:bg-[var(--surface-2)] aria-selected:bg-[var(--brand-soft)]"
 						aria-selected={selectable ? isSelected : undefined}
@@ -295,8 +358,13 @@
 									     and visually travel into place on navigation. -->
 									<a
 										href={href(row)}
+										tabindex={key === tabbableKey ? 0 : -1}
 										style:view-transition-name={toViewTransitionName('record', key)}
 										class="after:absolute after:inset-0 hover:underline focus-visible:underline"
+										{@attach (node) => {
+											focusTargets[key] = node;
+											return () => delete focusTargets[key];
+										}}
 									>
 										{#if column.cell}{@render column.cell(row)}{/if}
 									</a>

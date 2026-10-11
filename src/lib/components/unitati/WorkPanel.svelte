@@ -33,14 +33,16 @@
 		actions?: Snippet;
 		children: Snippet;
 		class?: string;
+		/** A keymap row verb's jump target (#88: `#action-custody` and friends). */
+		id?: string;
 	}
 
-	let { heading, actions, children, class: className }: Props = $props();
+	let { heading, actions, children, class: className, id }: Props = $props();
 
 	const styles = workPanel();
 </script>
 
-<section class={styles.root({ class: className })}>
+<section {id} class={styles.root({ class: className })}>
 	{#if heading || actions}
 		<div class={styles.head()}>
 			{#if heading}

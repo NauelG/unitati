@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Plus from '@lucide/svelte/icons/plus';
 	import Search from '@lucide/svelte/icons/search';
+	import { goto } from '$app/navigation';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import DataTable, { type DataTableColumn } from '#lib/components/unitati/DataTable.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
@@ -11,6 +12,7 @@
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import { TICKET_STATUSES } from '#lib/domain/status.js';
 	import { statusLabel } from '#lib/components/unitati/status.js';
+	import { formatKeys, isMacPlatform, keymapRegistry } from '#lib/keymap.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { TicketView } from '#lib/server/service-desk/index.js';
 	import type { PageProps } from './$types';
@@ -18,6 +20,37 @@
 	let { data }: PageProps = $props();
 
 	let term = $derived(data.search);
+
+	/** Roving focus's active row (#88), read by the `s` keymap verb below. */
+	let activeKey = $state<string | null>(null);
+	const mac = isMacPlatform();
+
+	$effect(() => {
+		return keymapRegistry.register({
+			id: 'tickets.new',
+			keys: ['n'],
+			scope: 'global',
+			group: m.keymap_group_tickets(),
+			label: m.keymap_entry_new_ticket(),
+			permission: 'tickets.create',
+			run: () => goto('/service-desk/new')
+		});
+	});
+
+	$effect(() => {
+		return keymapRegistry.register({
+			id: 'tickets.row.status',
+			keys: ['s'],
+			scope: 'list',
+			group: m.keymap_group_tickets(),
+			label: m.keymap_entry_ticket_status(),
+			permission: 'tickets.manage',
+			when: () => activeKey !== null,
+			run: () => {
+				if (activeKey) goto(`/service-desk/${encodeURIComponent(activeKey)}#action-status`);
+			}
+		});
+	});
 
 	const columns = $derived<DataTableColumn<TicketView>[]>([
 		{ key: 'tag', header: m.tickets_column_tag(), cell: tag },
@@ -84,6 +117,7 @@
 				<Button href="/service-desk/new">
 					<Plus class="size-4" aria-hidden="true" />
 					{m.tickets_new()}
+					<span class="ut-btn-kbd">{formatKeys(['n'], mac)}</span>
 				</Button>
 			{/if}
 		{/snippet}
@@ -109,6 +143,7 @@
 				bind:value={term}
 				class="w-full max-w-md"
 			/>
+			<span class="ut-kbd self-center" aria-hidden="true">{formatKeys(['/'], mac)}</span>
 			<SelectField
 				label={m.tickets_filter_queue()}
 				name="queue"
@@ -133,6 +168,7 @@
 			rowKey={(row) => row.ticketTag}
 			rowLabel={(row) => row.subject}
 			href={(row) => `/service-desk/${encodeURIComponent(row.ticketTag)}`}
+			bind:activeKey
 			emptyMessage={filtering ? m.tickets_empty_search({ term: data.search }) : m.tickets_empty()}
 			class="rounded-t-none"
 		/>
