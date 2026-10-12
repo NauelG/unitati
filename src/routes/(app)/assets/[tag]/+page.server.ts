@@ -27,11 +27,40 @@ import {
 	mergeAssetTimeline,
 	RECENT_MONTHS,
 	recentTicketCount,
-	relatedTo
+	relatedTo,
+	type AssetTimelineItem
 } from '#lib/server/links/index.js';
 import { editAssetForm } from '../forms';
 import { fieldsOf, rejected } from '../form-data';
 import type { Actions, PageServerLoad } from './$types';
+
+/**
+ * The timeline rail (#89): the slowest read on this page and the one with
+ * nothing else depending on it, so it streams — returned unawaited by
+ * `load` below, resolved by `+page.svelte`'s `{#await}` behind a
+ * `TimelineSkeleton` that matches the real rail's geometry (no CLS).
+ */
+async function timelineRailOf(
+	user: SessionUser,
+	tag: string,
+	asset: { visibility: 'full' | 'shared'; id?: string }
+): Promise<{ timeline: AssetTimelineItem[] | null; recentTickets: number }> {
+	// Gated separately inside the domain: holding `assets.view.shared` shows a
+	// shared asset's name and place, and explicitly not its history (ADR 0007).
+	const history = await assetTimeline(user, tag);
+
+	// The live half of the rail: tickets raised on this machine, with the status
+	// they have today. Asked only when the history itself is visible, and
+	// `relatedTo` withholds tickets from anybody without `tickets.view`.
+	const related =
+		history.ok && asset.visibility === 'full' && asset.id
+			? await relatedTo(user, { kind: 'asset', id: asset.id })
+			: [];
+	return {
+		timeline: history.ok ? mergeAssetTimeline(history.value, related) : null,
+		recentTickets: recentTicketCount(related, new Date())
+	};
+}
 
 export const load: PageServerLoad = async ({ locals, params }) => {
 	const user = requireAnyPermission(locals.user, ASSET_READ_PERMISSIONS);
@@ -39,18 +68,6 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	const found = await getAssetByTag(user, params.tag);
 	if (!found.ok) error(404, 'Not found');
 	const asset = found.value;
-
-	// Gated separately inside the domain: holding `assets.view.shared` shows a
-	// shared asset's name and place, and explicitly not its history (ADR 0007).
-	const history = await assetTimeline(user, params.tag);
-
-	// The live half of the rail: tickets raised on this machine, with the status
-	// they have today. Asked only when the history itself is visible, and
-	// `relatedTo` withholds tickets from anybody without `tickets.view`.
-	const related =
-		history.ok && asset.visibility === 'full'
-			? await relatedTo(user, { kind: 'asset', id: asset.id })
-			: [];
 
 	const canManage = can(user, 'assets.manage');
 	const canCheckout = can(user, 'assets.checkout');
@@ -100,8 +117,12 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 
 	return {
 		asset,
-		timeline: history.ok ? mergeAssetTimeline(history.value, related) : null,
-		recentTickets: recentTicketCount(related, new Date()),
+		// Unawaited on purpose (#89): SvelteKit streams this to the client as a
+		// promise, resolved by `+page.svelte`'s `{#await}` behind a skeleton.
+		timelineRail: timelineRailOf(user, params.tag, {
+			visibility: asset.visibility,
+			id: asset.visibility === 'full' ? asset.id : undefined
+		}),
 		recentMonths: RECENT_MONTHS,
 		canManage,
 		canCheckout,

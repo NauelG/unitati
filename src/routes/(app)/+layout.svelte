@@ -8,6 +8,7 @@
 	import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
 	import AppShell, { type AppShellNavLink } from '#lib/components/unitati/AppShell.svelte';
 	import EnvironmentBadge from '#lib/components/unitati/EnvironmentBadge.svelte';
+	import { Toaster } from '#lib/components/ui/sonner/index.js';
 	import { ASSET_READ_PERMISSIONS, TICKET_READ_PERMISSIONS } from '#lib/domain/access.js';
 	import { isProduction } from '#lib/environment.js';
 	import { m } from '#lib/paraglide/messages.js';
@@ -120,3 +121,11 @@
 
 	{@render children()}
 </AppShell>
+
+<!--
+	Outside `<AppShell>`'s children snippet on purpose: that snippet renders
+	inside `<main>`, the independent scrollport (#96). A `position: fixed`
+	toast still escapes a plain `overflow` ancestor, but sitting outside it
+	entirely removes any doubt the portal could end up clipped.
+-->
+<Toaster />

@@ -404,5 +404,11 @@
 	"portal_new_lede": "Cuéntanos qué pasa. Te avisaremos por correo cuando haya respuesta.",
 	"portal_back": "Volver a mis solicitudes",
 	"portal_reply_title": "Añadir un mensaje",
-	"portal_assets_link": "Mis equipos"
+	"portal_assets_link": "Mis equipos",
+
+	"loading_generic": "Cargando…",
+	"loading_timeline": "Cargando historial…",
+	"loading_thread": "Cargando conversación…",
+	"toast_rollback_generic": "No se ha podido guardar el cambio. Se ha revertido.",
+	"composer_pending": "Enviando…"
 }

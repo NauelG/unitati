@@ -61,6 +61,8 @@
 
 	const dialogAction = $derived(dialog.editingId ? '?/update' : '?/create');
 	const dialogFailure = $derived(dialog.failureFrom(form));
+	/** Same reasoning as `NameCatalogue` (#89): `busy`, not optimistic — the dialog stays open to show `dialogFailure` on a refusal. */
+	let saving = $state(false);
 
 	/** The model asking "are you sure?", if any: one at a time. */
 	let confirmingId: string | null = $state(null);
@@ -173,8 +175,10 @@
 			method="POST"
 			action={dialogAction}
 			use:enhance={() => {
+				saving = true;
 				return async ({ result: submitResult, update }) => {
 					await update();
+					saving = false;
 					if (submitResult.type === 'success') dialog.close();
 				};
 			}}
@@ -218,7 +222,7 @@
 				<Button type="button" variant="ghost" size="sm" onclick={dialog.close}>
 					{m.form_cancel()}
 				</Button>
-				<Button type="submit" size="sm">{m.catalogue_save()}</Button>
+				<Button type="submit" size="sm" busy={saving}>{m.catalogue_save()}</Button>
 			</div>
 		</form>
 	</Dialog>

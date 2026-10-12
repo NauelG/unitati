@@ -374,6 +374,28 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
 	}
 }
 
+/*
+ * `Button`'s `busy` spinner-dot (#89, spec: `.ut-btn-busy .ut-btn-dot::after`
+ * in docs/design/assets/css/components.css) — the pending state for a form
+ * whose success navigates, so there is no local value to flip optimistically.
+ */
+@keyframes ut-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/*
+ * `Skeleton`'s shimmer sweep (#89) — the one sanctioned looping animation of
+ * the whole phase. `before:-translate-x-full` (Tailwind, in `Skeleton.svelte`)
+ * sets the from-state; this `to` keyframe sweeps it across.
+ */
+@keyframes ut-shimmer {
+	to {
+		transform: translateX(100%);
+	}
+}
+
 @layer base {
 	* {
 		border-color: var(--border);

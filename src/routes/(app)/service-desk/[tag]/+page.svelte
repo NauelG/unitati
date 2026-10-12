@@ -1,25 +1,56 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
+	import Skeleton from '#lib/components/unitati/Skeleton.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import { statusLabel } from '#lib/components/unitati/status.js';
 	import { toViewTransitionName } from '#lib/motion.js';
+	import { optimisticEnhance } from '#lib/optimistic.js';
 	import TicketComposer from '#lib/components/unitati/TicketComposer.svelte';
 	import TicketDetailLayout from '#lib/components/unitati/TicketDetailLayout.svelte';
-	import TicketThread from '#lib/components/unitati/TicketThread.svelte';
+	import TicketThread, {
+		type PendingThreadItem
+	} from '#lib/components/unitati/TicketThread.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { PRIORITIES } from '#lib/domain/status.js';
 	import { m } from '#lib/paraglide/messages.js';
+	import type { ThreadItem } from '#lib/server/service-desk/index.js';
 	import type { Snippet } from 'svelte';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
 
 	const ticket = $derived(data.ticket);
+
+	/**
+	 * Optimistic mirrors (#89), same shape as the asset detail page: each
+	 * action form flips one of these the instant it submits and rolls back to
+	 * the pre-flip snapshot on `failure`/`error` (`optimisticEnhance`,
+	 * `#lib/optimistic.ts`). `localThread` additionally carries the composer's
+	 * own pending reply until it reconciles or fails.
+	 */
+	let localStatus = $state(ticket.status);
+	let localPriority = $state(ticket.priority);
+	let localAssigneePersonId = $state(ticket.assigneePersonId);
+	let localAssigneeName = $state(ticket.assigneeName);
+	let localQueueId = $state(ticket.queueId);
+	let localQueueName = $state(ticket.queueName);
+	// A writable `$derived` (Svelte 5: a direct assignment overrides it until
+	// `data.thread` itself changes again) rather than `$state` + `$effect` —
+	// the lone assignment here has nothing else to coordinate with.
+	let localThread = $derived<(ThreadItem | PendingThreadItem)[]>(data.thread);
+
+	$effect(() => {
+		localStatus = ticket.status;
+		localPriority = ticket.priority;
+		localAssigneePersonId = ticket.assigneePersonId;
+		localAssigneeName = ticket.assigneeName;
+		localQueueId = ticket.queueId;
+		localQueueName = ticket.queueName;
+	});
 
 	const provenance = $derived(
 		m.ticket_detail_opened({
@@ -93,13 +124,13 @@
 			ticketTag={ticket.ticketTag}
 			ticketTagViewTransitionName={toViewTransitionName('record', ticket.ticketTag)}
 			subject={ticket.subject}
-			status={ticket.status}
-			priority={ticket.priority}
+			status={localStatus}
+			priority={localPriority}
 			{provenance}
 		/>
 
 		<div class="mt-[var(--space-5)]">
-			<TicketThread items={data.thread} attachmentHref={(id) => `/attachments/${id}`} />
+			<TicketThread items={localThread} attachmentHref={(id) => `/attachments/${id}`} />
 		</div>
 	</WorkPanel>
 
@@ -108,30 +139,75 @@
 		allowInternal={data.canInternal}
 		error={replyError}
 		placeholder={m.composer_placeholder_reply({ name: ticket.requesterName })}
+		onOptimisticSend={(formData) => {
+			const body = formData.get('body');
+			if (typeof body !== 'string' || body.trim() === '') return () => {};
+			const key = `pending-${crypto.randomUUID()}`;
+			const pending: PendingThreadItem = {
+				kind: 'pending',
+				key,
+				authorName: data.user.name,
+				visibility: formData.get('visibility') === 'internal' ? 'internal' : 'public',
+				body
+			};
+			localThread = [...localThread, pending];
+			return () => {
+				localThread = localThread.filter((item) => !(item.kind === 'pending' && item.key === key));
+			};
+		}}
 	/>
 
 	{#snippet side()}
 		<WorkPanel heading={m.ticket_detail_details()}>
 			<dl class="divide-y divide-[var(--border)]">
 				{#snippet requester()}{ticket.requesterName}{/snippet}
-				{#snippet assignee()}{ticket.assigneeName ?? m.tickets_no_assignee()}{/snippet}
-				{#snippet queue()}{ticket.queueName}{/snippet}
+				{#snippet assignee()}{localAssigneeName ?? m.tickets_no_assignee()}{/snippet}
+				{#snippet queue()}{localQueueName}{/snippet}
 				{@render detailRow(m.ticket_detail_requester(), requester)}
 				{@render detailRow(m.ticket_detail_assignee(), assignee)}
 				{@render detailRow(m.ticket_detail_queue(), queue)}
 			</dl>
 		</WorkPanel>
 
-		<RelatedRecords
-			groups={data.related}
-			unlinkAction={data.canManage ? '?/unlinkAsset' : undefined}
-			error={unlinkError}
-		/>
+		<!-- Streamed (#89): `related` is read on the same scoped footing as the
+		     ticket itself but nothing above it needs the answer first. -->
+		{#await data.related}
+			<div
+				class="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-4)]"
+				role="status"
+				aria-live="polite"
+			>
+				<span class="sr-only">{m.loading_generic()}</span>
+				<Skeleton class="h-4 w-32" />
+				<div class="mt-[var(--space-3)] space-y-[var(--space-2)]">
+					<Skeleton class="h-5 w-full" />
+					<Skeleton class="h-5 w-3/4" />
+				</div>
+			</div>
+		{:then relatedGroups}
+			<RelatedRecords
+				groups={relatedGroups}
+				unlinkAction={data.canManage ? '?/unlinkAsset' : undefined}
+				error={unlinkError}
+			/>
+		{/await}
 
 		{#if data.canManage}
 			{#if statusOptions.length > 0}
 				<WorkPanel heading={m.ticket_action_status()}>
-					<form method="POST" action="?/status" use:enhance class="space-y-[var(--space-3)]">
+					<form
+						method="POST"
+						action="?/status"
+						use:optimisticEnhance={(formData) => {
+							const next = formData.get('status');
+							const previous = localStatus;
+							if (typeof next === 'string') localStatus = next as typeof localStatus;
+							return () => {
+								localStatus = previous;
+							};
+						}}
+						class="space-y-[var(--space-3)]"
+					>
 						<SelectField
 							label={m.ticket_detail_status()}
 							name="status"
@@ -145,12 +221,24 @@
 			{/if}
 
 			<WorkPanel heading={m.ticket_action_priority()}>
-				<form method="POST" action="?/priority" use:enhance class="space-y-[var(--space-3)]">
+				<form
+					method="POST"
+					action="?/priority"
+					use:optimisticEnhance={(formData) => {
+						const next = formData.get('priority');
+						const previous = localPriority;
+						if (typeof next === 'string') localPriority = next as typeof localPriority;
+						return () => {
+							localPriority = previous;
+						};
+					}}
+					class="space-y-[var(--space-3)]"
+				>
 					<SelectField
 						label={m.ticket_detail_priority()}
 						name="priority"
 						options={priorityOptions}
-						value={ticket.priority}
+						value={localPriority}
 					/>
 					{@render failure('priority')}
 					<Button type="submit" variant="secondary" size="sm">{m.ticket_action_submit()}</Button>
@@ -158,13 +246,31 @@
 			</WorkPanel>
 
 			<WorkPanel heading={m.ticket_action_assign()}>
-				<form method="POST" action="?/assign" use:enhance class="space-y-[var(--space-3)]">
+				<form
+					method="POST"
+					action="?/assign"
+					use:optimisticEnhance={(formData) => {
+						const personId = formData.get('personId');
+						const previousId = localAssigneePersonId;
+						const previousName = localAssigneeName;
+						const nextId = typeof personId === 'string' && personId !== '' ? personId : null;
+						localAssigneePersonId = nextId;
+						localAssigneeName = nextId
+							? (data.people.find((candidate) => candidate.id === nextId)?.fullName ?? previousName)
+							: null;
+						return () => {
+							localAssigneePersonId = previousId;
+							localAssigneeName = previousName;
+						};
+					}}
+					class="space-y-[var(--space-3)]"
+				>
 					<SelectField
 						label={m.ticket_detail_assignee()}
 						name="personId"
 						placeholder={m.ticket_action_unassign()}
 						options={peopleOptions}
-						value={ticket.assigneePersonId ?? ''}
+						value={localAssigneePersonId ?? ''}
 					/>
 					{@render failure('assign')}
 					<Button type="submit" variant="secondary" size="sm">{m.ticket_action_submit()}</Button>
@@ -172,12 +278,30 @@
 			</WorkPanel>
 
 			<WorkPanel heading={m.ticket_action_queue()}>
-				<form method="POST" action="?/queue" use:enhance class="space-y-[var(--space-3)]">
+				<form
+					method="POST"
+					action="?/queue"
+					use:optimisticEnhance={(formData) => {
+						const queueId = formData.get('queueId');
+						const previousId = localQueueId;
+						const previousName = localQueueName;
+						if (typeof queueId === 'string') {
+							localQueueId = queueId;
+							localQueueName =
+								data.queues.find((candidate) => candidate.id === queueId)?.name ?? previousName;
+						}
+						return () => {
+							localQueueId = previousId;
+							localQueueName = previousName;
+						};
+					}}
+					class="space-y-[var(--space-3)]"
+				>
 					<SelectField
 						label={m.ticket_detail_queue()}
 						name="queueId"
 						options={queueOptions}
-						value={ticket.queueId}
+						value={localQueueId}
 					/>
 					{@render failure('queue')}
 					<Button type="submit" variant="secondary" size="sm">{m.ticket_action_submit()}</Button>

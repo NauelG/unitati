@@ -162,6 +162,47 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		sourceFile: 'EmptyState.svelte',
 		load: () => import('./specs/EmptyState.svelte')
 	},
+	{
+		id: 'skeleton',
+		name: 'Skeleton',
+		category: 'feedback',
+		summary:
+			'Bloque surface-2 con un barrido de luz (#89): la forma de un contenido aún no llegado.',
+		sourceFile: 'Skeleton.svelte',
+		load: () => import('./specs/Skeleton.svelte')
+	},
+	{
+		id: 'data-table-skeleton',
+		name: 'DataTableSkeleton',
+		category: 'feedback',
+		summary: 'La geometría exacta de DataTable (cabecera + N filas) antes de las filas reales.',
+		sourceFile: 'DataTableSkeleton.svelte',
+		load: () => import('./specs/DataTableSkeleton.svelte')
+	},
+	{
+		id: 'kpi-card-skeleton',
+		name: 'KpiCardSkeleton',
+		category: 'feedback',
+		summary: 'La caja de KpiCard (etiqueta + número de 28/34) antes del recuento real.',
+		sourceFile: 'KpiCardSkeleton.svelte',
+		load: () => import('./specs/KpiCardSkeleton.svelte')
+	},
+	{
+		id: 'timeline-skeleton',
+		name: 'TimelineSkeleton',
+		category: 'feedback',
+		summary: 'El punto + carril de AssetTimeline, detrás del {#await} de la ficha de activo.',
+		sourceFile: 'TimelineSkeleton.svelte',
+		load: () => import('./specs/TimelineSkeleton.svelte')
+	},
+	{
+		id: 'thread-skeleton',
+		name: 'ThreadSkeleton',
+		category: 'feedback',
+		summary: 'El avatar + tarjeta de TicketThread, antes de que llegue el hilo real.',
+		sourceFile: 'ThreadSkeleton.svelte',
+		load: () => import('./specs/ThreadSkeleton.svelte')
+	},
 
 	// Data
 	{

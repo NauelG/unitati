@@ -46,6 +46,13 @@
 			name: 'disabled',
 			type: 'boolean',
 			description: 'Atributo nativo del <button>, propagado por el spread de rest.'
+		},
+		{
+			name: 'busy',
+			type: 'boolean',
+			default: 'false',
+			description:
+				'Solo en la forma <button> (#89): fuerza disabled y añade el punto-spinner (.ut-btn-busy). Para un envío que navega al éxito y por tanto no tiene valor local que voltear — create asset, create ticket, login — pásale el submitting del formulario.'
 		}
 	]}
 	usage={`<Button variant="primary" size="md" onclick={save}>Guardar</Button>
@@ -79,6 +86,15 @@
 			<div class="flex flex-wrap items-center gap-[var(--space-3)]">
 				<Button disabled>No disponible</Button>
 				<Button iconOnly aria-label="Buscar">⌘</Button>
+			</div>
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Busy (#89 — envío sin valor local que voltear)
+			</p>
+			<div class="flex flex-wrap items-center gap-[var(--space-3)]">
+				<Button busy>Guardando…</Button>
+				<Button variant="secondary" busy>Enviando…</Button>
 			</div>
 		</div>
 		<div>

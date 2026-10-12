@@ -31,7 +31,7 @@
 		<AssetFields bind:values={$form} errors={$errors} {modelOptions} tagRequired />
 
 		<div class="flex items-center gap-[var(--space-3)]">
-			<Button type="submit" size="lg" disabled={$submitting}>
+			<Button type="submit" size="lg" busy={$submitting}>
 				{$submitting ? m.form_saving() : m.asset_form_submit_edit()}
 			</Button>
 			<Button href="/assets/{encodeURIComponent(data.assetTag)}" variant="ghost" size="lg">

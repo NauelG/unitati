@@ -15,6 +15,8 @@
 	let { data, form }: PageProps = $props();
 
 	let affected = $state<PickedAsset[]>([]);
+	/** Success navigates away to the new ticket — no local value to flip, so `Button`'s `busy` prop is the whole feedback (#89). */
+	let busy = $state(false);
 
 	const values = $derived(form && 'values' in form ? form.values : {});
 	const queueOptions = $derived(data.queues.map((q) => ({ value: q.id, label: q.name })));
@@ -39,7 +41,13 @@
 	<form
 		method="POST"
 		enctype="multipart/form-data"
-		use:enhance
+		use:enhance={() => {
+			busy = true;
+			return async ({ update }) => {
+				await update();
+				busy = false;
+			};
+		}}
 		class="mt-[var(--space-6)] space-y-[var(--space-4)]"
 	>
 		<Field label={m.ticket_form_subject()} name="subject" value={values.subject} required />
@@ -105,7 +113,7 @@
 		{/if}
 
 		<div class="flex items-center gap-[var(--space-3)]">
-			<Button type="submit">{m.ticket_form_submit()}</Button>
+			<Button type="submit" {busy}>{m.ticket_form_submit()}</Button>
 			<Button href="/service-desk" variant="ghost">{m.form_cancel()}</Button>
 		</div>
 	</form>

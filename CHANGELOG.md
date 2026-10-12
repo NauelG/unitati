@@ -5,6 +5,41 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.24.0] - 2026-10-12
+
+### Added
+
+- UI overhaul — Phase 8: zero-wait (#89). `data-sveltekit-preload-data="hover"` on `AppShell`'s
+  sidebar/drawer `<nav>` and `<main>`, inherited by every nav row and every content link
+  (breadcrumbs, table rows, `RelatedRecords`).
+- Toast infrastructure: `svelte-sonner` vendored via `shadcn-svelte` at `ui/sonner`, themed to the
+  app's own tokens (`surface-1`, `--shadow-lg`, status colours) instead of its default palette,
+  mounted once in `(app)/+layout.svelte` outside `<main>`'s scrollport so the portal can never be
+  clipped. `mode-watcher`, unimported since day one, removed per ADR 0017's retroactive dependency
+  rule rather than wired up for a dark mode that does not exist yet.
+- The optimistic-mutation pattern, once (`optimisticEnhance`, `#lib/optimistic.ts`): a Svelte
+  action wrapping `use:enhance` that flips a local `$state` mirror the instant a form submits,
+  snapshots the previous value, and rolls back with a `toast.error` on `failure`/`error` — success
+  stays silent, the optimistic value already matched. Applied to asset detail's custody
+  assign/return, state and location changes and the note field; ticket detail's status, priority,
+  assignee and queue changes; and `TicketComposer`'s reply, which now appears in the thread
+  instantly as a dimmed `PendingThreadItem` until it reconciles or rolls back.
+- `Button` gained a `busy` prop (`.ut-btn-busy` spec: spinner-dot + forced `disabled`) for a form
+  whose success navigates and so has no local value to flip — asset/ticket creation, the asset
+  edit form and its contextual `Sheet`, login, setup, and the catalogue (manufacturers,
+  categories, models, queues) create/rename dialogs, which stay open on failure to show their
+  inline error rather than closing optimistically.
+- `Skeleton` (`.ut-skeleton`, the shimmer sweep's own `ut-shimmer` keyframe) plus four composed
+  variants matching real content geometry exactly (zero CLS on swap): `DataTableSkeleton`,
+  `KpiCardSkeleton`, `TimelineSkeleton`, `ThreadSkeleton`.
+- Streamed record detail: asset detail's history/related-tickets rail and ticket detail's
+  related-records rail now return as unawaited promises from their `+page.server.ts` loaders,
+  resolved by `{#await}` behind the matching skeleton — the thread itself stays awaited (ticket
+  detail's whole point), only the side rail streams.
+- Gallery: five new "Loading & feedback" pages (`Skeleton` and its four variants) plus a
+  completed "Loading & feedback" pattern on `/dev/components/patterns`, with the full
+  optimistic/busy-button classification table for every mutation form in the app.
+
 ## [0.23.1] - 2026-10-11
 
 ### Fixed
