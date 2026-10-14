@@ -253,6 +253,24 @@ export async function getTicketByTag(
 	return row ? success(row) : failure('ticket_not_found');
 }
 
+/**
+ * The ticket a write has just touched, scoped to the actor's organisation and
+ * nothing more. The staff writes below trust the caller's permission gate and
+ * scope tenancy only, so reading the result back must not demand a read
+ * permission the writer may not hold: a key scoped to `tickets.create` alone
+ * can open a ticket, and has to be able to see what it opened.
+ */
+export async function getWrittenTicket(
+	actor: SessionUser,
+	ticketTag: string
+): Promise<Outcome<TicketView, 'ticket_not_found'>> {
+	const [row] = await ticketsWithRelations()
+		.where(and(eq(tickets.organisationId, actor.organisationId), eq(tickets.ticketTag, ticketTag)))
+		.limit(1);
+
+	return row ? success(row) : failure('ticket_not_found');
+}
+
 /* -------------------------------------------------------------------------- */
 /* Writes                                                                     */
 /* -------------------------------------------------------------------------- */

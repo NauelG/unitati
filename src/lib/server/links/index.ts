@@ -7,7 +7,7 @@
 export { ticketAsset } from './schema';
 export type { TicketAsset } from './schema';
 
-export { linkAsset, unlinkAsset } from './ticket-asset';
+export { linkAsset, linkAssetToTicket, unlinkAsset } from './ticket-asset';
 export type { LinkAssetFailure, UnlinkAssetFailure, TicketAssetPair } from './ticket-asset';
 
 export { relatedTo } from './related';

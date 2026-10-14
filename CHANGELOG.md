@@ -5,6 +5,22 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.37.0] - 2026-10-14
+
+### Added
+
+- The API, second slice (#133, slice B of #35): the service desk's use cases over `/api/v1`.
+  `POST /tickets` opens a ticket (`201` with a `Location` header; `assetTags` are resolved as the
+  caller sees them, and an unknown or invisible tag is a `400` on `assetTags.<n>`).
+  `GET` and `POST /tickets/{tag}/comments` read the thread and add a reply or, with
+  `tickets.comment.internal`, an internal note (`404` without it). `POST /tickets/{tag}/status`,
+  `/priority`, `/assignee` and `/queue` apply the staff transitions; an illegal status change is
+  `409` with `code: "invalid_transition"`. `POST /tickets/{tag}/assets` links an asset (`201`, or
+  `200` when it already was) and `DELETE /tickets/{tag}/assets/{assetTag}` unlinks it (`204`).
+  `GET /queues` lists the queues.
+- Endpoints can answer `201` with a `Location` header and `204` with no body, and a handler can
+  report field-level `400` issues.
+
 ## [0.36.0] - 2026-10-14
 
 ### Added

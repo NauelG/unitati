@@ -108,6 +108,17 @@ export async function linkAsset(
 	return success(undefined);
 }
 
+/**
+ * `linkAsset` as a single act, for a caller that is not already inside a
+ * transaction (the API): opens its own, like `unlinkAsset`.
+ */
+export async function linkAssetToTicket(
+	actor: SessionUser,
+	pair: TicketAssetPair
+): Promise<Outcome<void, LinkAssetFailure>> {
+	return getDb().transaction((tx) => linkAsset(tx, actor, pair));
+}
+
 export type UnlinkAssetFailure = 'forbidden' | 'not_linked';
 
 /**
