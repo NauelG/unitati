@@ -25,6 +25,7 @@ export type { Queue, Ticket, TicketComment, Attachment } from './schema';
 export {
 	listTickets,
 	getTicketByTag,
+	getWrittenTicket,
 	createTicket,
 	changeTicketStatus,
 	setTicketPriority,
@@ -59,6 +60,7 @@ export {
 	addCommentInput,
 	queueInput,
 	attachmentProblem,
+	MAX_AFFECTED_ASSETS,
 	MAX_ATTACHMENTS_PER_COMMENT,
 	MAX_ATTACHMENT_BYTES,
 	RESERVED_TICKET_TAGS

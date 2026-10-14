@@ -33,3 +33,11 @@ calls a domain function that already knows who may see what.
 - **Adding an endpoint** is one `defineEndpoint` in `endpoints/` plus one line in
   `endpoints/index.ts`. Validation, authorisation and (slice C) the OpenAPI document follow from the
   declaration.
+- **Naming assets is part of the ticket scopes.** A key holding `tickets.create` or `tickets.manage`
+  resolves, links and unlinks assets without a separate `assets.*` scope: the endpoint adds the
+  asset-read scopes to the principal for that call. `can()` still intersects with the role, so it
+  never reaches an asset its owner could not see.
+- **A staff action reads its result back organisation-scoped** (`getWrittenTicket`), because a key
+  scoped to `tickets.manage` or `tickets.create` alone may hold no read permission.
+- **Success is `200` unless the handler says otherwise**: `created(body, location)` for `201` and
+  `noContent()` for `204` (whose `output` is `z.null()`).

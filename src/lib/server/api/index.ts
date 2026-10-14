@@ -24,5 +24,13 @@ export { handleApiRequest } from './dispatch';
 export type { ApiEvent } from './dispatch';
 
 export { ENDPOINTS } from './endpoints';
-export { defineEndpoint, ApiError, notFound, conflict } from './registry';
+export {
+	defineEndpoint,
+	ApiError,
+	Reply,
+	notFound,
+	conflict,
+	created,
+	noContent
+} from './registry';
 export type { Endpoint, HttpMethod } from './registry';

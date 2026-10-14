@@ -23,7 +23,7 @@ export const ticketSchema = z.object({
 	updatedAt: z.iso.datetime()
 });
 
-function toWire(ticket: TicketView): z.input<typeof ticketSchema> {
+export function toWire(ticket: TicketView): z.input<typeof ticketSchema> {
 	return {
 		tag: ticket.ticketTag,
 		subject: ticket.subject,

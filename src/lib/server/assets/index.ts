@@ -1,4 +1,4 @@
-import { and, asc, eq, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 import type { AssetState } from '#lib/domain/status.js';
 import { listActivity, recordActivity, type TimelineEntry } from '../activity';
 import { can } from '../access/permissions';
@@ -329,6 +329,35 @@ export async function assetSummary(viewer: SessionUser): Promise<AssetSummary> {
 		inService: row?.inService ?? 0,
 		unassigned: row?.unassigned ?? 0
 	};
+}
+
+/**
+ * Resolves asset tags to ids for a caller that addresses assets by tag (the
+ * API, ADR 0022). Only what the viewer may see comes back, through the same
+ * `requireAssetScope` every read here starts from: a tag that is missing from
+ * the result is either unknown or invisible, and the caller cannot tell which.
+ * A viewer who holds no asset-read permission sees nothing rather than
+ * tripping the scope's invariant, because a key's scopes can legitimately omit it.
+ */
+export async function resolveAssetTags(
+	viewer: SessionUser,
+	assetTags: readonly string[]
+): Promise<Map<string, string>> {
+	if (assetTags.length === 0) return new Map();
+	if (
+		!can(viewer, 'assets.view') &&
+		!can(viewer, 'assets.view.own') &&
+		!can(viewer, 'assets.view.shared')
+	) {
+		return new Map();
+	}
+
+	const rows = await getDb()
+		.select({ id: assets.id, assetTag: assets.assetTag })
+		.from(assets)
+		.where(and(requireAssetScope(viewer), inArray(assets.assetTag, [...assetTags])));
+
+	return new Map(rows.map((row) => [row.assetTag, row.id]));
 }
 
 /** The asset behind a `/assets/AST-0142` URL (ADR 0010), redacted for its viewer. */

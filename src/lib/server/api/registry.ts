@@ -16,11 +16,32 @@ export class ApiError extends Error {
 	constructor(
 		readonly status: 400 | 404 | 409,
 		readonly code: string,
-		message: string
+		message: string,
+		/** Field-level problems, in the shape Zod reports them, for a `400` the handler found itself. */
+		readonly issues?: readonly { path: readonly (string | number)[]; message: string }[]
 	) {
 		super(message);
 	}
 }
+
+/**
+ * A success that is not a plain `200`: a created resource, or nothing to say.
+ * A handler that returns its body bare answers `200`.
+ */
+export class Reply<T = unknown> {
+	constructor(
+		readonly status: 200 | 201 | 204,
+		readonly body: T,
+		readonly headers: Record<string, string> = {}
+	) {}
+}
+
+/** `201` with the new resource's address. */
+export const created = <T>(body: T, location: string) =>
+	new Reply(201, body, { location: `/api/v1${location}` });
+
+/** `204`: the output schema of such an endpoint is `z.null()`. */
+export const noContent = () => new Reply(204, null);
 
 /** The domain's `not_found`, or a record the principal may not see: the same answer (ADR 0007). */
 export const notFound = (message = 'Not found.') => new ApiError(404, 'not_found', message);
@@ -40,7 +61,10 @@ export interface Endpoint<I extends z.ZodType = z.ZodType, O extends z.ZodType =
 	/** Path parameters, query string and JSON body, merged; path parameters win. */
 	input: I;
 	output: O;
-	handler: (context: { principal: ApiPrincipal; input: z.output<I> }) => Promise<z.input<O>>;
+	handler: (context: {
+		principal: ApiPrincipal;
+		input: z.output<I>;
+	}) => Promise<z.input<O> | Reply<z.input<O>>>;
 }
 
 /** Identity at runtime; exists so each declaration's schemas and handler are checked against each other. */
