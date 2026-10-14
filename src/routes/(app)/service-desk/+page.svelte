@@ -7,7 +7,7 @@
 	import Field from '#lib/components/unitati/Field.svelte';
 	import Pager from '#lib/components/unitati/Pager.svelte';
 	import RollingText from '#lib/components/unitati/RollingText.svelte';
-	import { rollingPlural } from '#lib/rolling.js';
+	import { rollingSummary } from '#lib/rolling.js';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
@@ -132,8 +132,14 @@
 				{m.tickets_lede()}
 			{:else}
 				<RollingText
-					text={`${rollingPlural(data.summary.open, m.tickets_summary_open_one, m.tickets_summary_open_other, 0)} · ${rollingPlural(data.summary.waitingOnUser, m.tickets_summary_waiting_one, m.tickets_summary_waiting_other, 1)}`}
-					counts={[data.summary.open, data.summary.waitingOnUser]}
+					{...rollingSummary([
+						[data.summary.open, m.tickets_summary_open_one, m.tickets_summary_open_other],
+						[
+							data.summary.waitingOnUser,
+							m.tickets_summary_waiting_one,
+							m.tickets_summary_waiting_other
+						]
+					])}
 				/>
 			{/if}
 		{/snippet}

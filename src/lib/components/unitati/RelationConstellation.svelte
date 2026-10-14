@@ -1,3 +1,46 @@
+<script lang="ts" module>
+	import { tv } from 'tailwind-variants';
+
+	/**
+	 * The three kinds of node share one pill and differ in what they say: the
+	 * current record (outlined, inert), a linked record (a link) and a counted
+	 * group (dashed, inert). The dot is the record's domain colour.
+	 */
+	export const constellation = tv({
+		slots: {
+			panel: 'ut-constellation relative mx-auto aspect-square w-full max-w-[18rem]',
+			node: [
+				'ut-constellation-node absolute -translate-x-1/2 -translate-y-1/2 bg-[var(--surface-1)]',
+				'px-[var(--space-2)] py-[2px] font-mono text-xs font-semibold'
+			],
+			dot: 'mr-1 inline-block size-1.5 rounded-full align-middle'
+		},
+		variants: {
+			type: {
+				centre: {
+					node: 'rounded-[var(--radius-sm)] border border-[var(--border-strong)] text-[var(--ink)]'
+				},
+				record: {
+					node: [
+						'rounded-[var(--radius-sm)] text-[var(--ink)] outline-offset-2 hover:underline',
+						'focus-visible:outline-2 focus-visible:outline-[var(--brand)]'
+					]
+				},
+				group: {
+					node: [
+						'rounded-[var(--radius-full)] border border-dashed border-[var(--border-strong)]',
+						'text-[var(--ink-muted)]'
+					]
+				}
+			},
+			kind: {
+				ticket: { dot: 'bg-[var(--desk)]' },
+				asset: { dot: 'bg-[var(--asset)]' }
+			}
+		}
+	});
+</script>
+
 <script lang="ts">
 	import { layoutConstellation, type ConstellationNode } from '#lib/constellation.js';
 	import { handRecordMorphTo } from '#lib/motion.js';
@@ -68,12 +111,12 @@
 			: m.constellation_group_assets_other({ count: node.count });
 	}
 
-	const DOT = { ticket: 'var(--desk)', asset: 'var(--asset)' } as const;
+	const styles = constellation();
 </script>
 
 {#if layout}
 	<WorkPanel heading={m.constellation_title()} class={className}>
-		<div class="ut-constellation relative mx-auto aspect-square w-full max-w-[18rem]">
+		<div class={styles.panel()}>
 			<svg
 				viewBox="0 0 {layout.size} {layout.size}"
 				class="absolute inset-0 size-full"
@@ -97,15 +140,12 @@
 			</svg>
 
 			<span
-				class="ut-constellation-node absolute -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-sm)] border border-[var(--border-strong)] bg-[var(--surface-1)] px-[var(--space-2)] py-[2px] font-mono text-xs font-semibold text-[var(--ink)]"
+				class={styles.node({ type: 'centre' })}
 				style:left={percent(layout.centre.x, layout.size)}
 				style:top={percent(layout.centre.y, layout.size)}
 				style:--i="0"
 			>
-				<span
-					class="mr-1 inline-block size-1.5 rounded-full align-middle"
-					style:background-color={DOT[layout.centre.kind]}
-					aria-hidden="true"
+				<span class={constellation({ kind: layout.centre.kind }).dot()} aria-hidden="true"
 				></span>{layout.centre.tag}
 			</span>
 
@@ -114,7 +154,7 @@
 					<a
 						href={node.href}
 						aria-label={recordLabel(node)}
-						class="ut-constellation-node absolute -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-sm)] bg-[var(--surface-1)] px-[var(--space-2)] py-[2px] font-mono text-xs font-semibold text-[var(--ink)] outline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[var(--brand)]"
+						class={styles.node({ type: 'record' })}
 						style:left={percent(node.x, layout.size)}
 						style:top={percent(node.y, layout.size)}
 						style:--i={index + 1}
@@ -123,25 +163,20 @@
 							if (target) handRecordMorphTo(target, node.tag);
 						}}
 					>
-						<span
-							class="mr-1 inline-block size-1.5 rounded-full align-middle"
-							style:background-color={DOT[node.kind]}
-							aria-hidden="true"
-						></span><span data-node-tag>{node.tag}</span>
+						<span class={constellation({ kind: node.kind }).dot()} aria-hidden="true"></span><span
+							data-node-tag>{node.tag}</span
+						>
 					</a>
 				{:else}
 					<span
 						role="img"
 						aria-label={groupLabel(node)}
-						class="ut-constellation-node absolute -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-full)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-1)] px-[var(--space-2)] py-[2px] font-mono text-xs font-semibold text-[var(--ink-muted)]"
+						class={styles.node({ type: 'group' })}
 						style:left={percent(node.x, layout.size)}
 						style:top={percent(node.y, layout.size)}
 						style:--i={index + 1}
 					>
-						<span
-							class="mr-1 inline-block size-1.5 rounded-full align-middle"
-							style:background-color={DOT[node.kind]}
-							aria-hidden="true"
+						<span class={constellation({ kind: node.kind }).dot()} aria-hidden="true"
 						></span>+{node.count}
 					</span>
 				{/if}

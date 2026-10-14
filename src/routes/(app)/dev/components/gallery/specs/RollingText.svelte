@@ -3,7 +3,7 @@
 	import Button from '#lib/components/unitati/Button.svelte';
 	import RollingText from '#lib/components/unitati/RollingText.svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { rollingPlural } from '#lib/rolling.js';
+	import { rollingSummary } from '#lib/rolling.js';
 
 	let total = $state(12);
 	let unassigned = $state(3);
@@ -41,8 +41,10 @@
 		<div class="flex flex-wrap items-center gap-[var(--space-4)]">
 			<p class="text-[var(--ink-muted)]">
 				<RollingText
-					text={`${rollingPlural(total, m.assets_summary_total_one, m.assets_summary_total_other, 0)} · ${rollingPlural(unassigned, m.assets_summary_unassigned_one, m.assets_summary_unassigned_other, 1)}`}
-					counts={[total, unassigned]}
+					{...rollingSummary([
+						[total, m.assets_summary_total_one, m.assets_summary_total_other],
+						[unassigned, m.assets_summary_unassigned_one, m.assets_summary_unassigned_other]
+					])}
 				/>
 			</p>
 			<Button

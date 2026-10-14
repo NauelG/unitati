@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countToken, rollingPlural, splitRolling } from './rolling.js';
+import { countToken, rollingPlural, rollingSummary, splitRolling } from './rolling.js';
 
 describe('splitRolling', () => {
 	it('returns plain text untouched', () => {
@@ -34,5 +34,29 @@ describe('rollingPlural', () => {
 
 		expect(single).toEqual([1, ' activo']);
 		expect(many).toEqual([3, ' activos']);
+	});
+});
+
+describe('rollingSummary', () => {
+	const one = () => '1 activo';
+	const other = ({ count }: { count: string }) => `${count} activos`;
+	const noneAssigned = ({ count }: { count: string }) => `${count} sin asignar`;
+
+	it('joins the parts with their own counts and plural wording', () => {
+		const { text, counts } = rollingSummary([
+			[12, one, other],
+			[1, () => '1 sin asignar', noneAssigned]
+		]);
+		expect(counts).toEqual([12, 1]);
+		expect(splitRolling(text, counts)).toEqual([12, ' activos · ', 1, ' sin asignar']);
+	});
+
+	it('only swaps a standalone 1, never the one inside 11', () => {
+		const eleven = () => 'Hay 11 y 1 activo';
+		expect(splitRolling(rollingPlural(1, eleven, other, 0), [1])).toEqual([
+			'Hay 11 y ',
+			1,
+			' activo'
+		]);
 	});
 });

@@ -10,7 +10,7 @@
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { springIn } from '#lib/motion.js';
 	import { m } from '#lib/paraglide/messages.js';
-	import { countToken, rollingPlural } from '#lib/rolling.js';
+	import { countToken, rollingSummary } from '#lib/rolling.js';
 	import type { RelatedGroup } from '#lib/server/links/related.js';
 
 	/**
@@ -110,8 +110,10 @@
 		<div class="flex flex-wrap items-center gap-[var(--space-4)]">
 			<p class="m-0 text-[var(--ink-muted)]">
 				<RollingText
-					text={`${rollingPlural(total, m.assets_summary_total_one, m.assets_summary_total_other, 0)} · ${rollingPlural(unassigned, m.assets_summary_unassigned_one, m.assets_summary_unassigned_other, 1)}`}
-					counts={[total, unassigned]}
+					{...rollingSummary([
+						[total, m.assets_summary_total_one, m.assets_summary_total_other],
+						[unassigned, m.assets_summary_unassigned_one, m.assets_summary_unassigned_other]
+					])}
 				/>
 			</p>
 			<Button size="sm" variant="secondary" onclick={assign}>Asignar un activo</Button>

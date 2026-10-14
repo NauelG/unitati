@@ -10,7 +10,7 @@
 	import Field from '#lib/components/unitati/Field.svelte';
 	import Pager from '#lib/components/unitati/Pager.svelte';
 	import RollingText from '#lib/components/unitati/RollingText.svelte';
-	import { rollingPlural } from '#lib/rolling.js';
+	import { rollingSummary } from '#lib/rolling.js';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
@@ -175,8 +175,14 @@
 				{data.seesWholeInventory ? m.assets_lede() : m.assets_lede_limited()}
 			{:else}
 				<RollingText
-					text={`${rollingPlural(data.summary.total, m.assets_summary_total_one, m.assets_summary_total_other, 0)} · ${rollingPlural(data.summary.unassigned, m.assets_summary_unassigned_one, m.assets_summary_unassigned_other, 1)}`}
-					counts={[data.summary.total, data.summary.unassigned]}
+					{...rollingSummary([
+						[data.summary.total, m.assets_summary_total_one, m.assets_summary_total_other],
+						[
+							data.summary.unassigned,
+							m.assets_summary_unassigned_one,
+							m.assets_summary_unassigned_other
+						]
+					])}
 				/>
 			{/if}
 		{/snippet}

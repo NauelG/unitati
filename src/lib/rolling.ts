@@ -49,7 +49,7 @@ export function splitRolling(text: string, counts: readonly number[]): (string |
 
 /**
  * The right wording for `count` with its number replaced by a token. A
- * singular message hardcodes its "1" ("1 activo"), so the "1" is swapped for the
+ * singular message hardcodes its "1" ("1 activo"), so that standalone "1" (never the 1 in "11") is swapped for the
  * token: the number stays in the same place in the sentence when the count goes
  * from 1 to 3, and so keeps rolling instead of being replaced along with the
  * rest of the text.
@@ -60,5 +60,27 @@ export function rollingPlural(
 	other: (input: { count: string }) => string,
 	index: number
 ): string {
-	return count === 1 ? one().replace('1', countToken(index)) : other({ count: countToken(index) });
+	return count === 1
+		? one().replace(/\b1\b/, countToken(index))
+		: other({ count: countToken(index) });
+}
+
+/**
+ * A list header's one-line summary: each `[count, one, other]` becomes its
+ * plural-correct wording with a rolling number, joined by " · ". Returns the
+ * `text` and `counts` pair `RollingText` takes.
+ */
+export function rollingSummary(
+	parts: readonly (readonly [
+		count: number,
+		one: () => string,
+		other: (input: { count: string }) => string
+	])[]
+): { text: string; counts: number[] } {
+	return {
+		text: parts
+			.map(([count, one, other], index) => rollingPlural(count, one, other, index))
+			.join(' · '),
+		counts: parts.map(([count]) => count)
+	};
 }
