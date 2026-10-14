@@ -11,7 +11,6 @@ import type { Permission } from '#lib/server/access/permissions.js';
  * manage shows up nowhere.
  */
 
-export type SettingsModule = 'projects' | 'assets' | 'service-desk';
 
 export interface SettingsSection {
 	module: SettingsModule;
@@ -21,8 +20,10 @@ export interface SettingsSection {
 	permission: Permission;
 }
 
-/** Display order of the modules in the navigation and the index. */
-export const MODULE_ORDER: readonly SettingsModule[] = ['projects', 'assets', 'service-desk'];
+/** Display order of the modules in the navigation and the index; the one list `SettingsModule` derives from. */
+export const MODULE_ORDER = ['projects', 'assets', 'service-desk'] as const;
+
+export type SettingsModule = (typeof MODULE_ORDER)[number];
 
 export const MODULE_LABELS: Record<SettingsModule, () => string> = {
 	projects: m.settings_module_projects,

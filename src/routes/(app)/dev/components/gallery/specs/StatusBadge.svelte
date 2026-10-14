@@ -19,7 +19,7 @@
 	propsDoc={[
 		{
 			name: 'status',
-			type: 'StatusKey',
+			type: 'BadgeKey',
 			description:
 				'Unión de tipos en tiempo de compilación: TicketStatus | Priority | AssetState | StateGroup.'
 		}
