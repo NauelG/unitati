@@ -47,7 +47,8 @@ interface ListData {
 
 interface DetailData {
 	asset: AssetView;
-	timeline: unknown[] | null;
+	/** Unawaited by `load` (#89, streaming): the rail resolves after the critical payload above. */
+	timelineRail: Promise<{ timeline: unknown[] | null; recentTickets: number }>;
 	canManage: boolean;
 	canCheckout: boolean;
 	people: unknown[];
@@ -147,7 +148,7 @@ describe('the page an employee is sent for one asset', () => {
 			'name',
 			'visibility'
 		]);
-		expect(data.timeline).toBeNull();
+		expect((await data.timelineRail).timeline).toBeNull();
 		expect(JSON.stringify(data)).not.toContain('SECRET-PRINTER-SERIAL');
 	});
 
@@ -157,7 +158,7 @@ describe('the page an employee is sent for one asset', () => {
 		const data = await loaded<DetailData>(loadDetail(detailEvent(eva, 'AST-0002')));
 
 		expect(data.asset).toMatchObject({ visibility: 'full', serial: 'EVA-OWN-SERIAL' });
-		expect(data.timeline).not.toBeNull();
+		expect((await data.timelineRail).timeline).not.toBeNull();
 	});
 
 	it('is a 404 for somebody else’s equipment, as if it did not exist', async () => {
