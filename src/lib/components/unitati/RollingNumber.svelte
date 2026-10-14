@@ -1,6 +1,6 @@
 <script lang="ts">
 	import NumberFlow from '@number-flow/svelte';
-	import { MOTION_BASE_MS, MOTION_SLOW_MS } from '#lib/motion.js';
+	import { NUMBER_FLOW_TIMING } from '#lib/motion.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 
 	/**
@@ -9,10 +9,8 @@
 	 * the plain number, so a page load never rolls — and it stops itself under
 	 * `prefers-reduced-motion` (`respectMotionPreference`, on by default).
 	 *
-	 * Every timing is pinned inside the motion constitution: a roll is a macro
-	 * step (`--motion-slow`, the 240ms ceiling) and the fade of the digits that
-	 * leave or arrive is a micro one. NumberFlow's own defaults (900ms) would
-	 * break rule 2.
+	 * Timings are `NUMBER_FLOW_TIMING` (`motion.ts`), shared with `KpiCard`:
+	 * NumberFlow's own 900ms default would break the 240ms ceiling.
 	 */
 	interface Props {
 		value: number;
@@ -20,19 +18,12 @@
 	}
 
 	let { value, class: className }: Props = $props();
-
-	// Same curve as `--ease-out`: NumberFlow hands it to the Web Animations API,
-	// which cannot resolve a CSS custom property, so the literal lives here.
-	const EASE = 'cubic-bezier(0.2, 0, 0, 1)';
-	const timing = { duration: MOTION_SLOW_MS, easing: EASE };
 </script>
 
 <NumberFlow
 	{value}
 	locales={getLocale()}
-	transformTiming={timing}
-	spinTiming={timing}
-	opacityTiming={{ duration: MOTION_BASE_MS, easing: 'ease-out' }}
+	{...NUMBER_FLOW_TIMING}
 	class={className}
 	style="font-variant-numeric: tabular-nums;"
 />
