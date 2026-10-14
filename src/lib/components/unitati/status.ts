@@ -94,6 +94,11 @@ export function stateGroupBadge(group: StateGroup): { tone: Tone; label: string 
 	return { tone: GROUP_TONES[group], label: GROUP_LABELS[group]() };
 }
 
+/** The name of a state group, for prose that names the group rather than a state. */
+export function stateGroupLabel(group: StateGroup): string {
+	return GROUP_LABELS[group]();
+}
+
 function isStateGroup(key: BadgeKey): key is StateGroup {
 	return (STATE_GROUPS as readonly string[]).includes(key);
 }

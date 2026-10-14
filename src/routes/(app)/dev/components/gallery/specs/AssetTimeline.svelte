@@ -71,6 +71,13 @@
 			name: 'items',
 			type: 'AssetTimelineItem[]',
 			description: 'Más reciente primero, como mergeAssetTimeline las devuelve. Nunca se reordenan.'
+		},
+		{
+			name: 'domain',
+			type: "'asset' | 'project'",
+			default: "'asset'",
+			description:
+				'De quién es la línea: el punto de un evento del propio registro toma el color de su dominio. Una línea de proyecto o tarea solo lleva eventos de actividad.'
 		}
 	]}
 	usage={`<AssetTimeline items={mergeAssetTimeline(activityEntries, relatedGroups)} />`}

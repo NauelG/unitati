@@ -1,13 +1,19 @@
 import type { LucideIcon } from '@lucide/svelte';
+import FolderKanbanIcon from '@lucide/svelte/icons/folder-kanban';
 import HouseIcon from '@lucide/svelte/icons/house';
 import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
+import ListChecksIcon from '@lucide/svelte/icons/list-checks';
 import PackageIcon from '@lucide/svelte/icons/package';
 import PlusIcon from '@lucide/svelte/icons/plus';
 import TicketIcon from '@lucide/svelte/icons/ticket';
 import UserCheckIcon from '@lucide/svelte/icons/user-check';
 import UsersIcon from '@lucide/svelte/icons/users';
 import { m } from '../paraglide/messages.js';
-import { ASSET_READ_PERMISSIONS, TICKET_READ_PERMISSIONS } from './access.js';
+import {
+	ASSET_READ_PERMISSIONS,
+	PROJECT_READ_PERMISSIONS,
+	TICKET_READ_PERMISSIONS
+} from './access.js';
 
 /**
  * The command palette's "Acciones" group (#88): a pure function, not a
@@ -62,6 +68,14 @@ export function derivePaletteActions(ctx: PaletteActionContext): PaletteActionDe
 					target: { kind: 'navigate', href: '/assets/new' }
 				}
 			: null,
+		hasAnyPermission(ctx.permissions, 'projects.manage')
+			? {
+					id: 'new-project',
+					label: m.palette_action_new_project(),
+					icon: PlusIcon,
+					target: { kind: 'navigate', href: '/projects/new' }
+				}
+			: null,
 		hasAnyPermission(ctx.permissions, 'tickets.manage') && ctx.ticketTag && ctx.personId
 			? {
 					id: 'assign-to-me',
@@ -84,6 +98,22 @@ export function derivePaletteActions(ctx: PaletteActionContext): PaletteActionDe
 					label: m.palette_action_go_service_desk(),
 					icon: TicketIcon,
 					target: { kind: 'navigate', href: '/service-desk' }
+				}
+			: null,
+		hasAnyPermission(ctx.permissions, PROJECT_READ_PERMISSIONS)
+			? {
+					id: 'go-projects',
+					label: m.palette_action_go_projects(),
+					icon: FolderKanbanIcon,
+					target: { kind: 'navigate', href: '/projects' }
+				}
+			: null,
+		hasAnyPermission(ctx.permissions, PROJECT_READ_PERMISSIONS)
+			? {
+					id: 'go-tasks',
+					label: m.palette_action_go_tasks(),
+					icon: ListChecksIcon,
+					target: { kind: 'navigate', href: '/tasks' }
 				}
 			: null,
 		hasAnyPermission(ctx.permissions, 'people.view')

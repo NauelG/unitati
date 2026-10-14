@@ -1,10 +1,15 @@
 import { redirect } from '@sveltejs/kit';
 import { requireUser } from '#lib/server/auth/guards.js';
 import { permissionsFor } from '#lib/server/access/permissions.js';
-import { ASSET_READ_PERMISSIONS, TICKET_READ_PERMISSIONS } from '#lib/domain/access.js';
+import {
+	ASSET_READ_PERMISSIONS,
+	PROJECT_READ_PERMISSIONS,
+	TICKET_READ_PERMISSIONS
+} from '#lib/domain/access.js';
 import { needsSetup, countPeople } from '#lib/server/directory/index.js';
 import { countActive } from '#lib/server/assets/index.js';
 import { countOpen } from '#lib/server/service-desk/index.js';
+import { countActiveProjects, countOpenTasks } from '#lib/server/projects/index.js';
 import type { Permission } from '#lib/server/access/permissions.js';
 import type { LayoutServerLoad } from './$types';
 
@@ -26,10 +31,13 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	 * hides the link, so an absent count never shows beside a link that isn't
 	 * there.
 	 */
-	const [assets, serviceDesk, directory] = await Promise.all([
+	const seesProjects = hasAnyPermission(PROJECT_READ_PERMISSIONS);
+	const [assets, serviceDesk, directory, projects, tasks] = await Promise.all([
 		hasAnyPermission(ASSET_READ_PERMISSIONS) ? countActive(user.organisationId) : undefined,
 		hasAnyPermission(TICKET_READ_PERMISSIONS) ? countOpen(user.organisationId) : undefined,
-		permissions.includes('people.view') ? countPeople(user.organisationId) : undefined
+		permissions.includes('people.view') ? countPeople(user.organisationId) : undefined,
+		seesProjects ? countActiveProjects(user) : undefined,
+		seesProjects ? countOpenTasks(user) : undefined
 	]);
 
 	// Sent to the client so navigation can hide what the user cannot reach.
@@ -37,6 +45,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	return {
 		user: { name: user.name, email: user.email, role: user.role, personId: user.personId },
 		permissions,
-		counts: { assets, serviceDesk, directory }
+		counts: { assets, serviceDesk, directory, projects, tasks }
 	};
 };

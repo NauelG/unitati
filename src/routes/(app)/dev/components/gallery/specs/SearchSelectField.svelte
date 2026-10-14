@@ -13,6 +13,7 @@
 	let remoteValue: string | null = $state(null);
 	let remoteFailedValue: string | null = $state(null);
 	let clearedValue: string | null = $state('admin');
+	let manyValues: string[] = $state(['agent', 'viewer']);
 </script>
 
 <ComponentDocPage
@@ -25,7 +26,7 @@
 	]}
 	whenNotToUse={[
 		'Un puñado de opciones fijas conocidas (estado, prioridad): usa SelectField, es más simple y más rápido.',
-		'Elegir varios registros a la vez: usa AssetPicker.'
+		'Elegir varios activos buscando en remoto: usa AssetPicker.'
 	]}
 	propsDoc={[
 		{ name: 'label', type: 'string', description: 'Texto de la etiqueta.' },
@@ -50,6 +51,24 @@
 		{ name: 'error', type: 'string', description: 'Igual que en Field: presencia marca inválido.' },
 		{ name: 'hint', type: 'string', description: 'Pista permanente bajo el control.' },
 		{ name: 'required', type: 'boolean', description: 'Marca el campo obligatorio en el envío.' },
+		{
+			name: 'multiple',
+			type: 'boolean',
+			default: 'false',
+			description:
+				'Varias selecciones: se guardan en values (bindable) y se envían como campos name repetidos. El popover queda abierto entre selecciones.'
+		},
+		{
+			name: 'values',
+			type: 'string[]',
+			default: '[]',
+			description: 'Bindable. Solo con multiple.'
+		},
+		{
+			name: 'selectedLabels',
+			type: 'Record<string, string>',
+			description: 'Etiquetas de valores remotos ya elegidos, conocidas antes de buscar.'
+		},
 		{
 			name: 'clearable',
 			type: 'boolean',
@@ -99,6 +118,12 @@
 					Limpiable / obligatorio
 				</p>
 				<SearchSelectField label="Rol" options={roles} bind:value={clearedValue} required />
+			</div>
+			<div>
+				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+					Múltiple (multiple)
+				</p>
+				<SearchSelectField label="Roles" options={roles} multiple bind:values={manyValues} />
 			</div>
 		</div>
 	{/snippet}

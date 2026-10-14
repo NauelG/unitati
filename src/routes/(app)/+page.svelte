@@ -199,6 +199,37 @@
 
 		<div class="mt-[var(--space-5)] grid gap-[var(--space-5)] lg:grid-cols-2">
 			<WorkPanel heading={m.overview_section_your_work()}>
+				{#if data.myTasks !== undefined}
+					<h3
+						class="mb-[var(--space-2)] text-xs font-semibold tracking-[0.04em] text-[var(--ink-muted)] uppercase"
+					>
+						{m.overview_work_tasks()}
+					</h3>
+					{#if data.myTasks.length === 0}
+						<p class="text-sm text-[var(--ink-muted)]">{m.overview_work_tasks_empty()}</p>
+					{:else}
+						<ol class="m-0 list-none space-y-[var(--space-2)] p-0">
+							{#each data.myTasks as task (task.id)}
+								<li class="flex flex-wrap items-center gap-[var(--space-2)]">
+									<RecordRef
+										record={{
+											kind: 'task',
+											tag: task.taskTag,
+											title: task.title,
+											href: `/tasks/${encodeURIComponent(task.taskTag)}`
+										}}
+									/>
+									<StatusBadge status={task.stateGroup} label={task.stateName} />
+								</li>
+							{/each}
+						</ol>
+					{/if}
+					<h3
+						class="mt-[var(--space-4)] mb-[var(--space-2)] text-xs font-semibold tracking-[0.04em] text-[var(--ink-muted)] uppercase"
+					>
+						{m.overview_work_tickets()}
+					</h3>
+				{/if}
 				{#if data.myTickets.length === 0}
 					<p class="text-sm text-[var(--ink-muted)]">{m.overview_your_work_empty()}</p>
 				{:else}

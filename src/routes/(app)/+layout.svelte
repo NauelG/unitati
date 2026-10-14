@@ -3,6 +3,7 @@
 	import PackageIcon from '@lucide/svelte/icons/package';
 	import TicketIcon from '@lucide/svelte/icons/ticket';
 	import FolderKanbanIcon from '@lucide/svelte/icons/folder-kanban';
+	import ListChecksIcon from '@lucide/svelte/icons/list-checks';
 	import UsersIcon from '@lucide/svelte/icons/users';
 	import HouseIcon from '@lucide/svelte/icons/house';
 	import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
@@ -19,7 +20,11 @@
 	import EnvironmentBadge from '#lib/components/unitati/EnvironmentBadge.svelte';
 	import ThemeToggle from '#lib/components/unitati/ThemeToggle.svelte';
 	import { Toaster } from '#lib/components/ui/sonner/index.js';
-	import { ASSET_READ_PERMISSIONS, TICKET_READ_PERMISSIONS } from '#lib/domain/access.js';
+	import {
+		ASSET_READ_PERMISSIONS,
+		PROJECT_READ_PERMISSIONS,
+		TICKET_READ_PERMISSIONS
+	} from '#lib/domain/access.js';
 	import { isProduction } from '#lib/environment.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Permission } from '#lib/server/access/permissions.js';
@@ -75,12 +80,27 @@
 			]
 		},
 		{
-			href: '/projects',
+			id: 'projects',
 			label: m.nav_projects(),
-			permission: 'projects.view',
 			icon: FolderKanbanIcon,
 			section: 'modules',
-			accent: 'var(--project)'
+			accent: 'var(--project)',
+			children: [
+				{
+					href: '/projects',
+					label: m.nav_projects(),
+					icon: FolderKanbanIcon,
+					permission: PROJECT_READ_PERMISSIONS,
+					count: data.counts.projects
+				},
+				{
+					href: '/tasks',
+					label: m.nav_tasks(),
+					icon: ListChecksIcon,
+					permission: PROJECT_READ_PERMISSIONS,
+					count: data.counts.tasks
+				}
+			]
 		},
 		{
 			href: '/directory',

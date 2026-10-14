@@ -4,7 +4,7 @@
  * the other — a route file is not a module other code reaches into.
  */
 export interface PaletteRecord {
-	kind: 'asset' | 'ticket';
+	kind: 'asset' | 'ticket' | 'project' | 'task';
 	tag: string;
 	title: string;
 	href: string;

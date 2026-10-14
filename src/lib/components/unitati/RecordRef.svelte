@@ -1,11 +1,18 @@
 <script lang="ts" module>
 	import { tv } from 'tailwind-variants';
 
+	import FolderKanban from '@lucide/svelte/icons/folder-kanban';
 	import Laptop from '@lucide/svelte/icons/laptop';
+	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import Ticket from '@lucide/svelte/icons/ticket';
 
 	/** The icon of each kind of record: spelled once, for every place that draws one. */
-	export const KIND_ICONS = { asset: Laptop, ticket: Ticket };
+	export const KIND_ICONS = {
+		asset: Laptop,
+		ticket: Ticket,
+		project: FolderKanban,
+		task: ListChecks
+	};
 
 	/**
 	 * The `.ut-ref` family: an inline, clickable reference to a record. It is the
@@ -33,6 +40,12 @@
 				},
 				ticket: {
 					root: 'bg-[var(--desk-soft)] text-[var(--desk)] focus-visible:outline-[var(--desk)]'
+				},
+				project: {
+					root: 'bg-[var(--project-soft)] text-[var(--project)] focus-visible:outline-[var(--project)]'
+				},
+				task: {
+					root: 'bg-[var(--project-soft)] text-[var(--project)] focus-visible:outline-[var(--project)]'
 				}
 			}
 		}
@@ -44,7 +57,12 @@
 
 	interface Props {
 		/** The record, as `relatedTo` returns it: `kind`, `tag`, `title`, `href`. */
-		record: { kind: 'asset' | 'ticket'; tag: string; title: string; href: string };
+		record: {
+			kind: 'asset' | 'ticket' | 'project' | 'task';
+			tag: string;
+			title: string;
+			href: string;
+		};
 		class?: string;
 	}
 

@@ -26,6 +26,16 @@ export const TICKET_READ_PERMISSIONS = [
 ] as const satisfies readonly Permission[];
 
 /**
+ * The permissions that each get a person onto `/projects` and `/tasks`: a
+ * technician by `projects.view`, an employee by `projects.view.assigned`. Which
+ * rows then appear is decided inside the projects domain.
+ */
+export const PROJECT_READ_PERMISSIONS = [
+	'projects.view',
+	'projects.view.assigned'
+] as const satisfies readonly Permission[];
+
+/**
  * What puts a person in the staff shell rather than the employee portal. An
  * employee holds none of these, and a sidebar of near-empty modules would look
  * like a broken app.
