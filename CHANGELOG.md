@@ -5,6 +5,23 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.34.0] - 2026-10-14
+
+### Added
+
+- The kanban board (#125, slice 5d of #10): `/projects/{tag}` now opens on a board with one column
+  per state, ordered by group and position. Each card shows its code, title, assignees and due date.
+  `?view=list` keeps the task list.
+- A _Mover a…_ menu on every card, reachable with Tab and operated with the arrow keys and Enter,
+  and drag and drop (`svelte-dnd-action`) across and within columns. Both end in the same
+  `moveTask` action: a move reverts with a toast if the server refuses it, and a reorder inside a
+  column writes no activity.
+- Empty columns collapse to a strip with a `0` and still accept a menu move or a drop. A `+` in
+  each column header opens _Nueva tarea_ with that column's state preset.
+- Archived projects and assigned-work viewers get a read-only board: no menu, drop zone or quick
+  create in the DOM, and the viewer sees only their own cards.
+- Every drag announcement is a Spanish paraglide message (`board_aria_*`), ready for #36.
+
 ## [0.33.0] - 2026-10-14
 
 ### Added
