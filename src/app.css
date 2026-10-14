@@ -300,6 +300,35 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
 }
 
 /*
+ * AppShell navigation groups (ADR 0015 addendum, #122). Children are always in
+ * the DOM and shown by `[data-open]` on the group, so open/closed is plain CSS:
+ * the pre-paint script in `app.html` can open stored groups before the first
+ * frame without Svelte having run. The rail never lists children inline — its
+ * parent icon opens a popover instead.
+ */
+.ut-nav-children {
+	display: none;
+}
+
+[data-nav-group][data-open] > .ut-nav-children {
+	display: flex;
+}
+
+[data-nav-group][data-open] > button .ut-nav-chevron {
+	transform: rotate(90deg);
+}
+
+html[data-sidebar-collapsed] .ut-sidebar .ut-nav-children {
+	display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ut-nav-chevron {
+		transition: none;
+	}
+}
+
+/*
  * The AppShell scrollports (ADR 0015 addendum, #96): `<nav>`'s nav-items
  * region and `<main>` both scroll independently of the document now. This
  * customizes the *native* scrollbar's appearance only — never

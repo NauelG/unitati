@@ -6,7 +6,12 @@
 	import UsersIcon from '@lucide/svelte/icons/users';
 	import HouseIcon from '@lucide/svelte/icons/house';
 	import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
-	import AppShell, { type AppShellNavLink } from '#lib/components/unitati/AppShell.svelte';
+	import AppShell from '#lib/components/unitati/AppShell.svelte';
+	import type {
+		AppShellNavGroup,
+		AppShellNavLeaf,
+		AppShellNavLink
+	} from '#lib/components/unitati/app-shell-nav.js';
 	import EnvironmentBadge from '#lib/components/unitati/EnvironmentBadge.svelte';
 	import ThemeToggle from '#lib/components/unitati/ThemeToggle.svelte';
 	import { Toaster } from '#lib/components/ui/sonner/index.js';
@@ -19,75 +24,82 @@
 	let { data, children }: LayoutProps = $props();
 
 	/**
-	 * `AppShellNavLink` plus the one field the component itself never sees:
-	 * which permission shows the row at all. Kept a real `Permission` union
-	 * (not widened to `string`) so a typo'd permission name fails `npm run
-	 * check` instead of silently hiding — or always showing — a link.
+	 * The shell's own link types with `permission` narrowed to the real
+	 * `Permission` union (not widened to `string`), so a typo'd permission name
+	 * fails `npm run check` instead of silently hiding — or always showing — a
+	 * link. `AppShell` applies them (`resolveNavigation`), child by child.
 	 */
-	interface NavLinkSource extends AppShellNavLink {
-		permission: Permission | readonly Permission[] | null;
-	}
+	type Gated = { permission: Permission | readonly Permission[] | null };
+	type NavLeafSource = Omit<AppShellNavLeaf, 'permission'> & Gated;
+	type NavGroupSource = Omit<AppShellNavGroup, 'children'> & { children: NavLeafSource[] };
 
 	// One colour per domain, as the design system prescribes. Hiding a link is a
-	// convenience; every route still guards itself on the server.
-	const links = $derived(
-		(
-			[
-				{ href: '/', label: m.nav_overview(), permission: null, icon: HouseIcon },
+	// convenience; every route still guards itself on the server. A module with a
+	// single work screen is a one-child group: `AppShell` renders it as a flat row.
+	const links = $derived<AppShellNavLink[]>([
+		{ href: '/', label: m.nav_overview(), permission: null, icon: HouseIcon },
+		{
+			id: 'assets',
+			label: m.nav_assets(),
+			icon: PackageIcon,
+			section: 'modules',
+			accent: 'var(--asset)',
+			children: [
 				{
 					href: '/assets',
-					label: m.nav_assets(),
-					permission: ASSET_READ_PERMISSIONS,
+					label: m.nav_inventory(),
 					icon: PackageIcon,
-					section: 'modules',
-					accent: 'var(--asset)',
+					permission: ASSET_READ_PERMISSIONS,
 					count: data.counts.assets
-				},
+				}
+			]
+		},
+		{
+			id: 'service-desk',
+			label: m.nav_service_desk(),
+			icon: TicketIcon,
+			section: 'modules',
+			accent: 'var(--desk)',
+			children: [
 				{
 					href: '/service-desk',
-					label: m.nav_service_desk(),
-					permission: TICKET_READ_PERMISSIONS,
+					label: m.nav_tickets(),
 					icon: TicketIcon,
-					section: 'modules',
-					accent: 'var(--desk)',
+					permission: TICKET_READ_PERMISSIONS,
 					count: data.counts.serviceDesk
-				},
-				{
-					href: '/projects',
-					label: m.nav_projects(),
-					permission: 'projects.view',
-					icon: FolderKanbanIcon,
-					section: 'modules',
-					accent: 'var(--project)'
-				},
-				{
-					href: '/directory',
-					label: m.nav_directory(),
-					permission: 'people.view',
-					icon: UsersIcon,
-					section: 'directory',
-					count: data.counts.directory
-				},
-				// The component gallery, open in every environment but production. The
-				// route answers 404 there too, so hiding the entry is a convenience,
-				// not the guard.
-				...(!isProduction(APP_ENV)
-					? [
-							{
-								href: '/dev/components',
-								label: m.nav_components(),
-								permission: null,
-								icon: LayoutGridIcon
-							}
-						]
-					: [])
-			] satisfies NavLinkSource[]
-		).filter(
-			(link) =>
-				!link.permission ||
-				[link.permission].flat().some((permission) => data.permissions.includes(permission))
-		)
-	);
+				}
+			]
+		},
+		{
+			href: '/projects',
+			label: m.nav_projects(),
+			permission: 'projects.view',
+			icon: FolderKanbanIcon,
+			section: 'modules',
+			accent: 'var(--project)'
+		},
+		{
+			href: '/directory',
+			label: m.nav_directory(),
+			permission: 'people.view',
+			icon: UsersIcon,
+			section: 'directory',
+			count: data.counts.directory
+		},
+		// The component gallery, open in every environment but production. The
+		// route answers 404 there too, so hiding the entry is a convenience,
+		// not the guard.
+		...(!isProduction(APP_ENV)
+			? [
+					{
+						href: '/dev/components',
+						label: m.nav_components(),
+						permission: null,
+						icon: LayoutGridIcon
+					}
+				]
+			: [])
+	] satisfies (NavLeafSource | NavGroupSource)[]);
 
 	const initials = $derived(
 		data.user.name

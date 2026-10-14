@@ -14,6 +14,29 @@
 					document.documentElement.setAttribute('data-sidebar-collapsed', '');
 				}
 			} catch {}
+			// The same for AppShell's navigation groups (#122): open the ones the viewer
+			// opened by hand via a stylesheet, because the nav is not in the DOM yet to
+			// set an attribute on. AppShell removes this `<style>` on mount, once its
+			// own state agrees, so a group can still be closed afterwards.
+			try {
+				var ids = JSON.parse(localStorage.getItem('unitati:nav-groups') || '[]');
+				if (Array.isArray(ids) && ids.length) {
+					var style = document.createElement('style');
+					style.id = 'ut-nav-open';
+					style.textContent = ids
+						.map(function (id) {
+							var group = '[data-nav-group="' + String(id).replace(/["\\]/g, '\\$&') + '"]';
+							return (
+								group +
+								' > .ut-nav-children{display:flex}' +
+								group +
+								' > button .ut-nav-chevron{transform:rotate(90deg)}'
+							);
+						})
+						.join('');
+					document.head.appendChild(style);
+				}
+			} catch {}
 		</script>
 		%sveltekit.head%
 	</head>

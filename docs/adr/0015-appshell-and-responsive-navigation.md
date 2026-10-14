@@ -202,6 +202,48 @@ their own, so they inherit `<main>`'s scrollport unchanged. Wide tables still ov
 viewport horizontally with no scroll affordance of their own — a pre-existing gap, out of this
 issue's scope the same way sticky table headers are (#86).
 
+## Addendum: collapsible navigation groups (#122)
+
+A module with several work screens (Projects → Proyectos, Tareas) needs a parent row with
+children. `AppShellNavLink` is now a discriminated union: a **leaf** (as before) or a **group**
+`{ id, label, icon, section, accent, children }`. A group has no `href`, `count` or `permission` of
+its own; every child keeps its own. Visibility lives in one pure function,
+`resolveNavigation` (`app-shell-nav.ts`), unit-tested apart from any rendering:
+
+- **A group is visible when at least one child is.** An all-hidden group disappears.
+- **A group with exactly one visible child renders as a flat leaf**: the group's label, icon and
+  accent with that child's `href` and `count`. A one-option disclosure is a wasted click. This is
+  also why Assets and Service desk are already groups of one (`Inventario`, `Tickets`) and render
+  exactly as before: the rule is exercised in production without special-casing, and the next
+  child costs one array entry.
+- **The parent only expands or collapses; it never navigates.** It is a `<button>` with a
+  chevron, `aria-expanded` and `aria-controls`. A row that both navigates and toggles does two
+  things at once, and keyboard and screen-reader users cannot tell which one they will get.
+- **Auto-expand.** A group is open when the current route is inside one of its children
+  (`aria-current="page"` on that child), whatever was stored. While it holds the current page its
+  button is `aria-disabled`: collapsing it would hide the row that says where the viewer is, and a
+  control that silently does nothing is worse than one that says so.
+- **Persistence** follows the sidebar collapse: `localStorage` (`unitati:nav-groups`, the ids the
+  viewer opened by hand), no flash. The nav is not in the DOM when `app.html`'s inline script
+  runs, so it cannot set an attribute on it; it injects a `<style id="ut-nav-open">` that opens the
+  stored groups before the first paint, and `AppShell` removes it on mount once its own state
+  agrees. Children are always in the DOM and shown by `[data-open]`, so open/closed is plain CSS
+  and SSR renders the same markup. Writes merge into whatever is stored, since the gallery mounts
+  several shells on one page.
+- **Rail mode.** There is no room for indented children in 64px, so the parent icon opens a
+  popover (the vendored shadcn-svelte one; no new dependency, ADR 0017) listing the children with
+  their counts. Enter/Space open it, ArrowUp/Down/Home/End move, Escape closes and returns focus to
+  the icon. The swap to the popover happens after mount, so hydration sees what the server
+  rendered; until then the rail simply hides the inline children with CSS.
+- **Mobile drawer** behaves like the expanded sidebar; navigating closes it, as before.
+- **Counts** belong to children. The parent shows none.
+- **Keymap.** The `g`-prefix shortcuts are built from the resolved leaves (`navLeaves`), so a
+  shortcut keeps working whether its link is top-level, a child or a flattened group. The command
+  palette's navigation actions are static (`palette-actions.ts`) and unaffected.
+
+Three levels (Settings as a group with modules and catalogues beneath it) were rejected: they do not
+fit the icon rail, and Settings gets its own secondary navigation inside `/settings` (#123).
+
 ## Consequences
 
 `(app)/+layout.svelte` goes from owning the sidebar and header markup to building a links array,
