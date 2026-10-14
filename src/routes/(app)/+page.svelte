@@ -1,6 +1,11 @@
 <script lang="ts">
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import Circle from '@lucide/svelte/icons/circle';
+	import { backOut } from 'svelte/easing';
+	import { scale } from 'svelte/transition';
+	import RollingText from '#lib/components/unitati/RollingText.svelte';
+	import { countToken } from '#lib/rolling.js';
+	import { MOTION_BASE_MS } from '#lib/motion.js';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import KpiCard from '#lib/components/unitati/KpiCard.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
@@ -58,6 +63,7 @@
 	]);
 
 	const remainingSteps = $derived(steps.filter((step) => !step.done));
+	const doneCount = $derived(steps.length - remainingSteps.length);
 
 	const formatter = $derived(
 		new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short' })
@@ -71,7 +77,18 @@
 				class="flex items-start gap-[var(--space-3)] border-b border-[var(--border)] py-[var(--space-3)] last:border-0"
 			>
 				{#if step.done}
-					<CircleCheck class="mt-0.5 size-5 shrink-0 text-[var(--success)]" aria-hidden="true" />
+					<!--
+						S2 (#91): a spring only when the step completes while the page is
+						open. A local transition does not play for what is already there on
+						load, so a finished checklist does not replay its checks on every
+						visit; reduced-motion collapses it in the global layer.
+					-->
+					<span
+						class="mt-0.5 shrink-0 text-[var(--success)]"
+						in:scale={{ start: 0.5, duration: MOTION_BASE_MS, easing: backOut }}
+					>
+						<CircleCheck class="size-5" aria-hidden="true" />
+					</span>
 				{:else}
 					<Circle class="mt-0.5 size-5 shrink-0 text-[var(--ink-muted)]" aria-hidden="true" />
 				{/if}
@@ -87,6 +104,15 @@
 	</ol>
 {/snippet}
 
+{#snippet progress()}
+	<span class="text-xs text-[var(--ink-muted)]">
+		<RollingText
+			text={m.overview_checklist_progress({ done: countToken(0), total: countToken(1) })}
+			counts={[doneCount, steps.length]}
+		/>
+	</span>
+{/snippet}
+
 <svelte:head>
 	<title>{m.overview_title()} · {m.app_name()}</title>
 </svelte:head>
@@ -99,12 +125,20 @@
 	</PageHeader>
 
 	{#if data.mode === 'empty'}
-		<WorkPanel heading={m.overview_checklist_title()} class="mt-[var(--space-5)]">
+		<WorkPanel
+			heading={m.overview_checklist_title()}
+			actions={progress}
+			class="mt-[var(--space-5)]"
+		>
 			{@render checklist(steps)}
 		</WorkPanel>
 	{:else}
 		{#if data.mode === 'partial'}
-			<WorkPanel heading={m.overview_checklist_remaining_title()} class="mt-[var(--space-5)]">
+			<WorkPanel
+				heading={m.overview_checklist_remaining_title()}
+				actions={progress}
+				class="mt-[var(--space-5)]"
+			>
 				{@render checklist(remainingSteps)}
 			</WorkPanel>
 		{/if}

@@ -91,6 +91,7 @@
 	import AppVersion from '../AppVersion.svelte';
 	import CommandPalette from './CommandPalette.svelte';
 	import KeymapOverlay from './KeymapOverlay.svelte';
+	import RollingNumber from './RollingNumber.svelte';
 	import { MainScrollRestoration } from './main-scroll-restoration.js';
 	import { afterViewTransitionSettles } from '#lib/motion.js';
 	import {
@@ -309,7 +310,7 @@
 			<link.icon class={styles.navIcon()} aria-hidden="true" />
 			<span class={styles.navLabel()}>{link.label}</span>
 			{#if link.count !== undefined}
-				<span class={styles.navCount()}>{link.count}</span>
+				<span class={styles.navCount()}><RollingNumber value={link.count} /></span>
 			{/if}
 		</a>
 	{/each}

@@ -43,6 +43,19 @@ export default defineConfig({
 			},
 			{
 				extends: './vite.config.ts',
+				// Components that need a DOM but no browser: rendered with
+				// @testing-library/svelte under jsdom. `resolve.conditions` makes Svelte
+				// resolve to its client build, otherwise `mount` is unavailable.
+				resolve: process.env.VITEST ? { conditions: ['browser'] } : undefined,
+				test: {
+					name: 'component',
+					environment: 'jsdom',
+					setupFiles: ['./src/lib/testing/component-setup.ts'],
+					include: ['src/**/*.svelte.{test,spec}.{js,ts}']
+				}
+			},
+			{
+				extends: './vite.config.ts',
 				test: {
 					name: 'db',
 					environment: 'node',

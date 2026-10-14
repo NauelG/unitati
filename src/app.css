@@ -614,6 +614,47 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
 }
 
 /*
+ * The relation constellation's draw-in (S3, #91). One macro step: the whole
+ * thing is on screen within `--motion-slow` (240ms), the ceiling. Nodes fade in
+ * on a 15ms stagger (centre first, at most 8 more: 8 x 15 + 120 = 240); edges
+ * draw from the centre by `stroke-dashoffset` over `--motion-base`, offset by
+ * 10ms per edge (index 0 + 160 .. 7 x 10 + 160 = 230). `pathLength="1"` on the
+ * lines makes `1` mean "the whole edge" whatever its length. `both` keeps
+ * everything hidden through its delay; the reduced-motion layer above
+ * collapses the durations, which leaves each piece at its end state.
+ */
+@keyframes ut-constellation-fade {
+	from {
+		opacity: 0;
+	}
+}
+
+@keyframes ut-constellation-draw {
+	from {
+		stroke-dashoffset: 1;
+	}
+}
+
+.ut-constellation-node {
+	animation: ut-constellation-fade var(--motion-fast) var(--ease-out) both;
+	animation-delay: calc(var(--i, 0) * 15ms);
+}
+
+.ut-constellation-edge {
+	stroke-dasharray: 1;
+	animation: ut-constellation-draw var(--motion-base) var(--ease-out) both;
+	animation-delay: calc(var(--i, 0) * 10ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	/* Static means static from the first frame: no stagger delay either. */
+	.ut-constellation-node,
+	.ut-constellation-edge {
+		animation: none;
+	}
+}
+
+/*
  * `Button`'s `busy` spinner-dot (#89, spec: `.ut-btn-busy .ut-btn-dot::after`
  * in docs/design/assets/css/components.css) — the pending state for a form
  * whose success navigates, so there is no local value to flip optimistically.

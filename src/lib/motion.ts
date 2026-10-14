@@ -116,3 +116,23 @@ export async function afterViewTransitionSettles(fn: () => void): Promise<void> 
 	}
 	fn();
 }
+
+/**
+ * Hands a record's morph name to the constellation node being clicked (S3,
+ * #91). A `view-transition-name` must be unique in the document, and the same
+ * record is already named on its `RecordRef` chip in `RelatedRecords`; two
+ * elements sharing one makes the browser skip the whole transition. So at the
+ * moment of the click the chip lets go of the name and the node takes it —
+ * synchronously, before SvelteKit's own click handler starts the navigation.
+ */
+export function handRecordMorphTo(
+	node: HTMLElement,
+	tag: string,
+	root: ParentNode = document
+): void {
+	const name = toViewTransitionName('record', tag);
+	for (const chip of root.querySelectorAll<HTMLElement>('[data-record-ref]')) {
+		if (chip.dataset.recordRef === tag) chip.style.setProperty('view-transition-name', 'none');
+	}
+	node.style.setProperty('view-transition-name', name);
+}
