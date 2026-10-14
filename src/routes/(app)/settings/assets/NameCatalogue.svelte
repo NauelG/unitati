@@ -14,7 +14,6 @@
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import AssetsNav from './AssetsNav.svelte';
 
 	interface Entry {
 		id: string;
@@ -83,8 +82,6 @@
 			<Button onclick={openCreate}>{newLabel}</Button>
 		{/snippet}
 	</PageHeader>
-
-	<AssetsNav showCatalogue />
 
 	{#if deleteFailure}
 		<Alert tone="danger" class="mt-[var(--space-6)]">{deleteFailure}</Alert>

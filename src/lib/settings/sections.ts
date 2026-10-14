@@ -36,6 +36,30 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
 		href: '/settings/projects/states',
 		label: m.settings_section_project_states,
 		permission: 'projects.manage'
+	},
+	{
+		module: 'assets',
+		href: '/settings/assets/models',
+		label: m.assets_nav_models,
+		permission: 'assets.manage'
+	},
+	{
+		module: 'assets',
+		href: '/settings/assets/categories',
+		label: m.assets_nav_categories,
+		permission: 'assets.manage'
+	},
+	{
+		module: 'assets',
+		href: '/settings/assets/manufacturers',
+		label: m.assets_nav_manufacturers,
+		permission: 'assets.manage'
+	},
+	{
+		module: 'service-desk',
+		href: '/settings/service-desk/queues',
+		label: m.queues_title,
+		permission: 'tickets.manage'
 	}
 ];
 

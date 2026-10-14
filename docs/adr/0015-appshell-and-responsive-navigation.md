@@ -266,7 +266,7 @@ The `settings` snippet `AppShell` reserved now has a route behind it.
 
 - **One rule for catalogues.** Every configurable catalogue lives in `/settings/{module}/{catalogue}`,
   never inside the module. The module keeps only its work screens, and nobody has to guess where
-  the next catalogue goes. The existing asset and service-desk catalogues move there in #126.
+  the next catalogue goes. The existing asset and service-desk catalogues moved there in #126.
 - **The registry.** `src/lib/settings/sections.ts` lists every section once: `module`, `href`, a
   message-function label and the `permission` that manages it. The sidebar link, the secondary
   navigation, the `/settings` index and the guards all read it through `visibleSections`, so
@@ -283,3 +283,16 @@ The `settings` snippet `AppShell` reserved now has a route behind it.
   signed-in viewer without access is told so. `/settings/*` is 403 when no section is visible,
   and each section's page and every action checks its own permission
   (`requireSettingsSection`).
+
+## Addendum: the catalogue migration is complete (#126)
+
+The four catalogues that predated the rule now live where it says: models, categories and
+manufacturers under `/settings/assets/`, queues under `/settings/service-desk/`. Each is a
+registry entry carrying the permission its old route already enforced (`assets.manage`,
+`tickets.manage`), so no permission was invented. No catalogue remains inside a module, and the
+Assets tab bar that linked to them is gone: `/assets` is a single screen again.
+
+The old paths are kept for good. `src/lib/settings/legacy-redirects.ts` is the one table; a
+`hooks.server.ts` handle answers each old root, and any sub-path, with a **308** to the new one,
+query string preserved, before the session is even resolved. Links in emails, tickets and
+bookmarks outlive any deprecation window, and the table costs nothing to keep.

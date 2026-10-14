@@ -40,7 +40,7 @@
 			title: m.overview_checklist_define_queue_title(),
 			description: m.overview_checklist_define_queue_description(),
 			action: m.overview_checklist_define_queue_action(),
-			href: '/service-desk/queues',
+			href: '/settings/service-desk/queues',
 			done: data.checklist.defineQueue
 		},
 		{

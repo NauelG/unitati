@@ -145,9 +145,11 @@
 			{:else}
 				<p class="text-sm text-[var(--ink-muted)]">
 					{m.model_inline_needs_catalogue()}
-					<a href="/assets/manufacturers" class="underline">{m.assets_nav_manufacturers()}</a>
+					<a href="/settings/assets/manufacturers" class="underline"
+						>{m.assets_nav_manufacturers()}</a
+					>
 					·
-					<a href="/assets/categories" class="underline">{m.assets_nav_categories()}</a>
+					<a href="/settings/assets/categories" class="underline">{m.assets_nav_categories()}</a>
 				</p>
 			{/if}
 		</WorkPanel>

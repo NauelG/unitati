@@ -166,7 +166,6 @@
 	"assets_summary_total_other": "{count} activos",
 	"assets_summary_unassigned_one": "1 sin asignar",
 	"assets_summary_unassigned_other": "{count} sin asignar",
-	"assets_nav_label": "Secciones del inventario",
 	"assets_nav_assets": "Activos",
 	"assets_nav_models": "Modelos",
 	"assets_nav_categories": "Categorías",

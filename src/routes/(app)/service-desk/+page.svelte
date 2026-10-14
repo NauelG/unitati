@@ -145,7 +145,9 @@
 		{/snippet}
 		{#snippet actions()}
 			{#if data.canManage}
-				<Button href="/service-desk/queues" variant="secondary">{m.tickets_queues()}</Button>
+				<Button href="/settings/service-desk/queues" variant="secondary"
+					>{m.tickets_queues()}</Button
+				>
 			{/if}
 			{#if data.canCreate}
 				<Button href="/service-desk/new">

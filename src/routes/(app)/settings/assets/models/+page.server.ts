@@ -9,12 +9,14 @@ import {
 	updateAssetModel,
 	type AssetModelEditFailure
 } from '#lib/server/assets/index.js';
-import { requirePermission } from '#lib/server/auth/guards.js';
-import { fieldsOf, rejected, withId } from '../form-data';
+import { requireSettingsSection } from '#lib/server/settings/guard.js';
+import { fieldsOf, rejected, withId } from '../../../assets/form-data';
 import type { Actions, PageServerLoad } from './$types';
 
+const SECTION = '/settings/assets/models';
+
 export const load: PageServerLoad = async ({ locals }) => {
-	const user = requirePermission(locals.user, 'assets.manage');
+	const user = requireSettingsSection(locals.user, SECTION);
 
 	const [models, manufacturers, categories] = await Promise.all([
 		listAssetModels(user.organisationId),
@@ -34,7 +36,7 @@ const writeFailures: Record<AssetModelEditFailure, () => string> = {
 
 export const actions: Actions = {
 	create: async ({ request, locals }) => {
-		const user = requirePermission(locals.user, 'assets.manage');
+		const user = requireSettingsSection(locals.user, SECTION);
 
 		const parsed = assetModelInput.safeParse(await fieldsOf(request));
 		if (!parsed.success) return rejected('create', m.validation_field_invalid());
@@ -45,7 +47,7 @@ export const actions: Actions = {
 	},
 
 	update: async ({ request, locals }) => {
-		const user = requirePermission(locals.user, 'assets.manage');
+		const user = requireSettingsSection(locals.user, SECTION);
 		const fields = await fieldsOf(request);
 
 		const target = withId.safeParse(fields);
@@ -60,7 +62,7 @@ export const actions: Actions = {
 	},
 
 	delete: async ({ request, locals }) => {
-		const user = requirePermission(locals.user, 'assets.manage');
+		const user = requireSettingsSection(locals.user, SECTION);
 
 		const target = withId.safeParse(await fieldsOf(request));
 		if (!target.success) return rejected('delete', m.catalogue_error_not_found());
