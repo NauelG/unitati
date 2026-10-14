@@ -112,12 +112,13 @@
 								type="button"
 								variant="ghost"
 								size="sm"
+								iconOnly
 								class="ml-auto"
+								title={m.related_unlink()}
+								aria-label="{m.related_unlink()} {item.ref.tag}"
 								onclick={() => (confirming = item.ref.id)}
 							>
-								<Unlink class="size-3.5" aria-hidden="true" />
-								{m.related_unlink()}
-								<span class="sr-only">{item.ref.tag}</span>
+								<Unlink class="size-4" aria-hidden="true" />
 							</Button>
 
 							<ConfirmDialog

@@ -5,6 +5,16 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.31.1] - 2026-10-14
+
+### Changed
+
+- Row actions in the settings catalogues (asset models, categories, manufacturers, queues and
+  project states) are now icon buttons (pencil and trash) instead of "Edit" / "Delete" text. Each
+  keeps a tooltip and an `aria-label` naming the row, e.g. "Edit {name}".
+- The "Unlink" action in related records is an icon button too, with the record tag in its
+  `aria-label`.
+
 ## [0.31.0] - 2026-10-14
 
 ### Changed

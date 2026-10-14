@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import Alert from '#lib/components/unitati/Alert.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import {
@@ -79,16 +81,27 @@
 					<li class="flex items-center justify-between gap-[var(--space-3)] p-[var(--space-3)]">
 						<span class="min-w-0 truncate text-sm text-[var(--ink)]">{queue.name}</span>
 						<div class="flex shrink-0 items-center gap-[var(--space-2)]">
-							<Button variant="secondary" size="sm" onclick={() => openEdit(queue)}>
-								{m.catalogue_edit()}
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								iconOnly
+								title={m.catalogue_edit()}
+								aria-label={m.catalogue_edit_title({ name: queue.name })}
+								onclick={() => openEdit(queue)}
+							>
+								<PencilIcon class="size-4" aria-hidden="true" />
 							</Button>
 							<Button
 								type="button"
 								variant="ghost"
 								size="sm"
+								iconOnly
+								title={m.catalogue_delete()}
+								aria-label={m.catalogue_delete_title({ name: queue.name })}
 								onclick={() => (confirmingId = queue.id)}
 							>
-								{m.catalogue_delete()}
+								<Trash2Icon class="size-4" aria-hidden="true" />
 							</Button>
 						</div>
 
