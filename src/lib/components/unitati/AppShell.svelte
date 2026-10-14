@@ -31,7 +31,9 @@
 			],
 			navIcon: 'size-[var(--size-icon-sm)] shrink-0',
 			navDot: 'size-2 shrink-0 rounded-[var(--radius-full)]',
-			navGroupButton: 'w-full cursor-pointer text-left',
+			railMenuTitle:
+				'px-[var(--space-2)] py-[var(--space-1)] text-xs font-semibold text-[var(--ink-muted)]',
+			railMenuContent: 'w-56 gap-0 bg-[var(--surface-1)] p-1',
 			navChevron: [
 				'ut-nav-label ut-nav-chevron ml-auto size-4 shrink-0 text-[var(--ink-muted)]',
 				'transition-transform ut-transition-fast'
@@ -55,6 +57,9 @@
 		variants: {
 			active: {
 				true: { navItem: 'bg-[var(--brand-soft)] text-[var(--brand)]' }
+			},
+			group: {
+				true: { navItem: 'w-full cursor-pointer text-left' }
 			},
 			rail: {
 				true: {
@@ -408,7 +413,7 @@
 			</a>
 		{:else}
 			{@const open = isGroupOpen(item)}
-			{@const held = groupContainsPath(item.children, pathname)}
+			{@const containsCurrent = groupContainsPath(item.children, pathname)}
 			{@const panelId = `${uid}-${scope}-${item.id}`}
 			<div data-nav-group={item.id} data-open={open ? '' : undefined}>
 				{#if rail && mounted}
@@ -422,7 +427,7 @@
 						onOpenChange={(next) => (railOpenId = next ? item.id : null)}
 					>
 						<Popover.Trigger
-							class={appShell({ rail, active: held }).navItem()}
+							class={appShell({ rail, active: containsCurrent }).navItem()}
 							aria-label={item.label}
 							title={item.label}
 						>
@@ -432,12 +437,10 @@
 							side="right"
 							align="start"
 							sideOffset={8}
-							class="w-56 gap-0 bg-[var(--surface-1)] p-1"
+							class={styles.railMenuContent()}
 							onkeydown={onRailMenuKeydown}
 						>
-							<div
-								class="px-[var(--space-2)] py-[var(--space-1)] text-xs font-semibold text-[var(--ink-muted)]"
-							>
+							<div class={styles.railMenuTitle()}>
 								{item.label}
 							</div>
 							<ul class={styles.railMenu()}>
@@ -448,7 +451,7 @@
 											aria-current={isActive(child.href) ? 'page' : undefined}
 											class={appShell({ active: isActive(child.href) }).navItem()}
 										>
-											<span class="ut-nav-label truncate">{child.label}</span>
+											<span class={styles.navLabel()}>{child.label}</span>
 											{#if child.count !== undefined}
 												<span class={styles.navCount()}><RollingNumber value={child.count} /></span>
 											{/if}
@@ -461,11 +464,11 @@
 				{:else}
 					<button
 						type="button"
-						class={[appShell({ rail }).navItem(), styles.navGroupButton()]}
+						class={appShell({ rail, group: true }).navItem()}
 						title={rail ? item.label : undefined}
 						aria-expanded={open}
 						aria-controls={panelId}
-						aria-disabled={held ? 'true' : undefined}
+						aria-disabled={containsCurrent ? 'true' : undefined}
 						onclick={() => toggleGroup(item)}
 					>
 						{#if item.accent}

@@ -45,6 +45,8 @@ export interface AppShellNavGroup {
 	accent?: string;
 	children: AppShellNavLeaf[];
 	href?: never;
+	count?: never;
+	permission?: never;
 }
 
 export type AppShellNavLink = AppShellNavLeaf | AppShellNavGroup;
