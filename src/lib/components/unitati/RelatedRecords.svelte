@@ -113,7 +113,7 @@
 								variant="ghost"
 								size="sm"
 								iconOnly
-								class="ml-auto"
+								class="ml-auto text-[var(--danger)] hover:bg-[var(--danger-soft)]"
 								title={m.related_unlink()}
 								aria-label="{m.related_unlink()} {item.ref.tag}"
 								onclick={() => (confirming = item.ref.id)}

@@ -37,7 +37,8 @@ minor bumps carry features and patch bumps carry fixes.
 
 - Row actions in the settings catalogues (asset models, categories, manufacturers, queues and
   project states) are now icon buttons (pencil and trash) instead of "Edit" / "Delete" text. Each
-  keeps a tooltip and an `aria-label` naming the row, e.g. "Edit {name}".
+  keeps a tooltip and an `aria-label` naming the row, e.g. "Edit {name}". Delete and unlink use the
+  danger colour.
 - The "Unlink" action in related records is an icon button too, with the record tag in its
   `aria-label`.
 

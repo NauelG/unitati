@@ -197,6 +197,7 @@
 										variant="ghost"
 										size="sm"
 										iconOnly
+										class="text-[var(--danger)] hover:bg-[var(--danger-soft)]"
 										title={m.catalogue_delete()}
 										aria-label={m.catalogue_delete_title({ name: row.name })}
 										onclick={() => (confirmingId = row.id)}
