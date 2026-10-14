@@ -31,6 +31,16 @@
 			],
 			navIcon: 'size-[var(--size-icon-sm)] shrink-0',
 			navDot: 'size-2 shrink-0 rounded-[var(--radius-full)]',
+			railMenuTitle:
+				'px-[var(--space-2)] py-[var(--space-1)] text-xs font-semibold text-[var(--ink-muted)]',
+			railMenuContent: 'w-56 gap-0 bg-[var(--surface-1)] p-1',
+			navChevron: [
+				'ut-nav-label ut-nav-chevron ml-auto size-4 shrink-0 text-[var(--ink-muted)]',
+				'transition-transform ut-transition-fast'
+			],
+			navChildren:
+				'ut-nav-children mt-0.5 flex-col gap-0.5 pl-[calc(var(--space-2)+var(--size-icon-sm)+var(--space-2))]',
+			railMenu: 'flex flex-col gap-0.5',
 			navLabel: 'ut-nav-label truncate',
 			navCount: 'ut-nav-label ml-auto font-mono text-xs tabular-nums text-[var(--ink-muted)]',
 			kbd: 'ut-kbd ut-nav-label ml-auto',
@@ -48,6 +58,9 @@
 			active: {
 				true: { navItem: 'bg-[var(--brand-soft)] text-[var(--brand)]' }
 			},
+			group: {
+				true: { navItem: 'w-full cursor-pointer text-left' }
+			},
 			rail: {
 				true: {
 					sidebar: 'items-center',
@@ -57,29 +70,10 @@
 			}
 		}
 	});
-
-	export interface AppShellNavLink {
-		href: string;
-		label: string;
-		icon: LucideIcon;
-		/**
-		 * Which `.ut-nav-section` heading this row falls under. Rows with no
-		 * section (Overview, the dev gallery link) render on their own, outside
-		 * either heading — `AppShell` inserts "MODULES" / "DIRECTORY" the first
-		 * time it sees a row ask for it, so the layout never builds the heading
-		 * itself.
-		 */
-		section?: 'modules' | 'directory';
-		/** The domain dot (`--asset` / `--desk` / `--project`); absent outside `modules`. */
-		accent?: string;
-		/** Absent — not zero — when the viewer holds no permission to count it. */
-		count?: number;
-	}
 </script>
 
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-	import type { LucideIcon } from '@lucide/svelte';
+	import { onMount, tick, type Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { browser } from '$app/env';
 	import { afterNavigate, beforeNavigate } from '$app/navigation';
@@ -87,6 +81,7 @@
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import PanelLeftIcon from '@lucide/svelte/icons/panel-left';
 	import SearchIcon from '@lucide/svelte/icons/search';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import Logo from './Logo.svelte';
 	import AppVersion from '../AppVersion.svelte';
 	import CommandPalette from './CommandPalette.svelte';
@@ -103,6 +98,15 @@
 		type KeymapScope
 	} from '#lib/keymap.js';
 	import * as Sheet from '#lib/components/ui/sheet/index.js';
+	import * as Popover from '#lib/components/ui/popover/index.js';
+	import {
+		groupContainsPath,
+		isPathActive,
+		navLeaves,
+		resolveNavigation,
+		type AppShellNavLink,
+		type ResolvedNavGroup
+	} from './app-shell-nav.js';
 	import { m } from '#lib/paraglide/messages.js';
 
 	interface Props {
@@ -117,6 +121,12 @@
 		permissions?: readonly string[];
 		/** The viewer's own directory record, passed through to the palette's "Asignar a mí". */
 		personId?: string | null;
+		/**
+		 * The path "the current route" means. Defaults to the real URL; the
+		 * gallery passes one so a specimen can show a group opened by its
+		 * active child without navigating the gallery page itself.
+		 */
+		currentPath?: string;
 		children: Snippet;
 	}
 
@@ -127,10 +137,96 @@
 		topbarEnd,
 		permissions = [],
 		personId = null,
+		currentPath,
 		children
 	}: Props = $props();
 
 	const SIDEBAR_STORAGE_KEY = 'unitati:sidebar';
+	const GROUPS_STORAGE_KEY = 'unitati:nav-groups';
+
+	/** Distinguishes `aria-controls` ids when several shells share a page (the gallery). */
+	const uid = $props.id();
+
+	const pathname = $derived(currentPath ?? page.url.pathname);
+
+	/** Permissions applied and one-child groups flattened (`app-shell-nav.ts`). */
+	const items = $derived(resolveNavigation(links, permissions));
+
+	/**
+	 * Groups the viewer opened by hand. The first paint does not wait for this:
+	 * `app.html` injects a `<style>` for the stored ids before paint, and this
+	 * state takes over on mount (see `onMount`). Reading it during init would
+	 * hydrate a different DOM than the server rendered.
+	 */
+	let openGroupIds = $state<string[]>([]);
+	/** Only after mount may the rail swap a group's row for its popover (same hydration reason). */
+	let mounted = $state(false);
+	let railOpenId = $state<string | null>(null);
+
+	function readStoredGroups(): string[] {
+		try {
+			const parsed: unknown = JSON.parse(localStorage.getItem(GROUPS_STORAGE_KEY) ?? '[]');
+			return Array.isArray(parsed)
+				? parsed.filter((id): id is string => typeof id === 'string')
+				: [];
+		} catch {
+			return [];
+		}
+	}
+
+	onMount(() => {
+		openGroupIds = readStoredGroups();
+		mounted = true;
+		// The pre-paint style forced the stored groups open; now the component's own
+		// state says the same, so the override must go or a group could never close.
+		void tick().then(() => document.getElementById('ut-nav-open')?.remove());
+	});
+
+	function isGroupOpen(group: ResolvedNavGroup): boolean {
+		return groupContainsPath(group.children, pathname) || openGroupIds.includes(group.id);
+	}
+
+	/**
+	 * The parent row only expands or collapses — it never navigates. A group
+	 * holding the current page stays open (its button says so with
+	 * `aria-disabled`): collapsing it would hide the very row that says where
+	 * the viewer is.
+	 */
+	function toggleGroup(group: ResolvedNavGroup) {
+		if (groupContainsPath(group.children, pathname)) return;
+		const next = openGroupIds.includes(group.id)
+			? openGroupIds.filter((id) => id !== group.id)
+			: [...openGroupIds, group.id];
+		openGroupIds = next;
+		try {
+			// Merge into whatever is stored: another shell on the same page (the
+			// gallery) may know groups this one does not.
+			const stored = readStoredGroups().filter((id) => id !== group.id);
+			const merged = next.includes(group.id) ? [...stored, group.id] : stored;
+			if (merged.length) localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(merged));
+			else localStorage.removeItem(GROUPS_STORAGE_KEY);
+		} catch {
+			// Same as the sidebar collapse: works for this load, just not across reloads.
+		}
+	}
+
+	function onRailMenuKeydown(event: KeyboardEvent) {
+		const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
+		if (!keys.includes(event.key)) return;
+		const rows = [...(event.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('a[href]')];
+		if (!rows.length) return;
+		event.preventDefault();
+		const current = rows.indexOf(document.activeElement as HTMLElement);
+		const target =
+			event.key === 'Home'
+				? 0
+				: event.key === 'End'
+					? rows.length - 1
+					: event.key === 'ArrowDown'
+						? (current + 1) % rows.length
+						: (current - 1 + rows.length) % rows.length;
+		rows[target]?.focus();
+	}
 
 	/**
 	 * Visual-only: the width and the nav labels are driven by the
@@ -161,6 +257,7 @@
 
 	afterNavigate(({ to, type }) => {
 		drawerOpen = false;
+		railOpenId = null;
 		if (!to || !mainEl) return;
 		// Deferred past any in-flight View Transition (#87): a scroll jump
 		// applied while the browser is still animating the old-vs-new crossfade
@@ -186,7 +283,7 @@
 	}
 
 	function isActive(href: string): boolean {
-		return href === '/' ? page.url.pathname === '/' : page.url.pathname.startsWith(href);
+		return isPathActive(href, pathname);
 	}
 
 	function openCommandPalette() {
@@ -234,7 +331,7 @@
 	]);
 
 	$effect(() => {
-		const linkHrefs = new Set(links.map((link) => link.href));
+		const linkHrefs = new Set(navLeaves(items).map((leaf) => leaf.href));
 		const unregisters = NAV_SHORTCUTS.filter((shortcut) => linkHrefs.has(shortcut.href)).map(
 			(shortcut) =>
 				keymapRegistry.register({
@@ -276,7 +373,7 @@
 	});
 </script>
 
-{#snippet navList(rail: boolean)}
+{#snippet navList(rail: boolean, scope: string)}
 	{@const styles = appShell({ rail })}
 	{#if showSearch}
 		<button
@@ -291,28 +388,115 @@
 		</button>
 	{/if}
 
-	{#each links as link, index (link.href)}
-		{@const previousSection = links[index - 1]?.section}
-		{#if link.section && link.section !== previousSection}
-			<div class={styles.navSection()}>{SECTION_LABEL[link.section]()}</div>
+	{#each items as item, index (item.kind === 'group' ? `group:${item.id}` : item.href)}
+		{@const previousSection = items[index - 1]?.section}
+		{#if item.section && item.section !== previousSection}
+			<div class={styles.navSection()}>{SECTION_LABEL[item.section]()}</div>
 		{/if}
-		{@const active = isActive(link.href)}
-		<a
-			href={link.href}
-			aria-current={active ? 'page' : undefined}
-			class={appShell({ rail, active }).navItem()}
-			title={rail ? link.label : undefined}
-		>
-			{#if link.accent}
-				<span class={styles.navDot()} style:background-color={link.accent} aria-hidden="true"
-				></span>
-			{/if}
-			<link.icon class={styles.navIcon()} aria-hidden="true" />
-			<span class={styles.navLabel()}>{link.label}</span>
-			{#if link.count !== undefined}
-				<span class={styles.navCount()}><RollingNumber value={link.count} /></span>
-			{/if}
-		</a>
+		{#if item.kind === 'leaf'}
+			{@const active = isActive(item.href)}
+			<a
+				href={item.href}
+				aria-current={active ? 'page' : undefined}
+				class={appShell({ rail, active }).navItem()}
+				title={rail ? item.label : undefined}
+			>
+				{#if item.accent}
+					<span class={styles.navDot()} style:background-color={item.accent} aria-hidden="true"
+					></span>
+				{/if}
+				<item.icon class={styles.navIcon()} aria-hidden="true" />
+				<span class={styles.navLabel()}>{item.label}</span>
+				{#if item.count !== undefined}
+					<span class={styles.navCount()}><RollingNumber value={item.count} /></span>
+				{/if}
+			</a>
+		{:else}
+			{@const open = isGroupOpen(item)}
+			{@const containsCurrent = groupContainsPath(item.children, pathname)}
+			{@const panelId = `${uid}-${scope}-${item.id}`}
+			<div data-nav-group={item.id} data-open={open ? '' : undefined}>
+				{#if rail && mounted}
+					<!--
+						Rail: no room for indented children, so the parent icon opens a popover
+						with them. Enter/Space open it, arrows move, Escape closes it and puts
+						focus back on this icon (bits-ui's popover does the last part).
+					-->
+					<Popover.Root
+						open={railOpenId === item.id}
+						onOpenChange={(next) => (railOpenId = next ? item.id : null)}
+					>
+						<Popover.Trigger
+							class={appShell({ rail, active: containsCurrent }).navItem()}
+							aria-label={item.label}
+							title={item.label}
+						>
+							<item.icon class={styles.navIcon()} aria-hidden="true" />
+						</Popover.Trigger>
+						<Popover.Content
+							side="right"
+							align="start"
+							sideOffset={8}
+							class={styles.railMenuContent()}
+							onkeydown={onRailMenuKeydown}
+						>
+							<div class={styles.railMenuTitle()}>
+								{item.label}
+							</div>
+							<ul class={styles.railMenu()}>
+								{#each item.children as child (child.href)}
+									<li>
+										<a
+											href={child.href}
+											aria-current={isActive(child.href) ? 'page' : undefined}
+											class={appShell({ active: isActive(child.href) }).navItem()}
+										>
+											<span class={styles.navLabel()}>{child.label}</span>
+											{#if child.count !== undefined}
+												<span class={styles.navCount()}><RollingNumber value={child.count} /></span>
+											{/if}
+										</a>
+									</li>
+								{/each}
+							</ul>
+						</Popover.Content>
+					</Popover.Root>
+				{:else}
+					<button
+						type="button"
+						class={appShell({ rail, group: true }).navItem()}
+						title={rail ? item.label : undefined}
+						aria-expanded={open}
+						aria-controls={panelId}
+						aria-disabled={containsCurrent ? 'true' : undefined}
+						onclick={() => toggleGroup(item)}
+					>
+						{#if item.accent}
+							<span class={styles.navDot()} style:background-color={item.accent} aria-hidden="true"
+							></span>
+						{/if}
+						<item.icon class={styles.navIcon()} aria-hidden="true" />
+						<span class={styles.navLabel()}>{item.label}</span>
+						<ChevronRightIcon class={styles.navChevron()} aria-hidden="true" />
+					</button>
+					<div id={panelId} class={styles.navChildren()}>
+						{#each item.children as child (child.href)}
+							{@const active = isActive(child.href)}
+							<a
+								href={child.href}
+								aria-current={active ? 'page' : undefined}
+								class={appShell({ active }).navItem()}
+							>
+								<span class={styles.navLabel()}>{child.label}</span>
+								{#if child.count !== undefined}
+									<span class={styles.navCount()}><RollingNumber value={child.count} /></span>
+								{/if}
+							</a>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{/if}
 	{/each}
 {/snippet}
 
@@ -349,7 +533,7 @@
 			</div>
 
 			<div class={appShell().navItems()}>
-				{@render navList(collapsed)}
+				{@render navList(collapsed, 'sidebar')}
 			</div>
 
 			<div class={appShell().sidebarFooter()}>
@@ -398,7 +582,7 @@
 				<Logo variant="lockup" size="sm" />
 			</div>
 			<div class={appShell().navItems()}>
-				{@render navList(false)}
+				{@render navList(false, 'drawer')}
 			</div>
 			<div class={appShell().sidebarFooter()}>
 				<div class="ut-nav-label px-[var(--space-2)] font-mono text-[11px] text-[var(--ink-muted)]">

@@ -5,6 +5,28 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.28.0] - 2026-10-14
+
+### Added
+
+- `AppShell` collapsible navigation groups (#122). `AppShellNavLink` is now a leaf or a group of
+  leaves; a pure `resolveNavigation` (`app-shell-nav.ts`) applies each child's `permission`, drops
+  a group with no visible child and renders a group with exactly one visible child as a flat row.
+  The expanded sidebar and the mobile drawer get a parent row that only toggles (chevron,
+  `aria-expanded`, `aria-controls`); a group opens by itself when the current route is one of its
+  children; open groups persist in `localStorage` and are applied before first paint. In the icon
+  rail the parent icon opens a keyboard-operable popover with the children (Enter/Space, arrows,
+  Escape returns focus). Counts live on the children. `AppShell` takes an optional `currentPath`
+  for the gallery. Assets (`Inventario`) and Service desk (`Tickets`) are wired as one-child groups
+  and render exactly as before; `nav_inventory` and `nav_tickets` messages added for the next
+  children. Gallery: group specimens (toggle, opened by the active route, one visible child, rail
+  popover). ADR 0015 addendum.
+
+### Changed
+
+- A nav row is active on its `href` or beneath it (`/assets`, `/assets/7`), no longer on a sibling
+  that merely shares the prefix (`/assets-archive`).
+
 ## [0.27.0] - 2026-10-14
 
 ### Added

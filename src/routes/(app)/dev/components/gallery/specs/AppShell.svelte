@@ -3,10 +3,12 @@
 	import PackageIcon from '@lucide/svelte/icons/package';
 	import TicketIcon from '@lucide/svelte/icons/ticket';
 	import FolderKanbanIcon from '@lucide/svelte/icons/folder-kanban';
+	import ListChecksIcon from '@lucide/svelte/icons/list-checks';
 	import UsersIcon from '@lucide/svelte/icons/users';
 	import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
 	import ComponentDocPage from '../ComponentDocPage.svelte';
-	import AppShell, { type AppShellNavLink } from '#lib/components/unitati/AppShell.svelte';
+	import AppShell from '#lib/components/unitati/AppShell.svelte';
+	import type { AppShellNavLink } from '#lib/components/unitati/app-shell-nav.js';
 	import EnvironmentBadge from '#lib/components/unitati/EnvironmentBadge.svelte';
 
 	const tallLinks: AppShellNavLink[] = [
@@ -37,6 +39,55 @@
 		{ href: '/directory', label: 'Directorio', icon: UsersIcon, section: 'directory', count: 32 }
 	];
 
+	/**
+	 * Navigation groups (#122). Ids are prefixed per specimen: the open/closed
+	 * state of a group is stored by id, and these shells share one page.
+	 */
+	const projectsGroup = (id: string): AppShellNavLink[] => [
+		{ href: '/', label: 'Inicio', icon: HouseIcon },
+		{
+			id,
+			label: 'Proyectos',
+			icon: FolderKanbanIcon,
+			section: 'modules',
+			accent: 'var(--project)',
+			children: [
+				{ href: '/demo/proyectos', label: 'Proyectos', icon: FolderKanbanIcon, count: 6 },
+				{ href: '/demo/tareas', label: 'Tareas', icon: ListChecksIcon, count: 41 }
+			]
+		},
+		{
+			href: '/assets',
+			label: 'Activos',
+			icon: PackageIcon,
+			section: 'modules',
+			accent: 'var(--asset)',
+			count: 128
+		}
+	];
+
+	/** Two children, but the viewer may only see one: the group renders as a flat row. */
+	const oneVisibleChild: AppShellNavLink[] = [
+		{ href: '/', label: 'Inicio', icon: HouseIcon },
+		{
+			id: 'demo-flat',
+			label: 'Proyectos',
+			icon: FolderKanbanIcon,
+			section: 'modules',
+			accent: 'var(--project)',
+			children: [
+				{ href: '/demo/proyectos', label: 'Proyectos', icon: FolderKanbanIcon, count: 6 },
+				{
+					href: '/demo/tareas',
+					label: 'Tareas',
+					icon: ListChecksIcon,
+					count: 41,
+					permission: 'tasks.view'
+				}
+			]
+		}
+	];
+
 	const longNav: AppShellNavLink[] = Array.from({ length: 14 }, (_, index) => ({
 		href: `/modulo-${index}`,
 		label: `Un módulo con un nombre bastante largo ${index + 1}`,
@@ -58,7 +109,22 @@
 		{
 			name: 'links',
 			type: 'AppShellNavLink[]',
-			description: '{ href, label, icon, section?, accent?, count? }.'
+			description:
+				'Hoja { href, label, icon, section?, accent?, count?, permission? } o grupo { id, label, icon, section?, accent?, children }. Un grupo no tiene href, count ni permission propios.'
+		},
+		{
+			name: 'permissions',
+			type: 'readonly string[]',
+			default: '[]',
+			description:
+				'Los permisos del usuario: cada hoja (y cada hijo) con permission se oculta si no tiene ninguno; un grupo sin hijos visibles desaparece y uno con un solo hijo visible se pinta como fila plana.'
+		},
+		{
+			name: 'currentPath',
+			type: 'string',
+			default: 'page.url.pathname',
+			description:
+				'La ruta que cuenta como actual. Solo la usa la galería, para mostrar un grupo abierto por su hijo activo sin navegar.'
 		},
 		{
 			name: 'showSearch',
@@ -122,6 +188,59 @@
 				class="h-[320px] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)]"
 			>
 				<AppShell links={longNav}>
+					<div class="p-4 text-sm text-[var(--ink-muted)]">Contenido de la página.</div>
+				</AppShell>
+			</div>
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Grupo plegable — la fila padre solo despliega (Enter/Espacio), nunca navega; el estado
+				sobrevive a una recarga
+			</p>
+			<div
+				class="h-[320px] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)]"
+			>
+				<AppShell links={projectsGroup('demo-toggle')} currentPath="/">
+					<div class="p-4 text-sm text-[var(--ink-muted)]">Contenido de la página.</div>
+				</AppShell>
+			</div>
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Grupo abierto por la ruta activa — la ruta actual es una de sus hijas, así que se abre sin
+				importar el estado guardado
+			</p>
+			<div
+				class="h-[320px] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)]"
+			>
+				<AppShell links={projectsGroup('demo-active')} currentPath="/demo/tareas/7">
+					<div class="p-4 text-sm text-[var(--ink-muted)]">Contenido de la página.</div>
+				</AppShell>
+			</div>
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Grupo con un solo hijo visible — se pinta como fila plana con el href y el contador del hijo
+				(sin chevron, sin clic extra)
+			</p>
+			<div
+				class="h-[240px] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)]"
+			>
+				<AppShell links={oneVisibleChild} permissions={[]} currentPath="/">
+					<div class="p-4 text-sm text-[var(--ink-muted)]">Contenido de la página.</div>
+				</AppShell>
+			</div>
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Raíl con popover — colapsa el sidebar con el botón de la barra de marca: el icono del grupo
+				abre un popover con sus hijos (Enter/Espacio abre, flechas se mueven, Escape cierra y
+				devuelve el foco al icono)
+			</p>
+			<div
+				class="h-[320px] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)]"
+			>
+				<AppShell links={projectsGroup('demo-rail')} currentPath="/demo/proyectos">
 					<div class="p-4 text-sm text-[var(--ink-muted)]">Contenido de la página.</div>
 				</AppShell>
 			</div>
