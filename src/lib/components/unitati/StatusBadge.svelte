@@ -49,28 +49,34 @@
 		 * fails `npm run check` instead of rendering an untranslated badge.
 		 */
 		status: StatusKey;
+		/**
+		 * S2 (#91), the single-pulse signal: the row this badge sits in just
+		 * arrived flagged urgent (see `createUrgentArrivals`). Pulses once when
+		 * it turns `true`, including on the render that mounts a new row —
+		 * which is why it is a prop and not inferred from `status` changing.
+		 * Stays `false` on a page's first load, so nothing pulses on arrival
+		 * at the page itself.
+		 */
+		arrived?: boolean;
 		class?: string;
 	}
 
-	let { status, class: className }: Props = $props();
+	let { status, arrived = false, class: className }: Props = $props();
 
 	const resolved = $derived(statusBadge(status));
 
 	let pulsing = $state(false);
 	/**
 	 * `undefined` until the effect below has run once: that first run is
-	 * always the mount, which must never count as a "change" — a badge that
-	 * pulsed on every page load would explain nothing, which the constitution
-	 * (rule 6) rules out outright.
+	 * always the mount, which must never count as a status "change" — a badge
+	 * that pulsed on every page load would explain nothing, which the
+	 * constitution (rule 6) rules out outright.
 	 */
 	let previousStatus: typeof status | undefined = undefined;
+	let previousArrived = false;
 	let pulseTimeout: ReturnType<typeof setTimeout> | undefined;
 
-	$effect(() => {
-		const changed = previousStatus !== undefined && status !== previousStatus;
-		previousStatus = status;
-		if (!changed) return;
-
+	function pulse() {
 		pulsing = false;
 		clearTimeout(pulseTimeout);
 		// Reset before reapplying: two changes within 160ms must restart the
@@ -82,6 +88,14 @@
 		pulseTimeout = setTimeout(() => {
 			pulsing = false;
 		}, MOTION_BASE_MS);
+	}
+
+	$effect(() => {
+		const changed = previousStatus !== undefined && status !== previousStatus;
+		const arrivedNow = arrived && !previousArrived;
+		previousStatus = status;
+		previousArrived = arrived;
+		if (changed || arrivedNow) pulse();
 	});
 </script>
 

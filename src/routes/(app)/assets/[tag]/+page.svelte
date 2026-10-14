@@ -11,6 +11,7 @@
 	import Field from '#lib/components/unitati/Field.svelte';
 	import { toViewTransitionName } from '#lib/motion.js';
 	import { optimisticEnhance } from '#lib/optimistic.js';
+	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
@@ -403,6 +404,11 @@
 			</WorkPanel>
 		{:then rail}
 			{#if rail.timeline}
+				<RelationConstellation
+					centre={{ kind: 'asset', tag: asset.assetTag }}
+					groups={rail.related}
+					class="mb-[var(--space-4)]"
+				/>
 				<WorkPanel heading={m.timeline_title()} actions={timelineTag}>
 					{#if rail.recentTickets > 0}
 						<p class="text-sm font-medium text-[var(--ink)]">

@@ -5,6 +5,31 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.27.0] - 2026-10-14
+
+### Added
+
+- Signature moments (#91). **S2, the living header:** counts roll on change through `RollingNumber` and `RollingText` — the sidebar
+  counters, the assets and tickets list summaries (the translated sentence keeps its own
+  singular/plural; `src/lib/rolling.ts`) and the onboarding progress.
+  Timings are pinned to the motion constitution (240ms roll, 160ms fade), the first render never
+  rolls, and `prefers-reduced-motion` stops it. A ticket arriving urgent or high into the visible
+  list pulses its priority badge exactly once (`StatusBadge`'s new `arrived` prop,
+  `createUrgentArrivals` in `src/lib/urgent-arrivals.ts`): never on page load, and a different
+  filter or page counts as a new list, not an arrival. Completing an onboarding step springs its
+  check in (160ms).
+- **S3, the relation constellation** (decision D8: go). `RelationConstellation` on asset and
+  ticket detail: the record at the centre, its linked records around it (radial layout in
+  `src/lib/constellation.ts`), drawn from the same `RelatedGroup[]` that `RelatedRecords` lists —
+  no new query. Nodes are links (keyboard and `aria-label`), hand the record morph name to the
+  clicked node (`handRecordMorphTo`; `RecordRef` now carries `data-record-ref`), and beyond eight
+  relations collapse into one counted node per kind. Draws in within 240ms; static under
+  reduced motion. Nothing renders when nothing is linked.
+- A `component` Vitest project (jsdom + `@testing-library/svelte`) for `*.svelte.spec.ts`,
+  with the first specs for `StatusBadge` and `RelationConstellation`.
+- Gallery: `RollingNumber`, `RollingText` and `RelationConstellation` pages, and a Signature page
+  (`/dev/components/signature`) with the demos and the causal relation each moment explains.
+
 ## [0.26.0] - 2026-10-14
 
 ### Added

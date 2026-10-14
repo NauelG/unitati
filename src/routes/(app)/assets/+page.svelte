@@ -9,6 +9,8 @@
 	import DonutChart, { type DonutSlice } from '#lib/components/unitati/DonutChart.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import Pager from '#lib/components/unitati/Pager.svelte';
+	import RollingText from '#lib/components/unitati/RollingText.svelte';
+	import { rollingSummary } from '#lib/rolling.js';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
@@ -169,11 +171,20 @@
 <PageLayout variant="index">
 	<PageHeader title={m.assets_title()}>
 		{#snippet summary()}
-			{data.summary.total === 0
-				? data.seesWholeInventory
-					? m.assets_lede()
-					: m.assets_lede_limited()
-				: `${data.summary.total === 1 ? m.assets_summary_total_one() : m.assets_summary_total_other({ count: data.summary.total })} · ${data.summary.unassigned === 1 ? m.assets_summary_unassigned_one() : m.assets_summary_unassigned_other({ count: data.summary.unassigned })}`}
+			{#if data.summary.total === 0}
+				{data.seesWholeInventory ? m.assets_lede() : m.assets_lede_limited()}
+			{:else}
+				<RollingText
+					{...rollingSummary([
+						[data.summary.total, m.assets_summary_total_one, m.assets_summary_total_other],
+						[
+							data.summary.unassigned,
+							m.assets_summary_unassigned_one,
+							m.assets_summary_unassigned_other
+						]
+					])}
+				/>
+			{/if}
 		{/snippet}
 		{#snippet actions()}
 			{#if data.canManage}

@@ -19,6 +19,7 @@
 		{#snippet actions()}
 			<a href="/dev/components/tokens" class="ut-btn ut-btn-secondary ut-btn-sm">Tokens</a>
 			<a href="/dev/components/motion" class="ut-btn ut-btn-secondary ut-btn-sm">Motion</a>
+			<a href="/dev/components/signature" class="ut-btn ut-btn-secondary ut-btn-sm">Signature</a>
 			<a href="/dev/components/coverage" class="ut-btn ut-btn-secondary ut-btn-sm">Cobertura</a>
 			<a href="/dev/components/patterns" class="ut-btn ut-btn-secondary ut-btn-sm">Patrones</a>
 		{/snippet}

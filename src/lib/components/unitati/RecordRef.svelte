@@ -61,6 +61,7 @@
 -->
 <a
 	href={record.href}
+	data-record-ref={record.tag}
 	style:view-transition-name={toViewTransitionName('record', record.tag)}
 	class={styles.root({ class: className })}
 >

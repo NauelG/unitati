@@ -66,3 +66,7 @@ specific phases of #81, not installed yet; `mode-watcher` is scheduled for remov
 reinstalls it with its own first import. `bits-ui` is no longer on that removal list — #98 (outside
 #81) claimed it ahead of schedule. Each phase's pull request is where the version actually lands
 in `package.json` and where D12 is checked against what that phase actually imported.
+
+Phase 10 (#91) installs `@number-flow/svelte` and adds `jsdom` and `@testing-library/svelte` as
+dev-only dependencies for a `component` Vitest project: components that need a DOM but no browser
+(`*.svelte.spec.ts`) render under jsdom, with the server project's speed and no Playwright.

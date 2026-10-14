@@ -236,6 +236,22 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/KpiCard.svelte')
 	},
 	{
+		id: 'rolling-number',
+		name: 'RollingNumber',
+		category: 'data',
+		summary: 'Un recuento que rueda cuando cambia y se queda quieto el resto del tiempo (S2).',
+		sourceFile: 'RollingNumber.svelte',
+		load: () => import('./specs/RollingNumber.svelte')
+	},
+	{
+		id: 'rolling-text',
+		name: 'RollingText',
+		category: 'data',
+		summary: 'Una frase traducida cuyos números ruedan, con la frase entera como nombre accesible.',
+		sourceFile: 'RollingText.svelte',
+		load: () => import('./specs/RollingText.svelte')
+	},
+	{
 		id: 'data-table',
 		name: 'DataTable',
 		category: 'data',
@@ -286,6 +302,15 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		summary: 'Panel lateral de registros vinculados, agrupados por relación.',
 		sourceFile: 'RelatedRecords.svelte',
 		load: () => import('./specs/RelatedRecords.svelte')
+	},
+
+	{
+		id: 'relation-constellation',
+		name: 'RelationConstellation',
+		category: 'relations',
+		summary: 'El vecindario de un registro: él al centro, sus vínculos alrededor (S3).',
+		sourceFile: 'RelationConstellation.svelte',
+		load: () => import('./specs/RelationConstellation.svelte')
 	},
 
 	// Conversation

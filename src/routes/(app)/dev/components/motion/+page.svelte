@@ -14,7 +14,7 @@
 	const CONSTITUTION = [
 		'Motion only on state change — nothing loops, nothing idles (sanctioned exception: skeleton shimmer, phase 8).',
 		'Budget: 120–160ms micro (hover, press, toggle), 200–240ms macro (navigation morph, panel entry). Nothing above 240ms, ever.',
-		'Transform and opacity only — no layout-property animation.',
+		'Transform and opacity only — no layout-property animation (sanctioned exception: the constellation edge draw animates `stroke-dashoffset`, paint-only, #91).',
 		'Springs for things that move, fades for things that appear.',
 		'prefers-reduced-motion kills all non-essential motion globally — one layer, not per-component goodwill.',
 		'Every animation explains a causal relation; if it explains nothing, delete it.'

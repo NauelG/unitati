@@ -3,6 +3,7 @@
 	import Button from '#lib/components/unitati/Button.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
+	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
 	import Skeleton from '#lib/components/unitati/Skeleton.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import { statusLabel } from '#lib/components/unitati/status.js';
@@ -192,6 +193,10 @@
 				</div>
 			</div>
 		{:then relatedGroups}
+			<RelationConstellation
+				centre={{ kind: 'ticket', tag: ticket.ticketTag }}
+				groups={relatedGroups}
+			/>
 			<RelatedRecords
 				groups={relatedGroups}
 				unlinkAction={data.canManage ? '?/unlinkAsset' : undefined}
