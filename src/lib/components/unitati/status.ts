@@ -1,5 +1,5 @@
 import { m } from '#lib/paraglide/messages.js';
-import type { StatusKey } from '#lib/domain/status.js';
+import { STATE_GROUPS, type StateGroup, type StatusKey } from '#lib/domain/status.js';
 
 /**
  * The presentation half of the status vocabulary: a tone and a message for each
@@ -8,7 +8,16 @@ import type { StatusKey } from '#lib/domain/status.js';
  * list rather than one per layer (ADR 0011).
  */
 
-export type { TicketStatus, Priority, AssetState, StatusKey } from '#lib/domain/status.js';
+export type {
+	TicketStatus,
+	Priority,
+	AssetState,
+	StatusKey,
+	StateGroup
+} from '#lib/domain/status.js';
+
+/** What a `StatusBadge` can render: a status key, or the group a project state belongs to (#123). */
+export type BadgeKey = StatusKey | StateGroup;
 
 /** The six badge tones; a tone is a meaning, never a colour name. */
 export type Tone = 'brand' | 'desk' | 'success' | 'warning' | 'danger' | 'neutral';
@@ -55,6 +64,40 @@ const LABELS: Record<Exclude<StatusKey, 'normal'>, () => string> = {
 	retired: m.asset_state_retired
 };
 
+/**
+ * The tone of each project-state group, reusing the tones the ticket statuses
+ * already assign to the same meanings: `started` is `in_progress`, `completed`
+ * is `resolved`, `cancelled` is `closed`. Not-yet-moving work (`backlog`,
+ * `unstarted`) is neutral. No new token: a group is not a new colour, it is an
+ * existing meaning.
+ */
+const GROUP_TONES: Record<StateGroup, Tone> = {
+	backlog: 'neutral',
+	unstarted: 'neutral',
+	started: 'desk',
+	completed: 'success',
+	cancelled: 'neutral'
+};
+
+const GROUP_LABELS: Record<StateGroup, () => string> = {
+	backlog: m.state_group_backlog,
+	unstarted: m.state_group_unstarted,
+	started: m.state_group_started,
+	completed: m.state_group_completed,
+	cancelled: m.state_group_cancelled
+};
+
+/** Every state group, in board order. */
+export const STATE_GROUP_KEYS: readonly StateGroup[] = STATE_GROUPS;
+
+export function stateGroupBadge(group: StateGroup): { tone: Tone; label: string } {
+	return { tone: GROUP_TONES[group], label: GROUP_LABELS[group]() };
+}
+
+function isStateGroup(key: BadgeKey): key is StateGroup {
+	return (STATE_GROUPS as readonly string[]).includes(key);
+}
+
 /** Every key a badge renders, in the design system's reading order. */
 export const BADGED_STATUS_KEYS = Object.keys(TONES) as Exclude<StatusKey, 'normal'>[];
 
@@ -99,8 +142,9 @@ export function statusColour(status: Exclude<StatusKey, 'normal'>): string {
 }
 
 /** `null` for a status that renders nothing, so the caller has one thing to check. */
-export function statusBadge(status: StatusKey): { tone: Tone; label: string } | null {
+export function statusBadge(status: BadgeKey): { tone: Tone; label: string } | null {
 	if (status === 'normal') return null;
+	if (isStateGroup(status)) return stateGroupBadge(status);
 
 	return { tone: TONES[status], label: LABELS[status]() };
 }

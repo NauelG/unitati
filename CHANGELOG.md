@@ -5,6 +5,23 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.30.0] - 2026-10-14
+
+### Added
+
+- The Settings area (#123, slice 5b of #10): configuration per module under `/settings/{module}`,
+  driven by a typed section registry. A secondary navigation groups the sections the viewer may
+  manage; `/settings` lists them. Access answers 403 when no section is visible, and each section
+  and action checks its own permission.
+- _Configuración_ link at the bottom of the sidebar (expanded, rail and mobile drawer), shown only
+  when at least one section is visible.
+- `/settings/projects/states`: the project-state catalogue. Create a state in a group, rename it
+  (the group is shown read-only and cannot change), move it up or down inside its group, and
+  delete it. Deleting an occupied state, or the last state a new task could land in, is refused
+  with the reason and the task count.
+- `StatusBadge` renders the five state groups with tones borrowed from the ticket statuses.
+- `SettingsNav` in the component gallery.
+
 ## [0.29.0] - 2026-10-14
 
 ### Added

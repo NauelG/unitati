@@ -113,8 +113,13 @@
 		links: AppShellNavLink[];
 		/** Hidden in production, same gate as the dev gallery link (ADR 0013). */
 		showSearch?: boolean;
-		/** Reserved for a future settings screen (#83 scope: no route exists yet). */
-		settings?: Snippet;
+		/**
+		 * The *Configuración* link (#123), rendered above the version in the sidebar
+		 * and the mobile drawer. The caller passes it only when the viewer can see
+		 * at least one Settings section; it is told whether the sidebar is the 64px
+		 * rail so the row can centre its icon like every other row.
+		 */
+		settings?: Snippet<[{ rail: boolean }]>;
 		/** The topbar's right-hand side: environment badge, user, sign-out — all route-specific. */
 		topbarEnd?: Snippet;
 		/** The keymap's permission gate (#88) — same vocabulary `links` is already filtered by. */
@@ -537,7 +542,7 @@
 			</div>
 
 			<div class={appShell().sidebarFooter()}>
-				{#if settings}{@render settings()}{/if}
+				{#if settings}{@render settings({ rail: collapsed })}{/if}
 				<div class="ut-nav-label px-[var(--space-2)] font-mono text-[11px] text-[var(--ink-muted)]">
 					<AppVersion />
 				</div>
@@ -585,6 +590,7 @@
 				{@render navList(false, 'drawer')}
 			</div>
 			<div class={appShell().sidebarFooter()}>
+				{#if settings}{@render settings({ rail: false })}{/if}
 				<div class="ut-nav-label px-[var(--space-2)] font-mono text-[11px] text-[var(--ink-muted)]">
 					<AppVersion />
 				</div>

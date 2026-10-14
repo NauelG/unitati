@@ -1,6 +1,6 @@
 import { render, fireEvent } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { tick } from 'svelte';
+import { createRawSnippet, tick, type Snippet } from 'svelte';
 import FolderIcon from '@lucide/svelte/icons/folder';
 import AppShell from './AppShell.svelte';
 import type { AppShellNavLink } from './app-shell-nav.js';
@@ -31,7 +31,9 @@ const links: AppShellNavLink[] = [
 	}
 ];
 
-function renderShell(props: { currentPath?: string } = {}) {
+function renderShell(
+	props: { currentPath?: string; settings?: Snippet<[{ rail: boolean }]> } = {}
+) {
 	return render(AppShell, {
 		links,
 		currentPath: '/',
@@ -133,5 +135,23 @@ describe('AppShell navigation groups', () => {
 			await fireEvent.keyDown(tasks, { key: 'Escape' });
 			await vi.waitFor(() => expect(queryByRole('link', { name: /Tareas/ })).toBeNull());
 		});
+	});
+});
+
+describe('AppShell settings link', () => {
+	const settings = createRawSnippet(() => ({
+		render: () => '<a href="/settings">Configuración</a>'
+	}));
+
+	it('renders the settings snippet in the sidebar when one is given', () => {
+		const { container } = renderShell({ settings });
+
+		expect(container.querySelector('aside a[href="/settings"]')).not.toBeNull();
+	});
+
+	it('renders nothing when the caller passes none', () => {
+		const { container } = renderShell();
+
+		expect(container.querySelector('a[href="/settings"]')).toBeNull();
 	});
 });

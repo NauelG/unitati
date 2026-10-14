@@ -41,6 +41,23 @@ export async function listStates(viewer: SessionUser): Promise<State[]> {
 		.orderBy(asc(states.group), asc(states.position), asc(states.name));
 }
 
+export type StateWithTaskCount = State & { taskCount: number };
+
+/**
+ * `listStates` plus how many tasks sit in each state, for the catalogue screen:
+ * it says what a delete would be refused for, and how many tasks stand in the way.
+ */
+export async function listStatesWithTaskCount(viewer: SessionUser): Promise<StateWithTaskCount[]> {
+	const rows = await getDb()
+		.select({ state: states, taskCount: sql<number>`count(${tasks.id})::int` })
+		.from(states)
+		.leftJoin(tasks, eq(tasks.stateId, states.id))
+		.where(eq(states.organisationId, viewer.organisationId))
+		.groupBy(states.id)
+		.orderBy(asc(states.group), asc(states.position), asc(states.name));
+	return rows.map(({ state, taskCount }) => ({ ...state, taskCount }));
+}
+
 /**
  * Where a task with no stated column lands: the lowest `position` in `backlog`,
  * else `unstarted`, else `started`. `null` only for an organisation with none of

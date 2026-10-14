@@ -373,6 +373,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/Breadcrumbs.svelte')
 	},
 	{
+		id: 'settings-nav',
+		name: 'SettingsNav',
+		category: 'navigation',
+		summary: 'Navegación secundaria de Configuración: un encabezado por módulo y sus catálogos.',
+		sourceFile: 'SettingsNav.svelte',
+		load: () => import('./specs/SettingsNav.svelte')
+	},
+	{
 		id: 'command-palette',
 		name: 'CommandPalette',
 		category: 'navigation',
