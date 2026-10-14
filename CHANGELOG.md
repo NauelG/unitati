@@ -5,6 +5,14 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.32.1] - 2026-10-14
+
+### Changed
+
+- The delete and unlink icon buttons (settings catalogues and related records) are tinted with the
+  danger colour, with a soft danger background on hover, so destructive actions stand apart from
+  edit.
+
 ## [0.32.0] - 2026-10-14
 
 ### Added
