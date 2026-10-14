@@ -17,6 +17,11 @@ export interface SessionUser {
 	organisationId: string;
 	/** Directory record, absent only for a user with no person row. */
 	personId: string | null;
+	/**
+	 * Present only for an API key (ADR 0022): the permissions the key was narrowed
+	 * to. `can()` intersects them with the role's; a session leaves it unset.
+	 */
+	scopes?: readonly Permission[];
 }
 
 /** `(app)` group: anonymous visitors go to the login screen. */

@@ -69,3 +69,41 @@ describe('permissions', () => {
 		expect(can({ role: 'employee' }, 'assets.manage')).toBe(false);
 	});
 });
+
+describe('API key permissions', () => {
+	it('gives admin and technician api.keys.manage, and admin alone api.keys.manage.all', () => {
+		expect(roleCan('admin', 'api.keys.manage')).toBe(true);
+		expect(roleCan('technician', 'api.keys.manage')).toBe(true);
+		expect(roleCan('employee', 'api.keys.manage')).toBe(false);
+
+		expect(roleCan('admin', 'api.keys.manage.all')).toBe(true);
+		expect(roleCan('technician', 'api.keys.manage.all')).toBe(false);
+		expect(roleCan('employee', 'api.keys.manage.all')).toBe(false);
+	});
+});
+
+describe('scopes (API keys narrow a role, never widen it)', () => {
+	it('removes the permissions a scoped principal was not granted', () => {
+		const key = { role: 'technician' as const, scopes: ['tickets.view'] as const };
+
+		expect(can(key, 'tickets.view')).toBe(true);
+		expect(can(key, 'tickets.manage')).toBe(false);
+		expect(can(key, 'assets.view')).toBe(false);
+	});
+
+	it('never adds a permission the role lacks', () => {
+		const key = { role: 'employee' as const, scopes: ['tickets.view', 'tickets.create'] as const };
+
+		expect(can(key, 'tickets.create')).toBe(true);
+		expect(can(key, 'tickets.view')).toBe(false);
+	});
+
+	it('leaves an unscoped principal (a session) unchanged', () => {
+		expect(can({ role: 'technician' }, 'tickets.manage')).toBe(true);
+		expect(can({ role: 'technician', scopes: undefined }, 'tickets.manage')).toBe(true);
+	});
+
+	it('treats an empty scope list as no permissions at all', () => {
+		expect(can({ role: 'admin', scopes: [] }, 'people.view')).toBe(false);
+	});
+});

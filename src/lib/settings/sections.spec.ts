@@ -36,12 +36,13 @@ describe('visibleSections', () => {
 		expect(visibleSections(['assets.view.own', 'tickets.create'], sections)).toEqual([]);
 	});
 
-	it('shows the shipped project-state section to a technician and hides it from an employee', () => {
-		const technician = ['projects.view', 'projects.manage'];
+	it('shows the shipped sections to a technician and hides them from an employee', () => {
+		const technician = ['projects.view', 'projects.manage', 'api.keys.manage'];
 		const employee = ['projects.view.assigned', 'tickets.create'];
 
 		expect(visibleSections(technician).map((section) => section.href)).toEqual([
-			'/settings/projects/states'
+			'/settings/projects/states',
+			'/settings/api-keys'
 		]);
 		expect(visibleSections(employee)).toEqual([]);
 	});

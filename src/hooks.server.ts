@@ -3,6 +3,7 @@ import { building } from '$app/env';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { legacyCatalogueRedirect } from '#lib/settings/legacy-redirects.js';
 import { paraglideMiddleware } from '#lib/paraglide/server.js';
+import { authenticateRequest, isApiPath } from '#lib/server/api/index.js';
 import { getAuth } from '#lib/server/auth/index.js';
 import { closeDb } from '#lib/server/db/index.js';
 import { resolveSessionUser } from '#lib/server/directory/index.js';
@@ -39,13 +40,23 @@ const paraglideHandle: Handle = ({ event, resolve }) =>
 	);
 
 /**
- * The session resolves here into `locals.user` and nowhere else; route-group
+ * The session resolves here into `locals.user` and nowhere else (an API key
+ * resolves into the same slot, but only on `/api/v1`); route-group
  * layouts enforce the redirects through the guards (ADR 0007). Nothing else in
  * the application reads a cookie.
  */
 const authHandle: Handle = async ({ event, resolve }) => {
 	if (building) {
 		event.locals.user = null;
+		return resolve(event);
+	}
+
+	// `/api/v1` accepts bearer keys and nothing else (ADR 0022): the session
+	// cookie is never read there, and a key is never read anywhere else.
+	if (isApiPath(event.url.pathname)) {
+		const { user, api } = await authenticateRequest(event.request);
+		event.locals.user = user;
+		event.locals.api = api;
 		return resolve(event);
 	}
 
