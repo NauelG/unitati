@@ -1,4 +1,4 @@
-import { and, asc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { STATE_GROUPS, type StateGroup } from '#lib/domain/status.js';
 import { recordActivity } from '../activity';
@@ -94,6 +94,16 @@ export async function listProjects(
 		.orderBy(sql`${projects.dueDate} asc nulls last`, asc(projects.name), asc(projects.id));
 }
 
+/** How many active projects the viewer can see; the sidebar's count. */
+export async function countActiveProjects(viewer: SessionUser): Promise<number> {
+	const [row] = await getDb()
+		.select({ count: sql<number>`count(*)::int` })
+		.from(projects)
+		.where(and(requireProjectScope(viewer), isNull(projects.archivedAt)));
+
+	return row?.count ?? 0;
+}
+
 /** The project behind a `/projects/PRJ-0001` URL (ADR 0010). */
 export async function getProject(
 	viewer: SessionUser,
@@ -104,6 +114,10 @@ export async function getProject(
 		.limit(1);
 
 	return row ? success(row) : failure('project_not_found');
+}
+
+function zeroCounts(): Record<StateGroup, number> {
+	return Object.fromEntries(STATE_GROUPS.map((group) => [group, 0])) as Record<StateGroup, number>;
 }
 
 export type ProjectProgress = {
@@ -136,16 +150,41 @@ export async function projectProgress(
 		.where(and(requireTaskScope(viewer), eq(tasks.projectId, projectId)))
 		.groupBy(states.group);
 
-	const counts = Object.fromEntries(STATE_GROUPS.map((group) => [group, 0])) as Record<
-		StateGroup,
-		number
-	>;
+	const counts = zeroCounts();
 	for (const row of rows) counts[row.group] = row.count;
 
 	const total = STATE_GROUPS.reduce((sum, group) => sum + counts[group], 0);
 	const counted = total - counts.cancelled;
 
 	return success({ counts, total, ratio: counted === 0 ? 0 : counts.completed / counted });
+}
+
+/**
+ * Task counts per group for several projects in one query, for a list that shows
+ * each project's progress. A project with no visible task is present with all
+ * zeros, so the caller never has to special-case a missing key.
+ */
+export async function projectProgressMany(
+	viewer: SessionUser,
+	projectIds: string[]
+): Promise<Record<string, Record<StateGroup, number>>> {
+	const result: Record<string, Record<StateGroup, number>> = {};
+	for (const id of projectIds) result[id] = zeroCounts();
+	if (projectIds.length === 0) return result;
+
+	const rows = await getDb()
+		.select({
+			projectId: tasks.projectId,
+			group: states.group,
+			count: sql<number>`count(*)::int`
+		})
+		.from(tasks)
+		.innerJoin(states, eq(tasks.stateId, states.id))
+		.where(and(requireTaskScope(viewer), inArray(tasks.projectId, projectIds)))
+		.groupBy(tasks.projectId, states.group);
+
+	for (const row of rows) result[row.projectId][row.group] = row.count;
+	return result;
 }
 
 /* -------------------------------------------------------------------------- */

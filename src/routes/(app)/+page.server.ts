@@ -9,6 +9,7 @@ import { requireUser } from '#lib/server/auth/guards.js';
 import { assetRegistrationsSparkline, assetSummary } from '#lib/server/assets/index.js';
 import { countPeople, countTeams } from '#lib/server/directory/index.js';
 import { listRecentActivity } from '#lib/server/activity/index.js';
+import { myOpenTasks } from '#lib/server/projects/index.js';
 import {
 	hasPortalActivity,
 	listQueues,
@@ -55,6 +56,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const seesAssets = hasAnyPermission(ASSET_READ_PERMISSIONS);
 	const seesTickets = hasAnyPermission(TICKET_READ_PERMISSIONS);
 	const seesPeople = can(user, 'people.view');
+	const seesProjects = can(user, 'projects.view');
 
 	/**
 	 * One query per domain (ADR 0002), resolved in parallel: none depends on
@@ -72,7 +74,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		myTickets,
 		activity,
 		ticketTrend,
-		assetTrend
+		assetTrend,
+		myTasks
 	] = await Promise.all([
 		seesAssets ? assetSummary(user) : undefined,
 		seesTickets ? ticketSummary(user) : undefined,
@@ -85,7 +88,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		// Gated on the same permission as the card each one sits inside, so no
 		// viewer triggers a query whose result they could not be shown (#90).
 		seesTickets ? ticketOpeningsSparkline(user, TICKET_SPARKLINE_DAYS) : undefined,
-		seesAssets ? assetRegistrationsSparkline(user, ASSET_SPARKLINE_DAYS) : undefined
+		seesAssets ? assetRegistrationsSparkline(user, ASSET_SPARKLINE_DAYS) : undefined,
+		seesProjects ? myOpenTasks(user, 5) : undefined
 	]);
 
 	const checklist: ChecklistStatus = {
@@ -111,6 +115,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		people,
 		teams,
 		myTickets: myTickets ?? [],
+		// `undefined` for a viewer who cannot read projects: no panel section at all.
+		myTasks,
 		activity: activity ?? [],
 		ticketTrend,
 		assetTrend

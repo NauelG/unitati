@@ -49,6 +49,8 @@
 		 * fails `npm run check` instead of rendering an untranslated badge.
 		 */
 		status: BadgeKey;
+		/** Replaces the text, keeping the tone: a task state shows its own (user-authored) name. */
+		label?: string;
 		/**
 		 * S2 (#91), the single-pulse signal: the row this badge sits in just
 		 * arrived flagged urgent (see `createUrgentArrivals`). Pulses once when
@@ -61,7 +63,7 @@
 		class?: string;
 	}
 
-	let { status, arrived = false, class: className }: Props = $props();
+	let { label, status, arrived = false, class: className }: Props = $props();
 
 	const resolved = $derived(statusBadge(status));
 
@@ -100,5 +102,7 @@
 </script>
 
 {#if resolved}
-	<span class={badge({ tone: resolved.tone, pulsing, class: className })}>{resolved.label}</span>
+	<span class={badge({ tone: resolved.tone, pulsing, class: className })}
+		>{label ?? resolved.label}</span
+	>
 {/if}

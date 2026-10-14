@@ -8,6 +8,7 @@
 	import XIcon from '@lucide/svelte/icons/x';
 	import * as Command from '#lib/components/ui/command/index.js';
 	import * as Popover from '#lib/components/ui/popover/index.js';
+	import { m } from '#lib/paraglide/messages.js';
 	import { field } from './Field.svelte';
 	import type { SelectOption } from './SelectField.svelte';
 
@@ -47,6 +48,16 @@
 		 * dense row (a table cell) where a column heading already names the field.
 		 */
 		labelHidden?: boolean;
+		/**
+		 * Several selections instead of one. The picked values live in `values`
+		 * (bindable) and post as repeated `name` fields, one hidden input each,
+		 * the way `AssetPicker` does. The popover stays open between picks so a
+		 * list of assignees is one gesture, not one per person. `value` is unused.
+		 */
+		multiple?: boolean;
+		values?: string[];
+		/** Labels for already-selected remote values not in the first page of results. */
+		selectedLabels?: Record<string, string>;
 		class?: string;
 	}
 
@@ -65,6 +76,9 @@
 		selectedLabel,
 		clearable = !required,
 		labelHidden = false,
+		multiple = false,
+		values = $bindable([]),
+		selectedLabels,
 		class: className
 	}: Props = $props();
 
@@ -138,7 +152,36 @@
 		};
 	});
 
+	// Labels learned from picks in this component, so a chip keeps its text
+	// after the remote results that produced it have been replaced.
+	let pickedLabels = $state<Record<string, string>>({});
+	const chips = $derived(
+		values.map((v) => ({
+			value: v,
+			label:
+				pickedLabels[v] ??
+				selectedLabels?.[v] ??
+				(localOptions ?? []).find((option) => option.value === v)?.label ??
+				v
+		}))
+	);
+
+	function toggle(option: SelectOption) {
+		if (values.includes(option.value)) {
+			values = values.filter((v) => v !== option.value);
+		} else {
+			pickedLabels[option.value] = option.label;
+			values = [...values, option.value];
+		}
+	}
+
+	function remove(event: MouseEvent, removed: string) {
+		event.stopPropagation();
+		values = values.filter((v) => v !== removed);
+	}
+
 	function select(option: SelectOption) {
+		if (multiple) return toggle(option);
 		value = option.value;
 		pickedValue = option.value;
 		pickedLabel = option.label;
@@ -158,7 +201,13 @@
 <div class={styles.root({ class: className })}>
 	<label for={triggerId} class={labelHidden ? 'sr-only' : styles.label()}>{label}</label>
 
-	<input type="hidden" {name} value={value ?? ''} {required} />
+	{#if multiple}
+		{#each values as v (v)}
+			<input type="hidden" {name} value={v} />
+		{/each}
+	{:else}
+		<input type="hidden" {name} value={value ?? ''} {required} />
+	{/if}
 
 	<Popover.Root bind:open>
 		<Popover.Trigger
@@ -172,11 +221,37 @@
 				'flex items-center justify-between gap-[var(--space-2)] text-left'
 			].join(' ')}
 		>
-			<span class={selectedOption ? '' : 'text-[var(--ink-muted)]'}>
-				{selectedOption?.label ?? placeholder ?? ''}
-			</span>
+			{#if multiple}
+				<span class="flex min-w-0 flex-wrap gap-[var(--space-1)]">
+					{#each chips as chip (chip.value)}
+						<span
+							class="inline-flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--surface-2)] px-[var(--space-2)] text-xs leading-5"
+						>
+							{chip.label}
+							<span
+								role="button"
+								tabindex="-1"
+								class="grid size-4 place-items-center rounded-[var(--radius-full)] hover:bg-[var(--border)]"
+								aria-label={m.field_remove_item({ item: chip.label, label })}
+								onclick={(event) => remove(event, chip.value)}
+								onkeydown={(event) => {
+									if (event.key === 'Enter') remove(event as unknown as MouseEvent, chip.value);
+								}}
+							>
+								<XIcon class="size-3" aria-hidden="true" />
+							</span>
+						</span>
+					{:else}
+						<span class="text-[var(--ink-muted)]">{placeholder ?? ''}</span>
+					{/each}
+				</span>
+			{:else}
+				<span class={selectedOption ? '' : 'text-[var(--ink-muted)]'}>
+					{selectedOption?.label ?? placeholder ?? ''}
+				</span>
+			{/if}
 			<span class="flex items-center gap-[var(--space-1)]">
-				{#if clearable && selectedOption}
+				{#if !multiple && clearable && selectedOption}
 					<button
 						type="button"
 						class="grid size-5 place-items-center rounded-[var(--radius-full)] hover:bg-[var(--surface-2)]"
@@ -207,7 +282,11 @@
 							value={option.value}
 							disabled={option.disabled}
 							onSelect={() => select(option)}
+							aria-selected={multiple ? values.includes(option.value) : undefined}
 						>
+							{#if multiple && values.includes(option.value)}
+								<span aria-hidden="true">✓</span>
+							{/if}
 							{option.label}
 						</Command.Item>
 					{/each}

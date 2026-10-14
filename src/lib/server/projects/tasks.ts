@@ -1,4 +1,4 @@
-import { and, asc, eq, exists, inArray, ne, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, inArray, ne, sql, type SQL } from 'drizzle-orm';
 import type { StateGroup } from '#lib/domain/status.js';
 import { recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
@@ -162,6 +162,50 @@ function hasAssignee(personId: string): SQL {
 			.where(and(eq(taskAssignees.taskId, tasks.id), eq(taskAssignees.personId, personId)))
 	);
 }
+
+/**
+ * The viewer's own open work: tasks assigned to them whose state is still ahead
+ * of them (`unstarted` or `started`). A viewer with no directory record has no
+ * assignments, so the answer is zero rather than a query on a null person.
+ */
+export async function countOpenTasks(viewer: SessionUser): Promise<number> {
+	if (viewer.personId === null) return 0;
+
+	const [row] = await getDb()
+		.select({ count: sql<number>`count(*)::int` })
+		.from(tasks)
+		.innerJoin(states, eq(tasks.stateId, states.id))
+		.where(
+			and(
+				requireTaskScope(viewer),
+				hasAssignee(viewer.personId),
+				inArray(states.group, OPEN_TASK_GROUPS)
+			)
+		);
+
+	return row?.count ?? 0;
+}
+
+/** The viewer's own open tasks, most recently touched first: the overview's "Your work". */
+export async function myOpenTasks(viewer: SessionUser, limit = 5): Promise<TaskView[]> {
+	if (viewer.personId === null) return [];
+
+	const rows = await tasksWithRelations()
+		.where(
+			and(
+				requireTaskScope(viewer),
+				hasAssignee(viewer.personId),
+				inArray(states.group, OPEN_TASK_GROUPS)
+			)
+		)
+		.orderBy(desc(tasks.updatedAt), asc(tasks.id))
+		.limit(limit);
+
+	return withAssignees(rows);
+}
+
+/** The groups that count as "open" for someone's own work. */
+export const OPEN_TASK_GROUPS: StateGroup[] = ['unstarted', 'started'];
 
 /** The task behind a `/tasks/TSK-0001` URL (ADR 0010). */
 export async function getTask(

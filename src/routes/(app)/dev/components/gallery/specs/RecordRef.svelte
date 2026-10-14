@@ -17,7 +17,7 @@
 	propsDoc={[
 		{
 			name: 'record',
-			type: "{ kind: 'asset' | 'ticket'; tag: string; title: string; href: string }",
+			type: "{ kind: 'asset' | 'ticket' | 'project' | 'task'; tag: string; title: string; href: string }",
 			description: 'Exactamente lo que relatedTo devuelve.'
 		}
 	]}
@@ -45,6 +45,28 @@
 					tag: 'TCK-0042',
 					title: 'No enciende el portátil',
 					href: '/service-desk/TCK-0042'
+				}}
+			/>
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">Proyecto</p>
+			<RecordRef
+				record={{
+					kind: 'project',
+					tag: 'PRJ-0007',
+					title: 'Mudanza de oficina',
+					href: '/projects/PRJ-0007'
+				}}
+			/>
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">Tarea</p>
+			<RecordRef
+				record={{
+					kind: 'task',
+					tag: 'TSK-0031',
+					title: 'Empaquetar los monitores',
+					href: '/tasks/TSK-0031'
 				}}
 			/>
 		</div>

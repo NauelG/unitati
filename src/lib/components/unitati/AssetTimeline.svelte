@@ -46,7 +46,8 @@
 		variants: {
 			domain: {
 				asset: { dot: 'bg-[var(--asset-soft)] text-[var(--asset)]' },
-				ticket: { dot: 'bg-[var(--desk-soft)] text-[var(--desk)]' }
+				ticket: { dot: 'bg-[var(--desk-soft)] text-[var(--desk)]' },
+				project: { dot: 'bg-[var(--project-soft)] text-[var(--project)]' }
 			}
 		}
 	});
@@ -97,14 +98,19 @@
 		 * relations on one rail. The component never reorders.
 		 */
 		items: AssetTimelineItem[];
+		/**
+		 * Whose rail this is: the dot of an event on the record itself takes its
+		 * domain's colour. A project or task rail only carries `activity` items.
+		 */
+		domain?: 'asset' | 'project';
 		class?: string;
 	}
 
-	let { items, class: className }: Props = $props();
+	let { items, domain = 'asset', class: className }: Props = $props();
 
 	const styles = timeline();
 	// Only the dot changes colour with the domain.
-	const assetDot = timeline({ domain: 'asset' }).dot();
+	const assetDot = $derived(timeline({ domain }).dot());
 	const ticketDot = timeline({ domain: 'ticket' }).dot();
 
 	/**

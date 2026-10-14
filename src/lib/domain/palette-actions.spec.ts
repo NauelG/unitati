@@ -98,4 +98,18 @@ describe('derivePaletteActions', () => {
 			expect(action.label.length).toBeGreaterThan(0);
 		}
 	});
+
+	it('offers "new project" only with projects.manage', () => {
+		expect(idsOf(ctx({ permissions: ['projects.manage'] }))).toContain('new-project');
+		expect(idsOf(ctx({ permissions: ['projects.view'] }))).not.toContain('new-project');
+	});
+
+	it('offers "go to projects" and "go to tasks" for either project read permission', () => {
+		for (const permission of ['projects.view', 'projects.view.assigned']) {
+			const ids = idsOf(ctx({ permissions: [permission] }));
+			expect(ids).toContain('go-projects');
+			expect(ids).toContain('go-tasks');
+		}
+		expect(idsOf(ctx({ permissions: ['assets.view'] }))).not.toContain('go-projects');
+	});
 });

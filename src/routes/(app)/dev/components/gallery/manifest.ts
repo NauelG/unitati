@@ -415,6 +415,22 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/PageHeader.svelte')
 	},
 	{
+		id: 'text-area-field',
+		name: 'TextAreaField',
+		category: 'fields',
+		summary: 'Campo de texto multilínea con etiqueta, pista y error.',
+		sourceFile: 'TextAreaField.svelte',
+		load: () => import('./specs/TextAreaField.svelte')
+	},
+	{
+		id: 'project-progress',
+		name: 'ProjectProgress',
+		category: 'data',
+		summary: 'Barra de progreso de un proyecto: completadas ÷ (total − canceladas).',
+		sourceFile: 'ProjectProgress.svelte',
+		load: () => import('./specs/ProjectProgress.svelte')
+	},
+	{
 		id: 'work-panel',
 		name: 'WorkPanel',
 		category: 'layout',
