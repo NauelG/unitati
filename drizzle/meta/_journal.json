@@ -29,6 +29,13 @@
       "when": 1791538267133,
       "tag": "0003_ticket_asset",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791977371958,
+      "tag": "0004_projects",
+      "breakpoints": true
     }
   ]
 }

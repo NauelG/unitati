@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db';
 import { organisations, people } from '../directory/schema';
+import { ensureDefaultStates } from '../projects';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { users } from './schema';
 
@@ -32,6 +33,9 @@ export async function provisionFirstAdmin(
 			.insert(organisations)
 			.values({ name: organisationName, slug: slugify(organisationName) })
 			.returning({ id: organisations.id });
+
+		// An organisation is born with a board to put tasks on (#121).
+		await ensureDefaultStates(tx, organisation.id);
 
 		await tx
 			.update(users)

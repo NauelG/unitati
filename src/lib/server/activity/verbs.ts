@@ -11,7 +11,7 @@
  * in English once #36 lands.
  */
 
-/** Slices 2 to 4's verbs. #10, #11 and #12 append their own. */
+/** Slices 2 to 5's verbs. #11 and #12 append their own. */
 export const ACTIVITY_VERBS = [
 	'asset.created',
 	'custody.assigned',
@@ -26,7 +26,17 @@ export const ACTIVITY_VERBS = [
 	'ticket.priority.changed',
 	'ticket.queue.changed',
 	'link.asset.added',
-	'link.asset.removed'
+	'link.asset.removed',
+	'project.created',
+	'project.archived',
+	'project.unarchived',
+	'project.owner.changed',
+	'project.due.changed',
+	'task.created',
+	'task.state.changed',
+	'task.assigned',
+	'task.unassigned',
+	'task.due.changed'
 ] as const;
 
 export type ActivityVerb = (typeof ACTIVITY_VERBS)[number];

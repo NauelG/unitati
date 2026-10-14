@@ -1,11 +1,22 @@
-import { asc, count, sql } from 'drizzle-orm';
+import { asc, count, eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { STATE_GROUPS } from '#lib/domain/status.js';
 import { activity } from '../activity';
 import { advanceAssetTagSequence, assets, listAssets, registerAsset } from '../assets';
 import { createCatalogue, createOrganisation, createViewer } from '../assets/testing/fixtures';
 import { getDb } from '../db';
-import { applyPlan } from './apply';
-import { buildPlan } from './plan';
+import { people } from '../directory';
+import {
+	ensureDefaultStates,
+	listProjects,
+	listStates,
+	listTasks,
+	projects,
+	renameState,
+	tasks
+} from '../projects';
+import { applyPlan, applyProjects } from './apply';
+import { buildPlan, buildProjectsPlan, emailFor } from './plan';
 
 /**
  * The acceptance criterion "`npm run db:seed` twice in a row produces the same
@@ -102,5 +113,74 @@ describe('applyPlan', () => {
 			sql`select last_value from asset_code_seq`
 		);
 		expect(Number(row.last_value)).toBe(500);
+	});
+});
+
+describe('applyProjects', () => {
+	async function workspace() {
+		const organisation = await createOrganisation();
+		const admin = await createViewer(organisation.id, 'admin', 'Ada Admin');
+		await ensureDefaultStates(getDb(), organisation.id);
+		await applyPlan(admin, buildPlan(1));
+		return admin;
+	}
+
+	const codes = async () => ({
+		projects: (
+			await getDb()
+				.select({ tag: projects.projectTag })
+				.from(projects)
+				.orderBy(asc(projects.projectTag))
+		).map((r) => r.tag),
+		tasks: (
+			await getDb().select({ tag: tasks.taskTag }).from(tasks).orderBy(asc(tasks.taskTag))
+		).map((r) => r.tag)
+	});
+
+	it('creates three projects, one archived, with every default state occupied', async () => {
+		const admin = await workspace();
+
+		expect(await applyProjects(admin, buildProjectsPlan())).toBe(3);
+
+		expect(await listProjects(admin)).toHaveLength(2);
+		expect(await listProjects(admin, { archived: true })).toHaveLength(1);
+		const placed = new Set((await listTasks(admin)).map((task) => task.stateGroup));
+		expect([...placed].sort()).toEqual([...STATE_GROUPS].sort());
+	});
+
+	it('leaves the same project and task tags when it runs again', async () => {
+		const admin = await workspace();
+		await applyProjects(admin, buildProjectsPlan());
+		const first = await codes();
+
+		const second = await applyProjects(admin, buildProjectsPlan());
+
+		expect(second).toBe(0);
+		expect(await codes()).toEqual(first);
+		expect(first.projects).toHaveLength(3);
+	});
+
+	it('seeds into a catalogue whose states have all been renamed', async () => {
+		const admin = await workspace();
+		for (const state of await listStates(admin)) {
+			await renameState(admin, state.id, { name: `Renamed ${state.id}` });
+		}
+
+		expect(await applyProjects(admin, buildProjectsPlan())).toBe(3);
+	});
+
+	it('gives the seeded employee exactly one task, and one task three people', async () => {
+		const admin = await workspace();
+		await applyProjects(admin, buildProjectsPlan());
+		const [eva] = await getDb()
+			.select()
+			.from(people)
+			.where(eq(people.email, emailFor('Eva Employee')));
+
+		const hers = await listTasks(admin, { assignee: eva.id });
+		const all = await listTasks(admin);
+
+		expect(hers).toHaveLength(1);
+		expect(all.some((task) => task.assignees.length === 3)).toBe(true);
 	});
 });

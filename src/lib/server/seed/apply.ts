@@ -15,7 +15,17 @@ import {
 } from '../assets';
 import type { SessionUser } from '../auth/guards';
 import { listLocations, listPeople, locations, people } from '../directory';
-import type { InventoryPlan } from './plan';
+import {
+	archiveProject,
+	createProject,
+	createTask,
+	ensureDefaultStates,
+	listProjects,
+	listStates,
+	moveTask,
+	setAssignees
+} from '../projects';
+import type { InventoryPlan, ProjectsPlan } from './plan';
 
 /**
  * Applies a plan through the domain's own functions rather than by inserting
@@ -125,4 +135,71 @@ export async function applyPlan(actor: SessionUser, plan: InventoryPlan): Promis
 	}
 
 	return summary;
+}
+
+/**
+ * Projects and their tasks, through the domain like everything else: a seeded
+ * task moved to `started` carries the `task.state.changed` a real drag would.
+ *
+ * **Idempotent by presence**, as the tickets are. Codes come from sequences, so
+ * a second run would mint `PRJ-0004` onwards instead of colliding; it is skipped
+ * whenever the organisation already has any project, archived or not, which is
+ * what keeps the tags identical run after run.
+ *
+ * Tasks are placed by **group**, never by a state's name: the catalogue is the
+ * organisation's to rename, and the seed must work on one that already did.
+ */
+export async function applyProjects(actor: SessionUser, plan: ProjectsPlan): Promise<number> {
+	const organisationId = actor.organisationId;
+
+	const present =
+		(await listProjects(actor)).length + (await listProjects(actor, { archived: true })).length;
+	if (present > 0) return 0;
+
+	await ensureDefaultStates(getDb(), organisationId);
+	const stateOf = new Map<string, string>();
+	for (const state of await listStates(actor)) {
+		if (!stateOf.has(state.group)) stateOf.set(state.group, state.id);
+	}
+
+	const personIds = new Map((await listPeople(organisationId)).map((e) => [e.email, e.id]));
+	const person = (email: string) => {
+		const id = personIds.get(email);
+		if (!id) throw new Error(`The projects plan names ${email}, who is not in the directory.`);
+		return id;
+	};
+
+	let created = 0;
+	for (const planned of plan.projects) {
+		const project = await createProject(actor, {
+			name: planned.name,
+			description: planned.description,
+			ownerPersonId: planned.ownerEmail ? person(planned.ownerEmail) : null,
+			dueDate: planned.dueDate
+		});
+		if (!project.ok) throw new Error(`Could not seed ${planned.name}: ${project.error}`);
+		created += 1;
+
+		for (const task of planned.tasks) {
+			const opened = await createTask(actor, project.value.id, {
+				title: task.title,
+				description: task.description,
+				dueDate: task.dueDate
+			});
+			if (!opened.ok) throw new Error(`Could not seed ${task.title}: ${opened.error}`);
+
+			// Opened in the default state; moved to its group like a person would.
+			const target = stateOf.get(task.group);
+			if (!target) throw new Error(`The organisation has no ${task.group} state to seed into.`);
+			const moved = await moveTask(actor, opened.value.id, target);
+			if (!moved.ok) throw new Error(`Could not place ${task.title}: ${moved.error}`);
+
+			const assigned = await setAssignees(actor, opened.value.id, task.assigneeEmails.map(person));
+			if (!assigned.ok) throw new Error(`Could not assign ${task.title}: ${assigned.error}`);
+		}
+
+		if (planned.archived) await archiveProject(actor, project.value.id);
+	}
+
+	return created;
 }

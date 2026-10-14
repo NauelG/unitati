@@ -18,7 +18,8 @@ describe('permissions', () => {
 			'tickets.create',
 			'tickets.view.own',
 			'assets.view.own',
-			'assets.view.shared'
+			'assets.view.shared',
+			'projects.view.assigned'
 		] satisfies Permission[])('can %s', (permission) => {
 			expect(roleCan('employee', permission)).toBe(true);
 		});
@@ -30,6 +31,7 @@ describe('permissions', () => {
 			'assets.manage',
 			'people.view',
 			'projects.view',
+			'projects.manage',
 			'organisation.manage'
 		] satisfies Permission[])('cannot %s', (permission) => {
 			expect(roleCan('employee', permission)).toBe(false);
@@ -49,6 +51,11 @@ describe('permissions', () => {
 			expect(roleCan('technician', 'tickets.comment.internal')).toBe(true);
 			expect(roleCan('technician', 'assets.manage')).toBe(true);
 			expect(roleCan('technician', 'projects.manage')).toBe(true);
+		});
+
+		it('sees every project, and does not need the narrower assigned-only grant', () => {
+			expect(roleCan('technician', 'projects.view')).toBe(true);
+			expect(roleCan('technician', 'projects.view.assigned')).toBe(false);
 		});
 
 		it('does not administer the organisation or the directory', () => {

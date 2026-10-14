@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { assetTagFor, buildPlan, emailFor } from './plan';
+import { STATE_GROUPS } from '#lib/domain/status.js';
+import { assetTagFor, buildPlan, buildProjectsPlan, emailFor } from './plan';
 
 describe('buildPlan', () => {
 	it('is the same plan every time for the same seed', () => {
@@ -81,5 +82,55 @@ describe('emailFor / assetTagFor', () => {
 	it('pads tags to four digits', () => {
 		expect(assetTagFor(7)).toBe('AST-0007');
 		expect(assetTagFor(1234)).toBe('AST-1234');
+	});
+});
+
+describe('buildProjectsPlan', () => {
+	const plan = buildProjectsPlan();
+	const tasks = plan.projects.flatMap((project) => project.tasks);
+
+	it('is the same plan every time', () => {
+		expect(buildProjectsPlan()).toEqual(plan);
+	});
+
+	it('has three projects, one of them archived', () => {
+		expect(plan.projects).toHaveLength(3);
+		expect(plan.projects.filter((project) => project.archived)).toHaveLength(1);
+	});
+
+	it('puts at least one task in every state group, so every default state is occupied', () => {
+		for (const group of STATE_GROUPS) {
+			expect(tasks.some((task) => task.group === group)).toBe(true);
+		}
+	});
+
+	it('has a task with three assignees, and one assigned to the seeded employee', () => {
+		expect(tasks.some((task) => task.assigneeEmails.length === 3)).toBe(true);
+		expect(
+			tasks.filter((task) => task.assigneeEmails.includes(emailFor('Eva Employee')))
+		).toHaveLength(1);
+	});
+
+	it('mixes owners and due dates with nulls, at both levels', () => {
+		expect(plan.projects.some((project) => project.ownerEmail === null)).toBe(true);
+		expect(plan.projects.some((project) => project.ownerEmail !== null)).toBe(true);
+		expect(plan.projects.some((project) => project.dueDate === null)).toBe(true);
+		expect(plan.projects.some((project) => project.dueDate !== null)).toBe(true);
+		expect(tasks.some((task) => task.dueDate === null)).toBe(true);
+		expect(tasks.some((task) => task.dueDate !== null)).toBe(true);
+	});
+
+	it('only names people who exist in the inventory plan', () => {
+		const emails = new Set(buildPlan(1).people.map((person) => person.email));
+		const named = [
+			...plan.projects.flatMap((project) => (project.ownerEmail ? [project.ownerEmail] : [])),
+			...tasks.flatMap((task) => task.assigneeEmails)
+		];
+
+		for (const email of named) expect(emails.has(email)).toBe(true);
+	});
+
+	it('includes a task a Spanish stem search can find from its plural', () => {
+		expect(tasks.some((task) => /mudanza/i.test(task.title))).toBe(true);
 	});
 });

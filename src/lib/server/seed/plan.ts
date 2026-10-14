@@ -1,4 +1,4 @@
-import type { AssetState } from '#lib/domain/status.js';
+import type { AssetState, StateGroup } from '#lib/domain/status.js';
 
 /**
  * What the development seed will create, as plain data.
@@ -276,5 +276,154 @@ export function buildPlan(count = DEFAULT_ASSET_COUNT, seed = DEFAULT_SEED): Inv
 		locations: LOCATIONS,
 		people,
 		assets
+	};
+}
+
+/* -------------------------------------------------------------------------- */
+/* Projects                                                                   */
+/* -------------------------------------------------------------------------- */
+
+export interface PlannedTask {
+	title: string;
+	description: string | null;
+	/** `YYYY-MM-DD`. */
+	dueDate: string | null;
+	/**
+	 * The group the task ends up in, never a state's name: the catalogue is the
+	 * organisation's to rename. Apply resolves it to the group's first state.
+	 */
+	group: StateGroup;
+	assigneeEmails: string[];
+}
+
+export interface PlannedProject {
+	name: string;
+	description: string | null;
+	ownerEmail: string | null;
+	dueDate: string | null;
+	/** Archived once its tasks exist: an archived project accepts no writes. */
+	archived: boolean;
+	tasks: PlannedTask[];
+}
+
+export interface ProjectsPlan {
+	projects: PlannedProject[];
+}
+
+/**
+ * Three projects with a deliberate spread: every state group holds a task, one
+ * task has three assignees, exactly one is the seeded employee's, owners and
+ * dates are mixed with nulls, and one project is archived. Static data rather
+ * than draws, so there is nothing for a change elsewhere in this file to
+ * reshuffle.
+ */
+export function buildProjectsPlan(): ProjectsPlan {
+	const tom = emailFor('Tom Technician');
+	const eva = emailFor('Eva Employee');
+	const ada = emailFor('Ada Lovelace');
+	const alan = emailFor('Alan Turing');
+	const grace = emailFor('Grace Hopper');
+
+	return {
+		projects: [
+			{
+				name: 'Mudanza a la nueva oficina',
+				description:
+					'Trasladar el equipo y los puestos de trabajo a la planta 3 antes de fin de año.',
+				ownerEmail: tom,
+				dueDate: '2026-12-15',
+				archived: false,
+				tasks: [
+					{
+						title: 'Pedir cajas y material de embalaje',
+						description: null,
+						dueDate: null,
+						group: 'backlog',
+						assigneeEmails: []
+					},
+					{
+						title: 'Reservar el camión de la mudanza',
+						description: 'Mejor un sábado, para no parar la actividad.',
+						dueDate: '2026-11-20',
+						group: 'unstarted',
+						assigneeEmails: [eva]
+					},
+					{
+						title: 'Inventariar el mobiliario',
+						description: 'Qué se traslada, qué se dona y qué se tira.',
+						dueDate: '2026-11-30',
+						group: 'started',
+						assigneeEmails: [tom, ada, alan]
+					},
+					{
+						title: 'Avisar al proveedor de internet',
+						description: null,
+						dueDate: null,
+						group: 'completed',
+						assigneeEmails: [tom]
+					},
+					{
+						title: 'Alquilar un trastero para el archivo',
+						description: 'Descartado: el archivo se digitaliza.',
+						dueDate: null,
+						group: 'cancelled',
+						assigneeEmails: []
+					}
+				]
+			},
+			{
+				name: 'Renovación de portátiles',
+				description: null,
+				ownerEmail: null,
+				dueDate: null,
+				archived: false,
+				tasks: [
+					{
+						title: 'Elegir el modelo',
+						description: null,
+						dueDate: '2026-10-31',
+						group: 'completed',
+						assigneeEmails: [grace]
+					},
+					{
+						title: 'Pedir presupuesto a dos proveedores',
+						description: null,
+						dueDate: null,
+						group: 'started',
+						assigneeEmails: [grace]
+					},
+					{
+						title: 'Planificar el reparto por departamentos',
+						description: null,
+						dueDate: null,
+						group: 'backlog',
+						assigneeEmails: []
+					}
+				]
+			},
+			{
+				name: 'Auditoría de licencias 2025',
+				description: 'Revisión anual de licencias de software, cerrada.',
+				ownerEmail: grace,
+				dueDate: '2026-03-31',
+				archived: true,
+				tasks: [
+					{
+						title: 'Cruzar las licencias con los equipos',
+						description: null,
+						dueDate: '2026-02-28',
+						group: 'completed',
+						assigneeEmails: [grace, ada]
+					},
+					{
+						title: 'Dar de baja las licencias sin uso',
+						description: null,
+						dueDate: null,
+						group: 'completed',
+						assigneeEmails: [ada]
+					}
+				]
+			}
+		]
 	};
 }
