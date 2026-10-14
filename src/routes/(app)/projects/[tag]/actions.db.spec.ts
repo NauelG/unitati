@@ -6,9 +6,10 @@ import {
 	createWorkspace,
 	statesByGroup
 } from '#lib/server/projects/testing/fixtures.js';
+import { listActivity } from '#lib/server/activity/index.js';
 import { getProject, listTasks } from '#lib/server/projects/index.js';
 import { actionEvent, outcomeOf } from '#lib/server/projects/testing/action-event.js';
-import { actions } from './+page.server';
+import { actions, load } from './+page.server';
 
 async function setup() {
 	const workspace = await createWorkspace();
@@ -24,7 +25,8 @@ describe('writing to a project record', () => {
 			() => actions.update(actionEvent(employee, { name: 'Nope' }, params)),
 			() => actions.archive(actionEvent(employee, {}, params)),
 			() => actions.unarchive(actionEvent(employee, {}, params)),
-			() => actions.createTask(actionEvent(employee, { title: 'Nope' }, params))
+			() => actions.createTask(actionEvent(employee, { title: 'Nope' }, params)),
+			() => actions.moveTask(actionEvent(employee, {}, params))
 		]) {
 			expect((await outcomeOf(run)).thrown?.status).toBe(403);
 		}
@@ -127,5 +129,133 @@ describe('writing to a project record', () => {
 		expect(
 			(await outcomeOf(() => actions.archive(actionEvent(employee, {}, params)))).thrown?.status
 		).toBe(403);
+	});
+
+	it('creates a task in the column the quick create was opened from', async () => {
+		const { technician, project, organisation, params } = await setup();
+		const states = await statesByGroup(organisation.id);
+
+		await actions.createTask(
+			actionEvent(technician, { title: 'Quick', stateId: states.started.id }, params)
+		);
+
+		const [task] = await listTasks(technician, { projectId: project.id });
+		expect(task).toMatchObject({ title: 'Quick', stateId: states.started.id });
+	});
+});
+
+describe('moving a task on the board', () => {
+	it('moves to another column, to the end when no neighbour is named', async () => {
+		const { technician, project, organisation, params } = await setup();
+		const states = await statesByGroup(organisation.id);
+		const first = await createTaskRow(organisation.id, project.id, states.started.id, {
+			title: 'Already there',
+			taskTag: 'T-1'
+		});
+		const moving = await createTaskRow(organisation.id, project.id, states.unstarted.id, {
+			title: 'Moving',
+			taskTag: 'T-2'
+		});
+
+		await actions.moveTask(
+			actionEvent(technician, { taskId: moving.id, stateId: states.started.id }, params)
+		);
+
+		const column = (await listTasks(technician, { projectId: project.id })).filter(
+			(task) => task.stateId === states.started.id
+		);
+		expect(column.map((task) => task.id)).toEqual([first.id, moving.id]);
+	});
+
+	it('reorders inside a column from the neighbours of the drop, writing no activity', async () => {
+		const { technician, project, organisation, params } = await setup();
+		const states = await statesByGroup(organisation.id);
+		const ids: string[] = [];
+		for (const [index, title] of ['a', 'b', 'c'].entries()) {
+			const row = await createTaskRow(organisation.id, project.id, states.unstarted.id, {
+				title,
+				taskTag: `R-${index}`,
+				position: String((index + 1) * 1000)
+			});
+			ids.push(row.id);
+		}
+		const [a, b, c] = ids;
+
+		await actions.moveTask(
+			actionEvent(
+				technician,
+				{ taskId: c, stateId: states.unstarted.id, after: a, before: b },
+				params
+			)
+		);
+
+		const column = await listTasks(technician, { projectId: project.id });
+		expect(column.map((task) => task.id)).toEqual([a, c, b]);
+		expect(await listActivity({ organisationId: organisation.id, target: { taskId: c } })).toEqual(
+			[]
+		);
+	});
+
+	it('refuses a malformed request and moves nothing', async () => {
+		const { technician, params } = await setup();
+
+		const { returned } = await outcomeOf(() =>
+			actions.moveTask(actionEvent(technician, { taskId: 'nope', stateId: 'nope' }, params))
+		);
+
+		expect(returned?.status).toBe(400);
+	});
+
+	it('refuses to move a task of an archived project', async () => {
+		const { technician, project, organisation, params } = await setup();
+		const states = await statesByGroup(organisation.id);
+		const task = await createTaskRow(organisation.id, project.id, states.unstarted.id);
+		await actions.archive(actionEvent(technician, {}, params));
+
+		const { returned } = await outcomeOf(() =>
+			actions.moveTask(
+				actionEvent(technician, { taskId: task.id, stateId: states.started.id }, params)
+			)
+		);
+
+		expect(returned?.status).toBe(400);
+	});
+});
+
+describe('loading the project record for the board', () => {
+	const event = (user: unknown, params: Record<string, string>, search = '') =>
+		({
+			locals: { user },
+			params,
+			url: new URL(`http://localhost/projects/${params.tag}${search}`)
+		}) as never;
+
+	it('shows the board unless the list is asked for', async () => {
+		const { technician, params } = await setup();
+
+		const board = (await load(event(technician, params))) as { view: string };
+		const list = (await load(event(technician, params, '?view=list'))) as { view: string };
+
+		expect([board.view, list.view]).toEqual(['board', 'list']);
+	});
+
+	it('gives the assigned viewer only their own cards, and every column to put them in', async () => {
+		const { employee, project, organisation, params } = await setup();
+		const states = await statesByGroup(organisation.id);
+		const mine = await createTaskRow(organisation.id, project.id, states.started.id, {
+			taskTag: 'M-1'
+		});
+		await createTaskRow(organisation.id, project.id, states.started.id, { taskTag: 'M-2' });
+		await assignRow(organisation.id, mine.id, employee.personId!);
+
+		const data = (await load(event(employee, params))) as {
+			tasks: { id: string }[];
+			states: unknown[];
+			canManage: boolean;
+		};
+
+		expect(data.tasks.map((task) => task.id)).toEqual([mine.id]);
+		expect(data.states).toHaveLength(5);
+		expect(data.canManage).toBe(false);
 	});
 });
