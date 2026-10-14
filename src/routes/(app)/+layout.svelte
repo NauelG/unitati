@@ -97,7 +97,12 @@
 	);
 </script>
 
-<AppShell {links} showSearch={!isProduction(APP_ENV)}>
+<AppShell
+	{links}
+	showSearch={!isProduction(APP_ENV)}
+	permissions={data.permissions}
+	personId={data.user.personId}
+>
 	{#snippet topbarEnd()}
 		<EnvironmentBadge environment={APP_ENV} />
 		<div class="flex items-center gap-2.5">

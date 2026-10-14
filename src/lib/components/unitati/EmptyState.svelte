@@ -24,10 +24,9 @@
 			],
 			title: 'text-sm font-semibold text-[var(--ink)]',
 			description: 'max-w-sm text-sm text-[var(--ink-muted)]',
-			hint: [
-				'inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-sm)]',
-				'border border-[var(--border)] px-[6px] font-mono text-xs text-[var(--ink-muted)]'
-			]
+			// The shared chip (#88's `ut-kbd`, `src/app.css`) — this slot used to
+			// hand-roll the same border/mono/muted combination.
+			hint: 'ut-kbd inline-flex items-center gap-[var(--space-1)]'
 		}
 	});
 </script>

@@ -18,6 +18,7 @@
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import TimelineSkeleton from '#lib/components/unitati/TimelineSkeleton.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
+	import { focusFirstField } from '#lib/keymap.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import type { PageProps } from './$types';
@@ -26,6 +27,18 @@
 	import { options, stateOptions } from '../options';
 
 	let { data, form }: PageProps = $props();
+
+	/**
+	 * The keymap's row verbs (#88: `a`/`e`/`l` on the assets list) land here
+	 * with a `#action-custody`/`#action-state`/`#action-location` hash — the
+	 * jump target, not a style hook. Focusing the panel's first field is what
+	 * "open the existing edit controls" means once there is no list-row Sheet
+	 * trigger to open instead.
+	 */
+	$effect(() => {
+		if (!location.hash) return;
+		focusFirstField(document.querySelector(location.hash));
+	});
 
 	const asset = $derived(data.asset);
 	const stateChoices = stateOptions();
@@ -216,7 +229,7 @@
 		{#if asset.visibility === 'full' && (data.canCheckout || data.canManage)}
 			<div class="grid gap-[var(--space-4)] sm:grid-cols-2">
 				{#if data.canCheckout}
-					<WorkPanel heading={m.action_custody_title()}>
+					<WorkPanel id="action-custody" heading={m.action_custody_title()}>
 						<p class="text-sm text-[var(--ink-muted)]">
 							{localCustodianName
 								? m.action_custody_held({ name: localCustodianName })
@@ -282,7 +295,7 @@
 				{/if}
 
 				{#if data.canManage}
-					<WorkPanel heading={m.action_state_title()}>
+					<WorkPanel id="action-state" heading={m.action_state_title()}>
 						<form
 							method="POST"
 							action="?/changeState"
@@ -309,7 +322,7 @@
 						</form>
 					</WorkPanel>
 
-					<WorkPanel heading={m.action_location_title()}>
+					<WorkPanel id="action-location" heading={m.action_location_title()}>
 						<form
 							method="POST"
 							action="?/changeLocation"

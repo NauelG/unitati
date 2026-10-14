@@ -232,6 +232,39 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
 }
 
 /*
+ * The keyboard layer's shared chip (#88). `AppShell`'s sidebar search row and
+ * `EmptyState`'s `kbdHint` slot each hand-rolled the same border/mono/muted
+ * combination before this existed (see their inline classes); new call sites
+ * — the `n`/`/` hints, the palette footer, `KeymapOverlay`'s own rows — reach
+ * for this instead of repeating the string a fourth time. `ut-btn-kbd` is the
+ * same chip sat inside a `Button`, where the surrounding control already
+ * supplies the hover/focus state the bare chip does not need.
+ */
+.ut-kbd {
+	display: inline-flex;
+	align-items: center;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--border);
+	padding-inline: 6px;
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	line-height: 1rem;
+	color: var(--ink-muted);
+}
+
+.ut-btn-kbd {
+	display: inline-flex;
+	align-items: center;
+	border-radius: var(--radius-sm);
+	border: 1px solid currentColor;
+	opacity: 0.6;
+	padding-inline: 6px;
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	line-height: 1rem;
+}
+
+/*
  * The vendored `ui/sheet` (ADR 0011: never hand-edited) ships `bg-black/10` on
  * its overlay. Retheming it is a selector here, in the one file that already
  * maps shadcn's tokens onto ours, rather than a fork of the vendored file —

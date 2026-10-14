@@ -5,6 +5,36 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.25.0] - 2026-10-14
+
+### Added
+
+- The command and keyboard layer (#88): `src/lib/keymap.ts`, a single-source, DOM-agnostic
+  keymap module — chords, `g`-prefix sequences (500ms window), scope filtering, permission
+  filtering, and an input/overlay guard that disables shortcuts inside a text field or any
+  open dialog/sheet/popover (`[data-slot$="-content"][data-open]`), with Escape and ⌘K the
+  only exceptions. Fully unit-tested (`keymap.spec.ts`).
+- `CommandPalette`: a ⌘K/Ctrl+K palette on the vendored `ui/command` (bits-ui), consuming
+  the phase-2 `unitati:command-palette` event. "Acciones" is `derivePaletteActions`
+  (`#lib/domain/palette-actions.ts`), a pure, unit-tested permission filter; "Registros"
+  calls the new interim `/api/palette` endpoint (capped at 5 per domain, org- and
+  permission-scoped, 150ms debounce) — the contract MVP slice 7's Postgres FTS will swap
+  internally without this component changing.
+- `KeymapOverlay`: the `?` reference dialog, rendered live from whatever any page has
+  registered into `keymapRegistry` — never a hand-maintained list.
+- Linear-grammar navigation: `g a`/`g s`/`g d`/`g o` jump to Assets/Service desk/
+  Directory/Overview; `/` focuses the current page's filter field; `n` registers the
+  in-context "new" action (ticket or asset) per permission.
+- Row-level verbs on `DataTable`: roving-focus active row (`ArrowUp`/`ArrowDown`, `x` to
+  toggle selection), with `a`/`e`/`l` on the assets list and `s` on the tickets list jumping
+  to the record's existing custody/state/location/status controls and focusing the field
+  (`focusFirstField`, aware of #98's bits-ui `select-trigger`).
+- `.ut-kbd`/`.ut-btn-kbd` shared chip utilities (`src/app.css`), replacing the inline
+  border/mono/muted strings `AppShell`'s search row and `EmptyState`'s `kbdHint` slot each
+  hand-rolled before this existed.
+- Gallery pages for `CommandPalette` and `KeymapOverlay` (both forced open via a bindable
+  `open` prop for the demo).
+
 ## [0.24.0] - 2026-10-12
 
 ### Added

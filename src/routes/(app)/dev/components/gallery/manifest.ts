@@ -315,6 +315,22 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		sourceFile: 'Breadcrumbs.svelte',
 		load: () => import('./specs/Breadcrumbs.svelte')
 	},
+	{
+		id: 'command-palette',
+		name: 'CommandPalette',
+		category: 'navigation',
+		summary: 'Paleta ⌘K: acciones permitidas y registros, sobre el primitivo Command vendorizado.',
+		sourceFile: 'CommandPalette.svelte',
+		load: () => import('./specs/CommandPalette.svelte')
+	},
+	{
+		id: 'keymap-overlay',
+		name: 'KeymapOverlay',
+		category: 'navigation',
+		summary: 'La ayuda `?`: cada atajo registrado, agrupado por zona, generada desde keymap.ts.',
+		sourceFile: 'KeymapOverlay.svelte',
+		load: () => import('./specs/KeymapOverlay.svelte')
+	},
 
 	// Layout
 	{
