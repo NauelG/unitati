@@ -5,6 +5,26 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.36.0] - 2026-10-14
+
+### Added
+
+- Move a task between projects (#120, slice 5e of #10): a _Mover a proyecto_ action on
+  `/tasks/{taskTag}`, as a row verb on `/tasks` and as a palette action on the task record, all
+  opening the same dialog. The task keeps its code, URL, state, assignees, due date and history and
+  goes to the end of its column in the target project. It is hidden for viewers without
+  `projects.manage` and for tasks of an archived project; archived projects refuse a move in either
+  direction.
+- `moveTaskToProject` in the projects domain, with `reparentTask` as the reusable core for merging
+  projects (#61). It writes one `task.project.changed` entry, shown in the task's timeline as
+  _Movida de PRJ-0001 … a PRJ-0002 …_ with both codes linking to their projects.
+
+### Changed
+
+- A write that touches two projects locks both rows in one statement ordered by `id`, and
+  `lockTask` re-checks the task's project after taking the lock, so a task that moves while a write
+  waits is followed instead of written against the wrong project (ADR 0021 addendum).
+
 ## [0.35.0] - 2026-10-14
 
 ### Added
