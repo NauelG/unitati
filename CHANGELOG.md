@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.31.0] - 2026-10-14
+
+### Changed
+
+- The asset and service-desk catalogues moved into Settings (#126, slice 5f of #10): models,
+  categories and manufacturers are now at `/settings/assets/...`, queues at
+  `/settings/service-desk/queues`. Behaviour is unchanged; they appear in the Settings navigation
+  and index for anyone holding `assets.manage` / `tickets.manage`, and an employee gets 403.
+- The old paths (and any sub-path) answer a 308 to the new ones, query string preserved.
+- The Assets tab bar is gone: `/assets` no longer links to the catalogues from a second navigation.
+
 ## [0.30.0] - 2026-10-14
 
 ### Added
