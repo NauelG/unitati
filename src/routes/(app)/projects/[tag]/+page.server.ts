@@ -1,5 +1,11 @@
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
+import {
+	BOARD_COOKIE,
+	BOARD_COOKIE_MAX_AGE,
+	resolveView,
+	serializeBoardPreference
+} from '#lib/board-preference.js';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import { listActivity } from '#lib/server/activity/index.js';
@@ -18,6 +24,7 @@ import {
 	listTasks,
 	moveTask,
 	projectProgress,
+	readBoardPreference,
 	requireProjectRead,
 	requireProjectWrite,
 	unarchiveProject,
@@ -29,10 +36,7 @@ import {
 } from '#lib/server/projects/index.js';
 import type { Actions, PageServerLoad } from './$types';
 
-/** The board and the list are two views of the same data; the board is the default (#125). */
-const viewParam = z.enum(['list', 'board']).catch('board');
-
-export const load: PageServerLoad = async ({ locals, params, url }) => {
+export const load: PageServerLoad = async ({ locals, params, url, cookies }) => {
 	const user = requireProjectRead(locals.user);
 
 	const found = await getProject(user, params.tag);
@@ -51,13 +55,32 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 	]);
 	if (!progress.ok) error(404, 'Not found');
 
+	// The person's board preference (#127), cleaned of anything the cookie should
+	// not carry. An explicit ?view= wins over it, and is never stored: opening
+	// someone's link does not change your default.
+	const rawPreference = cookies.get(BOARD_COOKIE);
+	const preference = readBoardPreference(
+		rawPreference,
+		states.map(({ id }) => id)
+	);
+	if (rawPreference !== undefined && rawPreference !== serializeBoardPreference(preference)) {
+		cookies.set(BOARD_COOKIE, serializeBoardPreference(preference), {
+			path: '/',
+			sameSite: 'lax',
+			maxAge: BOARD_COOKIE_MAX_AGE,
+			httpOnly: false
+		});
+	}
+
 	return {
 		project,
 		tasks,
 		// Every column of the board, including the empty ones.
 		states: states.map(({ id, name, group, position }) => ({ id, name, group, position })),
 		progress: progress.value,
-		view: viewParam.parse(url.searchParams.get('view')),
+		// The board and the list are two views of the same data; the board is the default (#125).
+		view: resolveView(url.searchParams.get('view'), preference.view),
+		collapsedStates: preference.states,
 		// The permission alone. The page also needs the project not to be archived
 		// before it renders any write control: an archived project shows none,
 		// not disabled ones.

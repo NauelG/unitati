@@ -4,6 +4,7 @@ import {
 	createBoardMover,
 	moveLocally,
 	neighboursOf,
+	resolveCollapsed,
 	type BoardState
 } from './board.js';
 
@@ -97,5 +98,21 @@ describe('one path to moveTask', () => {
 		createBoardMover(submit).fromDrop('a', 's-done', [{ id: 'a' }]);
 
 		expect(submit).toHaveBeenCalledWith({ taskId: 'a', stateId: 's-done' });
+	});
+});
+
+describe('resolveCollapsed', () => {
+	it('honours a stored choice over how many tasks the column holds', () => {
+		expect(resolveCollapsed('s', 3, { s: 'collapsed' })).toBe(true);
+		expect(resolveCollapsed('s', 0, { s: 'expanded' })).toBe(false);
+	});
+
+	it('collapses an empty column and keeps a populated one open when nothing is stored', () => {
+		expect(resolveCollapsed('s', 0, {})).toBe(true);
+		expect(resolveCollapsed('s', 2, {})).toBe(false);
+	});
+
+	it('reads only the entry of its own state', () => {
+		expect(resolveCollapsed('s', 2, { other: 'collapsed' })).toBe(false);
 	});
 });

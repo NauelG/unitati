@@ -78,3 +78,17 @@ export function createBoardMover(submit: (request: MoveRequest) => void): BoardM
 			submit({ taskId, stateId, ...neighboursOf(items, taskId) })
 	};
 }
+
+/**
+ * Is this column a strip? The person's stored choice for the state wins; with
+ * none, a column is folded when it is empty (#125). `preference` is the global
+ * per-state record of the board cookie (#127).
+ */
+export function resolveCollapsed(
+	stateId: string,
+	taskCount: number,
+	preference: Readonly<Record<string, 'collapsed' | 'expanded'>>
+): boolean {
+	const stored = preference[stateId];
+	return stored === undefined ? taskCount === 0 : stored === 'collapsed';
+}

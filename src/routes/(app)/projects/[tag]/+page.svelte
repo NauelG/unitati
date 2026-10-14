@@ -6,6 +6,11 @@
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
 	import { navigating } from '$app/state';
+	import {
+		readStoredBoardPreference,
+		resolveView,
+		storeBoardPreference
+	} from '#lib/board-preference.js';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
@@ -106,13 +111,14 @@
 		)
 	);
 
-	/** `?view=` picks the board (the default) or the #124 list. */
+	/** `?view=` picks the board or the #124 list; without it, the stored choice (#127). */
 	const view = $derived(data.view);
 
 	/** The board is on its way: paint its shape instead of an empty page. */
 	const boardLoading = $derived(
 		navigating.to?.params?.tag === project.projectTag &&
-			navigating.to.url.searchParams.get('view') !== 'list'
+			resolveView(navigating.to.url.searchParams.get('view'), readStoredBoardPreference().view) ===
+				'board'
 	);
 
 	const views = $derived([
@@ -219,6 +225,7 @@
 			<a
 				href={option.href}
 				data-sveltekit-replacestate
+				onclick={() => storeBoardPreference({ view: option.id as 'board' | 'list' })}
 				aria-current={view === option.id ? 'page' : undefined}
 				class="ut-transition-fast rounded-[var(--radius-md)] px-[var(--space-3)] py-[var(--space-1)] text-sm font-medium transition-colors {view ===
 				option.id
@@ -239,6 +246,7 @@
 					states={data.states}
 					tasks={data.tasks}
 					editable={writable}
+					collapsedStates={data.collapsedStates}
 					onquickcreate={openTask}
 				/>
 			{/if}
