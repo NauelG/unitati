@@ -40,7 +40,7 @@ const eventSchema = z.object({
 
 const threadItem = z.discriminatedUnion('kind', [commentSchema, eventSchema]);
 
-function toWire(item: ThreadItem): z.input<typeof threadItem> {
+function threadItemToWire(item: ThreadItem): z.input<typeof threadItem> {
 	if (item.kind === 'comment') {
 		return {
 			kind: 'comment',
@@ -84,7 +84,7 @@ export const ticketThreadEndpoint = defineEndpoint({
 	handler: async ({ principal, input }) => {
 		const outcome = await ticketThread(principal, input.tag);
 		if (!outcome.ok) throw refusal(outcome.error);
-		return { data: outcome.value.map(toWire) };
+		return { data: outcome.value.map(threadItemToWire) };
 	}
 });
 

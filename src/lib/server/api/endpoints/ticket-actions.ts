@@ -50,7 +50,7 @@ const tag = z.string().min(1);
 const ticketResponse = z.object({ data: ticketSchema });
 
 /** The ticket after a write, in the wire shape. The write has already succeeded, so a miss is a bug, not a 404. */
-async function written(principal: Parameters<typeof getWrittenTicket>[0], ticketTag: string) {
+async function written(principal: ApiPrincipal, ticketTag: string) {
 	const outcome = await getWrittenTicket(principal, ticketTag);
 	if (!outcome.ok) throw new Error(`Ticket ${ticketTag} vanished after a write.`);
 	return { data: toWire(outcome.value) };

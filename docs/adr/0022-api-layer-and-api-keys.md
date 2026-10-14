@@ -144,3 +144,15 @@ forbids. There is no low-entropy secret to protect, so there is no stretching to
 - The in-process rate limit does not survive horizontal scaling. If a second container is
   ever added, the limit moves to Postgres or a shared store. That is a local change behind
   one function.
+
+## Addendum: naming assets and reading back a write (slice B, #133)
+
+- **Naming assets is part of the ticket scopes.** A key holding `tickets.create` or
+  `tickets.manage` may name, link and unlink assets without a separate `assets.*` scope. The
+  endpoint adds the asset-read scopes to the principal for that call only. `can()` still
+  intersects with the role, so a key never sees an asset its owner could not, and no other
+  permission is added: a create-only key is still not staff.
+- **A write answers with the ticket it touched**, read back scoped to the organisation only
+  (`getWrittenTicket`). A key scoped to `tickets.manage` or `tickets.create` alone may hold no
+  read permission, and the staff writes already trust the permission gate and scope tenancy only
+  (ADR 0007). Reads through `GET` keep the full row-level scope.

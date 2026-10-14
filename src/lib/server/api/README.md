@@ -4,18 +4,18 @@ The REST API at `/api/v1` and the API keys that open it (ADR 0022). The API is o
 over the domain functions (ADR 0002): nothing here queries a domain's tables, and every endpoint
 calls a domain function that already knows who may see what.
 
-| File                      | Owns                                                                                                             |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `schema.ts`               | `api_keys`, re-exported from `db/schema.ts`                                                                      |
-| `index.ts`                | The public surface: routes and the hook import from here and never from a file inside                            |
-| `keys.ts`                 | `createApiKey`, `listApiKeys`, `revokeApiKey`, `authenticateApiKey`                                              |
-| `key-format.ts`           | The `unt_` format, the SHA-256 hash and the display `start`                                                      |
-| `validation.ts`           | What a key may be created with: name, scopes, expiry                                                             |
-| `authenticate-request.ts` | `Authorization: Bearer` to principal; which URLs are the API                                                     |
-| `registry.ts`             | `defineEndpoint`, `ApiError`, path matching                                                                      |
-| `endpoints/`              | Every endpoint, declared once; `endpoints/index.ts` is the list                                                  |
-| `dispatch.ts`             | One function from `Request` to `Response`: 401, rate limit, 404, 400, handler, output schema, the error envelope |
-| `rate-limit.ts`           | 120 requests per minute per key, a fixed window in process memory, behind one function                           |
+| File                      | Owns                                                                                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `schema.ts`               | `api_keys`, re-exported from `db/schema.ts`                                                                                                                        |
+| `index.ts`                | The public surface: routes and the hook import from here and never from a file inside                                                                              |
+| `keys.ts`                 | `createApiKey`, `listApiKeys`, `revokeApiKey`, `authenticateApiKey`                                                                                                |
+| `key-format.ts`           | The `unt_` format, the SHA-256 hash and the display `start`                                                                                                        |
+| `validation.ts`           | What a key may be created with: name, scopes, expiry                                                                                                               |
+| `authenticate-request.ts` | `Authorization: Bearer` to principal; which URLs are the API                                                                                                       |
+| `registry.ts`             | `defineEndpoint`, `ApiError`, `Reply` (`created`, `noContent`), path matching                                                                                      |
+| `endpoints/`              | Every endpoint, declared once (`tickets`, `ticket-thread`, `ticket-actions`, `queues`); `refusals.ts` maps domain failures to the envelope; `index.ts` is the list |
+| `dispatch.ts`             | One function from `Request` to `Response`: 401, rate limit, 404, 400, handler (`200`, `201` or `204`), output schema, the error envelope                           |
+| `rate-limit.ts`           | 120 requests per minute per key, a fixed window in process memory, behind one function                                                                             |
 
 ## Rules worth knowing before changing this
 

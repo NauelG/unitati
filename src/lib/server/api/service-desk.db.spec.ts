@@ -8,7 +8,7 @@ import {
 	createViewer
 } from '../assets/testing/fixtures';
 import { getDb } from '../db';
-import { ticketAsset } from '../links';
+import { relatedTo, ticketAsset } from '../links';
 import { createComment, createQueue, createTicket } from '../service-desk/testing/fixtures';
 import { listActivity } from '../activity';
 import { authenticateRequest } from './authenticate-request';
@@ -370,7 +370,7 @@ describe('staff actions', () => {
 	});
 
 	it('links an asset idempotently and unlinks it with 204', async () => {
-		const { organisation, ticket, key, base } = await openTicket();
+		const { organisation, technician, ticket, key, base } = await openTicket();
 		const catalogue = await createCatalogue(organisation.id);
 		const asset = await createAsset(organisation.id, catalogue.modelId);
 		const linked = async () =>
@@ -383,6 +383,12 @@ describe('staff actions', () => {
 		expect(first.response.status).toBe(201);
 		expect(await linked()).toHaveLength(1);
 
+		const related = async () =>
+			(await relatedTo(technician, { kind: 'ticket', id: ticket.id })).flatMap((group) =>
+				group.items.map((item) => item.ref.tag)
+			);
+		expect(await related()).toEqual([asset.assetTag]);
+
 		const again = await send('POST', `${base}/assets`, key, { assetTag: asset.assetTag });
 		expect(again.response.status).toBe(200);
 		expect(await linked()).toHaveLength(1);
@@ -391,6 +397,16 @@ describe('staff actions', () => {
 		expect(removed.response.status).toBe(204);
 		expect(removed.body).toBeNull();
 		expect(await linked()).toHaveLength(0);
+		expect(await related()).toEqual([]);
+
+		const history = await listActivity({
+			organisationId: organisation.id,
+			target: { ticketId: ticket.id }
+		});
+		expect(history.map((entry) => [entry.verb, entry.actorPersonId])).toEqual([
+			['link.asset.removed', technician.personId],
+			['link.asset.added', technician.personId]
+		]);
 
 		const twice = await send('DELETE', `${base}/assets/${asset.assetTag}`, key);
 		expect(twice.response.status).toBe(404);

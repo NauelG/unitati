@@ -108,6 +108,7 @@ export async function handleApiRequest(
 		const reply = result instanceof Reply ? result : new Reply(200, result);
 		// Serialised through the schema, so a field it does not name never leaves.
 		const body = endpoint.output.parse(reply.body);
+		// A 204 has no body by definition; the schema (`z.null()`) still ran.
 		if (reply.status === 204) {
 			return new Response(null, { status: 204, headers: { 'cache-control': 'no-store' } });
 		}
