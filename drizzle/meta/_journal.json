@@ -43,6 +43,13 @@
       "when": 1791983457335,
       "tag": "0005_api_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791989545283,
+      "tag": "0006_task_project_changed",
+      "breakpoints": true
     }
   ]
 }

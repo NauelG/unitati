@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ActivityEntry } from '#lib/server/activity/index.js';
-import { activitySentence } from './activity';
+import { activitySentence, projectChangedParts } from './activity';
 
 const PERSON = '3f1e0c9a-0000-4000-8000-000000000001';
 const LOCATION = '3f1e0c9a-0000-4000-8000-000000000002';
@@ -101,7 +101,8 @@ describe('activitySentence', () => {
 			},
 			{ verb: 'task.assigned', payload: { toPersonId: PERSON, toPersonName: 'Ada' } },
 			{ verb: 'task.unassigned', payload: { fromPersonId: PERSON, fromPersonName: 'Ada' } },
-			{ verb: 'task.due.changed', payload: { from: '2026-12-01', to: null } }
+			{ verb: 'task.due.changed', payload: { from: '2026-12-01', to: null } },
+			{ verb: 'task.project.changed', payload: PROJECT_CHANGED }
 		];
 
 		for (const entry of entries) {
@@ -118,6 +119,32 @@ describe('activitySentence', () => {
 		// The body is rendered as the note itself, below the sentence. Inlining it
 		// here would put it into every timeline summary and every notification.
 		expect(activitySentence(entry)).not.toContain('hunter2');
+	});
+});
+
+const PROJECT_CHANGED = {
+	fromProjectId: PERSON,
+	fromProjectTag: 'PRJ-0001',
+	fromProjectName: 'Oficina',
+	toProjectId: LOCATION,
+	toProjectTag: 'PRJ-0002',
+	toProjectName: 'Almacén'
+};
+
+describe('task.project.changed', () => {
+	it('reads the codes and names recorded at the move', () => {
+		expect(activitySentence({ verb: 'task.project.changed', payload: PROJECT_CHANGED })).toBe(
+			'Movida de PRJ-0001 Oficina a PRJ-0002 Almacén'
+		);
+	});
+
+	it('splits into text and the two project references, in reading order', () => {
+		expect(projectChangedParts(PROJECT_CHANGED)).toEqual([
+			{ text: 'Movida de ' },
+			{ project: { tag: 'PRJ-0001', name: 'Oficina' } },
+			{ text: ' a ' },
+			{ project: { tag: 'PRJ-0002', name: 'Almacén' } }
+		]);
 	});
 });
 

@@ -90,6 +90,9 @@ export type {
 	MoveTaskFailure
 } from './tasks';
 
+export { moveTaskToProject } from './reparent';
+export type { MoveTaskToProjectFailure } from './reparent';
+
 export { placeBetween, spread, MIN_GAP, STEP } from './position';
 
 export {

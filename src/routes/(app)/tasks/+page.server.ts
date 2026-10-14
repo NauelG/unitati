@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import { STATE_GROUPS } from '#lib/domain/status.js';
 import { can } from '#lib/server/access/permissions.js';
-import { listStates, listTasks, requireProjectRead } from '#lib/server/projects/index.js';
+import {
+	listProjects,
+	listStates,
+	listTasks,
+	requireProjectRead
+} from '#lib/server/projects/index.js';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -39,6 +44,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		// The catalogue feeds the row verb that changes a state.
 		states: canManage
 			? (await listStates(user)).map(({ id, name, group }) => ({ id, name, group }))
+			: [],
+		// Destinations for the row verb that moves a task to another project (#120).
+		projects: canManage
+			? (await listProjects(user)).map(({ id, projectTag, name }) => ({ id, projectTag, name }))
 			: []
 	};
 };

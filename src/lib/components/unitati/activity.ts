@@ -127,9 +127,46 @@ export function activitySentence(entry: ActivityEntry): string {
 				to: entry.payload.to ?? m.activity_due_none()
 			});
 
+		case 'task.project.changed':
+			return m.activity_task_project_changed({
+				from: `${entry.payload.fromProjectTag} ${entry.payload.fromProjectName}`,
+				to: `${entry.payload.toProjectTag} ${entry.payload.toProjectName}`
+			});
+
 		default: {
 			const unhandled: never = entry;
 			throw new Error(`Unhandled activity verb: ${JSON.stringify(unhandled)}`);
 		}
 	}
+}
+
+export type ProjectChangedPart = { text: string } | { project: { tag: string; name: string } };
+
+type ProjectChangedPayload = Extract<ActivityEntry, { verb: 'task.project.changed' }>['payload'];
+
+// Control characters that cannot occur in a message: stand-ins for the two
+// placeholders, so the translated sentence keeps its own word order.
+const FROM = '\u0001';
+const TO = '\u0002';
+
+/**
+ * The "moved from PRJ-1 A to PRJ-2 B" sentence cut at its two projects, so the
+ * renderer can link each code. Splitting the translated message, rather than
+ * concatenating pieces, leaves word order to the locale.
+ */
+export function projectChangedParts(payload: ProjectChangedPayload): ProjectChangedPart[] {
+	const sentence = m.activity_task_project_changed({ from: FROM, to: TO });
+
+	return sentence
+		.split(new RegExp(`(${FROM}|${TO})`))
+		.filter((piece) => piece !== '')
+		.map((piece): ProjectChangedPart => {
+			if (piece === FROM) {
+				return { project: { tag: payload.fromProjectTag, name: payload.fromProjectName } };
+			}
+			if (piece === TO) {
+				return { project: { tag: payload.toProjectTag, name: payload.toProjectName } };
+			}
+			return { text: piece };
+		});
 }
