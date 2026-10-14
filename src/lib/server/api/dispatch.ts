@@ -39,18 +39,17 @@ export interface ApiEvent {
 }
 
 /** Query string, then JSON body, then path parameters: the last one cannot be overridden by the caller. */
-async function inputOf(request: Request, params: Record<string, string>): Promise<unknown> {
-	const query = Object.fromEntries(new URL(request.url).searchParams);
+async function inputOf(
+	request: Request,
+	url: URL,
+	params: Record<string, string>
+): Promise<unknown> {
+	const query = Object.fromEntries(url.searchParams);
 
 	let body: Record<string, unknown> = {};
 	if (request.method !== 'GET' && request.headers.get('content-type')?.includes('json')) {
 		const parsed: unknown = await request.json().catch(() => undefined);
-		if (
-			parsed === undefined ||
-			parsed === null ||
-			typeof parsed !== 'object' ||
-			Array.isArray(parsed)
-		) {
+		if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
 			throw new ApiError(400, 'invalid_json', 'The request body is not a JSON object.');
 		}
 		body = parsed as Record<string, unknown>;
@@ -59,9 +58,9 @@ async function inputOf(request: Request, params: Record<string, string>): Promis
 	return { ...query, ...body, ...params };
 }
 
-function find(method: string, pathname: string) {
+function matchEndpoint(endpoints: readonly Endpoint[], method: string, pathname: string) {
 	const relative = pathname.slice(PREFIX.length);
-	for (const endpoint of ENDPOINTS) {
+	for (const endpoint of endpoints) {
 		if (endpoint.method !== method) continue;
 		const params = matchPath(endpoint.path, relative);
 		if (params) return { endpoint, params };
@@ -69,7 +68,11 @@ function find(method: string, pathname: string) {
 	return null;
 }
 
-export async function handleApiRequest({ request, locals }: ApiEvent): Promise<Response> {
+/** `endpoints` is a parameter so a spec can serve a declaration the registry does not have yet. */
+export async function handleApiRequest(
+	{ request, locals }: ApiEvent,
+	endpoints: readonly Endpoint[] = ENDPOINTS
+): Promise<Response> {
 	const principal = locals.user as ApiPrincipal | null;
 	const auth: ApiAuthState | undefined = locals.api;
 	if (!principal || !auth?.ok) {
@@ -85,37 +88,22 @@ export async function handleApiRequest({ request, locals }: ApiEvent): Promise<R
 		});
 	}
 
-	const match = find(request.method, new URL(request.url).pathname);
+	const url = new URL(request.url);
+	const match = matchEndpoint(endpoints, request.method, url.pathname);
 	// "Not allowed" and "not there" are the same answer (ADR 0007).
 	if (!match || !match.endpoint.permissions.some((permission) => can(principal, permission))) {
 		return problem(404, 'not_found', 'Not found.');
 	}
 
-	return run(match.endpoint, match.params, principal, request);
-}
-
-async function run(
-	endpoint: Endpoint,
-	params: Record<string, string>,
-	principal: ApiPrincipal,
-	request: Request
-): Promise<Response> {
-	let raw: unknown;
+	const { endpoint, params } = match;
 	try {
-		raw = await inputOf(request, params);
-	} catch (error) {
-		if (error instanceof ApiError) return problem(400, error.code, error.message);
-		throw error;
-	}
+		const input = endpoint.input.safeParse(await inputOf(request, url, params));
+		if (!input.success) {
+			return problem(400, 'invalid_input', 'The request is not valid.', {
+				issues: input.error.issues
+			});
+		}
 
-	const input = endpoint.input.safeParse(raw);
-	if (!input.success) {
-		return problem(400, 'invalid_input', 'The request is not valid.', {
-			issues: input.error.issues
-		});
-	}
-
-	try {
 		const result = await endpoint.handler({ principal, input: input.data });
 		// Serialised through the schema, so a field it does not name never leaves.
 		return json(200, endpoint.output.parse(result));

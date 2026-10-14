@@ -15,7 +15,8 @@ export const MAX_NAME_LENGTH = 80;
 
 export type CreateApiKeyInput = {
 	name: string;
-	scopes: readonly Permission[];
+	/** Strings, not `Permission`s: this is a boundary, and validation is what narrows them. */
+	scopes: readonly string[];
 	/** `null` means the key never expires. */
 	expiresInDays: number | null;
 };

@@ -7,6 +7,8 @@ import { createQueue, createTicket } from '../service-desk/testing/fixtures';
 import { authenticateRequest } from './authenticate-request';
 import { handleApiRequest } from './dispatch';
 import { createApiKey } from './keys';
+import { conflict, defineEndpoint } from './registry';
+import { z } from 'zod';
 import { RATE_LIMIT_PER_MINUTE } from './rate-limit';
 
 /**
@@ -293,5 +295,53 @@ describe('rate limit', () => {
 		expect(response.status).toBe(429);
 		expect(Number(response.headers.get('retry-after'))).toBeGreaterThan(0);
 		expect(body.error.code).toBe('rate_limited');
+	});
+});
+
+describe('errors raised by a handler', () => {
+	const refusing = defineEndpoint({
+		id: 'tests.refuse',
+		method: 'POST',
+		path: '/refuse',
+		summary: 'Always refuses.',
+		permissions: ['tickets.manage'],
+		input: z.object({ reason: z.string().min(1) }),
+		output: z.object({}),
+		handler: async ({ input }) => {
+			throw conflict('illegal_transition', `Refused: ${input.reason}`);
+		}
+	});
+
+	async function post(key: string, body: string) {
+		const request = new Request('http://localhost/api/v1/refuse', {
+			method: 'POST',
+			headers: { ...bearer(key), 'content-type': 'application/json' },
+			body
+		});
+		const locals = { ...(await authenticateRequest(request)) } as unknown as App.Locals;
+		const response = await handleApiRequest({ request, locals }, [refusing]);
+		return { response, body: await response.json() };
+	}
+
+	it('answers 409 with the envelope for a domain refusal', async () => {
+		const { technician } = await workspace();
+		const key = await keyFor(technician, ['tickets.manage']);
+
+		const { response, body } = await post(key, JSON.stringify({ reason: 'closed' }));
+
+		expect(response.status).toBe(409);
+		expect(body).toEqual({
+			error: { code: 'illegal_transition', message: 'Refused: closed' }
+		});
+	});
+
+	it('answers 400 for a body that is not a JSON object, and for one that fails the schema', async () => {
+		const { technician } = await workspace();
+		const key = await keyFor(technician, ['tickets.manage']);
+
+		expect((await post(key, '[1]')).response.status).toBe(400);
+		const invalid = await post(key, JSON.stringify({ reason: '' }));
+		expect(invalid.response.status).toBe(400);
+		expect(invalid.body.error.issues[0].path).toEqual(['reason']);
 	});
 });

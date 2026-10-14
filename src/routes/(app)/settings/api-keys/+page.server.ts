@@ -58,8 +58,7 @@ export const actions: Actions = {
 
 		const outcome = await createApiKey(user, {
 			name: String(data.get('name') ?? ''),
-			// Unknown strings are refused by the domain's own validation.
-			scopes: data.getAll('scopes').filter((value) => typeof value === 'string') as never,
+			scopes: data.getAll('scopes').filter((value) => typeof value === 'string'),
 			expiresInDays: expiryOf(data.get('expiresInDays'))
 		});
 

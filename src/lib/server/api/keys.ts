@@ -56,6 +56,14 @@ function requireManage(actor: SessionUser): void {
 	}
 }
 
+/** Which keys `actor` may act on: every key in the organisation for `api.keys.manage.all`, else their own. */
+function withinReach(actor: SessionUser) {
+	return and(
+		eq(apiKeys.organisationId, actor.organisationId),
+		can(actor, 'api.keys.manage.all') ? undefined : eq(apiKeys.ownerUserId, actor.id)
+	);
+}
+
 /** Stored scopes are strings; a permission retired since is dropped, never trusted. */
 function knownScopes(scopes: readonly string[]): Permission[] {
 	return scopes.filter((scope): scope is Permission =>
@@ -142,8 +150,7 @@ export async function listApiKeys(
 		.innerJoin(users, eq(users.id, apiKeys.ownerUserId))
 		.where(
 			and(
-				eq(apiKeys.organisationId, viewer.organisationId),
-				can(viewer, 'api.keys.manage.all') ? undefined : eq(apiKeys.ownerUserId, viewer.id),
+				withinReach(viewer),
 				isNull(apiKeys.revokedAt),
 				or(isNull(apiKeys.expiresAt), gt(apiKeys.expiresAt, now))
 			)
@@ -168,14 +175,7 @@ export async function revokeApiKey(
 	const revoked = await getDb()
 		.update(apiKeys)
 		.set({ revokedAt: now, updatedAt: now })
-		.where(
-			and(
-				eq(apiKeys.id, id),
-				eq(apiKeys.organisationId, actor.organisationId),
-				can(actor, 'api.keys.manage.all') ? undefined : eq(apiKeys.ownerUserId, actor.id),
-				isNull(apiKeys.revokedAt)
-			)
-		)
+		.where(and(eq(apiKeys.id, id), withinReach(actor), isNull(apiKeys.revokedAt)))
 		.returning({ id: apiKeys.id });
 
 	return revoked.length === 0 ? failure('not_found') : success(undefined);

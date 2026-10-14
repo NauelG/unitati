@@ -8,7 +8,7 @@ import { defineEndpoint, notFound } from '../registry';
  * addressed by its tag. People and queues have no code, so they keep their ids.
  * The output schema is the allow-list, because Zod drops what it does not name.
  */
-const person = z.object({ id: z.string(), name: z.string() });
+const personRef = z.object({ id: z.string(), name: z.string() });
 
 export const ticketSchema = z.object({
 	tag: z.string(),
@@ -16,9 +16,9 @@ export const ticketSchema = z.object({
 	status: z.enum(TICKET_STATUSES),
 	priority: z.enum(PRIORITIES),
 	channel: z.enum(['portal', 'agent']),
-	queue: person,
-	requester: person,
-	assignee: person.nullable(),
+	queue: personRef,
+	requester: personRef,
+	assignee: personRef.nullable(),
 	createdAt: z.iso.datetime(),
 	updatedAt: z.iso.datetime()
 });
@@ -41,14 +41,14 @@ function toWire(ticket: TicketView): z.input<typeof ticketSchema> {
 	};
 }
 
-const VIEW = ['tickets.view', 'tickets.view.own'] as const;
+const VIEW_PERMISSIONS = ['tickets.view', 'tickets.view.own'] as const;
 
 export const listTicketsEndpoint = defineEndpoint({
 	id: 'tickets.list',
 	method: 'GET',
 	path: '/tickets',
 	summary: 'List the tickets the key can see, newest first.',
-	permissions: VIEW,
+	permissions: VIEW_PERMISSIONS,
 	// Out-of-range paging is clamped by the domain; only nonsense is refused.
 	input: z.object({
 		search: z.string().optional(),
@@ -85,7 +85,7 @@ export const getTicketEndpoint = defineEndpoint({
 	method: 'GET',
 	path: '/tickets/{tag}',
 	summary: 'Get one ticket by its tag.',
-	permissions: VIEW,
+	permissions: VIEW_PERMISSIONS,
 	input: z.object({ tag: z.string().min(1) }),
 	output: z.object({ data: ticketSchema }),
 	handler: async ({ principal, input }) => {
