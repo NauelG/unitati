@@ -5,6 +5,32 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.32.0] - 2026-10-14
+
+### Added
+
+- Project and task screens (#124, slice 5c of #10): `/projects` (active by default, an
+  _Archivados_ filter, search, progress per project), `/projects/new`, the project record, `/tasks`
+  (assigned to me by default; everything only with `projects.view`) and the task record. Everything
+  but the board, which arrives with #125.
+- Projects in the navigation as a group with _Proyectos_ and _Tareas_, each with its count, visible
+  with `projects.view` or `projects.view.assigned`.
+- The project record: a living header with task counts per state group, the task list in board
+  order, owner, due date, progress and activity in the side column, a Sheet to edit, a Dialog to
+  add a task by title, and optimistic archive and restore. An archived project renders no write
+  control at all.
+- The task record: state (end of the column) and assignees (several people) change optimistically
+  from the side column; title, description and due date are edited in a Sheet.
+- Read-only for `projects.view.assigned`: no write control anywhere, a project record lists only the
+  viewer's own tasks, `?filter=all` falls back to _Asignadas a mí_, and writes are answered 403.
+- The overview's _Tu trabajo_ lists the viewer's open tasks (`unstarted` and `started`) beside their
+  tickets.
+- Command palette: _Nuevo proyecto_, _Ir a Proyectos_, _Ir a Tareas_, and projects and tasks
+  among the records, found by words or by exact code (`TSK-0001`).
+- Components: `ProjectProgress`, `TextAreaField`; `SearchSelectField` gains `multiple`;
+  `StatusBadge` takes a task state (`group` + `label`, toned by group); `RecordRef` and
+  `AssetTimeline` gain project and task variants. All in `/dev/components`.
+
 ## [0.31.1] - 2026-10-14
 
 ### Changed

@@ -102,5 +102,7 @@
 </script>
 
 {#if resolved}
-	<span class={badge({ tone: resolved.tone, pulsing, class: className })}>{label ?? resolved.label}</span>
+	<span class={badge({ tone: resolved.tone, pulsing, class: className })}
+		>{label ?? resolved.label}</span
+	>
 {/if}
