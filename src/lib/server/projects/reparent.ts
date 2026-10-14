@@ -91,7 +91,6 @@ export async function moveTaskToProject(
 			if (!owning) return failure('task_not_found' as const);
 
 			const locked = await lockProjects(tx, actor, [owning.projectId, toProjectId]);
-			if (!locked.ok) throw new Error('lockProjects cannot fail.');
 
 			const [task] = await tx.select().from(tasks).where(eq(tasks.id, taskId));
 			if (!task || task.organisationId !== actor.organisationId) {
@@ -99,8 +98,8 @@ export async function moveTaskToProject(
 			}
 			if (task.projectId !== owning.projectId) continue;
 
-			const source = locked.value.find((project) => project.id === task.projectId);
-			const target = locked.value.find((project) => project.id === toProjectId);
+			const source = locked.find((project) => project.id === task.projectId);
+			const target = locked.find((project) => project.id === toProjectId);
 			if (!source) return failure('task_not_found' as const);
 			if (!target) return failure('project_not_found' as const);
 			if (source.archivedAt || target.archivedAt) return failure('project_archived' as const);

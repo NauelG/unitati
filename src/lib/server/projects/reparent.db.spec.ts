@@ -213,8 +213,7 @@ describe('reparentTask', () => {
 
 		await getDb().transaction(async (tx) => {
 			const locked = await lockProjects(tx, admin, [from.id, to.id]);
-			if (!locked.ok) throw new Error('setup');
-			const target = locked.value.find((project) => project.id === to.id)!;
+			const target = locked.find((project) => project.id === to.id)!;
 			for (const id of [first.id, second.id]) {
 				const [task] = await tx.select().from(tasks).where(eq(tasks.id, id));
 				await reparentTask(tx, admin, task, target);
@@ -295,13 +294,12 @@ describe('moveTaskToProject under concurrency', () => {
 		// A move that has locked both projects and not yet committed.
 		const mover = getDb().transaction(async (tx) => {
 			const rows = await lockProjects(tx, admin, [a.id, b.id]);
-			if (!rows.ok) throw new Error('setup');
 			const [row] = await tx.select().from(tasks).where(eq(tasks.id, task.id));
 			await reparentTask(
 				tx,
 				admin,
 				row,
-				rows.value.find((project) => project.id === b.id)!
+				rows.find((project) => project.id === b.id)!
 			);
 			locked();
 			await gate;

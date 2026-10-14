@@ -48,8 +48,8 @@ export async function lockProjects(
 	tx: Transaction,
 	actor: SessionUser,
 	projectIds: readonly string[]
-): Promise<Outcome<(typeof projects.$inferSelect)[], never>> {
-	const rows = await tx
+): Promise<(typeof projects.$inferSelect)[]> {
+	return tx
 		.select()
 		.from(projects)
 		.where(
@@ -60,8 +60,6 @@ export async function lockProjects(
 		)
 		.orderBy(asc(projects.id))
 		.for('update');
-
-	return success(rows);
 }
 
 /**
@@ -70,8 +68,10 @@ export async function lockProjects(
  * between reading which project owns it and getting that project's lock another
  * write may have moved it. When it has, the lock we hold is on the wrong
  * project; try once more with the new owner, and give up as `task_not_found` if
- * it moved again. (A row lock cannot be released early; the stale one is held
- * to the end of the transaction, which is harmless.)
+ * it moved again. A row lock cannot be released early, so the stale one is held to
+ * the end of the transaction. That is harmless unless a move in the opposite
+ * direction is racing the retry for the same two rows, in which case Postgres
+ * detects the cycle and aborts one of the two; it never hangs.
  */
 export async function lockTask(
 	tx: Transaction,
