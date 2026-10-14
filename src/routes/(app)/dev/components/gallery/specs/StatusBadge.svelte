@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ComponentDocPage from '../ComponentDocPage.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
-	import { BADGED_STATUS_KEYS } from '#lib/components/unitati/status.js';
+	import { BADGED_STATUS_KEYS, STATE_GROUP_KEYS } from '#lib/components/unitati/status.js';
 </script>
 
 <ComponentDocPage
@@ -20,7 +20,8 @@
 		{
 			name: 'status',
 			type: 'StatusKey',
-			description: 'Unión de tipos en tiempo de compilación: TicketStatus | Priority | AssetState.'
+			description:
+				'Unión de tipos en tiempo de compilación: TicketStatus | Priority | AssetState | StateGroup.'
 		}
 	]}
 	usage={`<StatusBadge status={ticket.status} />
@@ -36,6 +37,16 @@
 			<div class="flex flex-wrap items-center gap-[var(--space-2)]">
 				{#each BADGED_STATUS_KEYS as key (key)}
 					<StatusBadge status={key} />
+				{/each}
+			</div>
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Grupos de estado de proyecto
+			</p>
+			<div class="flex flex-wrap items-center gap-[var(--space-2)]">
+				{#each STATE_GROUP_KEYS as group (group)}
+					<StatusBadge status={group} />
 				{/each}
 			</div>
 		</div>

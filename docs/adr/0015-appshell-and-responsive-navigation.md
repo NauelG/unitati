@@ -259,3 +259,27 @@ simpler and would flash once per hard reload.
 Two Lucide icons (`menu`, `panel-left`) and four (`package`, `ticket`, `folder-kanban`, `users`)
 join the four the spec already named, all already available in `@lucide/svelte`; no icon had to be
 approximated.
+
+## Addendum: the Settings area (#123)
+
+The `settings` snippet `AppShell` reserved now has a route behind it.
+
+- **One rule for catalogues.** Every configurable catalogue lives in `/settings/{module}/{catalogue}`,
+  never inside the module. The module keeps only its work screens, and nobody has to guess where
+  the next catalogue goes. The existing asset and service-desk catalogues move there in #126.
+- **The registry.** `src/lib/settings/sections.ts` lists every section once: `module`, `href`, a
+  message-function label and the `permission` that manages it. The sidebar link, the secondary
+  navigation, the `/settings` index and the guards all read it through `visibleSections`, so
+  adding a section is one entry and a section the viewer cannot manage is hidden everywhere at
+  once.
+- **Visibility rule.** _Configuración_ appears at the bottom of the sidebar, above the version,
+  only when at least one registry section is visible. `AppShell` hands the snippet `{ rail }` so
+  the row centres its icon in the 64px rail; the mobile drawer renders the same snippet.
+- **Own navigation.** Inside `/settings` a secondary navigation (`SettingsNav`: a side list from
+  `md`, a compact scrolling strip below it) groups sections by module. Settings is not a sidebar
+  group, for the reason already given: a third level does not fit the icon rail.
+- **Guards answer 403, not 404.** `requirePermission` hides a resource by answering 404. Here
+  there is nothing to hide: the area is announced by the sidebar for anyone who can use it, so a
+  signed-in viewer without access is told so. `/settings/*` is 403 when no section is visible,
+  and each section's page and every action checks its own permission
+  (`requireSettingsSection`).

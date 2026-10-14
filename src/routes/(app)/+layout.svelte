@@ -6,7 +6,11 @@
 	import UsersIcon from '@lucide/svelte/icons/users';
 	import HouseIcon from '@lucide/svelte/icons/house';
 	import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
-	import AppShell from '#lib/components/unitati/AppShell.svelte';
+	import AppShell, { appShell } from '#lib/components/unitati/AppShell.svelte';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import { page } from '$app/state';
+	import { isPathActive } from '#lib/components/unitati/app-shell-nav.js';
+	import { visibleSections } from '#lib/settings/sections.js';
 	import type {
 		AppShellNavGroup,
 		AppShellNavLeaf,
@@ -101,6 +105,9 @@
 			: [])
 	] satisfies (NavLeafSource | NavGroupSource)[]);
 
+	/** The *Configuración* link exists only when at least one registry section is visible. */
+	const showSettings = $derived(visibleSections(data.permissions).length > 0);
+
 	const initials = $derived(
 		data.user.name
 			.split(' ')
@@ -110,11 +117,26 @@
 	);
 </script>
 
+{#snippet settingsLink({ rail }: { rail: boolean })}
+	{@const active = isPathActive('/settings', page.url.pathname)}
+	<a
+		href="/settings"
+		aria-current={active ? 'page' : undefined}
+		class={appShell({ rail, active }).navItem()}
+		title={rail ? m.nav_settings() : undefined}
+		aria-label={rail ? m.nav_settings() : undefined}
+	>
+		<SettingsIcon class={appShell().navIcon()} aria-hidden="true" />
+		<span class={appShell().navLabel()}>{m.nav_settings()}</span>
+	</a>
+{/snippet}
+
 <AppShell
 	{links}
 	showSearch={!isProduction(APP_ENV)}
 	permissions={data.permissions}
 	personId={data.user.personId}
+	settings={showSettings ? settingsLink : undefined}
 >
 	{#snippet topbarEnd()}
 		<EnvironmentBadge environment={APP_ENV} />

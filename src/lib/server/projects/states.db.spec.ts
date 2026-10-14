@@ -9,6 +9,7 @@ import {
 	defaultTaskState,
 	deleteState,
 	listStates,
+	listStatesWithTaskCount,
 	renameState,
 	reorderState
 } from './states';
@@ -49,6 +50,40 @@ describe('listStates', () => {
 		expect(
 			(await listStates(mine.admin)).every((s) => s.organisationId === mine.organisation.id)
 		).toBe(true);
+	});
+});
+
+describe('listStatesWithTaskCount', () => {
+	it('counts the tasks in each state, zero for an empty one, in board order', async () => {
+		const { admin, organisation } = await createWorkspace();
+		const { backlog } = await statesByGroup(organisation.id);
+		const project = await createProject(admin, { name: 'Move' });
+		if (!project.ok) throw new Error('setup');
+		await createTask(admin, project.value.id, { title: 'Pack', stateId: backlog.id });
+		await createTask(admin, project.value.id, { title: 'Label', stateId: backlog.id });
+
+		const listed = await listStatesWithTaskCount(admin);
+
+		expect(listed.map((state) => state.id)).toEqual((await listStates(admin)).map((s) => s.id));
+		expect(listed.find((state) => state.id === backlog.id)?.taskCount).toBe(2);
+		expect(listed.filter((state) => state.id !== backlog.id).map((s) => s.taskCount)).toEqual([
+			0, 0, 0, 0
+		]);
+	});
+
+	it('never counts tasks of another organisation', async () => {
+		const mine = await createWorkspace();
+		const elsewhere = await createOrganisation('Other', 'other');
+		await ensureDefaultStates(getDb(), elsewhere.id);
+		const theirAdmin = await createViewer(elsewhere.id, 'admin', 'Other Admin');
+		const { backlog } = await statesByGroup(elsewhere.id);
+		const project = await createProject(theirAdmin, { name: 'Elsewhere' });
+		if (!project.ok) throw new Error('setup');
+		await createTask(theirAdmin, project.value.id, { title: 'Pack', stateId: backlog.id });
+
+		const listed = await listStatesWithTaskCount(mine.admin);
+
+		expect(listed.every((state) => state.taskCount === 0)).toBe(true);
 	});
 });
 

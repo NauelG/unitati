@@ -27,13 +27,19 @@ export { requireProjectScope, requireTaskScope } from './scope';
 
 export {
 	listStates,
+	listStatesWithTaskCount,
 	defaultTaskState,
 	createState,
 	renameState,
 	reorderState,
 	deleteState
 } from './states';
-export type { CreateStateFailure, RenameStateFailure, DeleteStateFailure } from './states';
+export type {
+	StateWithTaskCount,
+	CreateStateFailure,
+	RenameStateFailure,
+	DeleteStateFailure
+} from './states';
 
 export { ensureDefaultStates, DEFAULT_STATES } from './defaults';
 

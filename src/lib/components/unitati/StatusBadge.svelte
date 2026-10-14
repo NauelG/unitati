@@ -40,7 +40,7 @@
 </script>
 
 <script lang="ts">
-	import { statusBadge, type StatusKey } from './status.js';
+	import { statusBadge, type BadgeKey } from './status.js';
 	import { MOTION_BASE_MS } from '#lib/motion.js';
 
 	interface Props {
@@ -48,7 +48,7 @@
 		 * A status key, never display text. The union is the point: `"En curso"`
 		 * fails `npm run check` instead of rendering an untranslated badge.
 		 */
-		status: StatusKey;
+		status: BadgeKey;
 		/**
 		 * S2 (#91), the single-pulse signal: the row this badge sits in just
 		 * arrived flagged urgent (see `createUrgentArrivals`). Pulses once when
