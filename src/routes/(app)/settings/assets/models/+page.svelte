@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import Alert from '#lib/components/unitati/Alert.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import {
@@ -113,16 +115,27 @@
 							<span class="truncate text-sm text-[var(--ink-muted)]">{model.categoryName}</span>
 						</div>
 						<div class="flex shrink-0 items-center gap-[var(--space-2)]">
-							<Button variant="secondary" size="sm" onclick={() => openEdit(model)}>
-								{m.catalogue_edit()}
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								iconOnly
+								title={m.catalogue_edit()}
+								aria-label={m.catalogue_edit_title({ name: model.name })}
+								onclick={() => openEdit(model)}
+							>
+								<PencilIcon class="size-4" aria-hidden="true" />
 							</Button>
 							<Button
 								type="button"
 								variant="ghost"
 								size="sm"
+								iconOnly
+								title={m.catalogue_delete()}
+								aria-label={m.catalogue_delete_title({ name: model.name })}
 								onclick={() => (confirmingId = model.id)}
 							>
-								{m.catalogue_delete()}
+								<Trash2Icon class="size-4" aria-hidden="true" />
 							</Button>
 						</div>
 

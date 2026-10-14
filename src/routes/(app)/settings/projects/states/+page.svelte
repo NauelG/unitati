@@ -2,6 +2,8 @@
 	import { enhance } from '$app/forms';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import Alert from '#lib/components/unitati/Alert.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import { catalogueDialog } from '#lib/components/unitati/catalogue-dialog.svelte.js';
@@ -179,16 +181,27 @@
 							</td>
 							<td class={cell}>
 								<div class="flex items-center justify-end gap-[var(--space-2)]">
-									<Button variant="secondary" size="sm" onclick={() => openEdit(row)}>
-										{m.catalogue_edit()}
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										iconOnly
+										title={m.catalogue_edit()}
+										aria-label={m.catalogue_edit_title({ name: row.name })}
+										onclick={() => openEdit(row)}
+									>
+										<PencilIcon class="size-4" aria-hidden="true" />
 									</Button>
 									<Button
 										type="button"
 										variant="ghost"
 										size="sm"
+										iconOnly
+										title={m.catalogue_delete()}
+										aria-label={m.catalogue_delete_title({ name: row.name })}
 										onclick={() => (confirmingId = row.id)}
 									>
-										{m.catalogue_delete()}
+										<Trash2Icon class="size-4" aria-hidden="true" />
 									</Button>
 								</div>
 
