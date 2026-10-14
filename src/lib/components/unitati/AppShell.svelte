@@ -225,7 +225,14 @@
 		style:width="var(--size-sidebar-current)"
 		style:view-transition-name="shell-sidebar"
 	>
-		<nav class={appShell().sidebar()} aria-label={m.nav_main()}>
+		<!--
+			Perceived speed (#89): hover warms the target route's data before the
+			click lands. Set once here rather than per-`<a>` — SvelteKit's
+			`data-sveltekit-preload-data` inherits down the DOM — so it reaches
+			every nav row without a per-link opt-in, and `<main>` below (content
+			links: breadcrumbs, table rows, `RelatedRecords`) the same way.
+		-->
+		<nav class={appShell().sidebar()} aria-label={m.nav_main()} data-sveltekit-preload-data="hover">
 			<div class={appShell({ rail: collapsed }).brandbar()}>
 				<a href="/" class="rounded-[var(--radius-sm)]" aria-label={m.app_name()}>
 					<Logo variant={collapsed ? 'mark' : 'lockup'} size="sm" />
@@ -277,7 +284,7 @@
 			</div>
 		</header>
 
-		<main bind:this={mainEl} class={appShell().main()}>
+		<main bind:this={mainEl} class={appShell().main()} data-sveltekit-preload-data="hover">
 			{@render children()}
 		</main>
 	</div>
@@ -285,7 +292,11 @@
 
 <Sheet.Root bind:open={drawerOpen}>
 	<Sheet.Content side="left" class="w-[85%] max-w-[300px] bg-[var(--surface-2)] p-[var(--space-3)]">
-		<nav class="flex h-full min-h-0 flex-col" aria-label={m.nav_main()}>
+		<nav
+			class="flex h-full min-h-0 flex-col"
+			aria-label={m.nav_main()}
+			data-sveltekit-preload-data="hover"
+		>
 			<div class={appShell().brandbar()}>
 				<Logo variant="lockup" size="sm" />
 			</div>

@@ -36,14 +36,15 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		? await Promise.all([listQueues(user), listPeople(user.organisationId)])
 		: [[], []];
 
-	// The viewer reached this ticket through a scoped read, so what is linked to
-	// it is read on that footing; `relatedTo` scopes the other side of each link.
-	const related = await relatedTo(user, { kind: 'ticket', id: found.value.id });
-
 	return {
 		ticket: found.value,
+		// Thread stays awaited — it's the page's point (#89's streaming note).
 		thread: thread.value,
-		related,
+		// Unawaited (#89): the viewer reached this ticket through a scoped
+		// read, so what is linked to it is read on that same footing;
+		// `relatedTo` scopes the other side of each link. Streams in behind
+		// `RelatedRecords` while the rest of the page is already interactive.
+		related: relatedTo(user, { kind: 'ticket', id: found.value.id }),
 		canManage,
 		canInternal: can(user, 'tickets.comment.internal'),
 		nextStatuses: nextStatuses(found.value.status),

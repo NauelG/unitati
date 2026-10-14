@@ -94,7 +94,7 @@
 		</AssetFields>
 
 		<div class="flex items-center gap-[var(--space-3)]">
-			<Button type="submit" size="lg" disabled={$submitting}>
+			<Button type="submit" size="lg" busy={$submitting}>
 				{$submitting ? m.form_saving() : m.asset_form_submit_new()}
 			</Button>
 			<Button href="/assets" variant="ghost" size="lg">{m.form_cancel()}</Button>
@@ -138,7 +138,7 @@
 						required
 					/>
 
-					<Button type="submit" variant="secondary" disabled={$modelSubmitting}>
+					<Button type="submit" variant="secondary" busy={$modelSubmitting}>
 						{m.model_form_submit()}
 					</Button>
 				</form>

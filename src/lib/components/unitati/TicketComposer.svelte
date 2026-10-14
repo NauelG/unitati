@@ -37,7 +37,7 @@
 
 <script lang="ts">
 	import Paperclip from '@lucide/svelte/icons/paperclip';
-	import { enhance } from '$app/forms';
+	import { optimisticEnhance } from '#lib/optimistic.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import Button from './Button.svelte';
 
@@ -50,9 +50,24 @@
 		error?: string;
 		placeholder?: string;
 		class?: string;
+		/**
+		 * Perceived speed (#89): called the instant this form submits, so the
+		 * caller can append a pending copy of the message to its own thread
+		 * mirror. Returns the cleanup that removes it again — this component
+		 * calls that cleanup itself on `failure`/`error`; a reconciled success
+		 * removes it by replacing `items` with the server's own list instead.
+		 */
+		onOptimisticSend?: (formData: FormData) => () => void;
 	}
 
-	let { action, allowInternal = false, error, placeholder, class: className }: Props = $props();
+	let {
+		action,
+		allowInternal = false,
+		error,
+		placeholder,
+		class: className,
+		onOptimisticSend
+	}: Props = $props();
 
 	let internal = $state(false);
 	let body = $state('');
@@ -75,12 +90,22 @@
 	{action}
 	enctype="multipart/form-data"
 	class={styles.root({ class: className })}
-	use:enhance={() =>
-		async ({ update }) => {
-			await update();
-			body = '';
-			internal = false;
-		}}
+	use:optimisticEnhance={(formData) => {
+		const previousBody = body;
+		const previousInternal = internal;
+		const removePending = onOptimisticSend?.(formData);
+		// The box empties the instant the message is "sent" — reconciling on
+		// success (`update()` inside `optimisticEnhance`) never has to touch
+		// it again, so there is no second clear racing a keystroke the
+		// visitor already made in the next message.
+		body = '';
+		internal = false;
+		return () => {
+			body = previousBody;
+			internal = previousInternal;
+			removePending?.();
+		};
+	}}
 >
 	<textarea
 		name="body"

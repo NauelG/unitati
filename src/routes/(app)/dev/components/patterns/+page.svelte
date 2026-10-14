@@ -70,9 +70,8 @@
 
 	/**
 	 * The feedback decision table #99 asks for: which of the taxonomy's pieces
-	 * answers which situation. #89's toast row is a placeholder — the row
-	 * exists so the table is complete, but the component behind it is not
-	 * built here.
+	 * answers which situation. The toast row shipped in #89 — `svelte-sonner`,
+	 * vendored at `ui/sonner`, mounted once in `(app)/+layout.svelte`.
 	 */
 	const FEEDBACK_TABLE: FeedbackRule[] = [
 		{
@@ -97,8 +96,8 @@
 		},
 		{
 			situation: 'Éxito/fallo puntual de una acción de red',
-			use: 'Toast (#89, todavía sin construir)',
-			why: 'Transitorio por definición: ni Alert ni ConfirmDialog se quedan ni desaparecen solos.'
+			use: 'toast.error (svelte-sonner)',
+			why: 'Transitorio por definición: ni Alert ni ConfirmDialog se quedan ni desaparecen solos. Éxito es silencioso por defecto (#89): solo el rollback de una mutación optimista anuncia con toast.'
 		},
 		{
 			situation: 'Guardar, asignar, filtrar — cualquier interacción rutinaria',
@@ -152,12 +151,109 @@
 		},
 		{
 			title: 'Alert vs ConfirmDialog vs Toast',
-			body: 'Tres piezas distintas de la misma taxonomía de feedback (#99), nunca intercambiables: Alert para lo que se queda en contexto, ConfirmDialog para lo que pide una decisión antes de una consecuencia irreversible, Toast (#89, todavía sin construir) para lo transitorio. La tabla de abajo es la fuente de verdad — RelatedRecords (desvincular) y el catálogo de Categorías/Fabricantes (eliminar) ya usan ConfirmDialog; service-desk/new ya usa Alert para su error de formulario.',
+			body: 'Tres piezas distintas de la misma taxonomía de feedback (#99), nunca intercambiables: Alert para lo que se queda en contexto, ConfirmDialog para lo que pide una decisión antes de una consecuencia irreversible, Toast (svelte-sonner, #89) para lo transitorio. La tabla de abajo es la fuente de verdad — RelatedRecords (desvincular) y el catálogo de Categorías/Fabricantes (eliminar) ya usan ConfirmDialog; service-desk/new ya usa Alert para su error de formulario.',
 			links: [
 				{ id: 'alert', label: 'Alert' },
 				{ id: 'confirm-dialog', label: 'ConfirmDialog' },
 				{ id: 'related-records', label: 'RelatedRecords' }
 			]
+		},
+		{
+			title: 'Loading & feedback: skeleton, busy y mutación optimista',
+			body: 'Perceived speed (#89), tres piezas: Skeleton (y sus variantes compuestas) para la mitad streamed de una ficha — el rail de historial/relacionados detrás de un {#await}, dimensionado exacto al contenido real para CLS 0. Button busy para un envío cuyo éxito navega (crear, iniciar sesión) y por tanto no tiene valor local que voltear. optimisticEnhance (#lib/optimistic.ts) para todo lo demás: aplica el cambio a un $state local en el instante del envío, revierte al snapshot previo y muestra un toast.error en failure/error — éxito no anuncia nada, el valor optimista ya coincidía. La tabla de abajo clasifica los formularios reales de la app.',
+			links: [
+				{ id: 'skeleton', label: 'Skeleton' },
+				{ id: 'data-table-skeleton', label: 'DataTableSkeleton' },
+				{ id: 'timeline-skeleton', label: 'TimelineSkeleton' },
+				{ id: 'thread-skeleton', label: 'ThreadSkeleton' },
+				{ id: 'button', label: 'Button' }
+			]
+		}
+	];
+
+	interface FormClassification {
+		form: string;
+		treatment: 'Optimista' | 'Busy-button';
+		why: string;
+	}
+
+	/**
+	 * The "Done when" classification table (#89): every mutation form in the
+	 * app, optimistic or busy-button, with the one-line reason. Optimistic
+	 * when there is a local value to flip and roll back; busy-button when
+	 * success navigates away (nothing local to flip) or the form's own
+	 * inline error display needs the dialog to stay open on failure.
+	 */
+	const FORM_CLASSIFICATION_TABLE: FormClassification[] = [
+		{
+			form: 'Ficha de activo — asignar custodia',
+			treatment: 'Optimista',
+			why: 'Custodia se muestra al instante; revierte y toastea en failure/error.'
+		},
+		{
+			form: 'Ficha de activo — devolver custodia',
+			treatment: 'Optimista',
+			why: 'Igual que asignar, sin campos que leer del envío.'
+		},
+		{
+			form: 'Ficha de activo — cambiar estado',
+			treatment: 'Optimista',
+			why: 'El criterio explícito del issue: el StatusBadge cambia al instante.'
+		},
+		{
+			form: 'Ficha de activo — cambiar ubicación',
+			treatment: 'Optimista',
+			why: 'Mismo patrón que estado, sobre localCustodianName/Id.'
+		},
+		{
+			form: 'Ficha de activo — añadir nota',
+			treatment: 'Optimista',
+			why: 'Sin valor para reflejar aparte del propio campo: vaciarlo es el feedback; revertir restaura el texto.'
+		},
+		{
+			form: 'Ficha de ticket — cambiar estado/prioridad/asignado/cola',
+			treatment: 'Optimista',
+			why: 'Cuatro espejos locales (localStatus, localPriority, localAssignee*, localQueue*), mismo patrón que activo.'
+		},
+		{
+			form: 'Ficha de ticket — desvincular activo (RelatedRecords)',
+			treatment: 'Busy-button',
+			why: 'ConfirmDialog con pending ya es el feedback correcto para una consecuencia irreversible — fuera del scope de #89, taxonomía de #99.'
+		},
+		{
+			form: 'TicketComposer — responder/nota interna',
+			treatment: 'Optimista',
+			why: 'El mensaje aparece en el hilo al instante, marcado pending (PendingThreadItem); se quita en reconcile o en rollback.'
+		},
+		{
+			form: 'Crear activo / Crear modelo inline',
+			treatment: 'Busy-button',
+			why: 'El éxito navega a la ficha nueva (o rellena un select recién creado) — nada local que voltear.'
+		},
+		{
+			form: 'Editar activo (ficha completa y Sheet contextual)',
+			treatment: 'Busy-button',
+			why: 'Formulario de muchos campos con validación por campo — ya usaba disabled+texto; ahora usa el punto-spinner.'
+		},
+		{
+			form: 'Crear ticket (agente y portal)',
+			treatment: 'Busy-button',
+			why: 'El éxito navega al ticket nuevo, con adjuntos multipart.'
+		},
+		{
+			form: 'Iniciar sesión / configuración inicial',
+			treatment: 'Busy-button',
+			why: 'El éxito navega fuera de la pantalla de autenticación.'
+		},
+		{
+			form: 'Catálogo (fabricantes, categorías, modelos, colas) — crear/renombrar',
+			treatment: 'Busy-button',
+			why: 'El diálogo debe quedarse abierto para mostrar el error de validación junto al campo; un cierre optimista lo ocultaría detrás de un toast.'
+		},
+		{
+			form: 'Catálogo — eliminar fila',
+			treatment: 'Busy-button',
+			why: 'ConfirmDialog + pending, misma razón que desvincular un activo.'
 		}
 	];
 
@@ -315,6 +411,29 @@
 									<td class="px-[var(--space-3)] py-2">{rule.situation}</td>
 									<td class="px-[var(--space-3)] py-2 font-medium">{rule.use}</td>
 									<td class="px-[var(--space-3)] py-2 text-[var(--ink-muted)]">{rule.why}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
+
+			{#if pattern.title === 'Loading & feedback: skeleton, busy y mutación optimista'}
+				<div class="mt-[var(--space-4)] overflow-x-auto">
+					<table class="ut-table w-full text-sm">
+						<thead>
+							<tr>
+								<th class="px-[var(--space-3)] py-2 text-left">Formulario</th>
+								<th class="px-[var(--space-3)] py-2 text-left">Tratamiento</th>
+								<th class="px-[var(--space-3)] py-2 text-left">Por qué</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each FORM_CLASSIFICATION_TABLE as row (row.form)}
+								<tr>
+									<td class="px-[var(--space-3)] py-2">{row.form}</td>
+									<td class="px-[var(--space-3)] py-2 font-medium">{row.treatment}</td>
+									<td class="px-[var(--space-3)] py-2 text-[var(--ink-muted)]">{row.why}</td>
 								</tr>
 							{/each}
 						</tbody>

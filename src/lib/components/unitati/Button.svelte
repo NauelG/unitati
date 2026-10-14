@@ -67,9 +67,20 @@
 	 * it lives here, and `href` is what chooses the element — a link dressed as a
 	 * button by hand ends up with the wrong semantics for a keyboard or a screen
 	 * reader.
+	 *
+	 * `busy` only exists on the button shape (#89): a navigating link has
+	 * nothing to be "pending" about until the page it points to has already
+	 * changed, and a `<form>` whose success navigates is the one case with no
+	 * local value to flip optimistically — the submit button's own pending
+	 * state (spinner-dot + disabled, spec `.ut-btn-busy`) is the whole
+	 * feedback. The caller passes its own `use:enhance` `submitting` store.
 	 */
 	type Props =
-		| (Common & Omit<HTMLButtonAttributes, 'class' | 'children'> & { href?: undefined })
+		| (Common &
+				Omit<HTMLButtonAttributes, 'class' | 'children'> & {
+					href?: undefined;
+					busy?: boolean;
+				})
 		| (Common & Omit<HTMLAnchorAttributes, 'class' | 'children'> & { href: string });
 
 	let {
@@ -90,7 +101,14 @@
 		{@render children()}
 	</a>
 {:else}
-	<button class={classes} {...rest as HTMLButtonAttributes}>
+	{@const { busy, disabled, ...buttonRest } = rest as HTMLButtonAttributes & { busy?: boolean }}
+	<button class={classes} disabled={busy || disabled} aria-busy={busy || undefined} {...buttonRest}>
+		{#if busy}
+			<span
+				class="size-3 shrink-0 animate-[ut-spin_700ms_linear_infinite] rounded-[var(--radius-full)] border-2 border-current border-r-transparent"
+				aria-hidden="true"
+			></span>
+		{/if}
 		{@render children()}
 	</button>
 {/if}

@@ -65,7 +65,7 @@
 						<p class="text-sm text-[var(--danger)]" role="alert">{$message}</p>
 					{/if}
 
-					<Button type="submit" size="lg" class="w-full" disabled={$submitting}>
+					<Button type="submit" size="lg" class="w-full" busy={$submitting}>
 						{$submitting ? m.login_submitting() : m.login_submit()}
 					</Button>
 				</form>

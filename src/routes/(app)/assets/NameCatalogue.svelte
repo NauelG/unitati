@@ -56,6 +56,13 @@
 	}
 
 	const dialogFailure = $derived(dialog.failureFrom(result));
+	/**
+	 * Create/rename keep the dialog open on failure to show `dialogFailure`
+	 * inline — an optimistic close-then-rollback would hide that message
+	 * behind a toast instead of next to the field it is about. `Button`'s
+	 * `busy` prop is the feedback while the request is in flight (#89).
+	 */
+	let saving = $state(false);
 
 	/** The entry asking "are you sure?", if any: one at a time. */
 	let confirmingId: string | null = $state(null);
@@ -151,8 +158,10 @@
 			method="POST"
 			action={dialog.editingId ? '?/rename' : '?/create'}
 			use:enhance={() => {
+				saving = true;
 				return async ({ result: submitResult, update }) => {
 					await update();
+					saving = false;
 					if (submitResult.type === 'success') dialog.close();
 				};
 			}}
@@ -176,7 +185,7 @@
 				<Button type="button" variant="ghost" size="sm" onclick={dialog.close}>
 					{m.form_cancel()}
 				</Button>
-				<Button type="submit" size="sm">{m.catalogue_save()}</Button>
+				<Button type="submit" size="sm" busy={saving}>{m.catalogue_save()}</Button>
 			</div>
 		</form>
 	</Dialog>

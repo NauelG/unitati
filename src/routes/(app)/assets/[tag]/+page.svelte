@@ -1,20 +1,22 @@
 <script lang="ts">
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import { untrack } from 'svelte';
-	import { enhance } from '$app/forms';
 	import { get } from 'svelte/store';
 	import { superForm } from 'sveltekit-superforms';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
+	import { ASSET_STATES } from '#lib/domain/status.js';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import { toViewTransitionName } from '#lib/motion.js';
+	import { optimisticEnhance } from '#lib/optimistic.js';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import Sheet from '#lib/components/unitati/Sheet.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
+	import TimelineSkeleton from '#lib/components/unitati/TimelineSkeleton.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
@@ -32,6 +34,39 @@
 	const editModelOptions = $derived(
 		options(data.editModels, (entry) => `${entry.manufacturerName} · ${entry.name}`)
 	);
+
+	/**
+	 * Optimistic mirrors (#89): each of these five action forms flips one of
+	 * these on submit, before the server answers, and rolls back to the
+	 * snapshot taken right before the flip on `failure`/`error` — see
+	 * `optimisticEnhance` (`#lib/optimistic.ts`). Resynced from the authoritative
+	 * `asset` whenever it changes (a reconciled success, a navigation to a
+	 * different tag) so a stale optimistic value never survives past the data
+	 * that actually backs it.
+	 */
+	// `asset` is `FullAssetView | SharedAssetView`: everything below only
+	// renders inside an existing `visibility === 'full'` guard, but the
+	// mirrors still need an initial value of the right type for the
+	// `visibility === 'shared'` branch, which never displays them. `state`
+	// alone isn't nullable, so its placeholder is the first real `AssetState`
+	// rather than `null`.
+	let localState = $state(asset.visibility === 'full' ? asset.state : ASSET_STATES[0]);
+	let localLocationId = $state(asset.visibility === 'full' ? asset.locationId : null);
+	let localLocationName = $state(asset.locationName);
+	let localCustodianPersonId = $state(asset.visibility === 'full' ? asset.custodianPersonId : null);
+	let localCustodianName = $state(asset.visibility === 'full' ? asset.custodianName : null);
+	/** `addNote` has no display value of its own to flip — clearing the box is the feedback; see the form below. */
+	let noteDraft = $state('');
+
+	$effect(() => {
+		if (asset.visibility === 'full') {
+			localState = asset.state;
+			localLocationId = asset.locationId;
+			localCustodianPersonId = asset.custodianPersonId;
+			localCustodianName = asset.custodianName;
+		}
+		localLocationName = asset.locationName;
+	});
 
 	/**
 	 * ADR 0020: a `Sheet` contextual edit over the same `/assets/[tag]/edit`
@@ -133,7 +168,7 @@
 
 	{#if asset.visibility === 'full'}
 		<div class="mt-[var(--space-2)] flex items-center gap-[var(--space-2)]">
-			<StatusBadge status={asset.state} />
+			<StatusBadge status={localState} />
 			{#if asset.shared}
 				<span class="text-xs font-medium text-[var(--ink-muted)]">{m.assets_shared()}</span>
 			{/if}
@@ -151,9 +186,9 @@
 					{#snippet manufacturer()}{asset.manufacturerName}{/snippet}
 					{#snippet category()}{asset.categoryName}{/snippet}
 					{#snippet custodian()}
-						{asset.custodianName ?? m.assets_no_custodian()}
+						{localCustodianName ?? m.assets_no_custodian()}
 					{/snippet}
-					{#snippet location()}{asset.locationName ?? m.assets_no_location()}{/snippet}
+					{#snippet location()}{localLocationName ?? m.assets_no_location()}{/snippet}
 					{#snippet shared()}
 						{asset.shared ? m.asset_detail_yes() : m.asset_detail_no()}
 					{/snippet}
@@ -166,7 +201,7 @@
 					{@render detail(m.asset_detail_location(), location)}
 					{@render detail(m.asset_detail_shared(), shared)}
 				{:else}
-					{#snippet location()}{asset.locationName ?? m.assets_no_location()}{/snippet}
+					{#snippet location()}{localLocationName ?? m.assets_no_location()}{/snippet}
 					{@render detail(m.asset_detail_location(), location)}
 				{/if}
 			</dl>
@@ -183,15 +218,28 @@
 				{#if data.canCheckout}
 					<WorkPanel heading={m.action_custody_title()}>
 						<p class="text-sm text-[var(--ink-muted)]">
-							{asset.custodianName
-								? m.action_custody_held({ name: asset.custodianName })
+							{localCustodianName
+								? m.action_custody_held({ name: localCustodianName })
 								: m.action_custody_free()}
 						</p>
 
 						<form
 							method="POST"
 							action="?/assignCustody"
-							use:enhance
+							use:optimisticEnhance={(formData) => {
+								const personId = formData.get('personId');
+								const person = data.people.find((candidate) => candidate.id === personId);
+								const previousId = localCustodianPersonId;
+								const previousName = localCustodianName;
+								if (typeof personId === 'string' && person) {
+									localCustodianPersonId = personId;
+									localCustodianName = person.fullName;
+								}
+								return () => {
+									localCustodianPersonId = previousId;
+									localCustodianName = previousName;
+								};
+							}}
 							class="mt-[var(--space-4)] space-y-[var(--space-3)]"
 						>
 							<SelectField
@@ -208,8 +256,22 @@
 							</Button>
 						</form>
 
-						{#if asset.custodianPersonId}
-							<form method="POST" action="?/returnCustody" use:enhance class="mt-[var(--space-3)]">
+						{#if localCustodianPersonId}
+							<form
+								method="POST"
+								action="?/returnCustody"
+								use:optimisticEnhance={() => {
+									const previousId = localCustodianPersonId;
+									const previousName = localCustodianName;
+									localCustodianPersonId = null;
+									localCustodianName = null;
+									return () => {
+										localCustodianPersonId = previousId;
+										localCustodianName = previousName;
+									};
+								}}
+								class="mt-[var(--space-3)]"
+							>
 								{@render failure('returnCustody')}
 								<Button type="submit" variant="ghost" size="sm">
 									{m.action_custody_return()}
@@ -221,12 +283,24 @@
 
 				{#if data.canManage}
 					<WorkPanel heading={m.action_state_title()}>
-						<form method="POST" action="?/changeState" use:enhance class="space-y-[var(--space-3)]">
+						<form
+							method="POST"
+							action="?/changeState"
+							use:optimisticEnhance={(formData) => {
+								const next = formData.get('state');
+								const previous = localState;
+								if (typeof next === 'string') localState = next as typeof localState;
+								return () => {
+									localState = previous;
+								};
+							}}
+							class="space-y-[var(--space-3)]"
+						>
 							<SelectField
 								label={m.asset_detail_state()}
 								name="state"
 								options={stateChoices}
-								value={asset.state}
+								value={localState}
 							/>
 							{@render failure('changeState')}
 							<Button type="submit" variant="secondary" size="sm">
@@ -239,7 +313,21 @@
 						<form
 							method="POST"
 							action="?/changeLocation"
-							use:enhance
+							use:optimisticEnhance={(formData) => {
+								const next = formData.get('locationId');
+								const previousId = localLocationId;
+								const previousName = localLocationName;
+								const nextId = typeof next === 'string' && next !== '' ? next : null;
+								localLocationId = nextId;
+								localLocationName = nextId
+									? (data.locations.find((candidate) => candidate.id === nextId)?.name ??
+										previousName)
+									: null;
+								return () => {
+									localLocationId = previousId;
+									localLocationName = previousName;
+								};
+							}}
 							class="space-y-[var(--space-3)]"
 						>
 							<SelectField
@@ -247,7 +335,7 @@
 								name="locationId"
 								placeholder={m.asset_form_no_location()}
 								options={locationOptions}
-								value={asset.locationId ?? ''}
+								value={localLocationId ?? ''}
 							/>
 							{@render failure('changeLocation')}
 							<Button type="submit" variant="secondary" size="sm">
@@ -257,8 +345,24 @@
 					</WorkPanel>
 
 					<WorkPanel heading={m.action_note_title()}>
-						<form method="POST" action="?/addNote" use:enhance class="space-y-[var(--space-3)]">
-							<Field label={m.action_note_label()} name="text" required />
+						<form
+							method="POST"
+							action="?/addNote"
+							use:optimisticEnhance={(formData) => {
+								const text = formData.get('text');
+								const previous = noteDraft;
+								// Clearing the box is the whole feedback: the note itself
+								// joins the activity timeline on reconcile, same as any
+								// other entry there — there is no second local copy of it
+								// to flip.
+								noteDraft = '';
+								return () => {
+									noteDraft = typeof text === 'string' ? text : previous;
+								};
+							}}
+							class="space-y-[var(--space-3)]"
+						>
+							<Field label={m.action_note_label()} name="text" required bind:value={noteDraft} />
 							{@render failure('addNote')}
 							<Button type="submit" variant="secondary" size="sm">
 								{m.action_note_submit()}
@@ -271,26 +375,38 @@
 	</div>
 
 	{#snippet side()}
-		{#if data.timeline}
-			{#snippet timelineTag()}
-				<span class="font-mono text-xs text-[var(--ink-muted)]">{asset.assetTag}</span>
-			{/snippet}
+		{#snippet timelineTag()}
+			<span class="font-mono text-xs text-[var(--ink-muted)]">{asset.assetTag}</span>
+		{/snippet}
+		<!--
+			Streamed (#89): the timeline/related-tickets read is the slowest half
+			of this page and nothing else on it depends on the result, so it
+			paints after the header and the action panels above, behind a
+			skeleton sized to match the real rail exactly (no CLS when it swaps).
+		-->
+		{#await data.timelineRail}
 			<WorkPanel heading={m.timeline_title()} actions={timelineTag}>
-				{#if data.recentTickets > 0}
-					<p class="text-sm font-medium text-[var(--ink)]">
-						{data.recentTickets === 1
-							? m.asset_tickets_recent_one({ months: data.recentMonths })
-							: m.asset_tickets_recent_other({
-									count: data.recentTickets,
-									months: data.recentMonths
-								})}
-					</p>
-				{/if}
-				<div class={data.recentTickets > 0 ? 'mt-[var(--space-4)]' : ''}>
-					<AssetTimeline items={data.timeline} />
-				</div>
+				<TimelineSkeleton />
 			</WorkPanel>
-		{/if}
+		{:then rail}
+			{#if rail.timeline}
+				<WorkPanel heading={m.timeline_title()} actions={timelineTag}>
+					{#if rail.recentTickets > 0}
+						<p class="text-sm font-medium text-[var(--ink)]">
+							{rail.recentTickets === 1
+								? m.asset_tickets_recent_one({ months: data.recentMonths })
+								: m.asset_tickets_recent_other({
+										count: rail.recentTickets,
+										months: data.recentMonths
+									})}
+						</p>
+					{/if}
+					<div class={rail.recentTickets > 0 ? 'mt-[var(--space-4)]' : ''}>
+						<AssetTimeline items={rail.timeline} />
+					</div>
+				</WorkPanel>
+			{/if}
+		{/await}
 	{/snippet}
 </PageLayout>
 

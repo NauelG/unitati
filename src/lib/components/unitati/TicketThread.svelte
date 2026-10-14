@@ -9,6 +9,22 @@
 	 * whatever sits behind the thread. An event is one muted line, because it is
 	 * context, not conversation.
 	 */
+	/**
+	 * The optimistic reply (#89): shaped like the `comment` branch of
+	 * `ThreadItem` minus everything the server alone can assign (`id` from the
+	 * database, `attachments` from the upload it hasn't finished yet). The
+	 * caller (a record detail page) appends one of these the instant
+	 * `TicketComposer` submits and drops it again once the real comment
+	 * reconciles in or the submission fails.
+	 */
+	export interface PendingThreadItem {
+		kind: 'pending';
+		key: string;
+		authorName: string | null;
+		visibility: 'public' | 'internal';
+		body: string;
+	}
+
 	export const thread = tv({
 		slots: {
 			list: 'm-0 flex list-none flex-col gap-[var(--space-4)] p-0',
@@ -52,7 +68,7 @@
 
 	interface Props {
 		/** Oldest first, as `ticketThread` returns them. The component never reorders. */
-		items: ThreadItem[];
+		items: (ThreadItem | PendingThreadItem)[];
 		/** Where an attachment is served from; staff and portal have different routes. */
 		attachmentHref: (attachmentId: string) => string;
 		class?: string;
@@ -89,7 +105,7 @@
 	<p class={styles.empty({ class: className })}>{m.timeline_empty()}</p>
 {:else}
 	<ol class={styles.list({ class: className })} aria-label={m.thread_title()}>
-		{#each items as item (item.kind === 'comment' ? item.id : `${item.entry.id}`)}
+		{#each items as item (item.kind === 'comment' ? item.id : item.kind === 'pending' ? item.key : `${item.entry.id}`)}
 			{#if item.kind === 'event'}
 				{@const asset = linkedAsset(item.entry)}
 				<li class={styles.event()}>
@@ -100,6 +116,28 @@
 					{#if item.entry.actorName}· {item.entry.actorName}{/if}
 					·
 					<time datetime={item.at.toISOString()}>{formatter.format(item.at)}</time>
+				</li>
+			{:else if item.kind === 'pending'}
+				<!-- Perceived speed (#89): the reply the visitor just sent, before the
+				     server has echoed it back. Same card, dimmed, with `aria-busy`
+				     rather than a second visual language for "this isn't real yet". -->
+				<li class={styles.message()} aria-busy="true">
+					<Avatar name={item.authorName ?? '?'} />
+					<div
+						class={styles.card({ internal: item.visibility === 'internal' })}
+						style:opacity="0.6"
+					>
+						<div class={styles.head()}>
+							<span class={styles.author()}>{item.authorName ?? '—'}</span>
+							{#if item.visibility === 'internal'}
+								<span class={badge({ tone: 'warning', plain: true })}>
+									{m.thread_internal_badge()}
+								</span>
+							{/if}
+							<span class={styles.time()}>{m.composer_pending()}</span>
+						</div>
+						<p class={styles.body()}>{item.body}</p>
+					</div>
 				</li>
 			{:else}
 				<li class={styles.message()}>
