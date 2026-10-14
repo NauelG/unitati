@@ -27,7 +27,8 @@ describe('writing to a task record', () => {
 		for (const run of [
 			() => actions.update(actionEvent(employee, { title: 'Nope' }, params)),
 			() => actions.changeState(actionEvent(employee, { stateId: states.completed.id }, params)),
-			() => actions.setAssignees(actionEvent(employee, { personIds: [] }, params))
+			() => actions.setAssignees(actionEvent(employee, { personIds: [] }, params)),
+			() => actions.moveToProject(actionEvent(employee, { projectId: crypto.randomUUID() }, params))
 		]) {
 			expect((await outcomeOf(run)).thrown?.status).toBe(403);
 		}
@@ -43,6 +44,23 @@ describe('writing to a task record', () => {
 		const task = await getTask(technician, params.taskTag);
 		expect(returned).toMatchObject({ action: 'changeState' });
 		expect(task.ok && task.value.stateGroup).toBe('completed');
+	});
+
+	it('moves the task to another project and refuses the one it is in', async () => {
+		const { technician, organisation, params } = await setup();
+		const other = await createProjectRow(organisation.id, { name: 'Warehouse' });
+
+		const moved = await outcomeOf(() =>
+			actions.moveToProject(actionEvent(technician, { projectId: other.id }, params))
+		);
+		const task = await getTask(technician, params.taskTag);
+		expect(moved.returned).toMatchObject({ action: 'moveToProject' });
+		expect(task.ok && task.value.projectId).toBe(other.id);
+
+		const same = await outcomeOf(() =>
+			actions.moveToProject(actionEvent(technician, { projectId: other.id }, params))
+		);
+		expect(same.returned?.status).toBe(400);
 	});
 
 	it('refuses a state that is not in the catalogue', async () => {

@@ -11,8 +11,10 @@ import {
 	orNull,
 	rejected,
 	getTask,
+	listProjects,
 	listStates,
 	moveTask,
+	moveTaskToProject,
 	requireProjectRead,
 	requireProjectWrite,
 	setAssignees,
@@ -20,6 +22,7 @@ import {
 	updateTaskInput,
 	type AssignFailure,
 	type MoveTaskFailure,
+	type MoveTaskToProjectFailure,
 	type UpdateTaskFailure
 } from '#lib/server/projects/index.js';
 import type { Actions, PageServerLoad } from './$types';
@@ -34,15 +37,19 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	// An archived project is read-only: its tasks render no write affordance.
 	const canManage = can(user, 'projects.manage') && !task.projectArchived;
 
-	const [states, people] = canManage
-		? await Promise.all([listStates(user), listPeople(user.organisationId)])
-		: [[], []];
+	const [states, people, projects] = canManage
+		? await Promise.all([listStates(user), listPeople(user.organisationId), listProjects(user)])
+		: [[], [], []];
 
 	return {
 		task,
 		canManage,
 		states: states.map(({ id, name, group }) => ({ id, name, group })),
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
+		// The destinations of "Mover a proyecto": active, in scope, and not this one.
+		projects: projects
+			.filter((project) => project.id !== task.projectId)
+			.map(({ id, projectTag, name }) => ({ id, projectTag, name })),
 		// Streamed: nothing above waits for the history.
 		timeline: listActivity({ organisationId: user.organisationId, target: { taskId: task.id } })
 	};
@@ -67,6 +74,15 @@ const moveFailures: Record<Exclude<MoveTaskFailure, 'task_not_found'>, () => str
 	project_archived: m.project_error_archived,
 	state_not_found: m.task_error_state_missing,
 	invalid_neighbours: m.action_error_invalid
+};
+
+const moveToProjectFailures: Record<
+	Exclude<MoveTaskToProjectFailure, 'task_not_found'>,
+	() => string
+> = {
+	project_archived: m.project_error_archived,
+	same_project: m.task_error_same_project,
+	project_not_found: m.task_error_project_missing
 };
 
 const assignFailures: Record<Exclude<AssignFailure, 'task_not_found'>, () => string> = {
@@ -121,6 +137,23 @@ export const actions: Actions = {
 		}
 
 		return { action: 'changeState' as const };
+	},
+
+	moveToProject: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const fields = await fieldsOf(request);
+
+		const projectId = z.uuid().safeParse(fields.get('projectId'));
+		if (!projectId.success) return rejected('moveToProject', m.action_error_invalid(), 'projectId');
+
+		const task = await targetOf(user, params.taskTag);
+		const outcome = await moveTaskToProject(user, task.id, projectId.data);
+		if (!outcome.ok) {
+			if (outcome.error === 'task_not_found') error(404, 'Not found');
+			return rejected('moveToProject', moveToProjectFailures[outcome.error](), 'projectId');
+		}
+
+		return { action: 'moveToProject' as const };
 	},
 
 	setAssignees: async ({ request, locals, params }) => {

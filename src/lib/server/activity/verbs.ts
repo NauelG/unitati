@@ -36,7 +36,8 @@ export const ACTIVITY_VERBS = [
 	'task.state.changed',
 	'task.assigned',
 	'task.unassigned',
-	'task.due.changed'
+	'task.due.changed',
+	'task.project.changed'
 ] as const;
 
 export type ActivityVerb = (typeof ACTIVITY_VERBS)[number];

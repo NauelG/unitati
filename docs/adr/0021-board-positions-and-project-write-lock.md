@@ -47,3 +47,15 @@ what stops two simultaneous drops from corrupting it, and what code may assume a
   needs a recursive query and a broken link corrupts the whole column.
 - **Optimistic concurrency instead of a lock.** Retrying a rejected drop is a UX the board would
   have to build; the lock costs nothing at this scale.
+
+## Addendum (#120): a task may change project
+
+A write that touches two projects locks both in one statement ordered by `id`. A task may change
+project, so `lockTask` re-checks the task's project after taking the lock.
+
+Without the fixed order, two opposite moves (A→B and B→A) each hold one row and wait for the
+other. Without the re-check, a write that read "the task is in A" and queued behind a move out of A
+would run against a task that is no longer there, holding the wrong project's lock. When the
+re-check fails `lockTask` retries once with the new owner and then reports `task_not_found`. A row
+lock cannot be released early, so the stale one is kept until the transaction ends; if an opposite
+move races that retry, Postgres detects the cycle and aborts one of the two rather than hanging.

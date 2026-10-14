@@ -1,10 +1,12 @@
 <script lang="ts">
+	import ArrowRightLeft from '@lucide/svelte/icons/arrow-right-left';
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import { tick } from 'svelte';
 	import { enhance } from '$app/forms';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import MoveTaskDialog from '#lib/components/unitati/MoveTaskDialog.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
@@ -18,6 +20,7 @@
 	import { formatDay } from '#lib/format-date.js';
 	import { toViewTransitionName } from '#lib/motion.js';
 	import { optimisticEnhance } from '#lib/optimistic.js';
+	import { MOVE_TASK_EVENT, paletteContext } from '#lib/palette-context.svelte.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
@@ -47,6 +50,20 @@
 	});
 
 	let editOpen = $state(false);
+	let moveOpen = $state(false);
+
+	// The palette offers "mover tarea" only while this record can be moved, and
+	// opens this same dialog (#120).
+	$effect(() => {
+		if (!data.canManage) return;
+		paletteContext.movableTaskTag = data.task.taskTag;
+		const open = () => (moveOpen = true);
+		window.addEventListener(MOVE_TASK_EVENT, open);
+		return () => {
+			window.removeEventListener(MOVE_TASK_EVENT, open);
+			paletteContext.movableTaskTag = null;
+		};
+	});
 	let saving = $state(false);
 
 	const stateOptions = $derived(
@@ -95,6 +112,10 @@
 				<Button variant="secondary" onclick={() => (editOpen = true)}>
 					<Pencil class="size-4" aria-hidden="true" />
 					{m.task_detail_edit()}
+				</Button>
+				<Button variant="secondary" onclick={() => (moveOpen = true)}>
+					<ArrowRightLeft class="size-4" aria-hidden="true" />
+					{m.task_move_action()}
 				</Button>
 			{/if}
 		{/snippet}
@@ -226,6 +247,13 @@
 </PageLayout>
 
 {#if data.canManage}
+	<MoveTaskDialog
+		open={moveOpen}
+		onOpenChange={(next) => (moveOpen = next)}
+		task={{ taskTag: task.taskTag, projectId: task.projectId }}
+		projects={data.projects}
+	/>
+
 	<Sheet
 		open={editOpen}
 		onOpenChange={(next) => (editOpen = next)}

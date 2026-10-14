@@ -2,6 +2,7 @@
 	import Archive from '@lucide/svelte/icons/archive';
 	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
+	import ArrowRightLeft from '@lucide/svelte/icons/arrow-right-left';
 	import FolderPlus from '@lucide/svelte/icons/folder-plus';
 	import ListTodo from '@lucide/svelte/icons/list-todo';
 	import Flag from '@lucide/svelte/icons/flag';
@@ -80,7 +81,8 @@
 		'task.state.changed': RefreshCw,
 		'task.assigned': UserCheck,
 		'task.unassigned': UserMinus,
-		'task.due.changed': CalendarClock
+		'task.due.changed': CalendarClock,
+		'task.project.changed': ArrowRightLeft
 	};
 </script>
 
@@ -88,7 +90,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import type { AssetTimelineItem } from '#lib/server/links/index.js';
-	import { activitySentence } from './activity.js';
+	import { activitySentence, projectChangedParts } from './activity.js';
 	import RecordRef from './RecordRef.svelte';
 	import StatusBadge from './StatusBadge.svelte';
 
@@ -152,7 +154,21 @@
 					</span>
 					<div class={styles.body()}>
 						<p class={styles.head()}>
-							{activitySentence(entry)}
+							{#if entry.verb === 'task.project.changed'}
+								{#each projectChangedParts(entry.payload) as part, index (index)}
+									{#if 'project' in part}
+										<a
+											href="/projects/{encodeURIComponent(part.project.tag)}"
+											class="font-medium hover:underline">{part.project.tag}</a
+										>
+										{part.project.name}
+									{:else}
+										{part.text}
+									{/if}
+								{/each}
+							{:else}
+								{activitySentence(entry)}
+							{/if}
 							{#if entry.actorName}
 								<span class={styles.actor()}>
 									{m.timeline_by({ name: entry.actorName })}

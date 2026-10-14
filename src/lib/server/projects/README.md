@@ -27,6 +27,10 @@ who sees what, activity, search. The routes are #123, #124 and #125.
   `1e-6` renumbers the column in the same transaction. The arithmetic is `position.ts`, pure and
   unit-tested. `before` is the task the moved one is dropped before (it ends up below), `after`
   the one it is dropped after (it ends up above).
+- **`moveTaskToProject` is the only function that changes `tasks.project_id`.** It locks both
+  projects in one statement ordered by `id` and keeps everything else about the task. Its core,
+  `reparentTask` (`reparent.ts`, not exported from `index.ts`), assumes the locks are held and
+  validates nothing, so merging projects (#61) can call it for every task in its own transaction.
 - **A state's group never changes.** No update input has a `group` key; changing it would rewrite
   what every past move into the state meant. To change group, create another state.
 - **`deleteState` is refused** while a task occupies the state, and when it would leave no state in

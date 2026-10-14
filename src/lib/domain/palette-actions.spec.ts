@@ -113,3 +113,24 @@ describe('derivePaletteActions', () => {
 		expect(idsOf(ctx({ permissions: ['assets.view'] }))).not.toContain('go-projects');
 	});
 });
+
+describe('move-task action (#120)', () => {
+	it('is offered with projects.manage while a movable task is open', () => {
+		expect(idsOf(ctx({ permissions: ['projects.manage'], movableTaskTag: 'TSK-0001' }))).toContain(
+			'move-task'
+		);
+	});
+
+	it('is absent without projects.manage', () => {
+		expect(
+			idsOf(ctx({ permissions: ['projects.view'], movableTaskTag: 'TSK-0001' }))
+		).not.toContain('move-task');
+	});
+
+	it('is absent when no task can be moved (none open, or its project is archived)', () => {
+		expect(idsOf(ctx({ permissions: ['projects.manage'], movableTaskTag: null }))).not.toContain(
+			'move-task'
+		);
+		expect(idsOf(ctx({ permissions: ['projects.manage'] }))).not.toContain('move-task');
+	});
+});

@@ -230,7 +230,12 @@ export type AssignFailure = TaskWriteFailure | 'person_not_found';
 export type MoveTaskFailure = TaskWriteFailure | 'state_not_found' | 'invalid_neighbours';
 
 /** The tasks of one board column in order, optionally leaving one out. */
-async function columnOf(tx: Transaction, projectId: string, stateId: string, except?: string) {
+export async function columnOf(
+	tx: Transaction,
+	projectId: string,
+	stateId: string,
+	except?: string
+) {
 	const rows = await tx
 		.select({ id: tasks.id, position: tasks.position })
 		.from(tasks)

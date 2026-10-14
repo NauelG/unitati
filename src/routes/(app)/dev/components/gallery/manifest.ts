@@ -486,7 +486,13 @@ export interface GalleryException {
  * scrutiny `unitati/README.md`'s old "deliberately missing" list had —
  * a reason a reviewer would accept, not "not done yet".
  */
-export const GALLERY_EXCEPTIONS: GalleryException[] = [];
+export const GALLERY_EXCEPTIONS: GalleryException[] = [
+	{
+		sourceFile: 'MoveTaskDialog.svelte',
+		reason:
+			"Bound to one record: it posts to the task record's own `moveToProject` action (#120), so it cannot render outside a task page. The generic shell is the Dialog entry."
+	}
+];
 
 export function findComponentEntry(id: string): ComponentManifestEntry | undefined {
 	return COMPONENT_MANIFEST.find((entry) => entry.id === id);

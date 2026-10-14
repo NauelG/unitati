@@ -1,10 +1,12 @@
 <script lang="ts">
+	import ArrowRightLeft from '@lucide/svelte/icons/arrow-right-left';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import Search from '@lucide/svelte/icons/search';
 	import SearchX from '@lucide/svelte/icons/search-x';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import DataTable, { type DataTableColumn } from '#lib/components/unitati/DataTable.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
+	import MoveTaskDialog from '#lib/components/unitati/MoveTaskDialog.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
@@ -23,6 +25,8 @@
 
 	let term = $derived(data.search);
 	let activeKey = $state<string | null>(null);
+	/** The row whose "Mover a proyecto" dialog is open (#120). */
+	let moving = $state<Row | null>(null);
 	const mac = isMacPlatform();
 
 	/**
@@ -137,6 +141,10 @@
 				value={row.stateId}
 			/>
 			<Button type="submit" variant="ghost" size="sm">{m.tasks_change_state()}</Button>
+			<Button type="button" variant="ghost" size="sm" onclick={() => (moving = row)}>
+				<ArrowRightLeft class="size-4" aria-hidden="true" />
+				{m.task_move_action()}
+			</Button>
 		</form>
 	{/if}
 {/snippet}
@@ -218,3 +226,14 @@
 		/>
 	</div>
 </PageLayout>
+
+{#if data.canManage && moving}
+	<MoveTaskDialog
+		open
+		onOpenChange={(next) => {
+			if (!next) moving = null;
+		}}
+		task={{ taskTag: moving.taskTag, projectId: moving.projectId }}
+		projects={data.projects}
+	/>
+{/if}

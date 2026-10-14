@@ -164,6 +164,17 @@ export const PAYLOAD_SCHEMAS = {
 	'task.due.changed': z.object({
 		from: isoDate.nullable(),
 		to: isoDate.nullable()
+	}),
+
+	// Ids for the links, tag and name as they read at the move: projects get
+	// renamed and re-tagged, and a history that rewrites itself is not a history.
+	'task.project.changed': z.object({
+		fromProjectId: z.uuid(),
+		fromProjectTag: presentName,
+		fromProjectName: presentName,
+		toProjectId: z.uuid(),
+		toProjectTag: presentName,
+		toProjectName: presentName
 	})
 } satisfies Record<ActivityVerb, z.ZodType>;
 

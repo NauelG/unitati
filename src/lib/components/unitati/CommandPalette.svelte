@@ -8,6 +8,7 @@
 	import { isProduction } from '#lib/environment.js';
 	import { formatKeys, isMacPlatform } from '#lib/keymap.js';
 	import { m } from '#lib/paraglide/messages.js';
+	import { MOVE_TASK_EVENT, paletteContext } from '#lib/palette-context.svelte.js';
 	import RecordRef from './RecordRef.svelte';
 
 	/**
@@ -54,7 +55,11 @@
 
 	function runAction(action: PaletteActionDef): void {
 		if (action.target.kind === 'navigate') go(action.target.href);
-		else assignToMe(action.target.ticketTag);
+		else if (action.target.kind === 'move-task') {
+			// The record that owns the dialog is listening (#120).
+			open = false;
+			window.dispatchEvent(new CustomEvent(MOVE_TASK_EVENT));
+		} else assignToMe(action.target.ticketTag);
 	}
 
 	/** `/service-desk/TCK-0001`, never a page one level deeper (comments, edit…). */
@@ -64,6 +69,7 @@
 		derivePaletteActions({
 			permissions,
 			ticketTag,
+			movableTaskTag: paletteContext.movableTaskTag,
 			personId,
 			isProduction: isProduction(APP_ENV)
 		})
