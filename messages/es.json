@@ -703,6 +703,8 @@
 	"board_move_to_heading": "Mover a",
 	"board_column_tasks": "{count} tareas",
 	"board_column_collapsed": "{name}, sin tareas",
+	"board_column_collapse": "Plegar {name}",
+	"board_column_expand": "Desplegar {name}",
 	"board_quick_create": "Nueva tarea en {state}",
 	"board_card_unassigned": "Sin asignar",
 	"board_card_assignees_more": "+{count}",

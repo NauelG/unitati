@@ -1,11 +1,14 @@
 <script lang="ts">
+	import ChevronsLeft from '@lucide/svelte/icons/chevrons-left';
+	import ChevronsRight from '@lucide/svelte/icons/chevrons-right';
 	import Plus from '@lucide/svelte/icons/plus';
 	import { flip } from 'svelte/animate';
 	import { dndzone, type DndEvent } from 'svelte-dnd-action';
 	import { badge } from './StatusBadge.svelte';
 	import { stateGroupBadge } from './status.js';
 	import TaskCard from './TaskCard.svelte';
-	import type { BoardState, BoardTask } from './board.js';
+	import { resolveCollapsed, type BoardState, type BoardTask } from './board.js';
+	import type { StatePreference } from '#lib/board-preference.js';
 	import { MOTION_BASE_MS, prefersReducedMotion } from '#lib/motion.js';
 	import { m } from '#lib/paraglide/messages.js';
 
@@ -16,6 +19,13 @@
 		states?: BoardState[];
 		/** Menu, drag zone and quick create exist only when true — never disabled, absent. */
 		editable?: boolean;
+		/**
+		 * The person's stored fold choice per state (#127). A state with no entry
+		 * is folded when empty. Reading it is not a write: read-only boards use it too.
+		 */
+		collapsedStates?: Record<string, StatePreference>;
+		/** The toggle in the header: the choice to store for this column. */
+		ontogglecollapse?: (stateId: string, preference: StatePreference) => void;
 		onconsider?: (items: BoardTask[], info: DndEvent<BoardTask>['info']) => void;
 		onfinalize?: (items: BoardTask[], info: DndEvent<BoardTask>['info']) => void;
 		onmove?: (taskId: string, stateId: string) => void;
@@ -27,14 +37,20 @@
 		items,
 		states = [],
 		editable = false,
+		collapsedStates = {},
+		ontogglecollapse,
 		onconsider,
 		onfinalize,
 		onmove,
 		onquickcreate
 	}: Props = $props();
 
-	/** A column with nothing in it — not even a card hovering over it mid-drag — is a strip. */
-	const collapsed = $derived(items.length === 0);
+	/**
+	 * A strip: by the person's choice, or — with none — when nothing is in it,
+	 * not even a card hovering over it mid-drag.
+	 */
+	const collapsed = $derived(resolveCollapsed(state.id, items.length, collapsedStates));
+	const bodyId = $derived(`board-column-body-${state.id}`);
 	const tone = $derived(stateGroupBadge(state.group).tone);
 	const flipDurationMs = $derived(prefersReducedMotion() ? 0 : MOTION_BASE_MS);
 </script>
@@ -56,7 +72,11 @@
 			class="min-w-0 truncate text-[13px] leading-[18px] font-semibold text-[var(--ink)] {collapsed
 				? '[writing-mode:vertical-rl]'
 				: ''}"
-			title={collapsed ? m.board_column_collapsed({ name: state.name }) : undefined}
+			title={collapsed
+				? items.length === 0
+					? m.board_column_collapsed({ name: state.name })
+					: `${state.name}, ${m.board_column_tasks({ count: items.length })}`
+				: undefined}
 		>
 			{state.name}
 		</h3>
@@ -64,8 +84,25 @@
 			{#if !collapsed}
 				<span class={badge({ tone, plain: true })}>{items.length}</span>
 			{:else}
-				<span class="text-xs text-[var(--ink-muted)] tabular-nums">0</span>
+				<span class="text-xs text-[var(--ink-muted)] tabular-nums">{items.length}</span>
 			{/if}
+			<button
+				type="button"
+				class="ut-transition-fast grid size-6 place-items-center rounded-[var(--radius-md)] text-[var(--ink-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
+				aria-label={collapsed
+					? m.board_column_expand({ name: state.name })
+					: m.board_column_collapse({ name: state.name })}
+				aria-expanded={!collapsed}
+				aria-controls={bodyId}
+				data-collapse-toggle
+				onclick={() => ontogglecollapse?.(state.id, collapsed ? 'expanded' : 'collapsed')}
+			>
+				{#if collapsed}
+					<ChevronsRight class="size-4" aria-hidden="true" />
+				{:else}
+					<ChevronsLeft class="size-4" aria-hidden="true" />
+				{/if}
+			</button>
 			{#if editable && onquickcreate}
 				<button
 					type="button"
@@ -89,6 +126,7 @@
 			class="flex flex-col gap-[var(--space-2)] p-[var(--space-2)] {collapsed
 				? 'absolute inset-0 rounded-[var(--radius-lg)]'
 				: 'min-h-16 flex-1'}"
+			id={bodyId}
 			aria-label={state.name}
 			data-board-dropzone={state.id}
 			use:dndzone={{
@@ -103,6 +141,7 @@
 			{#each items as task (task.id)}
 				<div
 					animate:flip={{ duration: flipDurationMs }}
+					hidden={collapsed}
 					aria-label="{task.taskTag} {task.title}"
 					data-task-id={task.id}
 				>
@@ -116,8 +155,10 @@
 				</div>
 			{/each}
 		</div>
-	{:else if !collapsed}
+	{:else}
 		<ul
+			id={bodyId}
+			hidden={collapsed}
 			class="flex flex-1 flex-col gap-[var(--space-2)] p-[var(--space-2)]"
 			aria-label={state.name}
 		>

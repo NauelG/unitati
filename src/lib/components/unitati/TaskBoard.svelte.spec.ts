@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { BOARD_COOKIE, parseBoardPreference } from '#lib/board-preference.js';
 import TaskBoard from './TaskBoard.svelte';
 import type { BoardState, BoardTask } from './board.js';
 
@@ -86,7 +87,10 @@ describe('TaskBoard', () => {
 	it('has no menu, drop zone, move form or quick create when read-only', () => {
 		const { container } = render(TaskBoard, { states, tasks, editable: false });
 
-		expect(screen.queryByRole('button')).toBeNull();
+		// Folding a column is a view preference, not a write: its toggle is the only button.
+		const buttons = screen.queryAllByRole('button');
+		expect(buttons).toHaveLength(states.length);
+		expect(buttons.every((button) => button.hasAttribute('data-collapse-toggle'))).toBe(true);
 		expect(container.querySelector('[data-board-dropzone]')).toBeNull();
 		expect(container.querySelector('form')).toBeNull();
 		// The cards are still there to read.
@@ -109,5 +113,77 @@ describe('TaskBoard', () => {
 			(card) => card.querySelectorAll('[role="img"]').length
 		);
 		expect(counts).toEqual([0, 1, 3]);
+	});
+});
+
+describe('TaskBoard folding by hand', () => {
+	afterEach(() => {
+		document.cookie = `${BOARD_COOKIE}=; Max-Age=0; Path=/`;
+	});
+
+	const column = (container: HTMLElement, id: string) =>
+		container.querySelector<HTMLElement>(`[data-board-column="${id}"]`)!;
+	const stored = () =>
+		parseBoardPreference(
+			decodeURIComponent(
+				document.cookie
+					.split('; ')
+					.find((part) => part.startsWith(`${BOARD_COOKIE}=`))!
+					.split('=')[1]
+			)
+		);
+
+	it('folds a populated column to a strip that keeps its name and count, and remembers it', async () => {
+		const { container } = render(TaskBoard, { states, tasks, editable: true });
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Plegar Por hacer' }));
+
+		const todo = column(container, 's-todo');
+		expect(todo.getAttribute('data-collapsed')).toBe('true');
+		expect(todo.textContent).toContain('Por hacer');
+		expect(todo.textContent).toContain('2');
+		expect(todo.querySelector('[data-task-card]')?.closest('[hidden]')).not.toBeNull();
+		expect(stored().states).toEqual({ 's-todo': 'collapsed' });
+	});
+
+	it('unfolds an empty column and keeps it open', async () => {
+		const { container } = render(TaskBoard, { states, tasks, editable: true });
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Desplegar En curso' }));
+
+		expect(column(container, 's-doing').getAttribute('data-collapsed')).toBe('false');
+		expect(stored().states).toEqual({ 's-doing': 'expanded' });
+	});
+
+	it('opens the way the server said, and exposes the state to assistive technology', () => {
+		const { container } = render(TaskBoard, {
+			states,
+			tasks,
+			collapsedStates: { 's-todo': 'collapsed', 's-doing': 'expanded' }
+		});
+
+		expect(column(container, 's-todo').getAttribute('data-collapsed')).toBe('true');
+		expect(column(container, 's-doing').getAttribute('data-collapsed')).toBe('false');
+		const toggle = screen.getByRole('button', { name: 'Desplegar Por hacer' });
+		expect(toggle.getAttribute('aria-expanded')).toBe('false');
+		expect(container.querySelector(`#${toggle.getAttribute('aria-controls')}`)).not.toBeNull();
+	});
+
+	it('offers the toggle on a read-only board too', async () => {
+		const { container } = render(TaskBoard, { states, tasks, editable: false });
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Plegar Por hacer' }));
+
+		expect(column(container, 's-todo').getAttribute('data-collapsed')).toBe('true');
+		expect(stored().states).toEqual({ 's-todo': 'collapsed' });
+	});
+
+	it('keeps the stored view when a column is folded', async () => {
+		document.cookie = `${BOARD_COOKIE}=${encodeURIComponent(JSON.stringify({ view: 'list', states: {} }))}; Path=/`;
+		render(TaskBoard, { states, tasks });
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Plegar Por hacer' }));
+
+		expect(stored().view).toBe('list');
 	});
 });

@@ -26,6 +26,7 @@ export type { State, Project, Task, TaskAssignee } from './schema';
 export { requireProjectScope, requireTaskScope } from './scope';
 export { requireProjectRead, requireProjectWrite } from './guards';
 export { fieldsOf, firstField, orNull, rejected } from './forms';
+export { readBoardPreference } from './board-preference';
 export type { Fields } from './forms';
 
 export {

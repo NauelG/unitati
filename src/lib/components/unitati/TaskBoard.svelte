@@ -12,6 +12,7 @@
 		type MoveRequest
 	} from './board.js';
 	import { boardAriaStrings } from './board-aria.js';
+	import { storeBoardPreference, type StatePreference } from '#lib/board-preference.js';
 	import { optimisticEnhance } from '#lib/optimistic.js';
 
 	interface Props {
@@ -23,16 +24,33 @@
 		 * zones and the quick create are then absent from the DOM.
 		 */
 		editable?: boolean;
+		/** The columns this person folded or unfolded by hand, by state (#127). */
+		collapsedStates?: Record<string, StatePreference>;
 		/** The `moveTask` action of the page that hosts the board. */
 		action?: string;
 		onquickcreate?: (stateId: string) => void;
 	}
 
-	let { states, tasks, editable = false, action = '?/moveTask', onquickcreate }: Props = $props();
+	let {
+		states,
+		tasks,
+		editable = false,
+		collapsedStates = {},
+		action = '?/moveTask',
+		onquickcreate
+	}: Props = $props();
 
 	// Written by drags and moves before the server confirms them, and replaced
 	// by the next `load`: assigning to a `$derived` is the optimistic mirror.
 	let columns = $derived(buildColumns(states, tasks));
+
+	// What the person chose, shown at once; the cookie keeps it for the next visit.
+	let folded = $derived(collapsedStates);
+
+	function toggleCollapse(stateId: string, preference: StatePreference) {
+		folded = { ...folded, [stateId]: preference };
+		storeBoardPreference({ states: folded });
+	}
 
 	// The library's strings are global: set them where the board mounts.
 	$effect(() => {
@@ -125,6 +143,8 @@
 			items={column.items}
 			{states}
 			{editable}
+			collapsedStates={folded}
+			ontogglecollapse={toggleCollapse}
 			onconsider={(items, info) => consider(column.state.id, items, info)}
 			onfinalize={(items, info) => finalize(column.state.id, items, info)}
 			onmove={moveFromMenu}

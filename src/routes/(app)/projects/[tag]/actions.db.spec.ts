@@ -223,12 +223,25 @@ describe('moving a task on the board', () => {
 });
 
 describe('loading the project record for the board', () => {
-	const event = (user: unknown, params: Record<string, string>, search = '') =>
-		({
+	/** The cookie jar is the cookie the request brought, and what `load` writes back. */
+	const written: { name: string; value: string }[] = [];
+	const event = (
+		user: unknown,
+		params: Record<string, string>,
+		search = '',
+		boardCookie?: string
+	) => {
+		written.length = 0;
+		return {
 			locals: { user },
 			params,
-			url: new URL(`http://localhost/projects/${params.tag}${search}`)
-		}) as never;
+			url: new URL(`http://localhost/projects/${params.tag}${search}`),
+			cookies: {
+				get: (name: string) => (name === 'unitati-board' ? boardCookie : undefined),
+				set: (name: string, value: string) => written.push({ name, value })
+			}
+		} as never;
+	};
 
 	it('shows the board unless the list is asked for', async () => {
 		const { technician, params } = await setup();
@@ -237,6 +250,70 @@ describe('loading the project record for the board', () => {
 		const list = (await load(event(technician, params, '?view=list'))) as { view: string };
 
 		expect([board.view, list.view]).toEqual(['board', 'list']);
+	});
+
+	it('opens on the stored view when the URL names none, on the first server response', async () => {
+		const { technician, params } = await setup();
+		const stored = JSON.stringify({ view: 'list', states: {} });
+
+		const data = (await load(event(technician, params, '', stored))) as { view: string };
+
+		expect(data.view).toBe('list');
+	});
+
+	it('lets an explicit ?view= win over the stored view without touching the cookie', async () => {
+		const { technician, params } = await setup();
+		const stored = JSON.stringify({ view: 'list', states: {} });
+
+		const data = (await load(event(technician, params, '?view=board', stored))) as {
+			view: string;
+		};
+
+		expect(data.view).toBe('board');
+		expect(written).toEqual([]);
+	});
+
+	it('hands the folded columns to the page and drops a state that no longer exists', async () => {
+		const { technician, organisation, params } = await setup();
+		const states = await statesByGroup(organisation.id);
+		const gone = '99999999-9999-4999-8999-999999999999';
+		const stored = JSON.stringify({
+			view: null,
+			states: { [states.completed.id]: 'collapsed', [gone]: 'collapsed' }
+		});
+
+		const data = (await load(event(technician, params, '', stored))) as {
+			view: string;
+			collapsedStates: Record<string, string>;
+		};
+
+		expect(data.view).toBe('board');
+		expect(data.collapsedStates).toEqual({ [states.completed.id]: 'collapsed' });
+		expect(written).toHaveLength(1);
+		expect(JSON.parse(written[0].value)).toEqual({
+			view: null,
+			states: { [states.completed.id]: 'collapsed' }
+		});
+	});
+
+	it('renders the default board for a malformed cookie and rewrites it cleaned', async () => {
+		const { technician, params } = await setup();
+
+		const data = (await load(event(technician, params, '', '{nope'))) as {
+			view: string;
+			collapsedStates: Record<string, string>;
+		};
+
+		expect(data).toMatchObject({ view: 'board', collapsedStates: {} });
+		expect(JSON.parse(written[0].value)).toEqual({ view: null, states: {} });
+	});
+
+	it('writes no cookie for a person who never stored a preference', async () => {
+		const { technician, params } = await setup();
+
+		await load(event(technician, params));
+
+		expect(written).toEqual([]);
 	});
 
 	it('gives the assigned viewer only their own cards, and every column to put them in', async () => {

@@ -442,7 +442,8 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		id: 'board-column',
 		name: 'BoardColumn',
 		category: 'data',
-		summary: 'Una columna del tablero; vacía, una tira colapsada que sigue siendo destino.',
+		summary:
+			'Una columna del tablero; plegada a mano o por estar vacía, una tira que sigue siendo destino.',
 		sourceFile: 'BoardColumn.svelte',
 		load: () => import('./specs/BoardColumn.svelte')
 	},
