@@ -431,6 +431,38 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/ProjectProgress.svelte')
 	},
 	{
+		id: 'task-board',
+		name: 'TaskBoard',
+		category: 'data',
+		summary: 'El tablero kanban de un proyecto: «Mover a…» como acción y arrastre por encima.',
+		sourceFile: 'TaskBoard.svelte',
+		load: () => import('./specs/TaskBoard.svelte')
+	},
+	{
+		id: 'board-column',
+		name: 'BoardColumn',
+		category: 'data',
+		summary: 'Una columna del tablero; vacía, una tira colapsada que sigue siendo destino.',
+		sourceFile: 'BoardColumn.svelte',
+		load: () => import('./specs/BoardColumn.svelte')
+	},
+	{
+		id: 'task-card',
+		name: 'TaskCard',
+		category: 'data',
+		summary: 'Tarjeta de tarea: código, título, personas asignadas, fecha y menú «Mover a…».',
+		sourceFile: 'TaskCard.svelte',
+		load: () => import('./specs/TaskCard.svelte')
+	},
+	{
+		id: 'task-board-skeleton',
+		name: 'TaskBoardSkeleton',
+		category: 'feedback',
+		summary: 'La silueta del tablero mientras carga.',
+		sourceFile: 'TaskBoardSkeleton.svelte',
+		load: () => import('./specs/TaskBoardSkeleton.svelte')
+	},
+	{
 		id: 'work-panel',
 		name: 'WorkPanel',
 		category: 'layout',

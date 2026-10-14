@@ -14,7 +14,9 @@ import {
 	createTask,
 	createTaskInput,
 	getProject,
+	listStates,
 	listTasks,
+	moveTask,
 	projectProgress,
 	requireProjectRead,
 	requireProjectWrite,
@@ -22,12 +24,13 @@ import {
 	updateProject,
 	updateProjectInput,
 	type CreateTaskFailure,
+	type MoveTaskFailure,
 	type UpdateProjectFailure
 } from '#lib/server/projects/index.js';
 import type { Actions, PageServerLoad } from './$types';
 
-/** The task list and the board are two views of the same data; #125 adds the board. */
-const viewParam = z.enum(['list', 'board']).catch('list');
+/** The board and the list are two views of the same data; the board is the default (#125). */
+const viewParam = z.enum(['list', 'board']).catch('board');
 
 export const load: PageServerLoad = async ({ locals, params, url }) => {
 	const user = requireProjectRead(locals.user);
@@ -40,8 +43,9 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 
 	// What the viewer can see of the project: an employee gets their own tasks
 	// and counts of exactly those (the domain scopes both from the same viewer).
-	const [tasks, progress, people] = await Promise.all([
+	const [tasks, states, progress, people] = await Promise.all([
 		listTasks(user, { projectId: project.id }),
+		listStates(user),
 		projectProgress(user, project.id),
 		canManage && project.archivedAt === null ? listPeople(user.organisationId) : Promise.resolve([])
 	]);
@@ -50,6 +54,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 	return {
 		project,
 		tasks,
+		// Every column of the board, including the empty ones.
+		states: states.map(({ id, name, group, position }) => ({ id, name, group, position })),
 		progress: progress.value,
 		view: viewParam.parse(url.searchParams.get('view')),
 		// The permission alone. The page also needs the project not to be archived
@@ -82,6 +88,20 @@ const taskFailures: Record<
 	state_not_found: [null, m.task_error_state_missing],
 	duplicate_task_tag: [null, m.action_error_invalid]
 };
+
+const moveFailures: Record<Exclude<MoveTaskFailure, 'task_not_found'>, () => string> = {
+	project_archived: m.project_error_archived,
+	state_not_found: m.task_error_state_missing,
+	invalid_neighbours: m.action_error_invalid
+};
+
+/** What the board sends for a move: a task, a column and, for a drop, the cards around it. */
+const moveInput = z.object({
+	taskId: z.uuid(),
+	stateId: z.uuid(),
+	before: z.uuid().optional(),
+	after: z.uuid().optional()
+});
 
 /** The project an action targets. Gone, or out of the viewer's scope, reads as missing. */
 async function targetOf(user: SessionUser, tag: string) {
@@ -146,8 +166,12 @@ export const actions: Actions = {
 		const user = requireProjectWrite(locals.user);
 		const fields = await fieldsOf(request);
 
-		// A title and nothing else: the state is the domain's default.
-		const parsed = createTaskInput.safeParse({ title: fields.get('title') });
+		// A title and, from a board column's quick create, the state it opens in;
+		// without one the state is the domain's default.
+		const parsed = createTaskInput.safeParse({
+			title: fields.get('title'),
+			stateId: orNull(fields.get('stateId')) ?? undefined
+		});
 		if (!parsed.success) {
 			return rejected('createTask', m.task_error_title_required(), 'title');
 		}
@@ -161,5 +185,31 @@ export const actions: Actions = {
 		}
 
 		return { action: 'createTask' as const, taskTag: outcome.value.taskTag };
+	},
+
+	/**
+	 * The one write behind the board (#125): the "Move to" menu and a drop both
+	 * submit here. With no neighbours the task goes to the end of the column.
+	 */
+	moveTask: async ({ request, locals }) => {
+		const user = requireProjectWrite(locals.user);
+		const fields = await fieldsOf(request);
+
+		const parsed = moveInput.safeParse({
+			taskId: fields.get('taskId'),
+			stateId: fields.get('stateId'),
+			before: orNull(fields.get('before')) ?? undefined,
+			after: orNull(fields.get('after')) ?? undefined
+		});
+		if (!parsed.success) return rejected('moveTask', m.action_error_invalid());
+
+		const { taskId, stateId, ...neighbours } = parsed.data;
+		const outcome = await moveTask(user, taskId, stateId, neighbours);
+		if (!outcome.ok) {
+			if (outcome.error === 'task_not_found') error(404, 'Not found');
+			return rejected('moveTask', moveFailures[outcome.error](), 'stateId');
+		}
+
+		return { action: 'moveTask' as const };
 	}
 };

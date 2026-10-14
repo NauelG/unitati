@@ -5,6 +5,7 @@
 	import Plus from '@lucide/svelte/icons/plus';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { navigating } from '$app/state';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
@@ -18,6 +19,8 @@
 	import Sheet from '#lib/components/unitati/Sheet.svelte';
 	import StatusBadge, { badge } from '#lib/components/unitati/StatusBadge.svelte';
 	import { stateGroupLabel } from '#lib/components/unitati/status.js';
+	import TaskBoard from '#lib/components/unitati/TaskBoard.svelte';
+	import TaskBoardSkeleton from '#lib/components/unitati/TaskBoardSkeleton.svelte';
 	import TextAreaField from '#lib/components/unitati/TextAreaField.svelte';
 	import TimelineSkeleton from '#lib/components/unitati/TimelineSkeleton.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
@@ -44,6 +47,8 @@
 
 	let editOpen = $state(false);
 	let taskOpen = $state(false);
+	/** The column a quick create was opened from; `null` is the domain's default state. */
+	let taskStateId = $state<string | null>(null);
 	let saving = $state(false);
 	let ownerPersonId = $state<string | null>(null);
 
@@ -55,6 +60,13 @@
 	function openEdit() {
 		ownerPersonId = project.ownerPersonId;
 		editOpen = true;
+	}
+
+	const quickCreateState = $derived(data.states.find((state) => state.id === taskStateId));
+
+	function openTask(stateId: string | null) {
+		taskStateId = stateId;
+		taskOpen = true;
 	}
 
 	const failureFor = (action: string) =>
@@ -71,7 +83,7 @@
 			label: m.project_new_task(),
 			permission: 'projects.manage',
 			when: () => writable,
-			run: () => (taskOpen = true)
+			run: () => openTask(null)
 		});
 	});
 
@@ -94,8 +106,19 @@
 		)
 	);
 
-	/** `?view=` is read here; #125 adds the board and makes it the default. */
+	/** `?view=` picks the board (the default) or the #124 list. */
 	const view = $derived(data.view);
+
+	/** The board is on its way: paint its shape instead of an empty page. */
+	const boardLoading = $derived(
+		navigating.to?.params?.tag === project.projectTag &&
+			navigating.to.url.searchParams.get('view') !== 'list'
+	);
+
+	const views = $derived([
+		{ id: 'board', label: m.board_view_board(), href: '?view=board' },
+		{ id: 'list', label: m.board_view_list(), href: '?view=list' }
+	]);
 </script>
 
 {#snippet failure(action: string)}
@@ -154,7 +177,7 @@
 					<Pencil class="size-4" aria-hidden="true" />
 					{m.project_detail_edit()}
 				</Button>
-				<Button onclick={() => (taskOpen = true)}>
+				<Button onclick={() => openTask(null)}>
 					<Plus class="size-4" aria-hidden="true" />
 					{m.project_new_task()}
 				</Button>
@@ -191,50 +214,84 @@
 		</p>
 	{/if}
 
-	<div class="mt-[var(--space-6)] space-y-[var(--space-4)]" data-view={view}>
-		{#each columns as column (column.id)}
-			<WorkPanel heading={column.name}>
-				{#snippet actions()}
-					<StatusBadge status={column.group} label={stateGroupLabel(column.group)} />
-				{/snippet}
-				<ul class="divide-y divide-[var(--border)]">
-					{#each column.tasks as task (task.id)}
-						<li
-							class="flex flex-wrap items-center gap-x-[var(--space-4)] gap-y-[var(--space-1)] py-[var(--space-2)] text-sm"
-						>
-							<a
-								href="/tasks/{encodeURIComponent(task.taskTag)}"
-								class="font-mono text-xs text-[var(--ink-muted)] hover:text-[var(--ink)]"
-								style:view-transition-name={toViewTransitionName('record', task.taskTag)}
-							>
-								{task.taskTag}
-							</a>
-							<a
-								href="/tasks/{encodeURIComponent(task.taskTag)}"
-								class="min-w-0 flex-1 truncate font-medium text-[var(--ink)] hover:underline"
-							>
-								{task.title}
-							</a>
-							<span class="text-[var(--ink-muted)]">
-								{task.assignees.length > 0
-									? task.assignees.map((assignee) => assignee.fullName).join(', ')
-									: m.project_detail_task_unassigned()}
-							</span>
-							{#if task.dueDate}
-								<span class="text-[var(--ink-muted)] tabular-nums">{formatDay(task.dueDate)}</span>
-							{/if}
-						</li>
-					{/each}
-				</ul>
-			</WorkPanel>
-		{:else}
-			<WorkPanel heading={m.project_detail_tasks()}>
-				<p class="text-sm text-[var(--ink-muted)]">
-					{data.canManage ? m.project_detail_tasks_empty() : m.project_detail_tasks_empty_limited()}
-				</p>
-			</WorkPanel>
+	<nav class="mt-[var(--space-6)] flex gap-[var(--space-1)]" aria-label={m.board_views_label()}>
+		{#each views as option (option.id)}
+			<a
+				href={option.href}
+				data-sveltekit-replacestate
+				aria-current={view === option.id ? 'page' : undefined}
+				class="ut-transition-fast rounded-[var(--radius-md)] px-[var(--space-3)] py-[var(--space-1)] text-sm font-medium transition-colors {view ===
+				option.id
+					? 'bg-[var(--surface-2)] text-[var(--ink)]'
+					: 'text-[var(--ink-muted)] hover:text-[var(--ink)]'}"
+			>
+				{option.label}
+			</a>
 		{/each}
-	</div>
+	</nav>
+
+	{#if view === 'board'}
+		<div class="mt-[var(--space-4)]" data-view="board">
+			{#if boardLoading}
+				<TaskBoardSkeleton columns={data.states.length} />
+			{:else}
+				<TaskBoard
+					states={data.states}
+					tasks={data.tasks}
+					editable={writable}
+					onquickcreate={openTask}
+				/>
+			{/if}
+		</div>
+	{:else}
+		<div class="mt-[var(--space-4)] space-y-[var(--space-4)]" data-view="list">
+			{#each columns as column (column.id)}
+				<WorkPanel heading={column.name}>
+					{#snippet actions()}
+						<StatusBadge status={column.group} label={stateGroupLabel(column.group)} />
+					{/snippet}
+					<ul class="divide-y divide-[var(--border)]">
+						{#each column.tasks as task (task.id)}
+							<li
+								class="flex flex-wrap items-center gap-x-[var(--space-4)] gap-y-[var(--space-1)] py-[var(--space-2)] text-sm"
+							>
+								<a
+									href="/tasks/{encodeURIComponent(task.taskTag)}"
+									class="font-mono text-xs text-[var(--ink-muted)] hover:text-[var(--ink)]"
+									style:view-transition-name={toViewTransitionName('record', task.taskTag)}
+								>
+									{task.taskTag}
+								</a>
+								<a
+									href="/tasks/{encodeURIComponent(task.taskTag)}"
+									class="min-w-0 flex-1 truncate font-medium text-[var(--ink)] hover:underline"
+								>
+									{task.title}
+								</a>
+								<span class="text-[var(--ink-muted)]">
+									{task.assignees.length > 0
+										? task.assignees.map((assignee) => assignee.fullName).join(', ')
+										: m.project_detail_task_unassigned()}
+								</span>
+								{#if task.dueDate}
+									<span class="text-[var(--ink-muted)] tabular-nums">{formatDay(task.dueDate)}</span
+									>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				</WorkPanel>
+			{:else}
+				<WorkPanel heading={m.project_detail_tasks()}>
+					<p class="text-sm text-[var(--ink-muted)]">
+						{data.canManage
+							? m.project_detail_tasks_empty()
+							: m.project_detail_tasks_empty_limited()}
+					</p>
+				</WorkPanel>
+			{/each}
+		</div>
+	{/if}
 
 	{#snippet side()}
 		<WorkPanel heading={m.project_detail_details()}>
@@ -358,7 +415,9 @@
 		onOpenChange={(next) => (taskOpen = next)}
 		pending={saving}
 		title={m.project_new_task()}
-		description={m.project_new_task_lede()}
+		description={quickCreateState
+			? m.board_quick_create_lede({ state: quickCreateState.name })
+			: m.project_new_task_lede()}
 	>
 		<form
 			method="POST"
@@ -373,6 +432,7 @@
 			}}
 			class="space-y-[var(--space-4)]"
 		>
+			{#if taskStateId}<input type="hidden" name="stateId" value={taskStateId} />{/if}
 			<Field
 				label={m.task_field_title()}
 				name="title"
