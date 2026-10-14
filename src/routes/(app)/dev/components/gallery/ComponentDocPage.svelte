@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import MoonIcon from '@lucide/svelte/icons/moon';
+	import SunIcon from '@lucide/svelte/icons/sun';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import type { PropDoc } from './manifest.js';
@@ -39,6 +41,22 @@
 	}: Props = $props();
 
 	const headerCode = $derived(`unitati/${name}.svelte`);
+
+	/**
+	 * The dark preview (#90): every component page can render its own demo on
+	 * the dark canvas without leaving the page or changing the app's theme.
+	 *
+	 * Local state, deliberately not `setMode`. The audit this phase asks for is
+	 * "does *this* component survive dark" — flipping the whole app would make
+	 * that a sequence of two page loads, and it would also take the gallery's
+	 * own chrome with it, which is not what is under inspection. A `.dark`
+	 * wrapper around the demo region answers the question in place, with the
+	 * light version still on screen in memory one click away.
+	 *
+	 * This is the second consumer that forces the `.dark` token block to be a
+	 * class selector rather than `:root.dark` — the first is the token table.
+	 */
+	let darkPreview = $state(false);
 </script>
 
 <div class="flex flex-col gap-[var(--space-6)]">
@@ -90,7 +108,35 @@
 	</WorkPanel>
 
 	<WorkPanel heading="Variantes y estados">
-		<div class="flex flex-col gap-[var(--space-5)]">
+		{#snippet actions()}
+			<button
+				type="button"
+				class="ut-transition-fast flex items-center gap-[var(--space-2)] rounded-[var(--radius-md)] border border-[var(--border-strong)] px-[var(--space-3)] py-1 text-[13px] text-[var(--ink)] transition-colors hover:bg-[var(--surface-2)]"
+				onclick={() => (darkPreview = !darkPreview)}
+				aria-pressed={darkPreview}
+			>
+				{#if darkPreview}
+					<SunIcon class="size-[var(--size-icon-sm)]" aria-hidden="true" />
+					Ver en claro
+				{:else}
+					<MoonIcon class="size-[var(--size-icon-sm)]" aria-hidden="true" />
+					Ver en oscuro
+				{/if}
+			</button>
+		{/snippet}
+
+		<!--
+			`--surface-0` is painted explicitly on the wrapper when the preview is
+			dark. Without it the demo's own dark tokens would sit on the light
+			panel behind them, and every component would look like it had a
+			contrast bug it does not have.
+		-->
+		<div
+			class={[
+				'flex flex-col gap-[var(--space-5)] rounded-[var(--radius-md)]',
+				darkPreview && 'dark bg-[var(--surface-0)] p-[var(--space-4)]'
+			]}
+		>
 			{@render demo()}
 		</div>
 	</WorkPanel>

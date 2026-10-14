@@ -9,12 +9,29 @@ import { locations, people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
 import { assetModels, assets, categories, manufacturers } from './schema';
+import { requireAssetScope } from './scope';
 import { viewAsset, type AssetView } from './view';
 import { registerAssetInput, updateAssetDetailsInput } from './validation';
 import type { RegisterAssetInput, UpdateAssetDetailsInput } from './validation';
 
 export { viewAsset } from './view';
 export type { AssetView, FullAssetView, SharedAssetView } from './view';
+
+/**
+ * The row scope (`scope.ts`), re-exported so `links` and every other caller
+ * outside the domain keeps reaching it at `'../assets'`. It is defined in a
+ * leaf module rather than here so the domain's own read modules
+ * (`sparkline.ts`, `state-distribution.ts`) can import it without forming a
+ * cycle with this barrel.
+ */
+export { requireAssetScope } from './scope';
+
+/** Asset registrations per day, for the KPI sparkline (#90). */
+export { assetRegistrationsSparkline } from './sparkline';
+
+/** Count per lifecycle state, for the donut on the assets index (#90). */
+export { assetStateDistribution } from './state-distribution';
+export type { AssetStateSlice } from './state-distribution';
 
 export {
 	createManufacturer,
@@ -76,59 +93,6 @@ export type {
  * trust the route's gate and scope tenancy only; the read functions resolve the
  * permission themselves, because for them the permission *is* the query.
  */
-
-/* -------------------------------------------------------------------------- */
-/* Scope                                                                      */
-/* -------------------------------------------------------------------------- */
-
-/**
- * The rows a viewer may see at all, as SQL. Returns `null` when the viewer
- * holds no asset-read permission whatsoever, which the callers turn into a
- * thrown error rather than an empty page: an empty list is indistinguishable
- * from a correctly-scoped empty inventory, and silently returning one would
- * hide a route that forgot its `requirePermission`.
- */
-function visibleAssets(viewer: SessionUser): SQL | null {
-	const organisation = eq(assets.organisationId, viewer.organisationId);
-
-	if (can(viewer, 'assets.view')) return organisation;
-
-	const clauses: SQL[] = [];
-
-	/**
-	 * The null check is the point, not a formality. An employee whose credential
-	 * has no directory record has `personId === null`, and "the assets in my
-	 * custody" written against it becomes `custodian_person_id is null` — which
-	 * matches every asset nobody holds, i.e. most of the inventory. The clause
-	 * has to be dropped, not parameterised with null.
-	 */
-	if (can(viewer, 'assets.view.own') && viewer.personId !== null) {
-		clauses.push(eq(assets.custodianPersonId, viewer.personId));
-	}
-
-	if (can(viewer, 'assets.view.shared')) clauses.push(eq(assets.shared, true));
-
-	if (clauses.length === 0) return null;
-
-	return and(organisation, or(...clauses)) as SQL;
-}
-
-/**
- * Exported for `links`, which has to ask "may this person see this asset?" when
- * somebody attaches one to a ticket. The rule stays here, in one place: `links`
- * composes it into its own query instead of restating who holds what (ADR 0002).
- */
-export function requireAssetScope(viewer: SessionUser): SQL {
-	const scope = visibleAssets(viewer);
-	if (scope) return scope;
-
-	// An invariant violation, not a business failure: every role in ADR 0007
-	// holds at least one asset-read permission, so arriving here means a route
-	// called a listing without gating it first.
-	throw new Error(
-		`The ${viewer.role} role holds no asset-read permission; the route should have called requirePermission first.`
-	);
-}
 
 /**
  * `simple` + `unaccent`, through the immutable wrapper the migration creates.

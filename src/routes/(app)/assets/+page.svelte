@@ -6,11 +6,13 @@
 	import { goto } from '$app/navigation';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import DataTable, { type DataTableColumn } from '#lib/components/unitati/DataTable.svelte';
+	import DonutChart, { type DonutSlice } from '#lib/components/unitati/DonutChart.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import Pager from '#lib/components/unitati/Pager.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
+	import { statusColour, statusLabel } from '#lib/components/unitati/status.js';
 	import { formatKeys, isMacPlatform, keymapRegistry } from '#lib/keymap.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { AssetView } from '#lib/server/assets/index.js';
@@ -116,6 +118,22 @@
 	const emptyTitle = $derived(data.search ? m.assets_empty_search_title() : m.assets_empty_title());
 	const emptyIcon = $derived(data.search ? SearchX : Inbox);
 
+	/**
+	 * The donut's slices (#90). Label and colour are both resolved through
+	 * `status.ts`, the same table `StatusBadge` reads, so a slice and the badge
+	 * for that state in the rows below are guaranteed to be the same green —
+	 * which is the issue's own acceptance criterion, enforced by having one
+	 * source rather than by matching two lists by eye.
+	 */
+	const slices = $derived<DonutSlice[]>(
+		data.distribution.map((entry) => ({
+			key: entry.state,
+			label: statusLabel(entry.state),
+			count: entry.count,
+			colour: statusColour(entry.state)
+		}))
+	);
+
 	function pageHref(target: number): string {
 		// Built by hand rather than with `URLSearchParams`: this is a pure string
 		// for an `href`, and a mutable reactive-looking object is the wrong tool.
@@ -169,6 +187,43 @@
 	</PageHeader>
 
 	<AssetsNav showCatalogue={data.canManage} />
+
+	<!--
+		The state distribution (#90), in the index header area.
+
+		The ring is paired with a written legend rather than left to speak on its
+		own: four arcs cannot say "En reparación 3", and the design system's rule
+		that colour is never the only cue applies to a chart exactly as it does to
+		a badge. The legend is also what makes the zero states visible — the ring
+		drops them, the list keeps them, so "nothing is in repair" is still
+		readable.
+	-->
+	<section
+		class="mt-[var(--space-6)] flex flex-wrap items-center gap-[var(--space-6)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-5)]"
+		aria-label={m.chart_assets_by_state()}
+	>
+		<DonutChart {slices} label={m.chart_assets_by_state()} />
+
+		<dl class="flex min-w-0 flex-col gap-[var(--space-2)]">
+			{#each data.distribution as entry (entry.state)}
+				<div class="flex items-center gap-[var(--space-2)]">
+					<dt class="flex items-center gap-[var(--space-2)]">
+						<span
+							class="size-2.5 shrink-0 rounded-[var(--radius-full)]"
+							style:background-color={statusColour(entry.state)}
+							aria-hidden="true"
+						></span>
+						<span class="text-sm text-[var(--ink)]">{statusLabel(entry.state)}</span>
+					</dt>
+					<dd
+						class="ml-auto pl-[var(--space-3)] font-mono text-sm text-[var(--ink-muted)] tabular-nums"
+					>
+						{entry.count}
+					</dd>
+				</div>
+			{/each}
+		</dl>
+	</section>
 
 	<form method="GET" role="search" class="mt-[var(--space-6)] flex items-end gap-[var(--space-3)]">
 		<!-- layout-ok: a bounded search field, not a page container -->

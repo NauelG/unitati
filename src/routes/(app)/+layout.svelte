@@ -8,6 +8,7 @@
 	import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
 	import AppShell, { type AppShellNavLink } from '#lib/components/unitati/AppShell.svelte';
 	import EnvironmentBadge from '#lib/components/unitati/EnvironmentBadge.svelte';
+	import ThemeToggle from '#lib/components/unitati/ThemeToggle.svelte';
 	import { Toaster } from '#lib/components/ui/sonner/index.js';
 	import { ASSET_READ_PERMISSIONS, TICKET_READ_PERMISSIONS } from '#lib/domain/access.js';
 	import { isProduction } from '#lib/environment.js';
@@ -105,6 +106,14 @@
 >
 	{#snippet topbarEnd()}
 		<EnvironmentBadge environment={APP_ENV} />
+		<!--
+			The theme switch sits in the user area (#90), beside the avatar and
+			sign-out rather than in the sidebar: it is a preference of the person
+			signed in, grouped with the other things about them, and the sidebar
+			collapses to a 64px rail where a third icon row would have nowhere to
+			put its label.
+		-->
+		<ThemeToggle />
 		<div class="flex items-center gap-2.5">
 			<span
 				class="grid size-8 place-items-center rounded-[var(--radius-full)] bg-[var(--brand-soft)] text-xs font-semibold text-[var(--brand)]"

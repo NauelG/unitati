@@ -6,6 +6,7 @@
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import RecordRef from '#lib/components/unitati/RecordRef.svelte';
+	import Sparkline from '#lib/components/unitati/Sparkline.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { activitySentence } from '#lib/components/unitati/activity.js';
@@ -108,21 +109,60 @@
 			</WorkPanel>
 		{/if}
 
+		<!--
+			The KPI grid (#84), now with trend lines and destinations (#90).
+
+			`href` is what earns the hover lift: each of these four numbers has one
+			obvious place to go and look at the rows behind it, so the card is a
+			link and the depth language is telling the truth. A card with no
+			destination would stay flat — see `KpiCard`'s own note.
+
+			Only the two *counting* cards carry a sparkline. "Waiting on user" and
+			"unassigned" are standing states, not events: there is no "number of
+			assets that were unassigned on Tuesday" to plot, and inventing one from
+			today's rows would draw a line of a quantity nobody recorded.
+		-->
 		<div class="mt-[var(--space-5)] grid grid-cols-2 gap-[var(--space-3)] sm:grid-cols-4">
 			{#if data.tickets}
-				<KpiCard label={m.overview_kpi_open()} value={data.tickets.open} />
+				<KpiCard label={m.overview_kpi_open()} value={data.tickets.open} href="/service-desk">
+					{#snippet sparkline()}
+						{#if data.ticketTrend}
+							<Sparkline
+								points={data.ticketTrend}
+								tone="desk"
+								label={m.chart_tickets_opened_7d()}
+							/>
+						{/if}
+					{/snippet}
+				</KpiCard>
 				<KpiCard
 					label={m.overview_kpi_waiting()}
 					value={data.tickets.waitingOnUser}
 					tone={data.tickets.waitingOnUser > 0 ? 'warning' : 'neutral'}
+					href="/service-desk"
 				/>
 			{/if}
 			{#if data.assets}
-				<KpiCard label={m.overview_kpi_assets_active()} value={data.assets.inService} />
+				<KpiCard
+					label={m.overview_kpi_assets_active()}
+					value={data.assets.inService}
+					href="/assets"
+				>
+					{#snippet sparkline()}
+						{#if data.assetTrend}
+							<Sparkline
+								points={data.assetTrend}
+								tone="asset"
+								label={m.chart_assets_registered_30d()}
+							/>
+						{/if}
+					{/snippet}
+				</KpiCard>
 				<KpiCard
 					label={m.overview_kpi_assets_unassigned()}
 					value={data.assets.unassigned}
 					tone={data.assets.unassigned > 0 ? 'warning' : 'neutral'}
+					href="/assets"
 				/>
 			{/if}
 		</div>

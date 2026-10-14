@@ -10,12 +10,21 @@
 	 * This paints a *shape*, never a sentence: callers size it with `class`
 	 * (`w-24 h-4`, `size-9 rounded-full`…) to match the real content's own box,
 	 * so the swap from skeleton to data moves nothing (CLS 0).
+	 *
+	 * The sweep takes a second token in dark (#90). `--surface-1` is the lighter
+	 * of the pair in the light theme, which is what makes the pass read as a
+	 * highlight travelling across the block — but the two invert in dark
+	 * (`#121922` is darker than `#1a2330`), so the same declaration would sweep
+	 * a *shadow* across instead. `--border` is the next step up from
+	 * `--surface-2` on the dark canvas, so the gesture stays a highlight in both
+	 * themes at the same strength (1.14:1 light, 1.21:1 dark).
 	 */
 	export const skeleton = tv({
 		base: [
 			'relative isolate overflow-hidden rounded-[var(--radius-sm)] bg-[var(--surface-2)]',
 			"before:absolute before:inset-0 before:content-[''] before:-translate-x-full",
-			'before:bg-gradient-to-r before:from-transparent before:via-[var(--surface-1)] before:to-transparent',
+			'before:bg-gradient-to-r before:from-transparent before:to-transparent',
+			'before:via-[var(--surface-1)] dark:before:via-[var(--border)]',
 			'before:animate-[ut-shimmer_1.2s_ease-in-out_infinite]'
 		]
 	});

@@ -1,6 +1,6 @@
 import { ASSET_READ_PERMISSIONS } from '#lib/domain/access.js';
 import { can } from '#lib/server/access/permissions.js';
-import { assetSummary, listAssets } from '#lib/server/assets/index.js';
+import { assetStateDistribution, assetSummary, listAssets } from '#lib/server/assets/index.js';
 import { requireAnyPermission } from '#lib/server/auth/guards.js';
 import { pageWindowFrom } from '#lib/server/shared/pagination.js';
 import type { PageServerLoad } from './$types';
@@ -13,16 +13,22 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const window = pageWindowFrom(url.searchParams);
 	const search = url.searchParams.get('q')?.trim() ?? '';
 
-	const [result, summary] = await Promise.all([
+	const [result, summary, distribution] = await Promise.all([
 		listAssets(user, { page: window.page, perPage: window.perPage, search }),
 		// The same scope as the list (#84): a search narrows `result`, not this.
-		assetSummary(user)
+		assetSummary(user),
+		// Likewise unaffected by the search (#90): the donut describes the whole
+		// inventory this viewer can see, which is what the summary beside it
+		// counts. Narrowing it to the current query would make the ring the shape
+		// of a search box rather than of the inventory.
+		assetStateDistribution(user)
 	]);
 
 	return {
 		result,
 		search,
 		summary,
+		distribution,
 		// Drives copy and columns, never access: the rows above are already redacted.
 		seesWholeInventory: can(user, 'assets.view'),
 		canManage: can(user, 'assets.manage')

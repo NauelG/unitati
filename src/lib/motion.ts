@@ -14,6 +14,31 @@ export const MOTION_BASE_MS = 160;
 export const MOTION_SLOW_MS = 240;
 
 /**
+ * `--ease-out` as a JS literal, for the same reason the durations above are
+ * ones: the Web Animations API takes an easing *string*, not a custom
+ * property. Read by `NumberFlow` (#90), whose animations run through
+ * `Element.animate()` inside a shadow root and so cannot inherit a token.
+ */
+export const EASE_OUT = 'cubic-bezier(0.2, 0, 0, 1)';
+
+/**
+ * The timing `NumberFlow` is handed wherever it is used (#90).
+ *
+ * The library's own defaults are a 900ms transform and a 450ms opacity fade —
+ * three to four times the motion constitution's ceiling, which is
+ * `--motion-slow` and "nothing above it, ever" (#87). They have to be passed
+ * explicitly on every instance; there is no global configuration hook.
+ *
+ * `spinTiming` is deliberately absent: the library falls back to
+ * `transformTiming` for the digit spin when it is unset, so naming it would
+ * add a third copy of the same number.
+ */
+export const NUMBER_FLOW_TIMING = {
+	transformTiming: { duration: MOTION_SLOW_MS, easing: EASE_OUT },
+	opacityTiming: { duration: MOTION_FAST_MS, easing: EASE_OUT }
+} as const;
+
+/**
  * Reads the one global reduced-motion signal. Used only where CSS cannot
  * reach — `document.startViewTransition` is a JS call, not a style, so the
  * `prefers-reduced-motion` media layer in `app.css` cannot stop it on its own
