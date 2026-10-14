@@ -5,6 +5,27 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.29.0] - 2026-10-14
+
+### Added
+
+- The projects domain, with no screens yet (#121, slice 5a of #10). Tables `states`, `projects`,
+  `tasks` and `task_assignees`; `PRJ-####` and `TSK-####` codes; generated Spanish search vectors
+  on projects and tasks. Routes and components arrive with #123, #124 and #125.
+- The state catalogue: five default states (one per group) given to every organisation, existing
+  ones included, by the migration and by setup. Names, order and count are the organisation's;
+  the group is fixed at creation and nothing writes it afterwards. `deleteState` is refused while
+  a task occupies the state and when it would leave no open state.
+- Project and task functions: create, update, archive and unarchive, progress per state group,
+  assignees, and `moveTask` (fractional positions, renumbering when a gap closes). An archived
+  project is read-only.
+- Ten activity verbs for projects and tasks, with snapshot payloads, and their foreign keys on
+  `activity` (`project_id`, `task_id`); the timeline renders them.
+- `projects.view.assigned`, granted to employees: they see the tasks assigned to them and the
+  projects that contain them, read-only. ADR 0007 amended.
+- Seed: three projects (one archived) with tasks in every state group, one task with three
+  assignees and one assigned to the demo employee. `npm run db:seed` twice leaves the same tags.
+
 ## [0.28.0] - 2026-10-14
 
 ### Added
