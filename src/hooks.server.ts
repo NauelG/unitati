@@ -1,6 +1,7 @@
 import { sequence, type Handle } from '@sveltejs/kit/hooks';
 import { building } from '$app/env';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
+import { legacyCatalogueRedirect } from '#lib/settings/legacy-redirects.js';
 import { paraglideMiddleware } from '#lib/paraglide/server.js';
 import { getAuth } from '#lib/server/auth/index.js';
 import { closeDb } from '#lib/server/db/index.js';
@@ -55,4 +56,11 @@ const authHandle: Handle = async ({ event, resolve }) => {
 	return svelteKitHandler({ event, resolve, auth, building });
 };
 
-export const handle = sequence(paraglideHandle, authHandle);
+/** Catalogues that moved under `/settings` (#126): a 308 before anything else runs, so no session is needed. */
+const legacyRedirectHandle: Handle = ({ event, resolve }) => {
+	const target = legacyCatalogueRedirect(event.url);
+	if (target) return new Response(null, { status: 308, headers: { location: target } });
+	return resolve(event);
+};
+
+export const handle = sequence(legacyRedirectHandle, paraglideHandle, authHandle);

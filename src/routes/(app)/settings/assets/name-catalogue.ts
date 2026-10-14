@@ -7,9 +7,10 @@ import type {
 	CatalogueEntry,
 	CatalogueFailure
 } from '#lib/server/assets/index.js';
-import { requirePermission, type SessionUser } from '#lib/server/auth/guards.js';
+import type { SessionUser } from '#lib/server/auth/guards.js';
+import { requireSettingsSection } from '#lib/server/settings/guard.js';
 import type { Outcome } from '#lib/server/shared/outcome.js';
-import { fieldsOf, rejected, withId } from './form-data';
+import { fieldsOf, rejected, withId } from '../../assets/form-data';
 
 /**
  * Manufacturers and categories are the same screen: a flat list of names that
@@ -37,6 +38,8 @@ export interface NameCatalogueOperations {
 	remove(actor: SessionUser, id: string): Promise<Outcome<void, CatalogueDeleteFailure>>;
 	/** What `restrict` means for this entry, in this entry's own words. */
 	inUseMessage: () => string;
+	/** The registry href this catalogue is registered at: its page and actions guard on that entry. */
+	section: string;
 }
 
 const nameOnly = z.object({ name: z.string().trim().min(1) });
@@ -44,13 +47,13 @@ const nameOnly = z.object({ name: z.string().trim().min(1) });
 export function nameCatalogue(operations: NameCatalogueOperations) {
 	return {
 		load: async ({ locals }: RequestEvent) => {
-			const user = requirePermission(locals.user, 'assets.manage');
+			const user = requireSettingsSection(locals.user, operations.section);
 			return { entries: await operations.list(user.organisationId) };
 		},
 
 		actions: {
 			create: async ({ request, locals }: RequestEvent) => {
-				const user = requirePermission(locals.user, 'assets.manage');
+				const user = requireSettingsSection(locals.user, operations.section);
 				const parsed = nameOnly.safeParse(await fieldsOf(request));
 				if (!parsed.success) return rejected('create', m.validation_name_required());
 
@@ -60,7 +63,7 @@ export function nameCatalogue(operations: NameCatalogueOperations) {
 			},
 
 			rename: async ({ request, locals }: RequestEvent) => {
-				const user = requirePermission(locals.user, 'assets.manage');
+				const user = requireSettingsSection(locals.user, operations.section);
 				const fields = await fieldsOf(request);
 				const target = withId.safeParse(fields);
 				if (!target.success) return rejected('rename', m.catalogue_error_not_found());
@@ -84,7 +87,7 @@ export function nameCatalogue(operations: NameCatalogueOperations) {
 			},
 
 			delete: async ({ request, locals }: RequestEvent) => {
-				const user = requirePermission(locals.user, 'assets.manage');
+				const user = requireSettingsSection(locals.user, operations.section);
 				const target = withId.safeParse(await fieldsOf(request));
 				if (!target.success) return rejected('delete', m.catalogue_error_not_found());
 

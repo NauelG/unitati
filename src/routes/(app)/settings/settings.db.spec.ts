@@ -10,6 +10,10 @@ import { createWorkspace, statesByGroup } from '#lib/server/projects/testing/fix
 import type { SessionUser } from '#lib/server/auth/guards.js';
 import { load as loadSettings } from './+layout.server';
 import { load as loadStates, actions } from './projects/states/+page.server';
+import { load as loadModels } from './assets/models/+page.server';
+import { load as loadCategories } from './assets/categories/+page.server';
+import { load as loadManufacturers } from './assets/manufacturers/+page.server';
+import { load as loadQueues } from './service-desk/queues/+page.server';
 
 /**
  * The Settings screens' server seam: who gets in, what the catalogue screen is
@@ -60,6 +64,24 @@ describe('/settings access', () => {
 
 		expect(await statusOf(() => loadSettings(event(technician)))).toBeUndefined();
 		expect(await statusOf(() => loadStates(event(technician)))).toBeUndefined();
+	});
+});
+
+describe('the moved catalogues (#126)', () => {
+	it('answers 403 to an employee on each of them', async () => {
+		const { employee } = await createWorkspace();
+
+		for (const load of [loadModels, loadCategories, loadManufacturers, loadQueues]) {
+			expect(await statusOf(() => load(event(employee)))).toBe(403);
+		}
+	});
+
+	it('lets a technician open each of them', async () => {
+		const { technician } = await createWorkspace();
+
+		for (const load of [loadModels, loadCategories, loadManufacturers, loadQueues]) {
+			expect(await statusOf(() => load(event(technician)))).toBeUndefined();
+		}
 	});
 });
 

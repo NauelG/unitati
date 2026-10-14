@@ -11,7 +11,6 @@ import {
 } from '#lib/server/assets/testing/fixtures.js';
 import { load as loadList } from './+page.server';
 import { load as loadDetail } from './[tag]/+page.server';
-import { load as loadModels } from './models/+page.server';
 import { load as loadNew } from './new/+page.server';
 import { load as loadEdit, actions as editActions } from './[tag]/edit/+page.server';
 import type { AssetView } from '#lib/server/assets/index.js';
@@ -181,14 +180,14 @@ describe('the page an employee is sent for one asset', () => {
 });
 
 describe('the screens an employee cannot reach', () => {
-	it.each([
-		['/assets/new', () => loadNew({ locals: { user: null } } as Event<typeof loadNew>)],
-		['/assets/models', () => loadModels({ locals: { user: null } } as Event<typeof loadModels>)]
-	])('redirects an anonymous visitor away from %s', async (_path, run) => {
-		await expect(run()).rejects.toMatchObject({ status: 303 });
-	});
+	it.each([['/assets/new', () => loadNew({ locals: { user: null } } as Event<typeof loadNew>)]])(
+		'redirects an anonymous visitor away from %s',
+		async (_path, run) => {
+			await expect(run()).rejects.toMatchObject({ status: 303 });
+		}
+	);
 
-	it('answers 404 for the registering, catalogue and edit screens', async () => {
+	it('answers 404 for the registering and edit screens', async () => {
 		const { eva } = await floor();
 
 		await expect(loadNew({ locals: { user: eva } } as Event<typeof loadNew>)).rejects.toMatchObject(
@@ -196,9 +195,6 @@ describe('the screens an employee cannot reach', () => {
 				status: 404
 			}
 		);
-		await expect(
-			loadModels({ locals: { user: eva } } as Event<typeof loadModels>)
-		).rejects.toMatchObject({ status: 404 });
 		await expect(
 			loadEdit({ locals: { user: eva }, params: { tag: 'AST-0002' } } as Event<typeof loadEdit>)
 		).rejects.toMatchObject({ status: 404 });

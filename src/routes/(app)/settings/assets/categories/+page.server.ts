@@ -12,7 +12,8 @@ const catalogue = nameCatalogue({
 	create: createCategory,
 	rename: renameCategory,
 	remove: deleteCategory,
-	inUseMessage: m.catalogue_error_in_use_category
+	inUseMessage: m.catalogue_error_in_use_category,
+	section: '/settings/assets/categories'
 });
 
 export const load = catalogue.load;

@@ -1,18 +1,20 @@
 import { z } from 'zod';
 import { m } from '#lib/paraglide/messages.js';
-import { requirePermission } from '#lib/server/auth/guards.js';
 import {
 	createQueue,
 	deleteQueue,
 	listQueues,
 	renameQueue
 } from '#lib/server/service-desk/index.js';
+import { requireSettingsSection } from '#lib/server/settings/guard.js';
 import { failureMessage } from '#lib/ticket-errors.js';
-import { fieldsOf, rejected } from '../../assets/form-data';
+import { fieldsOf, rejected } from '../../../assets/form-data';
 import type { Actions, PageServerLoad } from './$types';
 
+const SECTION = '/settings/service-desk/queues';
+
 export const load: PageServerLoad = async ({ locals }) => {
-	const user = requirePermission(locals.user, 'tickets.manage');
+	const user = requireSettingsSection(locals.user, SECTION);
 	const queues = await listQueues(user);
 	return { queues: queues.map(({ id, name }) => ({ id, name })) };
 };
@@ -22,7 +24,7 @@ const withId = z.object({ id: z.uuid() });
 
 export const actions: Actions = {
 	create: async ({ locals, request }) => {
-		const user = requirePermission(locals.user, 'tickets.manage');
+		const user = requireSettingsSection(locals.user, SECTION);
 		const parsed = named.safeParse(await fieldsOf(request));
 		if (!parsed.success) return rejected('create', m.queues_error_invalid());
 
@@ -32,7 +34,7 @@ export const actions: Actions = {
 	},
 
 	rename: async ({ locals, request }) => {
-		const user = requirePermission(locals.user, 'tickets.manage');
+		const user = requireSettingsSection(locals.user, SECTION);
 		const fields = await fieldsOf(request);
 		const id = withId.safeParse(fields);
 		const parsed = named.safeParse(fields);
@@ -44,7 +46,7 @@ export const actions: Actions = {
 	},
 
 	delete: async ({ locals, request }) => {
-		const user = requirePermission(locals.user, 'tickets.manage');
+		const user = requireSettingsSection(locals.user, SECTION);
 		const id = withId.safeParse(await fieldsOf(request));
 		if (!id.success) return rejected('delete', m.queues_error_not_found());
 

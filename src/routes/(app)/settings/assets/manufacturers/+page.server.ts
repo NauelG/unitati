@@ -12,7 +12,8 @@ const catalogue = nameCatalogue({
 	create: createManufacturer,
 	rename: renameManufacturer,
 	remove: deleteManufacturer,
-	inUseMessage: m.catalogue_error_in_use_manufacturer
+	inUseMessage: m.catalogue_error_in_use_manufacturer,
+	section: '/settings/assets/manufacturers'
 });
 
 export const load = catalogue.load;

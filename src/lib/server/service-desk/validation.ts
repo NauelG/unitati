@@ -13,8 +13,8 @@ import { PRIORITIES } from '#lib/domain/status.js';
 
 /**
  * Tags the router owns. The tag is a URL segment (ADR 0010) and the service
- * desk keeps `/service-desk/new` and `/service-desk/queues` beside it, so a
- * ticket tagged `queues` would be created happily and then be unreachable.
+ * desk keeps `/service-desk/new` and the legacy queues path (a redirect, #126)
+ * beside it, so a ticket tagged `queues` would be created happily and then be unreachable.
  */
 export const RESERVED_TICKET_TAGS: ReadonlySet<string> = new Set(['new', 'queues']);
 

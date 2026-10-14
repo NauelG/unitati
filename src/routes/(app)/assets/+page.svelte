@@ -18,7 +18,6 @@
 	import { formatKeys, isMacPlatform, keymapRegistry } from '#lib/keymap.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { AssetView } from '#lib/server/assets/index.js';
-	import AssetsNav from './AssetsNav.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -196,8 +195,6 @@
 			{/if}
 		{/snippet}
 	</PageHeader>
-
-	<AssetsNav showCatalogue={data.canManage} />
 
 	<!--
 		The state distribution (#90), in the index header area.

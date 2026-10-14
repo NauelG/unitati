@@ -23,9 +23,10 @@ import { assetModels, assets, categories, manufacturers } from './schema';
 
 /**
  * Tags the router owns. The tag is a URL segment (ADR 0010) and the assets
- * section keeps its own screens beside it — `/assets/new`, `/assets/models`… —
- * so an asset tagged `models` would be registered happily and then be
- * unreachable: the static route wins over `[tag]`. #21 imports tags an
+ * section keeps its own screens beside it — `/assets/new`, and the legacy
+ * catalogue paths that now redirect (#126) — so an asset tagged `models` would
+ * be registered happily and then be unreachable: the redirect or the static
+ * route wins over `[tag]`. #21 imports tags an
  * organisation already has stuck on its hardware, which is exactly how one
  * would arrive, so the rule lives here with the schema and not in a form.
  */

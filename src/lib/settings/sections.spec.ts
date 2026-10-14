@@ -45,6 +45,18 @@ describe('visibleSections', () => {
 		]);
 		expect(visibleSections(employee)).toEqual([]);
 	});
+
+	it('registers the asset and service-desk catalogues under their module, for the permission their routes always enforced', () => {
+		const assetsManager = visibleSections(['assets.manage']).map((section) => section.href);
+		const deskManager = visibleSections(['tickets.manage']).map((section) => section.href);
+
+		expect(assetsManager).toEqual([
+			'/settings/assets/models',
+			'/settings/assets/categories',
+			'/settings/assets/manufacturers'
+		]);
+		expect(deskManager).toEqual(['/settings/service-desk/queues']);
+	});
 });
 
 describe('groupByModule', () => {

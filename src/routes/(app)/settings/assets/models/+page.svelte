@@ -16,7 +16,6 @@
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import type { AssetModelEntry } from '#lib/server/assets/index.js';
 	import { m } from '#lib/paraglide/messages.js';
-	import AssetsNav from '../AssetsNav.svelte';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -86,14 +85,12 @@
 		{/snippet}
 	</PageHeader>
 
-	<AssetsNav showCatalogue />
-
 	{#if !canCreate}
 		<p class="mt-[var(--space-6)] text-sm text-[var(--ink-muted)]">
 			{m.model_inline_needs_catalogue()}
-			<a href="/assets/manufacturers" class="underline">{m.assets_nav_manufacturers()}</a>
+			<a href="/settings/assets/manufacturers" class="underline">{m.assets_nav_manufacturers()}</a>
 			·
-			<a href="/assets/categories" class="underline">{m.assets_nav_categories()}</a>
+			<a href="/settings/assets/categories" class="underline">{m.assets_nav_categories()}</a>
 		</p>
 	{/if}
 

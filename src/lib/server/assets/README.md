@@ -62,8 +62,8 @@ comes from the session, never from the payload (ADR 0004).
 
 Under `src/routes/(app)/assets/`: `/assets` (list, search, pager), `/assets/new`,
 `/assets/[tag]` (detail, with the custody, state, location and note actions, and the timeline),
-`/assets/[tag]/edit`, and the catalogue at `/assets/models`, `/assets/categories` and
-`/assets/manufacturers`.
+`/assets/[tag]/edit`. The catalogues live under `/settings/assets/` (models, categories,
+manufacturers); the old `/assets/...` catalogue paths answer a 308 to them.
 
 Three rules the screens keep, each of which cost a bug to learn:
 

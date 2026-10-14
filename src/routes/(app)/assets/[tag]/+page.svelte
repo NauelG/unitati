@@ -24,7 +24,6 @@
 	import type { Snippet } from 'svelte';
 	import type { PageProps } from './$types';
 	import AssetFields from '../AssetFields.svelte';
-	import AssetsNav from '../AssetsNav.svelte';
 	import { options, stateOptions } from '../options';
 
 	let { data, form }: PageProps = $props();
@@ -188,8 +187,6 @@
 			{/if}
 		</div>
 	{/if}
-
-	<AssetsNav showCatalogue={data.canManage} />
 
 	<div class="mt-[var(--space-6)] space-y-[var(--space-6)]">
 		<WorkPanel heading={m.asset_detail_details()}>
