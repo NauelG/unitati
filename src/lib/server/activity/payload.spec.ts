@@ -87,4 +87,40 @@ describe('parsePayload', () => {
 	it('refuses a payload belonging to a different verb', () => {
 		expect(() => parsePayload('note.added', { assetTag: 'AST-0001', name: 'MacBook' })).toThrow();
 	});
+
+	it('keeps the state names of a task move next to their ids', () => {
+		expect(
+			parsePayload('task.state.changed', {
+				fromStateId: PERSON,
+				fromStateName: 'Origen',
+				toStateId: LOCATION,
+				toStateName: 'Destino'
+			})
+		).toMatchObject({ fromStateName: 'Origen', toStateName: 'Destino' });
+		expect(() =>
+			parsePayload('task.state.changed', { fromStateId: PERSON, toStateId: LOCATION })
+		).toThrow();
+	});
+
+	it('accepts a project owner arriving from nobody, and refuses a name without its id', () => {
+		expect(
+			parsePayload('project.owner.changed', {
+				fromPersonId: null,
+				fromPersonName: null,
+				toPersonId: PERSON,
+				toPersonName: 'Ada'
+			})
+		).toMatchObject({ fromPersonId: null, toPersonId: PERSON });
+		expect(() =>
+			parsePayload('project.owner.changed', { toPersonId: PERSON, toPersonName: 'Ada' })
+		).toThrow();
+	});
+
+	it('takes calendar dates for a due change, nullable at both ends', () => {
+		expect(parsePayload('task.due.changed', { from: null, to: '2026-12-01' })).toEqual({
+			from: null,
+			to: '2026-12-01'
+		});
+		expect(() => parsePayload('task.due.changed', { from: null, to: '1 Dec' })).toThrow();
+	});
 });

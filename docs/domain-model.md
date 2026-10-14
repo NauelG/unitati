@@ -17,7 +17,9 @@ Draft. Names here become folder names in `src/lib/server/<domain>/` (see [ADR 00
 
 `Organisation` exists so the schema is tenant-ready while exactly one row is used: every aggregate root carries `organisation_id` ([ADR 0004](adr/0004-tenancy.md)).
 
-`State` carries a user-chosen name and a system-owned `StateGroup` (`backlog`, `unstarted`, `started`, `completed`, `cancelled`). That split is how a catalogue stays configurable while the structure does not — the shape Plane uses.
+`State` carries a user-chosen name and a system-owned `StateGroup` (`backlog`, `unstarted`, `started`, `completed`, `cancelled`). That split is how a catalogue stays configurable while the structure does not — the shape Plane uses. The group is fixed when a state is created and never changes; code depends on the group, never on the name. A `Task` sits in exactly one `State`, and its board column is ordered by a fractional `position`.
+
+A project is **archived** rather than deleted, and an archived project (with its tasks) is read-only. A task has **assignees** — any number of people — and a project has at most one owner.
 
 `CustomField` is deliberately absent: it is post-v1 in the [roadmap](roadmap-v1.md).
 
@@ -40,7 +42,8 @@ erDiagram
 
     PROJECT ||--o{ MILESTONE : "has"
     PROJECT ||--o{ TASK : "has"
-    TASK }o--o| PERSON : "owned by"
+    TASK }o--o{ PERSON : "assigned to"
+    PROJECT }o--o| PERSON : "owned by"
 
     TICKET ||--o{ TICKET_ASSET : "affects"
     ASSET ||--o{ TICKET_ASSET : "affected by"

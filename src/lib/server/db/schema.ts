@@ -6,4 +6,5 @@ export * from '../directory/schema';
 export * from '../assets/schema';
 export * from '../activity/schema';
 export * from '../service-desk/schema';
+export * from '../projects/schema';
 export * from '../links/schema';

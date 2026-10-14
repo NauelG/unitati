@@ -75,7 +75,33 @@ describe('activitySentence', () => {
 			{
 				verb: 'link.asset.removed',
 				payload: { assetId: PERSON, assetTag: 'AST-0142', assetName: 'MacBook Pro' }
-			}
+			},
+			{ verb: 'project.created', payload: { projectTag: 'PRJ-0001', name: 'Migración' } },
+			{ verb: 'project.archived', payload: {} },
+			{ verb: 'project.unarchived', payload: {} },
+			{
+				verb: 'project.owner.changed',
+				payload: {
+					fromPersonId: null,
+					fromPersonName: null,
+					toPersonId: PERSON,
+					toPersonName: 'Ada'
+				}
+			},
+			{ verb: 'project.due.changed', payload: { from: null, to: '2026-12-01' } },
+			{ verb: 'task.created', payload: { taskTag: 'TSK-0001', title: 'Mudanza' } },
+			{
+				verb: 'task.state.changed',
+				payload: {
+					fromStateId: PERSON,
+					fromStateName: 'Origen',
+					toStateId: LOCATION,
+					toStateName: 'Destino'
+				}
+			},
+			{ verb: 'task.assigned', payload: { toPersonId: PERSON, toPersonName: 'Ada' } },
+			{ verb: 'task.unassigned', payload: { fromPersonId: PERSON, fromPersonName: 'Ada' } },
+			{ verb: 'task.due.changed', payload: { from: '2026-12-01', to: null } }
 		];
 
 		for (const entry of entries) {
@@ -92,6 +118,33 @@ describe('activitySentence', () => {
 		// The body is rendered as the note itself, below the sentence. Inlining it
 		// here would put it into every timeline summary and every notification.
 		expect(activitySentence(entry)).not.toContain('hunter2');
+	});
+});
+
+describe('activitySentence for projects', () => {
+	it('reads the state names recorded at the move, whatever the catalogue says today', () => {
+		const sentence = activitySentence({
+			verb: 'task.state.changed',
+			payload: {
+				fromStateId: PERSON,
+				fromStateName: 'Antes',
+				toStateId: LOCATION,
+				toStateName: 'Después'
+			}
+		});
+
+		expect(sentence).toContain('Antes');
+		expect(sentence).toContain('Después');
+	});
+
+	it('says there was nobody rather than printing null when an owner end is empty', () => {
+		const sentence = activitySentence({
+			verb: 'project.owner.changed',
+			payload: { fromPersonId: null, fromPersonName: null, toPersonId: PERSON, toPersonName: 'Ada' }
+		});
+
+		expect(sentence).toContain('nadie');
+		expect(sentence).not.toContain('null');
 	});
 });
 

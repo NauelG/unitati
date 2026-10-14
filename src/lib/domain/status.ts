@@ -31,7 +31,16 @@ export const PRIORITIES = ['low', 'normal', 'high', 'urgent'] as const;
 
 export const ASSET_STATES = ['in_use', 'in_repair', 'in_stock', 'retired'] as const;
 
+/**
+ * What a task's progress *means*, as opposed to what an organisation calls it.
+ * The state catalogue is user-authored (names, order, how many); the group a
+ * state belongs to is the only thing code may depend on. Declared in board order:
+ * the `pgEnum` is built from this list, so sorting by it sorts left to right.
+ */
+export const STATE_GROUPS = ['backlog', 'unstarted', 'started', 'completed', 'cancelled'] as const;
+
 export type TicketStatus = (typeof TICKET_STATUSES)[number];
+export type StateGroup = (typeof STATE_GROUPS)[number];
 export type Priority = (typeof PRIORITIES)[number];
 export type AssetState = (typeof ASSET_STATES)[number];
 

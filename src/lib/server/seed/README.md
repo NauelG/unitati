@@ -16,6 +16,10 @@ location and notes, spread over 13 models, 26 people and 4 locations.
   write functions yet, so people and locations are inserted into its exported tables, and the demo
   credentials go through Better Auth. That is the honest boundary today; the directory CRUD slice
   is what removes it.
+- **Projects are placed by group.** `buildProjectsPlan` names a state _group_ for every task, never
+  a state's name; `applyProjects` resolves it to the group's first state, so it works on a
+  catalogue that was already renamed. It is idempotent by presence (any project, archived or not,
+  skips it), which is what keeps `PRJ-` and `TSK-` tags identical on a second run.
 - **Local only.** It creates accounts with a published password, so `guard.ts` refuses any
   `DATABASE_URL` whose host is not `localhost`.
 
@@ -39,4 +43,4 @@ way to resolve an import, not two.
 This is a composition root — it touches `directory`, `assets` and `activity` — which is why it sits
 beside the domains. ADR 0002 forbids a _domain_ importing another's tables; the seed is not a
 domain, but it keeps to the spirit where it can (see "Through the domain" above). #13 brings it to
-volume and extends it to tickets and projects.
+volume.

@@ -25,6 +25,9 @@ const ticketPriority = z.enum(PRIORITIES);
 /** A name that is present is a real name; a name that is absent is `null`. */
 const presentName = z.string().min(1);
 
+/** A calendar date (`YYYY-MM-DD`), as the `date` columns hold it: no time, no zone. */
+const isoDate = z.iso.date();
+
 /** The id for the link, the tag and name as they read when it was made or undone. */
 const linkedAsset = z.object({
 	assetId: z.uuid(),
@@ -110,7 +113,58 @@ export const PAYLOAD_SCHEMAS = {
 	// "when was this attached?", a past event, while the asset's timeline reads
 	// the live relation. Writing it on both would show the ticket twice, once stale.
 	'link.asset.added': linkedAsset,
-	'link.asset.removed': linkedAsset
+	'link.asset.removed': linkedAsset,
+
+	'project.created': z.object({
+		projectTag: presentName,
+		name: presentName
+	}),
+
+	'project.archived': z.object({}),
+	'project.unarchived': z.object({}),
+
+	// Both ends nullable: a project can gain an owner from nobody, and lose one
+	// without gaining another. The name is a snapshot, like every person here.
+	'project.owner.changed': z.object({
+		fromPersonId: z.uuid().nullable(),
+		fromPersonName: presentName.nullable(),
+		toPersonId: z.uuid().nullable(),
+		toPersonName: presentName.nullable()
+	}),
+
+	'project.due.changed': z.object({
+		from: isoDate.nullable(),
+		to: isoDate.nullable()
+	}),
+
+	'task.created': z.object({
+		taskTag: presentName,
+		title: presentName
+	}),
+
+	// The state catalogue is user-authored, so the name is a snapshot: renaming a
+	// state must not rewrite what a task's past said.
+	'task.state.changed': z.object({
+		fromStateId: z.uuid(),
+		fromStateName: presentName,
+		toStateId: z.uuid(),
+		toStateName: presentName
+	}),
+
+	'task.assigned': z.object({
+		toPersonId: z.uuid(),
+		toPersonName: presentName
+	}),
+
+	'task.unassigned': z.object({
+		fromPersonId: z.uuid(),
+		fromPersonName: presentName
+	}),
+
+	'task.due.changed': z.object({
+		from: isoDate.nullable(),
+		to: isoDate.nullable()
+	})
 } satisfies Record<ActivityVerb, z.ZodType>;
 
 /** The payload belonging to one verb, inferred from its schema. */

@@ -9,6 +9,8 @@ import {
 	createOrganisation,
 	createPerson
 } from '../assets/testing/fixtures';
+import { ensureDefaultStates } from '../projects/defaults';
+import { createProjectRow, createTaskRow, statesByGroup } from '../projects/testing/fixtures';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
 import { activity } from './schema';
 import { recordActivity } from './writer';
@@ -88,37 +90,19 @@ describe('the exactly-one-target CHECK', () => {
 		expect(refusal).toEqual({ code: '23514', constraint: 'activity_exactly_one_target' });
 	});
 
-	/**
-	 * The columns #10 will attach its tables to still count towards the
-	 * constraint today, so an entry about a task is already well-formed before
-	 * the task table exists.
-	 */
-	it('counts a target that has no foreign key yet', async () => {
-		const { organisation } = await scenario();
-
-		const refusal = await refusalFrom(
-			getDb()
-				.insert(activity)
-				.values({
-					organisationId: organisation.id,
-					verb: 'note.added',
-					payload: { text: 'About a task' },
-					taskId: crypto.randomUUID()
-				})
-		);
-
-		expect(refusal).toBeNull();
-	});
-
 	/** Every target column named in `verbs.ts` must satisfy the constraint alone. */
 	it('accepts each of the five targets on its own', async () => {
 		const { organisation, asset, person, ticket } = await scenario();
+		await ensureDefaultStates(getDb(), organisation.id);
+		const { backlog } = await statesByGroup(organisation.id);
+		const project = await createProjectRow(organisation.id);
+		const task = await createTaskRow(organisation.id, project.id, backlog.id);
 		const ids: Record<string, string> = {
 			assetId: asset.id,
 			personId: person.id,
 			ticketId: ticket.id,
-			taskId: crypto.randomUUID(),
-			projectId: crypto.randomUUID()
+			taskId: task.id,
+			projectId: project.id
 		};
 
 		const refusals = await Promise.all(

@@ -1,4 +1,9 @@
 <script lang="ts" module>
+	import Archive from '@lucide/svelte/icons/archive';
+	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
+	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
+	import FolderPlus from '@lucide/svelte/icons/folder-plus';
+	import ListTodo from '@lucide/svelte/icons/list-todo';
 	import Flag from '@lucide/svelte/icons/flag';
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import Link from '@lucide/svelte/icons/link';
@@ -64,7 +69,17 @@
 		'ticket.priority.changed': Flag,
 		'ticket.queue.changed': Inbox,
 		'link.asset.added': Link,
-		'link.asset.removed': Unlink
+		'link.asset.removed': Unlink,
+		'project.created': FolderPlus,
+		'project.archived': Archive,
+		'project.unarchived': ArchiveRestore,
+		'project.owner.changed': UserCheck,
+		'project.due.changed': CalendarClock,
+		'task.created': ListTodo,
+		'task.state.changed': RefreshCw,
+		'task.assigned': UserCheck,
+		'task.unassigned': UserMinus,
+		'task.due.changed': CalendarClock
 	};
 </script>
 

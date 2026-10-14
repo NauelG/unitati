@@ -32,6 +32,8 @@ export const PERMISSIONS = [
 
 	// Projects
 	'projects.view',
+	/** The `tickets.view.own` shape: the tasks assigned to you, and the projects that hold them. */
+	'projects.view.assigned',
 	'projects.manage'
 ] as const;
 
@@ -64,7 +66,13 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
 		'projects.view',
 		'projects.manage'
 	],
-	employee: ['assets.view.own', 'assets.view.shared', 'tickets.view.own', 'tickets.create']
+	employee: [
+		'assets.view.own',
+		'assets.view.shared',
+		'tickets.view.own',
+		'tickets.create',
+		'projects.view.assigned'
+	]
 };
 
 export function permissionsFor(role: UserRole): readonly Permission[] {

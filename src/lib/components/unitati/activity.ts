@@ -83,6 +83,50 @@ export function activitySentence(entry: ActivityEntry): string {
 		case 'link.asset.removed':
 			return m.activity_link_asset_removed();
 
+		case 'project.created':
+			return m.activity_project_created();
+
+		case 'project.archived':
+			return m.activity_project_archived();
+
+		case 'project.unarchived':
+			return m.activity_project_unarchived();
+
+		case 'project.owner.changed':
+			// Either end can be nobody: a project gains an owner, or loses one.
+			return m.activity_project_owner_changed({
+				from: entry.payload.fromPersonName ?? m.activity_project_owner_none(),
+				to: entry.payload.toPersonName ?? m.activity_project_owner_none()
+			});
+
+		case 'project.due.changed':
+			return m.activity_project_due_changed({
+				from: entry.payload.from ?? m.activity_due_none(),
+				to: entry.payload.to ?? m.activity_due_none()
+			});
+
+		case 'task.created':
+			return m.activity_task_created();
+
+		case 'task.state.changed':
+			// The names are the snapshot taken at the move, not today's catalogue.
+			return m.activity_task_state_changed({
+				from: entry.payload.fromStateName,
+				to: entry.payload.toStateName
+			});
+
+		case 'task.assigned':
+			return m.activity_task_assigned({ personName: entry.payload.toPersonName });
+
+		case 'task.unassigned':
+			return m.activity_task_unassigned({ personName: entry.payload.fromPersonName });
+
+		case 'task.due.changed':
+			return m.activity_task_due_changed({
+				from: entry.payload.from ?? m.activity_due_none(),
+				to: entry.payload.to ?? m.activity_due_none()
+			});
+
 		default: {
 			const unhandled: never = entry;
 			throw new Error(`Unhandled activity verb: ${JSON.stringify(unhandled)}`);
