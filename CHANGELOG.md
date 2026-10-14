@@ -17,6 +17,17 @@ minor bumps carry features and patch bumps carry fixes.
 
 ### Added
 
+- The API, first slice (#132, slice A of #35): scoped API keys end to end and the first read
+  endpoint. `GET /api/v1/tickets` and `GET /api/v1/tickets/{tag}` answer JSON for a bearer key,
+  filtered by the owner's role ∩ the key's scopes. Errors share one envelope
+  (`{ "error": { "code", "message", "issues"? } }`): `400`, `401`, `404`, `409`, `429`.
+- `/settings/api-keys` (module _Plataforma_): admins and technicians create keys with a name, an
+  expiry (30, 90 or 365 days; _sin caducidad_ for admins only) and a scope checklist limited to
+  their own role. The key is shown once, with a copy button. Admins see every key with its owner
+  and can revoke any of them.
+- Permissions `api.keys.manage` (admin, technician) and `api.keys.manage.all` (admin).
+- `can()` honours a principal's `scopes`: they narrow a role and never widen it.
+- A rate limit of 120 requests per minute per key (`429` with `Retry-After`).
 - Project and task screens (#124, slice 5c of #10): `/projects` (active by default, an
   _Archivados_ filter, search, progress per project), `/projects/new`, the project record, `/tasks`
   (assigned to me by default; everything only with `projects.view`) and the task record. Everything

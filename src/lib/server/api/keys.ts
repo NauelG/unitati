@@ -1,0 +1,224 @@
+import { and, asc, desc, eq, gt, isNull, lt, or } from 'drizzle-orm';
+import { can, PERMISSIONS, type Permission } from '../access/permissions';
+import type { SessionUser } from '../auth/guards';
+import { users } from '../auth/schema';
+import { getDb } from '../db';
+import { uniqueConstraintName } from '../db/errors';
+import { resolveSessionUser } from '../directory';
+import { failure, success, type Outcome } from '../shared/outcome';
+import { generateKey, hashKey, isWellFormed, startOf } from './key-format';
+import { apiKeys } from './schema';
+import {
+	validateCreateApiKey,
+	type CreateApiKeyInput,
+	type InvalidApiKeyInput
+} from './validation';
+
+export type { CreateApiKeyInput } from './validation';
+
+/**
+ * API key lifecycle (ADR 0022): create, list, revoke, and resolve a presented
+ * key into the principal it acts as.
+ *
+ * Authorisation here is two-layered, like the other domains. The route gates
+ * the capability (`api.keys.manage`); a function that is reached without it
+ * throws, because that is a programming error. Which keys a person then sees
+ * or revokes is data, decided here.
+ */
+
+const DAY_MS = 86_400_000;
+const LAST_USED_THROTTLE_MS = 60_000;
+
+/** What a screen is shown about a key. Never the plaintext, never the hash. */
+export interface ApiKeyView {
+	id: string;
+	name: string;
+	start: string;
+	scopes: Permission[];
+	ownerUserId: string;
+	ownerName: string;
+	createdAt: Date;
+	lastUsedAt: Date | null;
+	expiresAt: Date | null;
+}
+
+export type CreateApiKeyFailure = InvalidApiKeyInput | 'duplicate_name';
+/** The principal a key acts as: its owner, narrowed to the key's scopes. */
+export type ApiPrincipal = SessionUser & { scopes: readonly Permission[]; keyId: string };
+
+export type AuthenticateFailure = 'malformed' | 'unknown' | 'revoked' | 'expired';
+
+function requireManage(actor: SessionUser): void {
+	if (!can(actor, 'api.keys.manage')) {
+		throw new Error(
+			`The ${actor.role} role cannot manage API keys; the route should have called requirePermission first.`
+		);
+	}
+}
+
+/** Stored scopes are strings; a permission retired since is dropped, never trusted. */
+function knownScopes(scopes: readonly string[]): Permission[] {
+	return scopes.filter((scope): scope is Permission =>
+		(PERMISSIONS as readonly string[]).includes(scope)
+	);
+}
+
+const viewColumns = {
+	id: apiKeys.id,
+	name: apiKeys.name,
+	start: apiKeys.start,
+	scopes: apiKeys.scopes,
+	ownerUserId: apiKeys.ownerUserId,
+	ownerName: users.name,
+	createdAt: apiKeys.createdAt,
+	lastUsedAt: apiKeys.lastUsedAt,
+	expiresAt: apiKeys.expiresAt
+};
+
+function toView(row: Omit<ApiKeyView, 'scopes'> & { scopes: string[] }): ApiKeyView {
+	return { ...row, scopes: knownScopes(row.scopes) };
+}
+
+/**
+ * Creates a personal key for `actor` and returns the plaintext **once**: only
+ * its hash is stored, so nobody, this function included, can show it again.
+ */
+export async function createApiKey(
+	actor: SessionUser,
+	input: CreateApiKeyInput,
+	now: Date = new Date()
+): Promise<Outcome<{ key: string; record: ApiKeyView }, CreateApiKeyFailure>> {
+	requireManage(actor);
+	const valid = validateCreateApiKey(actor, input);
+	if (!valid.ok) return valid;
+
+	const key = generateKey();
+	const expiresAt =
+		valid.value.expiresInDays === null
+			? null
+			: new Date(now.getTime() + valid.value.expiresInDays * DAY_MS);
+
+	try {
+		const [row] = await getDb()
+			.insert(apiKeys)
+			.values({
+				organisationId: actor.organisationId,
+				ownerUserId: actor.id,
+				createdByUserId: actor.id,
+				name: valid.value.name,
+				start: startOf(key),
+				keyHash: hashKey(key),
+				scopes: valid.value.scopes,
+				expiresAt
+			})
+			.returning();
+
+		return success({
+			key,
+			record: toView({ ...row, ownerName: actor.name })
+		});
+	} catch (error) {
+		if (uniqueConstraintName(error) === 'api_keys_owner_active_name') {
+			return failure('duplicate_name');
+		}
+		throw error;
+	}
+}
+
+/**
+ * The viewer's own active keys, or every active key in the organisation for
+ * whoever holds `api.keys.manage.all`. Revoked and expired keys keep their rows
+ * but are not listed.
+ */
+export async function listApiKeys(
+	viewer: SessionUser,
+	now: Date = new Date()
+): Promise<ApiKeyView[]> {
+	requireManage(viewer);
+
+	const rows = await getDb()
+		.select(viewColumns)
+		.from(apiKeys)
+		.innerJoin(users, eq(users.id, apiKeys.ownerUserId))
+		.where(
+			and(
+				eq(apiKeys.organisationId, viewer.organisationId),
+				can(viewer, 'api.keys.manage.all') ? undefined : eq(apiKeys.ownerUserId, viewer.id),
+				isNull(apiKeys.revokedAt),
+				or(isNull(apiKeys.expiresAt), gt(apiKeys.expiresAt, now))
+			)
+		)
+		.orderBy(desc(apiKeys.createdAt), asc(apiKeys.id));
+
+	return rows.map(toView);
+}
+
+/**
+ * The owner revokes their own key; `api.keys.manage.all` revokes any key in the
+ * organisation. Everything else, including a key that is already revoked, is
+ * `not_found`: confirming that someone else's key exists is itself a leak.
+ */
+export async function revokeApiKey(
+	actor: SessionUser,
+	id: string,
+	now: Date = new Date()
+): Promise<Outcome<void, 'not_found'>> {
+	requireManage(actor);
+
+	const revoked = await getDb()
+		.update(apiKeys)
+		.set({ revokedAt: now, updatedAt: now })
+		.where(
+			and(
+				eq(apiKeys.id, id),
+				eq(apiKeys.organisationId, actor.organisationId),
+				can(actor, 'api.keys.manage.all') ? undefined : eq(apiKeys.ownerUserId, actor.id),
+				isNull(apiKeys.revokedAt)
+			)
+		)
+		.returning({ id: apiKeys.id });
+
+	return revoked.length === 0 ? failure('not_found') : success(undefined);
+}
+
+/**
+ * Resolves a presented key into the principal it acts as: its owner, with the
+ * key's scopes attached so `can()` intersects them with the owner's role on
+ * every request (ADR 0022).
+ *
+ * `last_used_at` is stamped at most once a minute per key, because writing it on
+ * every request would turn each read into a write.
+ */
+export async function authenticateApiKey(
+	raw: string,
+	now: Date = new Date()
+): Promise<Outcome<ApiPrincipal, AuthenticateFailure>> {
+	if (!isWellFormed(raw)) return failure('malformed');
+
+	const [key] = await getDb()
+		.select()
+		.from(apiKeys)
+		.where(eq(apiKeys.keyHash, hashKey(raw)));
+	if (!key) return failure('unknown');
+	if (key.revokedAt) return failure('revoked');
+	if (key.expiresAt && key.expiresAt <= now) return failure('expired');
+
+	const owner = await resolveSessionUser(key.ownerUserId);
+	// A credential with no directory record cannot act on anything (ADR 0004).
+	if (!owner) return failure('unknown');
+
+	await getDb()
+		.update(apiKeys)
+		.set({ lastUsedAt: now })
+		.where(
+			and(
+				eq(apiKeys.id, key.id),
+				or(
+					isNull(apiKeys.lastUsedAt),
+					lt(apiKeys.lastUsedAt, new Date(now.getTime() - LAST_USED_THROTTLE_MS))
+				)
+			)
+		);
+
+	return success({ ...owner, scopes: knownScopes(key.scopes), keyId: key.id });
+}

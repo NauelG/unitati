@@ -34,7 +34,12 @@ export const PERMISSIONS = [
 	'projects.view',
 	/** The `tickets.view.own` shape: the tasks assigned to you, and the projects that hold them. */
 	'projects.view.assigned',
-	'projects.manage'
+	'projects.manage',
+
+	// API keys (ADR 0022). `.manage` is a person's own keys; `.manage.all` is every
+	// key in the organisation.
+	'api.keys.manage',
+	'api.keys.manage.all'
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -64,7 +69,8 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
 		'tickets.manage',
 		'tickets.comment.internal',
 		'projects.view',
-		'projects.manage'
+		'projects.manage',
+		'api.keys.manage'
 	],
 	employee: [
 		'assets.view.own',
@@ -83,6 +89,18 @@ export function roleCan(role: UserRole, permission: Permission): boolean {
 	return ROLE_PERMISSIONS[role].includes(permission);
 }
 
-export function can(user: { role: UserRole } | null | undefined, permission: Permission): boolean {
-	return user ? roleCan(user.role, permission) : false;
+/**
+ * A principal's `scopes` (an API key's, ADR 0022) only ever narrow its role:
+ * `undefined` means unscoped, which is what a browser session is. An empty list
+ * is a key that may do nothing, not a key that may do everything.
+ */
+export function can(
+	user: { role: UserRole; scopes?: readonly Permission[] } | null | undefined,
+	permission: Permission
+): boolean {
+	if (!user) return false;
+	return (
+		roleCan(user.role, permission) &&
+		(user.scopes === undefined || user.scopes.includes(permission))
+	);
 }
