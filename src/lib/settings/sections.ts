@@ -11,7 +11,6 @@ import type { Permission } from '#lib/server/access/permissions.js';
  * manage shows up nowhere.
  */
 
-
 export interface SettingsSection {
 	module: SettingsModule;
 	href: string;
