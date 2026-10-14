@@ -1,11 +1,10 @@
 <script lang="ts">
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import Circle from '@lucide/svelte/icons/circle';
-	import { backOut } from 'svelte/easing';
 	import { scale } from 'svelte/transition';
 	import RollingText from '#lib/components/unitati/RollingText.svelte';
 	import { countToken } from '#lib/rolling.js';
-	import { MOTION_BASE_MS } from '#lib/motion.js';
+	import { springIn } from '#lib/motion.js';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import KpiCard from '#lib/components/unitati/KpiCard.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
@@ -83,10 +82,7 @@
 						load, so a finished checklist does not replay its checks on every
 						visit; reduced-motion collapses it in the global layer.
 					-->
-					<span
-						class="mt-0.5 shrink-0 text-[var(--success)]"
-						in:scale={{ start: 0.5, duration: MOTION_BASE_MS, easing: backOut }}
-					>
+					<span class="mt-0.5 shrink-0 text-[var(--success)]" in:scale={springIn()}>
 						<CircleCheck class="size-5" aria-hidden="true" />
 					</span>
 				{:else}

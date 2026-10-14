@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { backOut } from 'svelte/easing';
 	import { scale } from 'svelte/transition';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import Button from '#lib/components/unitati/Button.svelte';
@@ -9,7 +8,7 @@
 	import RollingText from '#lib/components/unitati/RollingText.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
-	import { MOTION_BASE_MS } from '#lib/motion.js';
+	import { springIn } from '#lib/motion.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import { countToken, rollingPlural } from '#lib/rolling.js';
 	import type { RelatedGroup } from '#lib/server/links/related.js';
@@ -140,10 +139,7 @@
 				{#each Array.from({ length: STEPS }, (_, i) => i) as step (step)}
 					<li class="size-5 text-[var(--ink-muted)]">
 						{#if step < done}
-							<span
-								class="block text-[var(--success)]"
-								in:scale={{ start: 0.5, duration: MOTION_BASE_MS, easing: backOut }}
-							>
+							<span class="block text-[var(--success)]" in:scale={springIn()}>
 								<CircleCheck class="size-5" aria-hidden="true" />
 							</span>
 						{:else}

@@ -436,6 +436,8 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
 	*::before,
 	*::after {
 		animation-duration: 0.01ms !important;
+		/* No stagger either: static means static from the first frame (the constellation's draw-in). */
+		animation-delay: 0s !important;
 		animation-iteration-count: 1 !important;
 		transition-duration: 0.01ms !important;
 		scroll-behavior: auto !important;
@@ -621,7 +623,7 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
  * 10ms per edge (index 0 + 160 .. 7 x 10 + 160 = 230). `pathLength="1"` on the
  * lines makes `1` mean "the whole edge" whatever its length. `both` keeps
  * everything hidden through its delay; the reduced-motion layer above
- * collapses the durations, which leaves each piece at its end state.
+ * collapses durations and delays, which leaves each piece at its end state. `stroke-dashoffset` is the one paint-only property the constitution lets move (the issue asks for edges that draw).
  */
 @keyframes ut-constellation-fade {
 	from {
@@ -644,14 +646,6 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
 	stroke-dasharray: 1;
 	animation: ut-constellation-draw var(--motion-base) var(--ease-out) both;
 	animation-delay: calc(var(--i, 0) * 10ms);
-}
-
-@media (prefers-reduced-motion: reduce) {
-	/* Static means static from the first frame: no stagger delay either. */
-	.ut-constellation-node,
-	.ut-constellation-edge {
-		animation: none;
-	}
 }
 
 /*

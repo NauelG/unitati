@@ -1,3 +1,5 @@
+import { backOut } from 'svelte/easing';
+
 /**
  * Motion system support code (#87): the pieces that are plain TypeScript, not
  * markup, so they are testable without a browser.
@@ -135,4 +137,19 @@ export function handRecordMorphTo(
 		if (chip.dataset.recordRef === tag) chip.style.setProperty('view-transition-name', 'none');
 	}
 	node.style.setProperty('view-transition-name', name);
+}
+
+/**
+ * The check that springs in when an onboarding step completes (S2, #91), for
+ * `in:` on an element inside an `{#if done}`. A Svelte transition runs through
+ * the Web Animations API, which the CSS reduced-motion layer in `app.css` does
+ * not reach — so the 0 duration under `prefers-reduced-motion` is set here, in
+ * the one place a JS-driven animation has to ask.
+ */
+export function springIn(): { start: number; duration: number; easing: (t: number) => number } {
+	return {
+		start: 0.5,
+		duration: prefersReducedMotion() ? 0 : MOTION_BASE_MS,
+		easing: backOut
+	};
 }

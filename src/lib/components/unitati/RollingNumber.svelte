@@ -21,6 +21,8 @@
 
 	let { value, class: className }: Props = $props();
 
+	// Same curve as `--ease-out`: NumberFlow hands it to the Web Animations API,
+	// which cannot resolve a CSS custom property, so the literal lives here.
 	const EASE = 'cubic-bezier(0.2, 0, 0, 1)';
 	const timing = { duration: MOTION_SLOW_MS, easing: EASE };
 </script>
