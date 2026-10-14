@@ -4,9 +4,19 @@
 @import '@fontsource-variable/instrument-sans';
 @import '@fontsource-variable/martian-mono';
 
-/* Dark mode is specified in the design system; nothing applies `.dark` yet, so the
-   variant compiles and never matches until the theme toggle lands. */
-@custom-variant dark (&:is(.dark *));
+/*
+ * Dark mode (#90). `mode-watcher` puts `.dark` on `<html>`, so the variant now
+ * matches for real — the comment that used to stand here said it never would.
+ *
+ * `.dark, .dark *` rather than shadcn's stock `.dark *`: the element carrying
+ * the class has to count as dark too. Globally that element is `<html>` and the
+ * difference is invisible, but the gallery renders its dark column as a
+ * `<div class="dark">` wrapper inside an otherwise light page, and with the
+ * stock selector that wrapper's own `dark:` utilities would sit the one theme
+ * out. `:is()` (not `:where()`) keeps the 0-1-0 specificity the vendored
+ * `ui/` components' `dark:` overrides were generated against.
+ */
+@custom-variant dark (&:is(.dark, .dark *));
 
 /*
  * Design tokens — source of truth: docs/design/design-system.html.
@@ -80,6 +90,21 @@
 	--shadow-md: 0 4px 12px rgba(15, 23, 32, 0.08), 0 1px 2px rgba(15, 23, 32, 0.06);
 	--shadow-lg: 0 16px 40px rgba(15, 23, 32, 0.16);
 
+	/*
+	 * Button bevels (#90). Not in the design system as tokens — these are the
+	 * literal inset values of `.ut-btn` / `.ut-btn-danger` in
+	 * `docs/design/design-system.html`, which spells them as raw `rgba` because
+	 * it only ever described the light theme. Promoting them to tokens here is
+	 * what lets the dark block restate them, the same move `--size-sidebar-*`
+	 * made above for a value the handoff left open.
+	 *
+	 * They stay two tokens rather than one because the handoff gives the two
+	 * buttons different alphas (0.28 and 0.22), and collapsing them would mean
+	 * silently repainting one of the two in light mode to tidy up the dark one.
+	 */
+	--bevel-action: rgba(0, 0, 0, 0.28);
+	--bevel-danger: rgba(0, 0, 0, 0.22);
+
 	/* Sizes */
 	--size-control-sm: 28px;
 	--size-control-md: 36px;
@@ -119,8 +144,104 @@
 	--ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* shadcn-svelte theme variables, mapped exactly as the design system prescribes
-   in "Using it with shadcn-svelte". */
+/*
+ * The dark theme (#90, D9), transcribed from the `dark` column of
+ * `docs/design/assets/tokens.json` in the same order and the same groups as
+ * the light block above, so the two read as one table and diff against the
+ * handoff line by line. `tokens.json` stays the single source; this is its
+ * second column, not a second opinion.
+ *
+ * **Only colour and elevation flip.** Spacing, radius, type, size and motion
+ * are theme-independent by design — a 12px radius does not become a different
+ * radius in the dark — so they are not restated here. Re-declaring them would
+ * create a second place to change one number, which is the exact failure the
+ * light block's own comment warns about.
+ *
+ * **`.dark`, not `:root.dark`.** Custom properties inherit, so a plain class
+ * selector serves both consumers from one declaration: `<html class="dark">`
+ * for the app, and the gallery's `<div class="dark">` wrapper, which has to
+ * flip a subtree while the page around it stays light. `:root.dark` would
+ * handle the first and silently fail the second. Specificity ties with
+ * `:root` (0-1-0) and wins on source order.
+ *
+ * Four tokens are deliberately absent because they do not change:
+ * `--action-accent` and `--on-action-accent` hold the same value in both
+ * themes (their *contrast* still shifts — 3.3:1 on `action` in light, 4.9:1 in
+ * dark — because `--action` moved underneath them), and `--asset` / `--asset-soft`
+ * are aliases of `--brand` / `--brand-soft`, so they follow automatically.
+ * Restating any of the four would mean two edits to change one colour.
+ */
+.dark {
+	/* Surfaces and ink */
+	--surface-0: #0b1016;
+	--surface-1: #121922;
+	--surface-2: #1a2330;
+	--ink: #edf0f4;
+	--ink-muted: #98a3b3;
+	--border: #263142;
+	--border-strong: #687689;
+
+	/* Action and brand. `action` inverts to ink-on-light: the primary button is
+	   the lightest thing on the screen in dark, as `on-action` going dark says. */
+	--brand: #78a2ff;
+	--brand-hover: #9ab9ff;
+	--brand-soft: #16244a;
+	--action: #edf0f4;
+	--action-hover: #c9d1db;
+	--on-brand: #0b1016;
+	--on-action: #0b1016;
+	--on-danger: #0b1016;
+
+	/* One colour per domain: lightened to stay text-safe on the dark canvas */
+	--desk: #a890ff;
+	--desk-soft: #251d4a;
+	--project: #4fd3a2;
+	--project-soft: #10302a;
+
+	/* States */
+	--focus: #78a2ff;
+	--success: #5ccf8c;
+	--success-soft: #11301e;
+	--warning: #f2b54a;
+	--warning-soft: #38290c;
+	--danger: #ff8173;
+	--danger-soft: #3c1614;
+	--scrim: rgba(0, 0, 0, 0.6);
+
+	/*
+	 * Elevation goes from tinted ink to plain black, and gets heavier. A shadow
+	 * is occlusion, and on a #0b1016 canvas a 6%-ink shadow is invisible: the
+	 * dark column raises every alpha so the same three steps still read as three
+	 * steps.
+	 */
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+	--shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+	--shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+
+	/*
+	 * The button bevels have to be re-derived rather than reused, because the
+	 * fill underneath them inverted: `--action` goes from #0f1720 to #edf0f4.
+	 * A black inset at the light theme's 0.28 is a 1.05:1 whisper on near-black
+	 * and a 1.97:1 grey stripe on near-white — 1.9x the intended weight, which
+	 * is the "hardcoded rgba in the Button inset" the issue flagged as a dark
+	 * risk. These alphas are solved for the same *perceptual step* the light
+	 * theme has (1.05 for the action bevel, 1.43 for danger), so the control
+	 * reads as the same button in both themes instead of growing an edge in one.
+	 */
+	--bevel-action: rgba(0, 0, 0, 0.03);
+	--bevel-danger: rgba(0, 0, 0, 0.17);
+}
+
+/*
+ * shadcn-svelte theme variables, mapped exactly as the design system prescribes
+ * in "Using it with shadcn-svelte".
+ *
+ * `inline` is what makes dark mode free for every vendored component: the
+ * generated utilities emit `var(--surface-0)` rather than baking in the hex at
+ * build time, so `bg-background` resolves against whichever `--surface-0` is in
+ * scope. Without `inline` the light values would be frozen into the utility and
+ * `.dark` would move the tokens while the components ignored them.
+ */
 @theme inline {
 	--color-background: var(--surface-0);
 	--color-foreground: var(--ink);
@@ -265,13 +386,32 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
 }
 
 /*
- * The vendored `ui/sheet` (ADR 0011: never hand-edited) ships `bg-black/10` on
- * its overlay. Retheming it is a selector here, in the one file that already
- * maps shadcn's tokens onto ours, rather than a fork of the vendored file —
- * this is the mobile drawer's `--scrim`, issue #83's first real use of that
- * token.
+ * The vendored overlays (ADR 0011: never hand-edited) all ship `bg-black/10`.
+ * Retheming them is a selector here, in the one file that already maps shadcn's
+ * tokens onto ours, rather than a fork of the vendored files.
+ *
+ * The sheet was the first (#83, the mobile drawer). The two dialog overlays are
+ * added in #90's dark sweep, and the token's own usage note in `tokens.json`
+ * was always the argument: *"Overlay behind dialogs and the global search
+ * palette."* Dialogs are named in it, and only the drawer was reading it. The
+ * palette comes along for free, since `ui/command-dialog` is built on
+ * `ui/dialog`.
+ *
+ * Measured against the panel it is meant to separate, `bg-black/10` leaves the
+ * veiled canvas at 1.36:1 from a light dialog where `--scrim` reaches 3.96:1 —
+ * the scrim's job is to make the dialog the only readable thing on screen, and
+ * a 10% veil does not do it.
+ *
+ * Worth stating plainly: in **dark** the scrim barely moves the number
+ * (1.09:1 to 1.15:1). A canvas that is already near-black cannot be darkened
+ * into separation. There, the dialog is told apart by `--shadow-lg`, whose dark
+ * alphas `tokens.json` raises to 0.6 for exactly this reason — the scrim still
+ * belongs, for the dimming of the content behind it, but it is not what carries
+ * the edge.
  */
-[data-slot='sheet-overlay'] {
+[data-slot='sheet-overlay'],
+[data-slot='dialog-overlay'],
+[data-slot='alert-dialog-overlay'] {
 	background-color: var(--scrim);
 }
 
@@ -359,6 +499,8 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
  */
 [data-slot='popover-content'][data-open],
 [data-slot='select-content'][data-open],
+[data-slot='dropdown-menu-content'][data-open],
+[data-slot='dropdown-menu-sub-content'][data-open],
 [data-slot='dialog-content'][data-open],
 [data-slot='dialog-overlay'][data-open],
 [data-slot='alert-dialog-content'][data-open],
@@ -370,6 +512,8 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
 
 [data-slot='popover-content'][data-closed],
 [data-slot='select-content'][data-closed],
+[data-slot='dropdown-menu-content'][data-closed],
+[data-slot='dropdown-menu-sub-content'][data-closed],
 [data-slot='dialog-content'][data-closed],
 [data-slot='dialog-overlay'][data-closed],
 [data-slot='alert-dialog-content'][data-closed],
@@ -377,6 +521,68 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
 [data-slot='sheet-content'][data-closed],
 [data-slot='sheet-overlay'][data-closed] {
 	animation-duration: var(--motion-base);
+}
+
+/*
+ * Focus-ring audit (#90). The design system's States section specifies one
+ * focus indicator for everything interactive — `2px solid var(--focus)` at a
+ * 2px offset — and `@layer base`'s `:focus-visible` at the bottom of this file
+ * applies it. These vendored components opt out of it: `shadcn-svelte add`
+ * ships `outline-none` / `outline-hidden` on them and substitutes either a
+ * `ring-ring/50` halo or a background tint.
+ *
+ * Measured, both substitutes fall short, in both themes:
+ *
+ * - `focus-visible:ring-3 ring-ring/50` is `--focus` at 50% alpha, which
+ *   composites to **2.10–2.20:1** against the surfaces behind it in light and
+ *   **2.65–2.76:1** in dark. WCAG 1.4.11 asks 3:1 of a focus indicator. The
+ *   spec'd solid ring measures 4.79–5.47:1 light and 6.34–7.65:1 dark, so the
+ *   design system's own answer passes comfortably and the substitute does not.
+ * - the menu rows' `focus:bg-accent` is `--surface-2` on a `--surface-1`
+ *   popover: **1.14:1** light, **1.12:1** dark. For a nav row that is a soft
+ *   hint on top of `aria-current`, but on a menu row the tint is the *only*
+ *   thing saying where the keyboard is.
+ *
+ * So the outline is put back rather than the halo retuned — one indicator for
+ * the whole app, which is what the spec asks for and what every non-vendored
+ * control already does. Written here as a selector because ADR 0011 forbids
+ * hand-editing anything in `src/lib/components/ui/`; same move as the sheet
+ * overlay's colour and the enter/exit durations above.
+ *
+ * The background tints are left alone — they still read as hover feedback and
+ * now sit *under* a ring that carries the actual message.
+ */
+[data-slot='button']:focus-visible,
+[data-slot='select-trigger']:focus-visible,
+[data-slot='input-group']:has([data-slot='input-group-control']:focus-visible),
+[data-slot='dialog-close']:focus-visible,
+[data-slot='sheet-close']:focus-visible,
+[data-slot='popover-close']:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+
+/*
+ * Menu rows draw the ring *inside* themselves (negative offset). A menu's
+ * content box is 4px of padding (`p-1`), so a +2px offset would push the ring
+ * under the popover's own rounded edge and clip it; inset, it traces the row.
+ *
+ * `:focus` and not `:focus-visible`: bits-ui moves real DOM focus onto the row
+ * as the user arrows through, and that focus arrives from a key press — the
+ * exact case `:focus-visible` is meant to cover — but the browser does not
+ * always classify programmatic focus as "visible", which would leave the
+ * keyboard user with no cursor at all. A menu row is never click-focused
+ * without also closing the menu, so there is no mouse case to exclude here.
+ */
+[data-slot='dropdown-menu-item']:focus,
+[data-slot='dropdown-menu-radio-item']:focus,
+[data-slot='dropdown-menu-checkbox-item']:focus,
+[data-slot='dropdown-menu-sub-trigger']:focus,
+[data-slot='select-item']:focus,
+[data-slot='command-item']:focus,
+[data-slot='command-item'][data-selected] {
+	outline: 2px solid var(--focus);
+	outline-offset: -2px;
 }
 
 /*

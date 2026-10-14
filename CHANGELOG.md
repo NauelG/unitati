@@ -5,6 +5,120 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.26.0] - 2026-10-14
+
+### Added
+
+- Dark mode (#90, D9: the system decides until the user says otherwise). `ModeWatcher` is
+  mounted in the root `+layout.svelte` — so the theme covers the staff shell, the employee
+  portal and the auth screens alike — and renders no element: its whole output is a
+  synchronous inline `<script>` in `<head>` that sets `.dark` on `<html>` before the first
+  paint, so a reload never flashes the wrong theme. Same trick, and same reason, as
+  `app.html`'s pre-paint script for the collapsed sidebar (ADR 0015); the two do not collide,
+  one writes a class and the other an attribute.
+- The 34 colour and 3 elevation dark values from `docs/design/assets/tokens.json`, transcribed
+  into a `.dark` block in `src/app.css` in the same order and groups as the light block. Only
+  colour and elevation flip — spacing, radius, type, size and motion are theme-independent, so
+  restating them would create a second place to change one number. Four tokens are
+  deliberately absent because they do not change: `--action-accent` / `--on-action-accent` hold
+  the same value in both themes, and `--asset` / `--asset-soft` are aliases of `--brand` /
+  `--brand-soft` and follow automatically.
+- `ThemeToggle` in the user area of both the staff topbar and the portal topbar: three options
+  (Claro / Oscuro / Sistema) as a `RadioGroup` in a newly vendored `ui/dropdown-menu`, so a
+  screen reader announces which theme is active rather than reading three equal-sounding
+  commands. The trigger shows the option the user _chose_, not the one being painted — somebody
+  on "Sistema" at night sees the monitor icon, because that is the answer they gave.
+- `Sparkline` (#90): a day-by-day trend line in the footer of a `KpiCard` — 7 days of ticket
+  openings, 30 days of asset registrations. No axes, no grid, no tooltip; the y axis is anchored
+  at zero, so a week of 3, 3, 3, 4 reads as what it was instead of a cliff. Straight segments
+  rather than a spline, because a smoothed curve would draw values between two days that nobody
+  measured.
+- `DonutChart` (#90): the asset state distribution in the `/assets` header, with the total in the
+  hole and a written legend beside it (colour is never the only cue). Slice colours resolve
+  through the same `status.ts` table `StatusBadge` reads, so a slice and the badge for that state
+  in the rows below cannot disagree. `sort={null}` preserves the vocabulary's order, so the same
+  inventory does not look like a different chart between two reloads.
+- **Every chart ships an empty state, enforced by test.** `Sparkline` draws a flat baseline and
+  "Sin datos todavía"; `DonutChart` draws a `--surface-2` ring with a centred em-dash. Neither
+  ever invents an axis or a single 360° slice for an empty series — the benchmark failure the
+  rule exists to prevent. `src/lib/components/unitati/charts.empty-state.spec.ts` renders both
+  through `svelte/server` and asserts it.
+- New read-only, viewer-scoped aggregates, each tested against Postgres and each returning a
+  _dense_ series or a complete vocabulary so a chart cannot be handed a gap:
+  `service-desk/sparkline.ts` (tickets opened per day), `assets/sparkline.ts` (registrations per
+  day) and `assets/state-distribution.ts` (count per state, every state always present, in
+  `ASSET_STATES` order). No schema change: `created_at` already exists on every table. Day
+  buckets name UTC explicitly, so the same query cannot answer differently on two hosts.
+- `NumberFlow` on the overview KPI values (#90, first import of `@number-flow/svelte`). Numbers
+  roll on _change_ and are static on first render — the library's own behaviour, since it only
+  animates after its initial `data` assignment — and hold still under
+  `prefers-reduced-motion`, which has to come from the library because these animations run
+  through `Element.animate()` inside a shadow root that `app.css`'s global reduced-motion layer
+  cannot reach.
+- The depth language (#90): `KpiCard` gains an `href`, and only a card with one rests on
+  `--shadow-sm` and lifts to `--shadow-md` on hover (within `--motion-fast`). A card with no
+  destination stays flat — the lift is a promise that clicking does something, so a static card
+  borrowing it would be lying. This is the first real use of `--shadow-sm`.
+- Gallery: a new "Gráficos" category with `Sparkline` and `DonutChart` pages (both stating the
+  empty-state rule and demonstrating it), a `ThemeToggle` page, a dark-preview toggle on _every_
+  component page (a `.dark` wrapper around the demo region, so the audit happens in place without
+  changing the app's theme), and live light/dark swatch columns on the token page — rendered
+  through CSS rather than printed from the JSON, so the two columns are a test of `app.css`
+  rather than a second copy of the handoff.
+
+### Fixed
+
+- Focus rings on the vendored controls that had opted out of them. `shadcn-svelte add` ships
+  `outline-none`/`outline-hidden` on its buttons, select trigger, input group, close buttons and
+  menu rows, substituting either a `ring-ring/50` halo or a background tint. Measured, both fall
+  short of WCAG 1.4.11's 3:1 for a focus indicator in both themes: the halo composites to
+  2.10–2.20:1 in light and 2.65–2.76:1 in dark, and the menu rows' tint is 1.14:1 / 1.12:1 while
+  being the only thing saying where the keyboard is. The design system's own `2px solid
+var(--focus)` measures 4.79–5.47:1 and 6.34–7.65:1, so it is restored to those controls via
+  attribute selectors in `app.css` (ADR 0011: vendored files are never hand-edited), inset on
+  menu rows so the ring traces the row instead of being clipped by the popover's padding.
+- The dark lockup. `unitati-lockup.svg` draws its wordmark in flat ink (`#0F1720`), which all but
+  disappears on the dark canvas; `Logo` now swaps in `unitati-lockup-inverse.svg` through the
+  `dark:` variant rather than by reading the mode in JS, so it is correct on the server and on a
+  hard reload and resolves per element inside the gallery's `.dark` wrapper. The _mark_
+  deliberately keeps one cut: it is three brand gradients and no ink, so it reads on either
+  canvas, and reaching for `unitati-mark-white.svg` would throw the logo's colour away to solve
+  a contrast problem the coloured mark does not have.
+- `Button`'s two bottom bevels, the last colours in `unitati/` that bypassed a token. They were
+  written as literal `rgba(0,0,0,0.28)` / `rgba(0,0,0,0.22)`, and dark mode is what made that
+  matter: both fills invert, so a fixed black alpha that is a 1.05:1 whisper on near-black ink
+  becomes a 1.97:1 grey stripe across a near-white button — 1.9× the intended weight. They are
+  now `--bevel-action` / `--bevel-danger`, with dark alphas solved for the same perceptual step
+  the light theme has.
+- Toasts followed the theme. `ui/sonner` had `theme="light"` hardcoded with a comment deferring
+  the fix to this phase: the upstream registry item for that block declares `mode-watcher` as its
+  own dependency and ships `theme={mode.current}`, which #88 had to strip while D12 kept the
+  package out. Restoring it returns the vendored file to being diffable against upstream
+  (ADR 0011). `mode`, not `userPrefersMode`, because sonner wants the theme being painted.
+- The dialog and alert-dialog overlays now read `--scrim`, joining the sheet overlay that
+  already did. The token's own usage note always covered them — "Overlay behind dialogs and the
+  global search palette" — while only the drawer read it; the vendored `bg-black/10` leaves a
+  light dialog at 1.36:1 from its veiled canvas where `--scrim` reaches 3.96:1. The command
+  palette inherits it, since `ui/command-dialog` is built on `ui/dialog`. In dark the scrim
+  barely moves the number (1.09 → 1.15:1) because a near-black canvas cannot be darkened into
+  separation — there the edge comes from `--shadow-lg`, whose dark alphas `tokens.json` raises
+  to 0.6 for this exact reason.
+- `Skeleton`'s shimmer swept the wrong way in dark. Its highlight is `--surface-1` over a
+  `--surface-2` block, and the two inverted (`#121922` is darker than `#1a2330`), so the pass
+  read as a travelling shadow instead of a travelling light. It now takes `--border` in dark, the
+  next step up from `--surface-2` there, keeping the gesture a highlight at the same strength in
+  both themes (1.14:1 light, 1.21:1 dark).
+
+### Changed
+
+- `assets`' row scope moved from `index.ts` into its own `assets/scope.ts`, mirroring
+  `service-desk/scope.ts`, which has always been shaped that way. The domain's new read modules
+  need the predicate, and importing it from the barrel that re-exports them would be an import
+  cycle that works only because the call happens at runtime. `requireAssetScope` is still
+  re-exported from `'../assets'`, so nothing outside the domain changes.
+- The vendored `ui/dropdown-menu`'s open/close animation joins the existing token override in
+  `app.css` (120ms in, 160ms out), instead of the `duration-100` it ships with.
+
 ## [0.25.0] - 2026-10-14
 
 ### Added

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { mode } from "mode-watcher";
 	import { Toaster as Sonner, type ToasterProps as SonnerProps } from "svelte-sonner";
 	import Loader2Icon from '@lucide/svelte/icons/loader-2';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
@@ -6,10 +7,15 @@
 	import InfoIcon from '@lucide/svelte/icons/info';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 
-	// No light/dark toggle exists yet (`.dark` is never applied — see
-	// `src/app.css`), so `theme` stays a fixed "light" rather than wiring up
-	// `mode-watcher`: ADR 0017 schedules that dependency's first import for
-	// phase 9, not this one.
+	// Restored to upstream's own `theme={mode.current}` (#90). The registry item
+	// for this block declares `mode-watcher` as its dependency and ships that
+	// line; #88 had to replace it with a fixed "light" because D12 had the
+	// package removed until a phase claimed it. Phase 9 is that phase, so the
+	// vendored file goes back to being diffable against upstream (ADR 0011).
+	//
+	// `mode`, not `userPrefersMode`: sonner wants the theme being *painted*, so
+	// "system" has to be resolved first. It is `undefined` until the browser
+	// reports, which sonner reads as its own default.
 	let { ...restProps }: SonnerProps = $props();
 </script>
 
@@ -20,7 +26,7 @@
 	toast-specific to wire up here.
 -->
 <Sonner
-	theme="light"
+	theme={mode.current}
 	position="bottom-right"
 	richColors
 	class="toaster group"

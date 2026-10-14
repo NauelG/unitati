@@ -58,6 +58,46 @@ const LABELS: Record<Exclude<StatusKey, 'normal'>, () => string> = {
 /** Every key a badge renders, in the design system's reading order. */
 export const BADGED_STATUS_KEYS = Object.keys(TONES) as Exclude<StatusKey, 'normal'>[];
 
+/**
+ * A tone as a CSS colour (#90), for the places a class name cannot go.
+ *
+ * `StatusBadge` paints its tones through Tailwind variants, which is right for
+ * an element with a class attribute. An SVG arc fill is not: `DonutChart` hands
+ * the colour to `layerchart`, which writes it into a `fill` attribute, so it
+ * needs the `var(--token)` string itself.
+ *
+ * It belongs here, beside `TONES`, because the alternative is the chart
+ * restating "in_stock is green" — and then the donut and the badge for the same
+ * state could disagree, which is precisely what the issue's "slice colours
+ * match `StatusBadge` colours for the same states" forbids. One table maps a
+ * meaning to a colour; two renderers read it.
+ *
+ * `neutral` is `--ink-muted` rather than a surface, matching the badge's own
+ * `text-[var(--ink-muted)]`: on a donut the slice needs to be the *ink*, since
+ * a slice painted `--surface-2` would vanish into the empty ring behind it.
+ */
+const TONE_COLOURS: Record<Tone, string> = {
+	brand: 'var(--brand)',
+	desk: 'var(--desk)',
+	success: 'var(--success)',
+	warning: 'var(--warning)',
+	danger: 'var(--danger)',
+	neutral: 'var(--ink-muted)'
+};
+
+export function toneColour(tone: Tone): string {
+	return TONE_COLOURS[tone];
+}
+
+/**
+ * The colour a chart should paint for a status, resolved through the same
+ * `TONES` table the badge reads. `normal` is excluded at the type level for the
+ * same reason `statusLabel` excludes it: it has no badge, so it has no colour.
+ */
+export function statusColour(status: Exclude<StatusKey, 'normal'>): string {
+	return TONE_COLOURS[TONES[status]];
+}
+
 /** `null` for a status that renders nothing, so the caller has one thing to check. */
 export function statusBadge(status: StatusKey): { tone: Tone; label: string } | null {
 	if (status === 'normal') return null;

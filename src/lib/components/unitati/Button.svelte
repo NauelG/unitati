@@ -6,6 +6,13 @@
 	 * action buttons sit at `--radius-md` (8px), the same corner as an input or
 	 * a select trigger — full-pill geometry is reserved for badges and status
 	 * markers, not every control. Colour only ever arrives through a token.
+	 *
+	 * The bottom bevel on `primary` and `danger` reads `--bevel-action` /
+	 * `--bevel-danger` (#90) rather than the raw `rgba(0,0,0,0.28)` /
+	 * `rgba(0,0,0,0.22)` it was written with. Those literals were the last
+	 * colours in `unitati/` that bypassed a token, and dark mode is what made
+	 * that matter: both fills invert, so a fixed black alpha that is a whisper
+	 * on near-black ink becomes a grey stripe across a near-white button.
 	 */
 	export const button = tv({
 		base: [
@@ -20,12 +27,12 @@
 		variants: {
 			variant: {
 				primary:
-					'bg-[var(--action)] text-[var(--on-action)] shadow-[inset_0_-2px_0_rgba(0,0,0,0.28)] hover:bg-[var(--action-hover)] active:shadow-none',
+					'bg-[var(--action)] text-[var(--on-action)] shadow-[inset_0_-2px_0_var(--bevel-action)] hover:bg-[var(--action-hover)] active:shadow-none',
 				secondary:
 					'bg-[var(--surface-1)] text-[var(--ink)] shadow-[inset_0_0_0_1px_var(--border-strong)] hover:bg-[var(--surface-2)]',
 				ghost: 'bg-transparent text-[var(--ink)] hover:bg-[var(--surface-2)]',
 				danger:
-					'bg-[var(--danger)] text-[var(--on-danger)] shadow-[inset_0_-2px_0_rgba(0,0,0,0.22)] active:shadow-none'
+					'bg-[var(--danger)] text-[var(--on-danger)] shadow-[inset_0_-2px_0_var(--bevel-danger)] active:shadow-none'
 			},
 			size: {
 				sm: 'h-[var(--size-control-sm)] px-[var(--space-3)] text-xs leading-4',

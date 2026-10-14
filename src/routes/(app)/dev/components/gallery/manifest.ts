@@ -10,6 +10,7 @@ export const GALLERY_CATEGORIES = [
 	'fields',
 	'feedback',
 	'data',
+	'charts',
 	'relations',
 	'conversation',
 	'navigation',
@@ -24,6 +25,11 @@ export const CATEGORY_LABEL: Record<GalleryCategory, string> = {
 	fields: 'Campos',
 	feedback: 'Feedback',
 	data: 'Datos',
+	// Its own category rather than more of "Datos" (#90): these two are the
+	// only components in the app that render a *shape* instead of a value, and
+	// they share one rule nothing else has — every chart ships an empty state.
+	// A reader looking for that rule should find a section, not two rows.
+	charts: 'Gráficos',
 	relations: 'Relaciones',
 	conversation: 'Conversación',
 	navigation: 'Navegación',
@@ -67,6 +73,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		summary: 'Control interactivo primario; renderiza un `<a>` cuando recibe `href`.',
 		sourceFile: 'Button.svelte',
 		load: () => import('./specs/Button.svelte')
+	},
+	{
+		id: 'theme-toggle',
+		name: 'ThemeToggle',
+		category: 'actions',
+		summary: 'Claro / Oscuro / Sistema, como grupo de radio en un menú desplegable.',
+		sourceFile: 'ThemeToggle.svelte',
+		load: () => import('./specs/ThemeToggle.svelte')
 	},
 
 	// Fields
@@ -236,6 +250,24 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		summary: 'Un único carril de actividad de un activo, con sus relaciones de ticket en vivo.',
 		sourceFile: 'AssetTimeline.svelte',
 		load: () => import('./specs/AssetTimeline.svelte')
+	},
+
+	// Charts
+	{
+		id: 'sparkline',
+		name: 'Sparkline',
+		category: 'charts',
+		summary: 'Tendencia diaria sin ejes, para el pie de un KpiCard. Con estado vacío real.',
+		sourceFile: 'Sparkline.svelte',
+		load: () => import('./specs/Sparkline.svelte')
+	},
+	{
+		id: 'donut-chart',
+		name: 'DonutChart',
+		category: 'charts',
+		summary: 'Un reparto como anillo, con el total en el hueco. Con estado vacío real.',
+		sourceFile: 'DonutChart.svelte',
+		load: () => import('./specs/DonutChart.svelte')
 	},
 
 	// Relations

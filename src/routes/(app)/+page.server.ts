@@ -6,16 +6,27 @@ import {
 } from '#lib/domain/access.js';
 import { can, permissionsFor, type Permission } from '#lib/server/access/permissions.js';
 import { requireUser } from '#lib/server/auth/guards.js';
-import { assetSummary } from '#lib/server/assets/index.js';
+import { assetRegistrationsSparkline, assetSummary } from '#lib/server/assets/index.js';
 import { countPeople, countTeams } from '#lib/server/directory/index.js';
 import { listRecentActivity } from '#lib/server/activity/index.js';
 import {
 	hasPortalActivity,
 	listQueues,
 	myOpenTickets,
+	ticketOpeningsSparkline,
 	ticketSummary
 } from '#lib/server/service-desk/index.js';
 import type { PageServerLoad } from './$types';
+
+/**
+ * The two sparkline windows (#90), named rather than inlined so the server and
+ * the chart's accessible label cannot disagree about how many days the line
+ * covers. Ticket inflow is read a week at a time; asset registrations are far
+ * sparser, so a week of them would usually be a flat zero that says nothing —
+ * a month is the shortest window with a shape in it.
+ */
+const TICKET_SPARKLINE_DAYS = 7;
+const ASSET_SPARKLINE_DAYS = 30;
 
 /**
  * The three checklist steps this organisation has not completed yet (#84).
@@ -51,17 +62,31 @@ export const load: PageServerLoad = async ({ locals }) => {
 	 * viewer missing one never triggers a query whose result they could not be
 	 * shown anyway.
 	 */
-	const [assets, tickets, queueCount, portalUsed, people, teams, myTickets, activity] =
-		await Promise.all([
-			seesAssets ? assetSummary(user) : undefined,
-			seesTickets ? ticketSummary(user) : undefined,
-			seesTickets ? listQueues(user).then((rows) => rows.length) : undefined,
-			seesTickets ? hasPortalActivity(user.organisationId) : undefined,
-			seesPeople ? countPeople(user.organisationId) : undefined,
-			seesPeople ? countTeams(user.organisationId) : undefined,
-			seesTickets ? myOpenTickets(user, 5) : undefined,
-			seesAssets || seesTickets ? listRecentActivity(user.organisationId, 8) : undefined
-		]);
+	const [
+		assets,
+		tickets,
+		queueCount,
+		portalUsed,
+		people,
+		teams,
+		myTickets,
+		activity,
+		ticketTrend,
+		assetTrend
+	] = await Promise.all([
+		seesAssets ? assetSummary(user) : undefined,
+		seesTickets ? ticketSummary(user) : undefined,
+		seesTickets ? listQueues(user).then((rows) => rows.length) : undefined,
+		seesTickets ? hasPortalActivity(user.organisationId) : undefined,
+		seesPeople ? countPeople(user.organisationId) : undefined,
+		seesPeople ? countTeams(user.organisationId) : undefined,
+		seesTickets ? myOpenTickets(user, 5) : undefined,
+		seesAssets || seesTickets ? listRecentActivity(user.organisationId, 8) : undefined,
+		// Gated on the same permission as the card each one sits inside, so no
+		// viewer triggers a query whose result they could not be shown (#90).
+		seesTickets ? ticketOpeningsSparkline(user, TICKET_SPARKLINE_DAYS) : undefined,
+		seesAssets ? assetRegistrationsSparkline(user, ASSET_SPARKLINE_DAYS) : undefined
+	]);
 
 	const checklist: ChecklistStatus = {
 		registerAsset: seesAssets ? (assets?.total ?? 0) > 0 : true,
@@ -86,6 +111,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		people,
 		teams,
 		myTickets: myTickets ?? [],
-		activity: activity ?? []
+		activity: activity ?? [],
+		ticketTrend,
+		assetTrend
 	};
 };

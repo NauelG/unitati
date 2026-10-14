@@ -62,23 +62,46 @@
 				</p>
 			</div>
 		</div>
+		<!--
+			Both themes at once (#90). The dark swatch carries `class="dark"`
+			itself, which is why the token block in `app.css` is written as `.dark`
+			rather than `:root.dark`: custom properties declared by a rule matching
+			an element are visible to that element's own `var()`, so one class on
+			one `<span>` re-resolves every token inside it.
+
+			Rendered live rather than printed from `token.value.dark`, and the
+			difference matters — a swatch showing the hex from `tokens.json` would
+			stay green while the stylesheet had drifted away from the handoff. This
+			column shows what the CSS actually does, so the two columns are a test
+			of `app.css`, not a second copy of the JSON.
+		-->
 		<div class="mt-[var(--space-4)] overflow-x-auto">
 			<table class="ut-table w-full text-sm">
 				<thead>
 					<tr>
 						<th class="px-[var(--space-3)] py-2 text-left">Token</th>
+						<th class="px-[var(--space-3)] py-2 text-left">Claro</th>
+						<th class="px-[var(--space-3)] py-2 text-left">Oscuro</th>
 						<th class="px-[var(--space-3)] py-2 text-left">Uso</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each data.colorTokens as token (token.name)}
 						<tr>
-							<td class="px-[var(--space-3)] py-2 font-mono text-xs">
+							<td class="px-[var(--space-3)] py-2 font-mono text-xs">--{token.name}</td>
+							<td class="px-[var(--space-3)] py-2">
 								<span
-									class="mr-2 inline-block size-3 rounded-[var(--radius-sm)] border border-[var(--border)] align-middle"
+									class="inline-block size-4 rounded-[var(--radius-sm)] border border-[var(--border)] align-middle"
 									style:background="var(--{token.name})"
+									title={token.value.light}
 								></span>
-								--{token.name}
+							</td>
+							<td class="px-[var(--space-3)] py-2">
+								<span
+									class="dark inline-block size-4 rounded-[var(--radius-sm)] border border-[var(--border)] align-middle"
+									style:background="var(--{token.name})"
+									title={token.value.dark}
+								></span>
 							</td>
 							<td class="px-[var(--space-3)] py-2 text-[var(--ink-muted)]">{token.usage}</td>
 						</tr>

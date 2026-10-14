@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AppVersion from '#lib/components/AppVersion.svelte';
 	import Logo from '#lib/components/unitati/Logo.svelte';
+	import ThemeToggle from '#lib/components/unitati/ThemeToggle.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { LayoutProps } from './$types';
 
@@ -22,6 +23,13 @@
 				{m.portal_assets_link()}
 			</a>
 			<AppVersion />
+			<!--
+				The portal gets the same switch as the staff shell (#90). The theme is
+				a property of the person reading, not of their permissions, and the
+				portal is the only screen most employees ever see — leaving it out
+				would mean dark mode shipped for staff only.
+			-->
+			<ThemeToggle />
 			<span class="hidden text-sm text-[var(--ink)] sm:inline">{data.user.name}</span>
 			<form method="POST" action="/sign-out">
 				<button
