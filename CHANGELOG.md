@@ -5,6 +5,21 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.35.0] - 2026-10-14
+
+### Added
+
+- Fold any board column by hand (#127): a button in each column header (_Plegar_ / _Desplegar_,
+  with `aria-expanded` and `aria-controls`, reachable with Tab) turns a column into a strip that
+  keeps its name and its real count, and still takes a _Mover a…_ and a drop without unfolding.
+  An empty column can be unfolded and stays so; with no choice it folds itself when empty, as
+  before. The toggle is also on read-only boards.
+- The board remembers the person's choices in the `unitati-board` cookie: the folded columns
+  (global across projects, per device) and the board/list view. `/projects/{tag}` reads the cookie
+  on the server, so the first paint is already right with no flash. An explicit `?view=` still wins
+  and is never stored; a malformed cookie or one naming a deleted state falls back to the default
+  board and is rewritten clean.
+
 ## [0.34.0] - 2026-10-14
 
 ### Added
