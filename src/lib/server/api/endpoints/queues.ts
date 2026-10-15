@@ -7,6 +7,8 @@ export const listQueuesEndpoint = defineEndpoint({
 	method: 'GET',
 	path: '/queues',
 	summary: 'List the queues a ticket can be opened in or moved to.',
+	description:
+		'Returns the queues a ticket can be opened in or moved to. Use their `id` as `queueId` in `tickets.create` and `tickets.queue`.',
 	permissions: ['tickets.view', 'tickets.create'],
 	input: z.object({}),
 	output: z.object({ data: z.array(z.object({ id: z.string(), name: z.string() })) }),

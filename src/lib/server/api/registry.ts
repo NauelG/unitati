@@ -56,6 +56,12 @@ export interface Endpoint<I extends z.ZodType = z.ZodType, O extends z.ZodType =
 	/** Relative to `/api/v1`; `{name}` segments are path parameters. */
 	path: string;
 	summary: string;
+	/** Markdown, English: what the use case does beyond its one-line summary. Shown in the documentation. */
+	description?: string;
+	/** A sample request body (or query) for the documentation and its `curl`. */
+	example?: Record<string, unknown>;
+	/** The success status. `200` unless it creates something; `204` is implied by a `z.null()` output. */
+	status?: 200 | 201;
 	/** "Any of", like `requireAnyPermission`. Never empty. */
 	permissions: readonly [Permission, ...Permission[]];
 	/** Path parameters, query string and JSON body, merged; path parameters win. */

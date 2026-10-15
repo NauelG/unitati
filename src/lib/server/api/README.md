@@ -14,6 +14,7 @@ calls a domain function that already knows who may see what.
 | `authenticate-request.ts` | `Authorization: Bearer` to principal; which URLs are the API                                                                                                       |
 | `registry.ts`             | `defineEndpoint`, `ApiError`, `Reply` (`created`, `noContent`), path matching                                                                                      |
 | `endpoints/`              | Every endpoint, declared once (`tickets`, `ticket-thread`, `ticket-actions`, `queues`); `refusals.ts` maps domain failures to the envelope; `index.ts` is the list |
+| `openapi.ts`              | `buildOpenApiDocument`: the OpenAPI 3.1 document, generated from the registry; `shared-schemas.ts` names the schemas that become `components.schemas`              |
 | `dispatch.ts`             | One function from `Request` to `Response`: 401, rate limit, 404, 400, handler (`200`, `201` or `204`), output schema, the error envelope                           |
 | `rate-limit.ts`           | 120 requests per minute per key, a fixed window in process memory, behind one function                                                                             |
 
@@ -31,8 +32,9 @@ calls a domain function that already knows who may see what.
 - **The `output` schema is the allow-list.** A response is parsed through it, so a column the schema
   does not name never leaves. Tickets are addressed by tag; their UUID is not on the wire (ADR 0010).
 - **Adding an endpoint** is one `defineEndpoint` in `endpoints/` plus one line in
-  `endpoints/index.ts`. Validation, authorisation and (slice C) the OpenAPI document follow from the
-  declaration.
+  `endpoints/index.ts`. Validation, authorisation and the OpenAPI document (`/api/v1/openapi.json`,
+  `/settings/api-keys/docs`) follow from the declaration. Give it a `description` (English, Markdown)
+  and, for a write, an `example` body; a `201` also sets `status: 201`.
 - **Naming assets is part of the ticket scopes.** A key holding `tickets.create` or `tickets.manage`
   resolves, links and unlinks assets without a separate `assets.*` scope: the endpoint adds the
   asset-read scopes to the principal for that call. `can()` still intersects with the role, so it

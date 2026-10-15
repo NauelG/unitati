@@ -34,3 +34,6 @@ export {
 	noContent
 } from './registry';
 export type { Endpoint, HttpMethod } from './registry';
+
+export { buildOpenApiDocument, tagOf } from './openapi';
+export type { JsonSchema, OpenApiDocument, OpenApiOperation, OpenApiParameter } from './openapi';
