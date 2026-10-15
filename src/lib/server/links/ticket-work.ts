@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { recordActivity } from '../activity';
+import { actorColumns, recordActivity } from '../activity';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
@@ -80,7 +80,7 @@ export async function linkTask(
 
 	await recordActivity(tx, {
 		organisationId: actor.organisationId,
-		actorPersonId: actor.personId,
+		...actorColumns(actor),
 		target: { ticketId: ticket.id },
 		verb: 'link.task.added',
 		payload: { taskId: task.id, taskTag: task.taskTag, taskTitle: task.title }
@@ -125,7 +125,7 @@ export async function linkProject(
 
 	await recordActivity(tx, {
 		organisationId: actor.organisationId,
-		actorPersonId: actor.personId,
+		...actorColumns(actor),
 		target: { ticketId: ticket.id },
 		verb: 'link.project.added',
 		payload: { projectId: project.id, projectTag: project.projectTag, projectName: project.name }
@@ -175,7 +175,7 @@ export async function unlinkTask(
 
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { ticketId: pair.ticketId },
 			verb: 'link.task.removed',
 			payload: { taskId: task.id, taskTag: task.taskTag, taskTitle: task.title }
@@ -212,7 +212,7 @@ export async function unlinkProject(
 
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { ticketId: pair.ticketId },
 			verb: 'link.project.removed',
 			payload: { projectId: project.id, projectTag: project.projectTag, projectName: project.name }
