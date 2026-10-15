@@ -5,6 +5,26 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.38.0] - 2026-10-15
+
+### Added
+
+- The API, third slice (#134, slice C of #35): a generated OpenAPI 3.1 document and in-app
+  documentation. `GET /api/v1/openapi.json` serves the document for every endpoint to any valid
+  key, with no scope (`401` without one). It is built from the endpoint registry and nothing else,
+  with Zod's own `z.toJSONSchema()`: one operation per use case (`operationId` is the use-case id),
+  parameters and body from the input schema, the success response from the output schema, the
+  shared error envelope for `400`, `401`, `404`, `409` and `429`, and the required permissions both
+  in the description and as `x-unitati-permissions`. The ticket, the error envelope and the
+  pagination meta are shared under `components.schemas`. A registry entry gains an optional
+  `description`, `example` and `status`; every existing entry is described in English.
+- `/settings/api-keys/docs`, reached from the API keys page ("Documentación"), with the same
+  permission as the keys: a download button for `openapi.json`, an introduction (authentication,
+  errors, pagination, rate limit) and every use case grouped by domain, with its method and path,
+  the permissions it needs marked as in or out of the viewer's role, its request and response
+  fields as tables and a copyable `curl`. New `MethodBadge` and `SchemaFieldTable` components,
+  both in the gallery.
+
 ## [0.37.0] - 2026-10-14
 
 ### Added

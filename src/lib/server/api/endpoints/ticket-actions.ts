@@ -61,6 +61,16 @@ export const createTicketEndpoint = defineEndpoint({
 	method: 'POST',
 	path: '/tickets',
 	summary: 'Open a ticket. Staff may name the requester; everybody else is their own.',
+	description:
+		"Opens a ticket in a queue and answers `201` with the ticket and a `Location` header. Staff holding `tickets.manage` may set `requesterPersonId`; for everybody else the requester is the key's owner. `assetTags` names the affected assets as the caller sees them; an unknown or invisible tag is a `400` on `assetTags.<n>`.",
+	example: {
+		subject: 'Printer on floor 2 is offline',
+		body: 'It stopped printing this morning.',
+		queueId: '00000000-0000-4000-8000-000000000000',
+		priority: 'normal',
+		assetTags: ['AST-0001']
+	},
+	status: 201,
 	permissions: ['tickets.create'],
 	input: createTicketInput.omit({ assetIds: true }).extend({
 		assetTags: z.array(z.string().min(1)).max(MAX_AFFECTED_ASSETS).optional()
@@ -101,6 +111,9 @@ export const changeStatusEndpoint = defineEndpoint({
 	method: 'POST',
 	path: '/tickets/{tag}/status',
 	summary: 'Move a ticket to another status, if the lifecycle allows it.',
+	description:
+		'Moves the ticket to another status. An illegal transition is a `409` with `code: "invalid_transition"`.',
+	example: { status: 'in_progress' },
 	permissions: MANAGE,
 	input: z.object({ tag, status: z.enum(TICKET_STATUSES) }),
 	output: ticketResponse,
@@ -116,6 +129,8 @@ export const setPriorityEndpoint = defineEndpoint({
 	method: 'POST',
 	path: '/tickets/{tag}/priority',
 	summary: 'Set the priority of a ticket.',
+	description: "Sets the ticket's priority and records the change in its history.",
+	example: { priority: 'high' },
 	permissions: MANAGE,
 	input: z.object({ tag, priority: z.enum(PRIORITIES) }),
 	output: ticketResponse,
@@ -131,6 +146,8 @@ export const assignTicketEndpoint = defineEndpoint({
 	method: 'POST',
 	path: '/tickets/{tag}/assignee',
 	summary: 'Assign a ticket to a person, or unassign it with a null personId.',
+	description: 'Assigns the ticket to a person, or unassigns it when `personId` is `null`.',
+	example: { personId: '00000000-0000-4000-8000-000000000000' },
 	permissions: MANAGE,
 	input: z.object({ tag, personId: z.uuid().nullable() }),
 	output: ticketResponse,
@@ -146,6 +163,8 @@ export const moveQueueEndpoint = defineEndpoint({
 	method: 'POST',
 	path: '/tickets/{tag}/queue',
 	summary: 'Move a ticket to another queue.',
+	description: 'Moves the ticket to another queue. List the available queues with `queues.list`.',
+	example: { queueId: '00000000-0000-4000-8000-000000000000' },
 	permissions: MANAGE,
 	input: z.object({ tag, queueId: z.uuid() }),
 	output: ticketResponse,
@@ -170,6 +189,10 @@ export const linkAssetEndpoint = defineEndpoint({
 	method: 'POST',
 	path: '/tickets/{tag}/assets',
 	summary: 'Link an asset to a ticket. Linking one that is already linked is a no-op.',
+	description:
+		"Links an asset, addressed by its tag, to the ticket. Answers `201` when the link is new and `200` when it already existed. Naming assets is part of the ticket scopes: no separate `assets.*` scope is needed, but the key's owner must be able to see the asset.",
+	example: { assetTag: 'AST-0001' },
+	status: 201,
 	permissions: MANAGE,
 	input: z.object({ tag, assetTag: z.string().min(1) }),
 	output: z.object({ data: z.object({ ticket: z.string(), assetTag: z.string() }) }),
@@ -191,6 +214,8 @@ export const unlinkAssetEndpoint = defineEndpoint({
 	method: 'DELETE',
 	path: '/tickets/{tag}/assets/{assetTag}',
 	summary: 'Unlink an asset from a ticket.',
+	description:
+		'Removes the link between the ticket and the asset. Answers `204` with no body; an asset that is not linked is a `404`.',
 	permissions: MANAGE,
 	input: z.object({ tag, assetTag: z.string().min(1) }),
 	output: z.null(),

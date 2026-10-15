@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { PRIORITIES, TICKET_STATUSES } from '#lib/domain/status.js';
 import { getTicketByTag, listTickets, type TicketView } from '../../service-desk';
 import { defineEndpoint, notFound } from '../registry';
+import { named, paginationMetaSchema } from '../shared-schemas';
 
 /**
  * A ticket on the wire. The UUID is left out on purpose (ADR 0010): a ticket is
@@ -10,18 +11,21 @@ import { defineEndpoint, notFound } from '../registry';
  */
 const personRef = z.object({ id: z.string(), name: z.string() });
 
-export const ticketSchema = z.object({
-	tag: z.string(),
-	subject: z.string(),
-	status: z.enum(TICKET_STATUSES),
-	priority: z.enum(PRIORITIES),
-	channel: z.enum(['portal', 'agent']),
-	queue: personRef,
-	requester: personRef,
-	assignee: personRef.nullable(),
-	createdAt: z.iso.datetime(),
-	updatedAt: z.iso.datetime()
-});
+export const ticketSchema = named(
+	'Ticket',
+	z.object({
+		tag: z.string(),
+		subject: z.string(),
+		status: z.enum(TICKET_STATUSES),
+		priority: z.enum(PRIORITIES),
+		channel: z.enum(['portal', 'agent']),
+		queue: personRef,
+		requester: personRef,
+		assignee: personRef.nullable(),
+		createdAt: z.iso.datetime(),
+		updatedAt: z.iso.datetime()
+	})
+);
 
 export function toWire(ticket: TicketView): z.input<typeof ticketSchema> {
 	return {
@@ -48,6 +52,8 @@ export const listTicketsEndpoint = defineEndpoint({
 	method: 'GET',
 	path: '/tickets',
 	summary: 'List the tickets the key can see, newest first.',
+	description:
+		'Returns one page of the tickets the key can see, newest first. A key holding `tickets.view.own` sees only the tickets it requested. Filter with `search`, `queueId` and `status`; page with `page` and `perPage` (out-of-range values are clamped). The response carries `meta` with the totals.',
 	permissions: VIEW_PERMISSIONS,
 	// Out-of-range paging is clamped by the domain; only nonsense is refused.
 	input: z.object({
@@ -59,12 +65,7 @@ export const listTicketsEndpoint = defineEndpoint({
 	}),
 	output: z.object({
 		data: z.array(ticketSchema),
-		meta: z.object({
-			page: z.number(),
-			perPage: z.number(),
-			total: z.number(),
-			pageCount: z.number()
-		})
+		meta: paginationMetaSchema
 	}),
 	handler: async ({ principal, input }) => {
 		const result = await listTickets(principal, input);
@@ -85,6 +86,8 @@ export const getTicketEndpoint = defineEndpoint({
 	method: 'GET',
 	path: '/tickets/{tag}',
 	summary: 'Get one ticket by its tag.',
+	description:
+		'Returns one ticket, addressed by its tag (for example `TCK-0042`). A ticket the key cannot see is answered with `404`, the same as one that does not exist.',
 	permissions: VIEW_PERMISSIONS,
 	input: z.object({ tag: z.string().min(1) }),
 	output: z.object({ data: ticketSchema }),

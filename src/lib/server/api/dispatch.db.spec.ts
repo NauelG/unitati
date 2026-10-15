@@ -345,3 +345,26 @@ describe('errors raised by a handler', () => {
 		expect(invalid.body.error.issues[0].path).toEqual(['reason']);
 	});
 });
+
+describe('GET /api/v1/openapi.json', () => {
+	it('returns the document for every endpoint to any valid key, whatever its scopes', async () => {
+		const { technician } = await workspace();
+		// A key that can call none of the ticket endpoints still may read the shape of the API.
+		const key = await keyFor(technician, ['people.view']);
+
+		const { response, body } = await call('/api/v1/openapi.json', bearer(key));
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get('content-type')).toContain('application/json');
+		expect(body.openapi).toBe('3.1.0');
+		expect(body.servers).toEqual([{ url: 'http://localhost/api/v1' }]);
+		expect(body.paths['/tickets'].get.operationId).toBe('tickets.list');
+	});
+
+	it('answers 401 without a key', async () => {
+		const { response, body } = await call('/api/v1/openapi.json');
+
+		expect(response.status).toBe(401);
+		expect(body.error.code).toBe('unauthorized');
+	});
+});

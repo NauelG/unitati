@@ -78,6 +78,8 @@ export const ticketThreadEndpoint = defineEndpoint({
 	method: 'GET',
 	path: '/tickets/{tag}/comments',
 	summary: "Read a ticket's thread, oldest first: its comments and the events of its history.",
+	description:
+		"Returns the ticket's conversation, oldest first: comments merged with the events of its history (status changes, assignments...). Internal notes are included only when the key holds `tickets.comment.internal`.",
 	permissions: VIEW,
 	input: z.object({ tag }),
 	output: z.object({ data: z.array(threadItem) }),
@@ -93,6 +95,10 @@ export const commentEndpoint = defineEndpoint({
 	method: 'POST',
 	path: '/tickets/{tag}/comments',
 	summary: 'Add a reply, or an internal note when the key may write one.',
+	description:
+		"Adds a comment to the ticket's thread. `visibility` defaults to `public`; an `internal` note requires `tickets.comment.internal` and is otherwise answered with `404`. Answers `201` with the new comment's id.",
+	example: { body: 'The printer on the second floor is out of toner.', visibility: 'public' },
+	status: 201,
 	permissions: VIEW,
 	input: addCommentInput.extend({
 		tag,

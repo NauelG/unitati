@@ -1,7 +1,9 @@
 import { can } from '../access/permissions';
 import type { ApiAuthState } from './authenticate-request';
+import { APP_VERSION } from '../../version';
 import { ENDPOINTS } from './endpoints';
 import type { ApiPrincipal } from './keys';
+import { buildOpenApiDocument } from './openapi';
 import { rateLimit } from './rate-limit';
 import { ApiError, matchPath, Reply, type Endpoint } from './registry';
 
@@ -89,6 +91,16 @@ export async function handleApiRequest(
 	}
 
 	const url = new URL(request.url);
+
+	// The shape of the API grants nothing, so any valid key may read it, with no scope.
+	// It describes every endpoint, not only those this key can call: one document per instance.
+	if (request.method === 'GET' && url.pathname === `${PREFIX}/openapi.json`) {
+		return json(
+			200,
+			buildOpenApiDocument(endpoints, { version: APP_VERSION, serverUrl: url.origin })
+		);
+	}
+
 	const match = matchEndpoint(endpoints, request.method, url.pathname);
 	// "Not allowed" and "not there" are the same answer (ADR 0007).
 	if (!match || !match.endpoint.permissions.some((permission) => can(principal, permission))) {

@@ -161,6 +161,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/StatusBadge.svelte')
 	},
 	{
+		id: 'method-badge',
+		name: 'MethodBadge',
+		category: 'feedback',
+		summary: 'El método HTTP de un caso de uso, con el tono de cuánto cambia la petición.',
+		sourceFile: 'MethodBadge.svelte',
+		load: () => import('./specs/MethodBadge.svelte')
+	},
+	{
 		id: 'environment-badge',
 		name: 'EnvironmentBadge',
 		category: 'feedback',
@@ -266,6 +274,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		summary: 'Un único carril de actividad de un activo, con sus relaciones de ticket en vivo.',
 		sourceFile: 'AssetTimeline.svelte',
 		load: () => import('./specs/AssetTimeline.svelte')
+	},
+	{
+		id: 'schema-field-table',
+		name: 'SchemaFieldTable',
+		category: 'data',
+		summary: 'Los campos de una petición o respuesta: nombre, tipo, obligatorio y descripción.',
+		sourceFile: 'SchemaFieldTable.svelte',
+		load: () => import('./specs/SchemaFieldTable.svelte')
 	},
 
 	// Charts

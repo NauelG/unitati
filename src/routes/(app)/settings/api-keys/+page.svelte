@@ -95,6 +95,7 @@
 	<PageHeader title={m.api_keys_title()}>
 		{#snippet summary()}{m.api_keys_lede()}{/snippet}
 		{#snippet actions()}
+			<Button variant="ghost" href="/settings/api-keys/docs">{m.api_keys_docs_link()}</Button>
 			<Button onclick={openCreate}>{m.api_keys_create()}</Button>
 		{/snippet}
 	</PageHeader>
