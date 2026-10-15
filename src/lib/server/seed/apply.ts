@@ -1,3 +1,4 @@
+import { and, eq } from 'drizzle-orm';
 import { getDb } from '../db';
 import {
 	addNote,
@@ -22,10 +23,13 @@ import {
 	ensureDefaultStates,
 	listProjects,
 	listStates,
+	listTasks,
 	moveTask,
 	setAssignees
 } from '../projects';
-import type { InventoryPlan, ProjectsPlan } from './plan';
+import { escalateTicket, relatedTo, type EscalationTarget } from '../links';
+import { tickets } from '../service-desk';
+import type { EscalationsPlan, InventoryPlan, ProjectsPlan } from './plan';
 
 /**
  * Applies a plan through the domain's own functions rather than by inserting
@@ -203,3 +207,102 @@ export async function applyProjects(actor: SessionUser, plan: ProjectsPlan): Pro
 
 	return created;
 }
+
+/**
+ * Escalates the seeded tickets through `escalateTicket`, so the links and the
+ * activity on both sides are the ones the app would have written.
+ *
+ * **Idempotent by presence**, like tickets and projects. `new_task` mints a
+ * record, so replaying the plan would pile up duplicates; instead the whole
+ * step is skipped once any planned ticket already has work linked to it, and the
+ * links stay exactly as the first run left them. A ticket the plan names that
+ * does not exist (a database seeded before this entry) is skipped, not an error.
+ *
+ * Returns how many tickets it escalated.
+ */
+export async function applyEscalations(actor: SessionUser, plan: EscalationsPlan): Promise<number> {
+	const organisationId = actor.organisationId;
+
+	const ticketIds = new Map<string, string>();
+	for (const planned of plan.escalations) {
+		const [ticket] = await getDb()
+			.select({ id: tickets.id })
+			.from(tickets)
+			.where(
+				and(eq(tickets.organisationId, organisationId), eq(tickets.subject, planned.ticketSubject))
+			)
+			.limit(1);
+		if (ticket) ticketIds.set(planned.ticketSubject, ticket.id);
+	}
+
+	for (const id of ticketIds.values()) {
+		if ((await relatedTo(actor, { kind: 'ticket', id })).some(isWork)) return 0;
+	}
+
+	const projectByName = new Map(
+		[...(await listProjects(actor)), ...(await listProjects(actor, { archived: true }))].map(
+			(project) => [project.name, project]
+		)
+	);
+	const createdTasks = new Map<string, string>();
+
+	const projectNamed = (name: string) => {
+		const project = projectByName.get(name);
+		if (!project) throw new Error(`The escalations plan names ${name}, which is not a project.`);
+		return project;
+	};
+
+	let escalated = 0;
+	for (const planned of plan.escalations) {
+		const ticketId = ticketIds.get(planned.ticketSubject);
+		if (!ticketId) continue;
+
+		const target = planned.target;
+		let resolved: EscalationTarget;
+
+		switch (target.kind) {
+			case 'new_task':
+				resolved = {
+					kind: 'new_task',
+					projectId: projectNamed(target.projectName).id,
+					title: target.title,
+					description: target.description
+				};
+				break;
+
+			case 'planned_task': {
+				const taskId = createdTasks.get(target.key);
+				if (!taskId) throw new Error(`No earlier entry created the task ${target.key}.`);
+				resolved = { kind: 'existing_task', taskId };
+				break;
+			}
+
+			case 'existing_task': {
+				const project = projectNamed(target.projectName);
+				const task = (await listTasks(actor, { projectId: project.id })).find(
+					(candidate) => candidate.title === target.taskTitle
+				);
+				if (!task) throw new Error(`${target.projectName} has no task ${target.taskTitle}.`);
+				resolved = { kind: 'existing_task', taskId: task.id };
+				break;
+			}
+
+			case 'existing_project':
+				resolved = { kind: 'existing_project', projectId: projectNamed(target.projectName).id };
+				break;
+		}
+
+		const outcome = await escalateTicket(actor, ticketId, resolved);
+		if (!outcome.ok) {
+			throw new Error(`Could not escalate ${planned.ticketSubject}: ${outcome.error}`);
+		}
+
+		if (target.kind === 'new_task') createdTasks.set(target.key, outcome.value.id);
+		escalated += 1;
+	}
+
+	return escalated;
+}
+
+const isWork = (group: { relation: string }) =>
+	group.relation === 'resolved_in' || group.relation === 'handled_in';

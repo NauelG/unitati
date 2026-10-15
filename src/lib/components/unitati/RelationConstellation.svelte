@@ -45,7 +45,7 @@
 	import { layoutConstellation, type ConstellationNode } from '#lib/constellation.js';
 	import { handRecordMorphTo } from '#lib/motion.js';
 	import { m } from '#lib/paraglide/messages.js';
-	import type { RelatedGroup } from '#lib/server/links/index.js';
+	import type { AssetRelatedGroup } from '#lib/server/links/index.js';
 	import WorkPanel from './WorkPanel.svelte';
 	import { statusLabel } from './status.js';
 
@@ -63,7 +63,7 @@
 	interface Props {
 		/** The record whose page this is. */
 		centre: { kind: 'asset' | 'ticket'; tag: string };
-		groups: RelatedGroup[];
+		groups: AssetRelatedGroup[];
 		class?: string;
 	}
 

@@ -1,9 +1,9 @@
 import { DATABASE_URL } from '$app/env/private';
 import { advanceAssetTagSequence } from '../assets';
-import { applyPlan, applyProjects } from './apply';
+import { applyEscalations, applyPlan, applyProjects } from './apply';
 import { DEMO_PASSWORD, ensureDemoLogins, ensureWorkspace } from './accounts';
 import { assertLocalDatabase } from './guard';
-import { buildPlan, buildProjectsPlan } from './plan';
+import { buildEscalationsPlan, buildPlan, buildProjectsPlan } from './plan';
 import { seedTickets } from './tickets';
 
 /**
@@ -26,6 +26,7 @@ export async function run(): Promise<void> {
 
 	const ticketCount = await seedTickets(workspace.actor);
 	const projectCount = await applyProjects(workspace.actor, buildProjectsPlan());
+	const escalationCount = await applyEscalations(workspace.actor, buildEscalationsPlan());
 
 	const logins = await ensureDemoLogins(workspace.organisationId);
 
@@ -37,6 +38,11 @@ export async function run(): Promise<void> {
 		projectCount > 0
 			? `Created ${projectCount} projects, with their tasks.`
 			: 'Projects already there, none created.'
+	);
+	console.log(
+		escalationCount > 0
+			? `Escalated ${escalationCount} tickets to tasks and projects.`
+			: 'Escalations already there, none made.'
 	);
 	for (const line of summary.refused) console.warn(`  not seeded — ${line}`);
 

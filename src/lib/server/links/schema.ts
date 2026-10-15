@@ -2,6 +2,7 @@ import { index, pgTable, unique, uuid } from 'drizzle-orm/pg-core';
 import { timestamps } from '../shared/columns';
 import { organisations, people } from '../directory/schema';
 import { assets } from '../assets/schema';
+import { projects, tasks } from '../projects/schema';
 import { tickets } from '../service-desk/schema';
 
 /**
@@ -50,3 +51,58 @@ export const ticketAsset = pgTable(
 );
 
 export type TicketAsset = typeof ticketAsset.$inferSelect;
+
+/** A ticket is being resolved in this task (`resolved_in`). Many to many. */
+export const ticketTask = pgTable(
+	'ticket_task',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		ticketId: uuid('ticket_id')
+			.notNull()
+			.references(() => tickets.id, { onDelete: 'cascade' }),
+		taskId: uuid('task_id')
+			.notNull()
+			.references(() => tasks.id, { onDelete: 'cascade' }),
+		createdByPersonId: uuid('created_by_person_id').references(() => people.id, {
+			onDelete: 'set null'
+		}),
+		...timestamps
+	},
+	(table) => [
+		/** Leads with the ticket, so "what is this ticket linked to" uses it. */
+		unique('ticket_task_pair').on(table.ticketId, table.taskId),
+		/** The task page asks "which tickets". */
+		index('ticket_task_task_idx').on(table.taskId)
+	]
+);
+
+/** A ticket is being handled in this project (`handled_in`). Many to many. */
+export const ticketProject = pgTable(
+	'ticket_project',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		ticketId: uuid('ticket_id')
+			.notNull()
+			.references(() => tickets.id, { onDelete: 'cascade' }),
+		projectId: uuid('project_id')
+			.notNull()
+			.references(() => projects.id, { onDelete: 'cascade' }),
+		createdByPersonId: uuid('created_by_person_id').references(() => people.id, {
+			onDelete: 'set null'
+		}),
+		...timestamps
+	},
+	(table) => [
+		unique('ticket_project_pair').on(table.ticketId, table.projectId),
+		index('ticket_project_project_idx').on(table.projectId)
+	]
+);
+
+export type TicketTask = typeof ticketTask.$inferSelect;
+export type TicketProject = typeof ticketProject.$inferSelect;

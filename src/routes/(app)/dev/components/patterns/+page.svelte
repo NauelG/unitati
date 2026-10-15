@@ -6,7 +6,7 @@
 	import TicketDetailLayout from '#lib/components/unitati/TicketDetailLayout.svelte';
 	import TicketThread from '#lib/components/unitati/TicketThread.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
-	import type { RelatedGroup } from '#lib/server/links/related.js';
+	import type { AssetRelatedGroup } from '#lib/server/links/related.js';
 	import type { ThreadItem } from '#lib/server/service-desk/comments.js';
 
 	interface Pattern {
@@ -312,7 +312,7 @@
 		}
 	];
 
-	const relatedWithLongName: RelatedGroup[] = [
+	const relatedWithLongName: AssetRelatedGroup[] = [
 		{
 			relation: 'affects',
 			icon: 'asset',

@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { TicketStatus } from '#lib/domain/status.js';
 import type { TimelineEntry } from '../activity';
 import type { RelatedGroup, RelatedItem } from './related';
-import { mergeAssetTimeline, recentTicketCount } from './timeline';
+import {
+	mergeAssetTimeline,
+	mergeProjectTimeline,
+	mergeTaskTimeline,
+	recentTicketCount
+} from './timeline';
 
 const at = (iso: string) => new Date(iso);
 
@@ -145,5 +150,57 @@ describe('recentTicketCount', () => {
 
 	it('is zero with no ticket group', () => {
 		expect(recentTicketCount([], now)).toBe(0);
+	});
+});
+
+describe('mergeTaskTimeline and mergeProjectTimeline', () => {
+	it("merge a task's tickets into its activity the way an asset's are", () => {
+		const merged = mergeTaskTimeline(
+			[note('n1', '2026-03-01T10:00:00Z')],
+			[
+				{
+					relation: 'resolves',
+					icon: 'ticket',
+					items: [ticket('TCK-0002', '2026-04-01T10:00:00Z')]
+				}
+			]
+		);
+
+		expect(
+			merged.map((item) => (item.kind === 'ticket' ? item.record.tag : item.entry.id))
+		).toEqual(['TCK-0002', 'n1']);
+	});
+
+	it("keep the task a project's ticket came through", () => {
+		const via = {
+			kind: 'task' as const,
+			id: 'id-TSK-0001',
+			tag: 'TSK-0001',
+			title: 'Book the van',
+			href: '/tasks/TSK-0001'
+		};
+		const reached = { ...ticket('TCK-0003', '2026-04-01T10:00:00Z'), via };
+
+		const [item] = mergeProjectTimeline(
+			[],
+			[
+				{
+					relation: 'resolves_via_tasks',
+					icon: 'ticket',
+					items: [reached]
+				}
+			]
+		);
+
+		expect(item).toMatchObject({ kind: 'ticket', via: { tag: 'TSK-0001' } });
+	});
+
+	it('leave a ticket without a via task without one', () => {
+		const [item] = mergeProjectTimeline(
+			[],
+			[{ relation: 'handles', icon: 'ticket', items: [ticket('TCK-0004', '2026-04-01T10:00:00Z')] }]
+		);
+
+		expect(item).not.toHaveProperty('via');
 	});
 });

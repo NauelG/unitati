@@ -24,6 +24,10 @@ export {
 export type { State, Project, Task, TaskAssignee } from './schema';
 
 export { requireProjectScope, requireTaskScope } from './scope';
+export { findTaskInScope, findProjectInScope, taskSnapshot, projectSnapshot } from './link-targets';
+export type { TaskLinkTarget, ProjectLinkTarget } from './link-targets';
+export { taskSummaries, tasksOfProject, projectSummaries, readsProjects } from './summaries';
+export type { TaskSummary, ProjectSummary } from './summaries';
 export { requireProjectRead, requireProjectWrite } from './guards';
 export { fieldsOf, firstField, orNull, rejected } from './forms';
 export { readBoardPreference } from './board-preference';
@@ -54,6 +58,7 @@ export {
 	projectProgress,
 	projectProgressMany,
 	createProject,
+	openProject,
 	updateProject,
 	archiveProject,
 	unarchiveProject
@@ -73,6 +78,7 @@ export {
 	OPEN_TASK_GROUPS,
 	getTask,
 	createTask,
+	openTask,
 	updateTask,
 	assign,
 	unassign,
@@ -103,7 +109,8 @@ export {
 	createStateInput,
 	updateStateInput,
 	RESERVED_PROJECT_TAGS,
-	RESERVED_TASK_TAGS
+	RESERVED_TASK_TAGS,
+	TASK_TITLE_MAX
 } from './validation';
 export type {
 	CreateProjectInput,

@@ -2,6 +2,7 @@ import { count, eq } from 'drizzle-orm';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { listPeople } from '../directory';
+import { emailFor } from './plan';
 import {
 	addComment,
 	assignTicket,
@@ -34,6 +35,8 @@ interface PlannedTicket {
 	body: string;
 	queue: (typeof QUEUES)[number];
 	steps: ('in_progress' | 'waiting_on_user' | 'resolved' | 'closed')[];
+	/** Who asks, when it matters; otherwise requesters are dealt out in turn. */
+	requesterEmail?: string;
 	priority?: 'low' | 'high' | 'urgent';
 	reply?: string;
 	note?: string;
@@ -83,6 +86,15 @@ const PLAN: PlannedTicket[] = [
 		body: 'Parpadea cuando cambio de ventana.',
 		queue: 'Hardware',
 		steps: []
+	},
+	{
+		// The seeded employee's own ticket, so signing in as them shows a request
+		// with something escalated from it (see `buildEscalationsPlan`).
+		subject: 'Quiero cambiar mi puesto de sitio',
+		body: 'Con la mudanza, ¿puedo sentarme junto a mi equipo?',
+		queue: 'Accesos',
+		steps: [],
+		requesterEmail: emailFor('Eva Employee')
 	}
 ];
 
@@ -105,7 +117,9 @@ export async function seedTickets(actor: SessionUser): Promise<number> {
 
 	let created = 0;
 	for (const [index, planned] of PLAN.entries()) {
-		const requester = requesters[index % requesters.length];
+		const requester =
+			requesters.find((person) => person.email === planned.requesterEmail) ??
+			requesters[index % requesters.length];
 
 		const opened = await createTicket(
 			actor,

@@ -11,3 +11,8 @@ export const assetHref = (assetTag: string): string => `/assets/${encodeURICompo
 /** The staff view of a ticket; the portal has its own route under `/portal`. */
 export const ticketHref = (ticketTag: string): string =>
 	`/service-desk/${encodeURIComponent(ticketTag)}`;
+
+export const taskHref = (taskTag: string): string => `/tasks/${encodeURIComponent(taskTag)}`;
+
+export const projectHref = (projectTag: string): string =>
+	`/projects/${encodeURIComponent(projectTag)}`;

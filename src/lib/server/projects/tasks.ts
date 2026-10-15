@@ -252,6 +252,68 @@ export async function columnOf(
 }
 
 /**
+ * The body of `createTask`, for a caller that owns the transaction (an
+ * escalation, #149, creates the task and links it atomically).
+ *
+ * Does **not** catch constraint violations: in Postgres they abort the whole
+ * transaction, so only the owner of it can decide what to do. `createTask`
+ * maps them to failures; a caller that passes no explicit tag cannot trigger
+ * `tasks_org_tag`.
+ */
+export async function openTask(
+	tx: Transaction,
+	actor: SessionUser,
+	projectId: string,
+	values: ReturnType<typeof createTaskInput.parse>
+): Promise<Outcome<{ id: string; taskTag: string }, CreateTaskFailure>> {
+	requireManage(actor);
+
+	const locked = await lockProject(tx, actor, projectId);
+	if (!locked.ok) return locked;
+
+	const state = values.stateId
+		? (
+				await tx
+					.select()
+					.from(states)
+					.where(
+						and(eq(states.id, values.stateId), eq(states.organisationId, actor.organisationId))
+					)
+			)[0]
+		: await defaultTaskState(tx, actor.organisationId);
+	if (!state) return failure('state_not_found' as const);
+
+	const column = await columnOf(tx, projectId, state.id);
+	const placed = placeBetween(column.at(-1)?.position ?? null, null);
+	// Nothing follows the last task, so the end of a column never needs a renumber.
+	if (!('position' in placed)) throw new Error('Appending to a column cannot renumber it.');
+
+	const [task] = await tx
+		.insert(tasks)
+		.values({
+			organisationId: actor.organisationId,
+			projectId,
+			title: values.title,
+			description: values.description,
+			dueDate: values.dueDate ?? null,
+			stateId: state.id,
+			position: String(placed.position),
+			taskTag: values.taskTag
+		})
+		.returning({ id: tasks.id, taskTag: tasks.taskTag, title: tasks.title });
+
+	await recordActivity(tx, {
+		organisationId: actor.organisationId,
+		...actorColumns(actor),
+		target: { taskId: task.id },
+		verb: 'task.created',
+		payload: { taskTag: task.taskTag, title: task.title }
+	});
+
+	return success({ id: task.id, taskTag: task.taskTag });
+}
+
+/**
  * Opens a task in the project, in `stateId` or, when none is given, in the first
  * open state (`defaultTaskState`), at the end of that column.
  */
@@ -264,51 +326,7 @@ export async function createTask(
 	const values = createTaskInput.parse(input);
 
 	try {
-		return await getDb().transaction(async (tx) => {
-			const locked = await lockProject(tx, actor, projectId);
-			if (!locked.ok) return locked;
-
-			const state = values.stateId
-				? (
-						await tx
-							.select()
-							.from(states)
-							.where(
-								and(eq(states.id, values.stateId), eq(states.organisationId, actor.organisationId))
-							)
-					)[0]
-				: await defaultTaskState(tx, actor.organisationId);
-			if (!state) return failure('state_not_found' as const);
-
-			const column = await columnOf(tx, projectId, state.id);
-			const placed = placeBetween(column.at(-1)?.position ?? null, null);
-			// Nothing follows the last task, so the end of a column never needs a renumber.
-			if (!('position' in placed)) throw new Error('Appending to a column cannot renumber it.');
-
-			const [task] = await tx
-				.insert(tasks)
-				.values({
-					organisationId: actor.organisationId,
-					projectId,
-					title: values.title,
-					description: values.description,
-					dueDate: values.dueDate ?? null,
-					stateId: state.id,
-					position: String(placed.position),
-					taskTag: values.taskTag
-				})
-				.returning({ id: tasks.id, taskTag: tasks.taskTag, title: tasks.title });
-
-			await recordActivity(tx, {
-				organisationId: actor.organisationId,
-				...actorColumns(actor),
-				target: { taskId: task.id },
-				verb: 'task.created',
-				payload: { taskTag: task.taskTag, title: task.title }
-			});
-
-			return success({ id: task.id, taskTag: task.taskTag });
-		});
+		return await getDb().transaction((tx) => openTask(tx, actor, projectId, values));
 	} catch (error) {
 		if (uniqueConstraintName(error) === 'tasks_org_tag') return failure('duplicate_task_tag');
 		// The state was deleted between the check and the insert.

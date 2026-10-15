@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
-import type { RelatedGroup } from '#lib/server/links/index.js';
+import type { AssetRelatedGroup } from '#lib/server/links/index.js';
 import RelationConstellation from './RelationConstellation.svelte';
 
-function ticketGroup(count: number): RelatedGroup {
+function ticketGroup(count: number): AssetRelatedGroup {
 	return {
 		relation: 'affected_by',
 		icon: 'ticket',

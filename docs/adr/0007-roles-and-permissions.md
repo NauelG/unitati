@@ -4,6 +4,8 @@
 - **Date:** 2026-10-06
 - **Amended:** 2026-10-14 — employees see their assigned tasks. See
   [Amendment](#amendment-2026-10-14-employees-see-their-assigned-tasks).
+- **Amended:** 2026-10-15 — requesters see where their ticket was escalated. See
+  [Amendment](#amendment-2026-10-15-requesters-see-where-their-ticket-was-escalated).
 
 ## Context
 
@@ -68,3 +70,21 @@ the permission but is assigned nothing, so they see nothing — never every unas
 **What it does not do.** There is no per-project membership: seeing a project because one of its
 tasks is yours is derived, not granted, and the employee gets no view of the project's other tasks
 or of who else works on it beyond the assignees of tasks they can see. Membership is #58.
+
+## Amendment 2026-10-15: requesters see where their ticket was escalated
+
+On a ticket that is theirs, the employee may see the code, title and state of the tasks and
+projects it was escalated to (#149, under #11) — never the project of a task, its assignees or its
+dates, and a link only when the target is inside their own scope. Everything else about work stays
+as the previous amendment left it.
+
+**Why.** It is the most valuable thing a requester can learn: "my request is in progress there".
+The code, the title and the state are not sensitive, and the alternative is a requester who has to
+ask the desk what became of a request that was escalated on their behalf.
+
+**How it stays narrow.** The exception is a property of the _relation_, not of the role: it applies
+only to `resolved_in` and `handled_in` on a ticket whose requester is the viewer and who holds only
+`tickets.view.own`. `relatedTo` marks such an item `restricted` and gives it `href: null` when the
+target is out of scope; an in-scope target comes back in full. Anyone else — another employee on
+that ticket, or the same employee asking about any other record — gets the usual rule: nobody
+learns of a record they cannot see.

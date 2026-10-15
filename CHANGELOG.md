@@ -5,6 +5,23 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.40.0] - 2026-10-15
+
+### Added
+
+- Tickets can point at the work that resolves them (#149, slice 6a of #11), with no screens yet:
+  the `ticket_task` and `ticket_project` relations, `linkTicketToTask`, `linkTicketToProject` and
+  their unlinks (idempotent, scoped by who can see the target, refusing archived projects), and
+  `escalateTicket`, which links an existing task or project or creates one and links it in a single
+  transaction. Activity (`link.task.added|removed`, `link.project.added|removed`) is recorded on the
+  ticket with a snapshot, and `relatedTo` now answers for tasks and projects too. A requester sees,
+  on their own ticket, the code, title and state of the work it was escalated to even when that work
+  is outside their scope (ADR 0007, amended). The seed escalates a handful of tickets.
+
+### Changed
+
+- Task titles are limited to 200 characters.
+
 ## [0.39.0] - 2026-10-15
 
 ### Added

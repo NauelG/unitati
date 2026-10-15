@@ -35,6 +35,19 @@ const linkedAsset = z.object({
 	assetName: presentName
 });
 
+/** Tasks and projects are renamed and re-tagged, so the link snapshots both. */
+const linkedTask = z.object({
+	taskId: z.uuid(),
+	taskTag: presentName,
+	taskTitle: presentName
+});
+
+const linkedProject = z.object({
+	projectId: z.uuid(),
+	projectTag: presentName,
+	projectName: presentName
+});
+
 /**
  * The compile-time gate is the `satisfies` below: a verb added to
  * `ACTIVITY_VERBS` without an entry here is a missing property, reported on
@@ -114,6 +127,13 @@ export const PAYLOAD_SCHEMAS = {
 	// the live relation. Writing it on both would show the ticket twice, once stale.
 	'link.asset.added': linkedAsset,
 	'link.asset.removed': linkedAsset,
+
+	// Same rule for work: the escalation hangs off the ticket (#149), and the
+	// task or project merges the live relation into its own timeline.
+	'link.task.added': linkedTask,
+	'link.task.removed': linkedTask,
+	'link.project.added': linkedProject,
+	'link.project.removed': linkedProject,
 
 	'project.created': z.object({
 		projectTag: presentName,

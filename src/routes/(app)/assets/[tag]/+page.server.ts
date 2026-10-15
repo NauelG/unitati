@@ -27,9 +27,10 @@ import {
 	mergeAssetTimeline,
 	RECENT_MONTHS,
 	recentTicketCount,
+	assetRelations,
 	relatedTo,
 	type AssetTimelineItem,
-	type RelatedGroup
+	type AssetRelatedGroup
 } from '#lib/server/links/index.js';
 import { editAssetForm } from '../forms';
 import { fieldsOf, rejected } from '../form-data';
@@ -49,7 +50,7 @@ async function timelineRailOf(
 	timeline: AssetTimelineItem[] | null;
 	recentTickets: number;
 	/** The same `relatedTo` answer the timeline was merged from, for the constellation: no second query. */
-	related: RelatedGroup[];
+	related: AssetRelatedGroup[];
 }> {
 	// Gated separately inside the domain: holding `assets.view.shared` shows a
 	// shared asset's name and place, and explicitly not its history (ADR 0007).
@@ -60,7 +61,7 @@ async function timelineRailOf(
 	// `relatedTo` withholds tickets from anybody without `tickets.view`.
 	const related =
 		history.ok && asset.visibility === 'full' && asset.id
-			? await relatedTo(user, { kind: 'asset', id: asset.id })
+			? assetRelations(await relatedTo(user, { kind: 'asset', id: asset.id }))
 			: [];
 	return {
 		timeline: history.ok ? mergeAssetTimeline(history.value, related) : null,
