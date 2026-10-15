@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.42.0-1d5cf0" alt="Version 0.42.0" />
+  <img src="https://img.shields.io/badge/version-0.42.1-1d5cf0" alt="Version 0.42.1" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
 </p>
@@ -188,41 +188,19 @@ tests and will not do that to yours.
 
 ### Environments
 
-Three environments, **one artefact**: no origin and no base path are baked into the build, so a
-single `npm run build` output runs in all of them. See
-[ADR 0012](docs/adr/0012-environments-and-real-verification.md).
+The repository is **deployment-agnostic**: it ships one artefact, the container image below, and
+does not prescribe where it runs ([ADR 0025](docs/adr/0025-deployment-agnostic.md)). No origin and
+no base path are baked into the build, so the same output runs in every environment; `APP_ENV`
+tells the app which kind of environment it is in (`development`, `staging` or `production`, see
+[ADR 0013](docs/adr/0013-app-env-and-the-non-production-surface.md)).
 
-| Environment    | Origin                                                   | Database          | Artefact                  |
-| -------------- | -------------------------------------------------------- | ----------------- | ------------------------- |
-| **dev**        | `http://localhost:5173`                                  | `unitati`         | `vite dev`                |
-| **staging**    | `https://talos.nutria-pirate.ts.net:8443` (tailnet only) | `unitati_staging` | the production build      |
-| **production** | does not exist yet                                       | —                 | the container of ADR 0001 |
+A pull request's _Guia de verificació en real_ runs against whichever environment its author
+chooses. Prefer a production build when the change touches cookies, HTTPS or anything else dev
+mode cannot reach.
 
-**A pull request's _Guia de verificació en real_ is executed against staging**, because dev mode
-does not run the production build and cannot reach the paths that only exist there — secure
-cookies being the first of them.
-
-Staging updates itself: `unitati-staging-update.timer` polls `origin/main` every five minutes and
-deploys it **only when CI for that exact commit is green**. Without that gate a broken push would
-deploy itself minutes later and take staging down with nobody having touched anything. To deploy
-by hand, or to deploy something other than `main`:
-
-```sh
-~/staging/repo/scripts/staging-deploy.sh                # deploys origin/main
-~/staging/repo/scripts/staging-deploy.sh feat/x         # deploys a branch
-DRY_RUN=1 ~/staging/repo/scripts/staging-autodeploy.sh  # what would the timer do?
-```
-
-The script deploys a ref of `origin`, never a working tree, so staging proves that what was
-pushed works. It builds into `releases/<timestamp>-<sha>`, swaps an atomic symlink, restarts the
-systemd user unit and health-checks the result; a failed check reverts the symlink to the release
-that was serving. Migrations are **not** reverted — they are forward-only.
-
-```sh
-systemctl --user list-timers unitati-staging-update.timer
-journalctl --user -u unitati-staging-update -n 50
-journalctl --user -u unitati-staging -f
-```
+Migrations are **forward-only**: a failed deployment does not revert the schema. Additive
+migrations are safe; destructive ones need a plan of their own in the pull request that
+introduces them.
 
 ### Deploying
 
@@ -246,9 +224,9 @@ configuration is environment variables only (see `.env.example`).
 # once per host: a classic PAT with read:packages
 echo "$GHCR_TOKEN" | docker login ghcr.io -u NauelG --password-stdin
 
-docker pull ghcr.io/nauelg/unitati:0.41.2
+docker pull ghcr.io/nauelg/unitati:0.42.1
 docker run -d --name unitati --env-file unitati.env -p 3000:3000 \
-  -v unitati-uploads:/data/uploads ghcr.io/nauelg/unitati:0.41.2
+  -v unitati-uploads:/data/uploads ghcr.io/nauelg/unitati:0.42.1
 ```
 
 The container applies pending migrations on every start, then serves; with nothing pending that

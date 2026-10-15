@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.42.1] - 2026-10-15
+
+### Removed
+
+- The source-checkout staging on `talos` and its deploy scripts (`scripts/staging-deploy.sh`,
+  `scripts/staging-autodeploy.sh`). The repository is now deployment-agnostic: it ships the
+  container image and leaves where it runs, and where a _Guia de verificació en real_ is executed,
+  to the operator (ADR 0025, superseding ADR 0012). No app behaviour changes.
+
 ## [0.42.0] - 2026-10-15
 
 ### Added

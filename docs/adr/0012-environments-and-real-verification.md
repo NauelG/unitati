@@ -1,5 +1,7 @@
 # 0012. Environments and verification in real
 
+- **Status:** superseded by [ADR 0025](0025-deployment-agnostic.md)
+
 ## Context
 
 Every pull request carries a **Guia de verificació en real** ([pull-requests.md](../agents/pull-requests.md)):
