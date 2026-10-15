@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, exists, inArray, ne, sql, type SQL } from 'drizzle-orm';
 import type { StateGroup } from '#lib/domain/status.js';
-import { recordActivity } from '../activity';
+import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { constraintViolation, uniqueConstraintName } from '../db/errors';
@@ -301,7 +301,7 @@ export async function createTask(
 
 			await recordActivity(tx, {
 				organisationId: actor.organisationId,
-				actorPersonId: actor.personId,
+				...actorColumns(actor),
 				target: { taskId: task.id },
 				verb: 'task.created',
 				payload: { taskTag: task.taskTag, title: task.title }
@@ -340,7 +340,7 @@ export async function updateTask(
 			if (values.dueDate !== undefined && values.dueDate !== task.dueDate) {
 				await recordActivity(tx, {
 					organisationId: actor.organisationId,
-					actorPersonId: actor.personId,
+					...actorColumns(actor),
 					target: { taskId },
 					verb: 'task.due.changed',
 					payload: { from: task.dueDate, to: values.dueDate }
@@ -383,7 +383,7 @@ async function addAssignee(
 
 	await recordActivity(tx, {
 		organisationId: actor.organisationId,
-		actorPersonId: actor.personId,
+		...actorColumns(actor),
 		target: { taskId },
 		verb: 'task.assigned',
 		payload: { toPersonId: person.id, toPersonName: person.fullName }
@@ -404,7 +404,7 @@ async function removeAssignee(
 
 	await recordActivity(tx, {
 		organisationId: actor.organisationId,
-		actorPersonId: actor.personId,
+		...actorColumns(actor),
 		target: { taskId },
 		verb: 'task.unassigned',
 		payload: { fromPersonId: person.id, fromPersonName: person.fullName }
@@ -597,7 +597,7 @@ export async function moveTask(
 
 			await recordActivity(tx, {
 				organisationId: actor.organisationId,
-				actorPersonId: actor.personId,
+				...actorColumns(actor),
 				target: { taskId: task.id },
 				verb: 'task.state.changed',
 				payload: {
