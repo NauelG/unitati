@@ -36,6 +36,25 @@ export default defineConfig(
 		}
 	},
 	{
+		// `projects` does not know that tickets exist (ADR 0002). What other
+		// domains must hear of, it emits through `shared/events.ts` (ADR 0024).
+		files: ['src/lib/server/projects/**/*.ts'],
+		ignores: ['**/*.spec.ts', '**/testing/**'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					patterns: [
+						{
+							regex: '(^|/)(links|service-desk)(/|$)',
+							message: 'projects must not import links or service-desk (ADR 0002, ADR 0024).'
+						}
+					]
+				}
+			]
+		}
+	},
+	{
 		// Override or add rule settings here, such as:
 		// 'svelte/button-has-type': 'error'
 		rules: {}

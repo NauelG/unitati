@@ -5,6 +5,7 @@ import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { constraintViolation, uniqueConstraintName } from '../db/errors';
 import { people } from '../directory/schema';
+import { emit, type DomainEvents } from '../shared/events';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { placeBetween, spread } from './position';
 import { matchesQuery } from './search';
@@ -528,6 +529,9 @@ export interface MoveNeighbours {
  * - A gap below `MIN_GAP` renumbers the column in the same transaction.
  * - A move within the same state records nothing; a move across states records
  *   exactly one `task.state.changed`, with the state names as they read now.
+ * - A move from any other group into `completed` emits `task.completed` once
+ *   the transaction has committed (ADR 0024). `projects` does not know who
+ *   listens.
  *
  * Neighbours must be other tasks of the same project in the target column.
  */
@@ -539,7 +543,9 @@ export async function moveTask(
 ): Promise<Outcome<void, MoveTaskFailure>> {
 	requireManage(actor);
 
-	return getDb().transaction(async (tx) => {
+	let completedEvent: DomainEvents['task.completed'] | null = null;
+
+	const outcome = await getDb().transaction(async (tx) => {
 		const locked = await lockTask(tx, actor, taskId);
 		if (!locked.ok) return locked;
 		const { task } = locked.value;
@@ -609,7 +615,7 @@ export async function moveTask(
 
 		if (task.stateId !== target.id) {
 			const [from] = await tx
-				.select({ id: states.id, name: states.name })
+				.select({ id: states.id, name: states.name, group: states.group })
 				.from(states)
 				.where(eq(states.id, task.stateId));
 
@@ -625,8 +631,26 @@ export async function moveTask(
 					toStateName: target.name
 				}
 			});
+
+			if (from.group !== 'completed' && target.group === 'completed') {
+				completedEvent = {
+					organisationId: actor.organisationId,
+					taskId: task.id,
+					taskTag: task.taskTag,
+					taskTitle: task.title,
+					fromStateName: from.name,
+					toStateName: target.name,
+					actorPersonId: actor.personId,
+					occurredAt: new Date()
+				};
+			}
 		}
 
 		return success(undefined);
 	});
+
+	// After commit, never inside the transaction: a rolled-back move emits nothing.
+	if (outcome.ok && completedEvent) emit('task.completed', completedEvent);
+
+	return outcome;
 }
