@@ -5,6 +5,21 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.43.0] - 2026-10-15
+
+### Added
+
+- A technician can escalate a ticket from its record (#150, slice 6b of #11). _Escalar_ (also in
+  the command palette and on `E`) opens a Sheet with a target choice: a new task, an existing task,
+  or a project, new or existing. It pre-fills the title and description from the ticket, states
+  what will be created and linked, that the ticket keeps its status, and who is mailed when the
+  task completes, and its button names the act. Refusals show next to the field they are about.
+  Without `projects.manage` the _new_ targets are not offered. Any ticket status can be escalated.
+- The ticket's relation panel unlinks tasks and projects after confirmation, shows each task's
+  project code and each project's progress, _Activo_ or _Archivado_. The requesting employee sees
+  _En seguimiento en_ with code, title and state, a link only where they may open it, and the
+  payload carries neither the project of a task nor project progress.
+
 ## [0.42.1] - 2026-10-15
 
 ### Removed
