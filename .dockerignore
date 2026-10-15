@@ -1,0 +1,16 @@
+node_modules
+.git
+.svelte-kit
+build
+.output
+uploads
+.env
+.env.*
+!.env.example
+.agents
+.claude
+.vscode
+docs
+*.md
+Dockerfile
+.dockerignore

@@ -17,6 +17,8 @@ SemVer in `package.json`; `CHANGELOG.md` follows Keep a Changelog. Every change 
 
 The running version is injected at build time (`__APP_VERSION__`, read via `src/lib/version.ts`) and shown in the app shell and on the login screen.
 
+Every version bump that lands on `main` is released as a `vX.Y.Z` git tag and a private image `ghcr.io/nauelg/unitati:X.Y.Z`. Do not tag or push images by hand: `.github/workflows/publish-image.yml` does both, once CI is green, for any version that has no tag yet (`docs/adr/0023-container-image-on-ghcr.md`). A PR that does not bump the version releases nothing.
+
 CI enforces all of this with `scripts/check-version-bump.mjs`. See `docs/adr/0003-semver-and-changelog.md` for the full policy and the paths exempt from bumping.
 
 ## Agent skills
