@@ -11,6 +11,7 @@ Draft. Names here become folder names in `src/lib/server/<domain>/` (see [ADR 00
 | `service-desk` | `Ticket`, `Queue`, `Comment` (public / internal); later `CannedResponse`, `Sla`      |
 | `projects`     | `Project`, `Task`, `State` + `StateGroup`; later `Milestone`                         |
 | `links`        | the pairwise join tables and the uniform read facade over them                       |
+| `api`          | `ApiKey`, `ServiceAccount`; the `/api/v1` endpoint registry                          |
 | cross-cutting  | `ActivityLog`, `Attachment`, global search                                           |
 
 `directory` is the only domain everyone depends on. The other three domains do not import each other's tables; they relate through `links`.
@@ -20,6 +21,8 @@ Draft. Names here become folder names in `src/lib/server/<domain>/` (see [ADR 00
 `State` carries a user-chosen name and a system-owned `StateGroup` (`backlog`, `unstarted`, `started`, `completed`, `cancelled`). That split is how a catalogue stays configurable while the structure does not — the shape Plane uses. The group is fixed when a state is created and never changes; code depends on the group, never on the name. A `Task` sits in exactly one `State`, and its board column is ordered by a fractional `position`.
 
 A project is **archived** rather than deleted, and an archived project (with its tasks) is read-only. A task has **assignees** — any number of people — and a project has at most one owner.
+
+A **service account** is an organisation-owned API principal with the technician or employee role and no `Person` ([ADR 0022](adr/0022-api-layer-and-api-keys.md)). It is disabled, never deleted, because the `ActivityLog` entries it wrote name it as their actor (a row has a person, a service account, or neither for the system, never both).
 
 `CustomField` is deliberately absent: it is post-v1 in the [roadmap](roadmap-v1.md).
 
