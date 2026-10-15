@@ -20,6 +20,7 @@
 				verb: 'state.changed',
 				occurredAt: new Date('2026-03-01T12:00:00Z'),
 				actorPersonId: 'p1',
+				actorServiceAccountId: null,
 				actorName: 'Ada Lovelace',
 				payload: { from: 'in_stock', to: 'in_use' }
 			}
@@ -33,6 +34,7 @@
 				verb: 'note.added',
 				occurredAt: new Date('2026-02-20T08:30:00Z'),
 				actorPersonId: null,
+				actorServiceAccountId: null,
 				actorName: null,
 				payload: { text: 'Entregado con cargador original y funda.' }
 			}
@@ -46,6 +48,7 @@
 				verb: 'asset.created',
 				occurredAt: new Date('2026-02-15T10:00:00Z'),
 				actorPersonId: 'p1',
+				actorServiceAccountId: null,
 				actorName: 'Ada Lovelace',
 				payload: { assetTag: 'AST-0231', name: 'MacBook Pro 14"' }
 			}

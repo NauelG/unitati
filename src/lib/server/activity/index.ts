@@ -17,7 +17,7 @@ export type { ActivityEntry, PayloadFor } from './payload';
 export { activity, activityVerb } from './schema';
 export type { ActivityRow } from './schema';
 
-export { recordActivity } from './writer';
+export { recordActivity, actorColumns } from './writer';
 export type { ActivityWrite } from './writer';
 
 export { listActivity, listRecentActivity } from './reader';

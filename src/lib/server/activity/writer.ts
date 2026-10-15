@@ -1,3 +1,4 @@
+import type { SessionUser } from '../auth/guards';
 import type { Transaction } from '../db';
 import { activity } from './schema';
 import { parsePayload } from './payload';
@@ -21,6 +22,8 @@ export type ActivityWrite = ActivityEntry & {
 	organisationId: string;
 	/** Null for the system: a scheduled rule acts without a person. */
 	actorPersonId?: string | null;
+	/** An integration acted. Never together with `actorPersonId`: the table refuses both. */
+	actorServiceAccountId?: string | null;
 	/** Exactly one record, as a single-key object the compiler can check. */
 	target: ActivityTarget;
 	/**
@@ -30,6 +33,22 @@ export type ActivityWrite = ActivityEntry & {
 	 */
 	occurredAt?: Date;
 };
+
+/**
+ * Who an activity row names as its actor, for the one call every writer makes:
+ * `...actorColumns(actor)`. A service account is attributed by id, never left
+ * anonymous; a person by their directory record.
+ */
+export function actorColumns(actor: Pick<SessionUser, 'personId' | 'serviceAccountId'>): {
+	actorPersonId: string | null;
+	actorServiceAccountId: string | null;
+} {
+	const { personId, serviceAccountId = null } = actor;
+	return {
+		actorPersonId: serviceAccountId ? null : personId,
+		actorServiceAccountId: serviceAccountId
+	};
+}
 
 export async function recordActivity(tx: Transaction, entry: ActivityWrite): Promise<void> {
 	// Validated here rather than trusted from the caller: the column is `jsonb`
@@ -42,6 +61,7 @@ export async function recordActivity(tx: Transaction, entry: ActivityWrite): Pro
 		...entry.target,
 		organisationId: entry.organisationId,
 		actorPersonId: entry.actorPersonId ?? null,
+		actorServiceAccountId: entry.actorServiceAccountId ?? null,
 		verb: entry.verb,
 		payload,
 		occurredAt: entry.occurredAt

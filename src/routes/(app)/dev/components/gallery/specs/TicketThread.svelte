@@ -14,6 +14,7 @@
 				verb: 'ticket.created',
 				occurredAt: new Date('2026-03-01T09:00:00Z'),
 				actorPersonId: null,
+				actorServiceAccountId: null,
 				actorName: null,
 				payload: { ticketTag: 'TCK-0042', subject: 'No enciende el portátil', channel: 'portal' }
 			}

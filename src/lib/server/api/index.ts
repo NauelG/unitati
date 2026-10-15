@@ -15,7 +15,26 @@ export type {
 	CreateApiKeyInput
 } from './keys';
 
-export { EXPIRY_DAYS, DEFAULT_EXPIRY_DAYS, MAX_NAME_LENGTH } from './validation';
+export {
+	createServiceAccount,
+	listServiceAccounts,
+	setServiceAccountDisabled,
+	createServiceAccountKey
+} from './service-accounts';
+export type {
+	CreateServiceAccountFailure,
+	CreateServiceAccountKeyFailure,
+	ServiceAccountView
+} from './service-accounts';
+export { serviceAccounts } from './schema';
+export type { ServiceAccount } from './schema';
+
+export {
+	EXPIRY_DAYS,
+	DEFAULT_EXPIRY_DAYS,
+	MAX_NAME_LENGTH,
+	SERVICE_ACCOUNT_ROLES
+} from './validation';
 
 export { authenticateRequest, isApiPath } from './authenticate-request';
 export type { ApiAuthFailure, ApiAuthState } from './authenticate-request';

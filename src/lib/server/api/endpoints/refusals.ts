@@ -1,4 +1,4 @@
-import { conflict, notFound, type ApiError } from '../registry';
+import { ApiError, conflict, notFound } from '../registry';
 
 /**
  * A domain failure as the envelope's refusal (ADR 0022). A record that is not
@@ -8,6 +8,13 @@ import { conflict, notFound, type ApiError } from '../registry';
  * is a conflict with the state of the world, carrying the domain's own name.
  */
 export function refusal(failure: string): ApiError {
+	// A principal with no person (a service account) has nobody to default to: the
+	// fix is a field the caller can send, so it is a `400` on that field.
+	if (failure === 'requester_required') {
+		return new ApiError(400, 'invalid_input', 'The request is not valid.', [
+			{ path: ['requesterPersonId'], message: 'The requester is required.' }
+		]);
+	}
 	if (
 		failure.endsWith('_not_found') ||
 		failure === 'forbidden' ||

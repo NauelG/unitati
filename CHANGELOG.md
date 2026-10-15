@@ -5,6 +5,29 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.39.0] - 2026-10-15
+
+### Added
+
+- The API, slice E (#135 of #35): **service accounts**, organisation-owned API principals with the
+  technician or employee role and no person, so an integration's keys keep working when the
+  employee who set it up leaves. An administrator creates, disables and enables them, and issues
+  their keys, from a new _Cuentas de servicio_ section on `/settings/api-keys`; the scopes offered
+  are those of the account's role. While an account is disabled all its keys answer `401`.
+- What a service account does is attributed to it by name: the asset and ticket timelines, the
+  Overview feed and the `actor` of ticket-thread events carry the account, tagged _Servicio_
+  (the API's `actor` now has a `kind`, `person` or `service_account`).
+
+### Changed
+
+- `POST /tickets` from a principal with no person and no `requesterPersonId` is now a `400` on
+  `requesterPersonId` instead of a `409`.
+
+### Fixed
+
+- A principal holding `assets.view.own` or `tickets.view.own` but with no person (a service account
+  with the employee role) now sees an empty list instead of a server error.
+
 ## [0.38.0] - 2026-10-15
 
 ### Added

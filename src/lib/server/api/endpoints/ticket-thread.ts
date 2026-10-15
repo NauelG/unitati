@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { TimelineEntry } from '../../activity';
 import { addComment, addCommentInput, ticketThread, type ThreadItem } from '../../service-desk';
 import { created, defineEndpoint } from '../registry';
 import { refusal } from './refusals';
@@ -10,6 +11,12 @@ import { refusal } from './refusals';
  */
 
 const personRef = z.object({ id: z.string(), name: z.string() });
+/** Who acted on an event: a person, or a service account (an integration). */
+const actorRef = z.object({
+	kind: z.enum(['person', 'service_account']),
+	id: z.string(),
+	name: z.string()
+});
 
 const attachmentSchema = z.object({
 	id: z.string(),
@@ -34,11 +41,19 @@ const eventSchema = z.object({
 	verb: z.string(),
 	/** A snapshot of the fact as it was when it happened (ADR 0009). */
 	payload: z.record(z.string(), z.unknown()),
-	actor: personRef.nullable(),
+	actor: actorRef.nullable(),
 	at: z.iso.datetime()
 });
 
 const threadItem = z.discriminatedUnion('kind', [commentSchema, eventSchema]);
+
+function eventActor(entry: TimelineEntry): z.input<typeof actorRef> | null {
+	const name = entry.actorName ?? '';
+	if (entry.actorServiceAccountId !== null) {
+		return { kind: 'service_account', id: entry.actorServiceAccountId, name };
+	}
+	return entry.actorPersonId === null ? null : { kind: 'person', id: entry.actorPersonId, name };
+}
 
 function threadItemToWire(item: ThreadItem): z.input<typeof threadItem> {
 	if (item.kind === 'comment') {
@@ -62,10 +77,7 @@ function threadItemToWire(item: ThreadItem): z.input<typeof threadItem> {
 		id: entry.id,
 		verb: entry.verb,
 		payload: entry.payload as Record<string, unknown>,
-		actor:
-			entry.actorPersonId === null
-				? null
-				: { id: entry.actorPersonId, name: entry.actorName ?? '' },
+		actor: eventActor(entry),
 		at: item.at.toISOString()
 	};
 }
