@@ -1,6 +1,8 @@
 <script lang="ts">
 	import ComponentDocPage from '../ComponentDocPage.svelte';
 	import MethodBadge, { HTTP_METHODS } from '#lib/components/unitati/MethodBadge.svelte';
+
+	const usage = '<MethodBadge method="POST" />';
 </script>
 
 <ComponentDocPage
@@ -22,7 +24,7 @@
 			description: 'El método; también es el texto de la insignia.'
 		}
 	]}
-	usage={'<MethodBadge method="POST" />'}
+	{usage}
 	referenceHref="https://github.com/NauelG/unitati/blob/main/docs/adr/0022-api-layer-and-api-keys.md"
 	referenceLabel="ADR 0022 — la API y las claves"
 >
