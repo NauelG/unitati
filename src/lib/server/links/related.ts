@@ -1,4 +1,4 @@
-import { and, asc, eq, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { assetHref, projectHref, taskHref, ticketHref } from '#lib/domain/routes.js';
 import type { AssetState, StateGroup, TicketStatus } from '#lib/domain/status.js';
 import { can } from '../access/permissions';
@@ -8,14 +8,13 @@ import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import {
 	projectProgress,
-	projects,
-	requireProjectScope,
-	requireTaskScope,
-	states,
-	tasks,
-	type ProjectProgress
+	projectSummaries,
+	taskSummaries,
+	tasksOfProject,
+	type ProjectProgress,
+	type TaskSummary
 } from '../projects';
-import { requireTicketScope, tickets } from '../service-desk';
+import { isRequester, ticketSummaries, tickets, type TicketRow } from '../service-desk';
 import { ticketAsset, ticketProject, ticketTask } from './schema';
 
 /**
@@ -202,25 +201,30 @@ async function ticketsAffecting(viewer: SessionUser, assetId: string): Promise<R
 /* Tickets and the work they were escalated to (#149)                         */
 /* -------------------------------------------------------------------------- */
 
-const NOTHING = sql`false`;
+/*
+ * Each half reads its own join table here and asks the other domain for the
+ * records (`taskSummaries`, `ticketSummaries`, …) instead of joining their
+ * tables (ADR 0002). The order is the link's: oldest first.
+ */
 
-/** Only a role that reads projects at all may be asked for their scope; the SQL throws otherwise. */
-function readsProjects(viewer: SessionUser): boolean {
-	return can(viewer, 'projects.view') || can(viewer, 'projects.view.assigned');
+function ticketRef(summary: TicketRow): RecordRef<'ticket'> {
+	return {
+		kind: 'ticket',
+		id: summary.id,
+		tag: summary.ticketTag,
+		title: summary.subject,
+		href: ticketHref(summary.ticketTag)
+	};
 }
 
-function readsTickets(viewer: SessionUser): boolean {
-	return can(viewer, 'tickets.view') || can(viewer, 'tickets.view.own');
-}
-
-const taskScope = (viewer: SessionUser): SQL =>
-	readsProjects(viewer) ? requireTaskScope(viewer) : NOTHING;
-
-const projectScope = (viewer: SessionUser): SQL =>
-	readsProjects(viewer) ? requireProjectScope(viewer) : NOTHING;
-
-function ticketRef(row: { id: string; tag: string; title: string }): RecordRef<'ticket'> {
-	return { kind: 'ticket', id: row.id, tag: row.tag, title: row.title, href: ticketHref(row.tag) };
+function taskRef(task: TaskSummary): RecordRef<'task'> {
+	return {
+		kind: 'task',
+		id: task.id,
+		tag: task.taskTag,
+		title: task.title,
+		href: taskHref(task.taskTag)
+	};
 }
 
 /**
@@ -239,21 +243,9 @@ async function standingOn(
 	ticketId: string
 ): Promise<'staff' | 'requester' | null> {
 	if (can(viewer, 'tickets.view')) return 'staff';
-	if (!can(viewer, 'tickets.view.own') || viewer.personId === null) return null;
+	if (!can(viewer, 'tickets.view.own')) return null;
 
-	const [own] = await getDb()
-		.select({ id: tickets.id })
-		.from(tickets)
-		.where(
-			and(
-				eq(tickets.id, ticketId),
-				eq(tickets.organisationId, viewer.organisationId),
-				eq(tickets.requesterPersonId, viewer.personId)
-			)
-		)
-		.limit(1);
-
-	return own ? 'requester' : null;
+	return (await isRequester(viewer, ticketId)) ? 'requester' : null;
 }
 
 async function tasksResolving(
@@ -261,42 +253,38 @@ async function tasksResolving(
 	ticketId: string,
 	standing: 'staff' | 'requester'
 ): Promise<RelatedItem[]> {
-	const scope = taskScope(viewer);
-
-	const rows = await getDb()
-		.select({
-			id: tasks.id,
-			tag: tasks.taskTag,
-			title: tasks.title,
-			group: states.group,
-			stateName: states.name,
-			inScope: sql<boolean>`(${scope})`,
-			linkedAt: ticketTask.createdAt
-		})
+	const links = await getDb()
+		.select({ taskId: ticketTask.taskId, linkedAt: ticketTask.createdAt })
 		.from(ticketTask)
-		.innerJoin(tasks, eq(ticketTask.taskId, tasks.id))
-		.innerJoin(states, eq(tasks.stateId, states.id))
 		.where(
-			and(
-				eq(ticketTask.organisationId, viewer.organisationId),
-				eq(ticketTask.ticketId, ticketId),
-				standing === 'staff' ? scope : undefined
-			)
+			and(eq(ticketTask.organisationId, viewer.organisationId), eq(ticketTask.ticketId, ticketId))
 		)
 		.orderBy(asc(ticketTask.createdAt), asc(ticketTask.id));
 
-	return rows.map((row) => ({
-		ref: {
-			kind: 'task' as const,
-			id: row.id,
-			tag: row.tag,
-			title: row.title,
-			href: row.inScope ? taskHref(row.tag) : null
-		},
-		status: { group: row.group, name: row.stateName },
-		linkedAt: row.linkedAt,
-		...(row.inScope ? {} : { restricted: true as const })
-	}));
+	const byId = new Map(
+		(
+			await taskSummaries(
+				viewer,
+				links.map((link) => link.taskId)
+			)
+		).map((task) => [task.id, task])
+	);
+
+	return links.flatMap((link): RelatedItem[] => {
+		const task = byId.get(link.taskId);
+		if (!task || (standing === 'staff' && !task.inScope)) return [];
+
+		return [
+			{
+				ref: task.inScope
+					? taskRef(task)
+					: { kind: 'task', id: task.id, tag: task.taskTag, title: task.title, href: null },
+				status: { group: task.stateGroup, name: task.stateName },
+				linkedAt: link.linkedAt,
+				...(task.inScope ? {} : { restricted: true as const })
+			}
+		];
+	});
 }
 
 async function projectsHandling(
@@ -304,163 +292,147 @@ async function projectsHandling(
 	ticketId: string,
 	standing: 'staff' | 'requester'
 ): Promise<RelatedItem[]> {
-	const scope = projectScope(viewer);
-
-	const rows = await getDb()
-		.select({
-			id: projects.id,
-			tag: projects.projectTag,
-			title: projects.name,
-			archivedAt: projects.archivedAt,
-			inScope: sql<boolean>`(${scope})`,
-			linkedAt: ticketProject.createdAt
-		})
+	const links = await getDb()
+		.select({ projectId: ticketProject.projectId, linkedAt: ticketProject.createdAt })
 		.from(ticketProject)
-		.innerJoin(projects, eq(ticketProject.projectId, projects.id))
 		.where(
 			and(
 				eq(ticketProject.organisationId, viewer.organisationId),
-				eq(ticketProject.ticketId, ticketId),
-				standing === 'staff' ? scope : undefined
+				eq(ticketProject.ticketId, ticketId)
 			)
 		)
 		.orderBy(asc(ticketProject.createdAt), asc(ticketProject.id));
 
+	const byId = new Map(
+		(
+			await projectSummaries(
+				viewer,
+				links.map((link) => link.projectId)
+			)
+		).map((project) => [project.id, project])
+	);
+
 	return Promise.all(
-		rows.map(async (row) => {
+		links.map(async (link): Promise<RelatedItem[]> => {
+			const project = byId.get(link.projectId);
+			if (!project || (standing === 'staff' && !project.inScope)) return [];
+
 			// Reused from the projects domain rather than recomputed. Only for what
 			// the viewer can open: the counts of a project they cannot see would be
 			// a window onto it.
-			const progress = row.inScope ? await projectProgress(viewer, row.id) : null;
+			const progress = project.inScope ? await projectProgress(viewer, project.id) : null;
 
-			return {
-				ref: {
-					kind: 'project' as const,
-					id: row.id,
-					tag: row.tag,
-					title: row.title,
-					href: row.inScope ? projectHref(row.tag) : null
-				},
-				status: {
-					archived: row.archivedAt !== null,
-					progress: progress?.ok ? progress.value : null
-				},
-				linkedAt: row.linkedAt,
-				...(row.inScope ? {} : { restricted: true as const })
-			};
+			return [
+				{
+					ref: project.inScope
+						? {
+								kind: 'project',
+								id: project.id,
+								tag: project.projectTag,
+								title: project.name,
+								href: projectHref(project.projectTag)
+							}
+						: {
+								kind: 'project',
+								id: project.id,
+								tag: project.projectTag,
+								title: project.name,
+								href: null
+							},
+					status: { archived: project.archived, progress: progress?.ok ? progress.value : null },
+					linkedAt: link.linkedAt,
+					...(project.inScope ? {} : { restricted: true as const })
+				}
+			];
 		})
-	);
+	).then((items) => items.flat());
 }
 
-/** Tickets linked to work, as the viewer's ticket scope allows. */
-function ticketItems(
-	rows: {
-		id: string;
-		tag: string;
-		title: string;
-		status: TicketStatus;
-		linkedAt: Date;
-		via?: RecordRef<'task'>;
-	}[]
-): RelatedItem[] {
-	return rows.map((row) => ({
-		ref: ticketRef(row),
-		status: row.status,
-		linkedAt: row.linkedAt,
-		...(row.via ? { via: row.via } : {})
-	}));
+/** The tickets of `links` the viewer may see, in the links' order. */
+async function ticketItems(
+	viewer: SessionUser,
+	links: { ticketId: string; linkedAt: Date; via?: RecordRef<'task'> }[]
+): Promise<RelatedItem[]> {
+	const byId = new Map(
+		(
+			await ticketSummaries(
+				viewer,
+				links.map((link) => link.ticketId)
+			)
+		).map((ticket) => [ticket.id, ticket])
+	);
+
+	return links.flatMap((link): RelatedItem[] => {
+		const ticket = byId.get(link.ticketId);
+		if (!ticket) return [];
+
+		return [
+			{
+				ref: ticketRef(ticket),
+				status: ticket.status,
+				linkedAt: link.linkedAt,
+				...(link.via ? { via: link.via } : {})
+			}
+		];
+	});
 }
 
 async function ticketsResolvedBy(viewer: SessionUser, taskId: string): Promise<RelatedItem[]> {
-	if (!readsTickets(viewer)) return [];
+	const links = await getDb()
+		.select({ ticketId: ticketTask.ticketId, linkedAt: ticketTask.createdAt })
+		.from(ticketTask)
+		.where(and(eq(ticketTask.organisationId, viewer.organisationId), eq(ticketTask.taskId, taskId)))
+		.orderBy(asc(ticketTask.createdAt), asc(ticketTask.id));
 
-	return ticketItems(
-		await getDb()
-			.select({
-				id: tickets.id,
-				tag: tickets.ticketTag,
-				title: tickets.subject,
-				status: tickets.status,
-				linkedAt: ticketTask.createdAt
-			})
-			.from(ticketTask)
-			.innerJoin(tickets, eq(ticketTask.ticketId, tickets.id))
-			.where(
-				and(
-					eq(ticketTask.organisationId, viewer.organisationId),
-					eq(ticketTask.taskId, taskId),
-					requireTicketScope(viewer)
-				)
-			)
-			.orderBy(asc(ticketTask.createdAt), asc(ticketTask.id))
-	);
+	return ticketItems(viewer, links);
 }
 
 async function ticketsHandledBy(viewer: SessionUser, projectId: string): Promise<RelatedItem[]> {
-	if (!readsTickets(viewer)) return [];
-
-	return ticketItems(
-		await getDb()
-			.select({
-				id: tickets.id,
-				tag: tickets.ticketTag,
-				title: tickets.subject,
-				status: tickets.status,
-				linkedAt: ticketProject.createdAt
-			})
-			.from(ticketProject)
-			.innerJoin(tickets, eq(ticketProject.ticketId, tickets.id))
-			.where(
-				and(
-					eq(ticketProject.organisationId, viewer.organisationId),
-					eq(ticketProject.projectId, projectId),
-					requireTicketScope(viewer)
-				)
+	const links = await getDb()
+		.select({ ticketId: ticketProject.ticketId, linkedAt: ticketProject.createdAt })
+		.from(ticketProject)
+		.where(
+			and(
+				eq(ticketProject.organisationId, viewer.organisationId),
+				eq(ticketProject.projectId, projectId)
 			)
-			.orderBy(asc(ticketProject.createdAt), asc(ticketProject.id))
-	);
+		)
+		.orderBy(asc(ticketProject.createdAt), asc(ticketProject.id));
+
+	return ticketItems(viewer, links);
 }
 
-/** Tickets reaching a project through one of its tasks, each naming that task. */
+/**
+ * Tickets reaching a project through one of its tasks, each naming that task.
+ *
+ * Only through tasks the viewer may open: the `via` reference is a record in its
+ * own right, and seeing a project is not seeing all its tasks.
+ */
 async function ticketsViaTasksOf(viewer: SessionUser, projectId: string): Promise<RelatedItem[]> {
-	if (!readsTickets(viewer) || !readsProjects(viewer)) return [];
+	const visible = new Map((await tasksOfProject(viewer, projectId)).map((task) => [task.id, task]));
+	if (visible.size === 0) return [];
 
-	const rows = await getDb()
+	const links = await getDb()
 		.select({
-			id: tickets.id,
-			tag: tickets.ticketTag,
-			title: tickets.subject,
-			status: tickets.status,
-			linkedAt: ticketTask.createdAt,
-			taskId: tasks.id,
-			taskTag: tasks.taskTag,
-			taskTitle: tasks.title
+			ticketId: ticketTask.ticketId,
+			taskId: ticketTask.taskId,
+			linkedAt: ticketTask.createdAt
 		})
 		.from(ticketTask)
-		.innerJoin(tickets, eq(ticketTask.ticketId, tickets.id))
-		.innerJoin(tasks, eq(ticketTask.taskId, tasks.id))
 		.where(
 			and(
 				eq(ticketTask.organisationId, viewer.organisationId),
-				eq(tasks.projectId, projectId),
-				requireTicketScope(viewer),
-				// The `via` task is a record in its own right, and the viewer's scope for
-				// tasks applies to it: seeing the project is not seeing all its tasks.
-				requireTaskScope(viewer)
+				inArray(ticketTask.taskId, [...visible.keys()])
 			)
 		)
 		.orderBy(asc(ticketTask.createdAt), asc(ticketTask.id));
 
 	return ticketItems(
-		rows.map((row) => ({
-			...row,
-			via: {
-				kind: 'task' as const,
-				id: row.taskId,
-				tag: row.taskTag,
-				title: row.taskTitle,
-				href: taskHref(row.taskTag)
-			}
+		viewer,
+		links.map((link) => ({
+			ticketId: link.ticketId,
+			linkedAt: link.linkedAt,
+			via: taskRef(visible.get(link.taskId)!)
 		}))
 	);
 }

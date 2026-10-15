@@ -1,9 +1,9 @@
 import { and, eq, type SQL } from 'drizzle-orm';
-import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import type { Transaction } from '../db';
 import { projects, tasks } from './schema';
 import { requireProjectScope, requireTaskScope } from './scope';
+import { readsProjects } from './summaries';
 
 /**
  * What `links` needs to know about a task or a project to relate a ticket to
@@ -29,16 +29,6 @@ export interface ProjectLinkTarget {
 	projectTag: string;
 	name: string;
 	archived: boolean;
-}
-
-/**
- * The scope SQL throws for a viewer who holds no project-read permission at
- * all (a route that forgot its guard). For a *link* that is an ordinary answer
- * — a key narrowed to `tickets.manage` simply cannot see any project — so it
- * reads as "nothing in scope" and the caller reports the target missing.
- */
-function canReadProjects(viewer: SessionUser): boolean {
-	return can(viewer, 'projects.view') || can(viewer, 'projects.view.assigned');
 }
 
 async function taskTarget(tx: Transaction, where: SQL): Promise<TaskLinkTarget | null> {
@@ -87,7 +77,7 @@ export async function findTaskInScope(
 	viewer: SessionUser,
 	taskId: string
 ): Promise<TaskLinkTarget | null> {
-	if (!canReadProjects(viewer)) return null;
+	if (!readsProjects(viewer)) return null;
 	return taskTarget(tx, and(requireTaskScope(viewer), eq(tasks.id, taskId)) as SQL);
 }
 
@@ -96,7 +86,7 @@ export async function findProjectInScope(
 	viewer: SessionUser,
 	projectId: string
 ): Promise<ProjectLinkTarget | null> {
-	if (!canReadProjects(viewer)) return null;
+	if (!readsProjects(viewer)) return null;
 	return projectTarget(tx, and(requireProjectScope(viewer), eq(projects.id, projectId)) as SQL);
 }
 

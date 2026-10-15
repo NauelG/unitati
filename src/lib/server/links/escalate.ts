@@ -94,11 +94,12 @@ async function run(
 
 			const opened = await openTask(tx, actor, target.projectId, values.data);
 			if (!opened.ok) {
-				return failure(
-					opened.error === 'state_not_found' || opened.error === 'duplicate_task_tag'
-						? 'invalid_input'
-						: opened.error
-				);
+				// No default state, or a tag clash with no tag given, cannot come from the
+				// caller's input: they are broken invariants, not something to report as invalid.
+				if (opened.error === 'state_not_found' || opened.error === 'duplicate_task_tag') {
+					throw new Error(`Could not open the escalated task: ${opened.error}.`);
+				}
+				return failure(opened.error);
 			}
 
 			const linked = await linkTask(tx, actor, { ticketId, taskId: opened.value.id });
