@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.42.0] - 2026-10-15
+
+### Added
+
+- When a task is completed, the technicians whose tickets it resolves get one mail (#152, slice 6d
+  of #11): one per person, listing all their affected tickets with absolute links, and saying the
+  ticket itself was not touched. Tickets already resolved or closed, unassigned, or whose assignee
+  has no address are skipped; with SMTP unconfigured nothing is sent. It rests on the product's
+  first domain event, `task.completed`, emitted by `moveTask` after commit (ADR 0024), so the board
+  menu, a drag and the task record all trigger it.
+
 ## [0.41.2] - 2026-10-15
 
 ### Added
