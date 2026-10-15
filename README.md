@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.42.0-1d5cf0" alt="Version 0.42.0" />
+  <img src="https://img.shields.io/badge/version-0.42.1-1d5cf0" alt="Version 0.42.1" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
 </p>
@@ -224,9 +224,9 @@ configuration is environment variables only (see `.env.example`).
 # once per host: a classic PAT with read:packages
 echo "$GHCR_TOKEN" | docker login ghcr.io -u NauelG --password-stdin
 
-docker pull ghcr.io/nauelg/unitati:0.41.2
+docker pull ghcr.io/nauelg/unitati:0.42.1
 docker run -d --name unitati --env-file unitati.env -p 3000:3000 \
-  -v unitati-uploads:/data/uploads ghcr.io/nauelg/unitati:0.41.2
+  -v unitati-uploads:/data/uploads ghcr.io/nauelg/unitati:0.42.1
 ```
 
 The container applies pending migrations on every start, then serves; with nothing pending that
