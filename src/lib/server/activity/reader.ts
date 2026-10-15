@@ -1,8 +1,9 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { assets } from '../assets/schema';
 import { tickets } from '../service-desk/schema';
 import { people } from '../directory/schema';
+import { serviceAccounts } from '../api/schema';
 import { activity } from './schema';
 import type { ActivityEntry } from './payload';
 import type { ActivityTarget, ActivityTargetColumn } from './verbs';
@@ -26,16 +27,22 @@ export type TimelineEntry = ActivityEntry & {
 	id: string;
 	occurredAt: Date;
 	actorPersonId: string | null;
+	/** Set when an integration acted: `actorName` is then the service account's name, and the UI tags it. */
+	actorServiceAccountId: string | null;
 	/**
 	 * Resolved live from `people`, and deliberately so: the actor is a link to
 	 * somebody who still exists, and a renamed colleague should read by their
 	 * current name. The *fact* of the entry is never resolved this way — it is
 	 * snapshotted into the payload on write, which is what keeps the history
 	 * from rewriting itself (ADR 0009). Null when the system acted, or when the
-	 * actor has since been deleted.
+	 * actor has since been deleted. A service account is never deleted, only
+	 * disabled, so its name always resolves.
 	 */
 	actorName: string | null;
 };
+
+/** The person's current name, or the service account's: at most one of the two is joined. */
+const ACTOR_NAME = sql<string | null>`coalesce(${people.fullName}, ${serviceAccounts.name})`;
 
 export interface ActivityQuery {
 	organisationId: string;
@@ -63,10 +70,12 @@ export async function listActivity(query: ActivityQuery): Promise<TimelineEntry[
 			payload: activity.payload,
 			occurredAt: activity.occurredAt,
 			actorPersonId: activity.actorPersonId,
-			actorName: people.fullName
+			actorServiceAccountId: activity.actorServiceAccountId,
+			actorName: ACTOR_NAME
 		})
 		.from(activity)
 		.leftJoin(people, eq(activity.actorPersonId, people.id))
+		.leftJoin(serviceAccounts, eq(activity.actorServiceAccountId, serviceAccounts.id))
 		// Scoped by organisation as well as by target (ADR 0004): the target id is
 		// a uuid and effectively unguessable, but "effectively" is not a boundary.
 		.where(and(eq(activity.organisationId, query.organisationId), eq(activity[column], id)))
@@ -114,7 +123,8 @@ export async function listRecentActivity(
 			payload: activity.payload,
 			occurredAt: activity.occurredAt,
 			actorPersonId: activity.actorPersonId,
-			actorName: people.fullName,
+			actorServiceAccountId: activity.actorServiceAccountId,
+			actorName: ACTOR_NAME,
 			assetTag: assets.assetTag,
 			assetName: assets.name,
 			ticketTag: tickets.ticketTag,
@@ -122,6 +132,7 @@ export async function listRecentActivity(
 		})
 		.from(activity)
 		.leftJoin(people, eq(activity.actorPersonId, people.id))
+		.leftJoin(serviceAccounts, eq(activity.actorServiceAccountId, serviceAccounts.id))
 		.leftJoin(assets, eq(activity.assetId, assets.id))
 		.leftJoin(tickets, eq(activity.ticketId, tickets.id))
 		.where(eq(activity.organisationId, organisationId))

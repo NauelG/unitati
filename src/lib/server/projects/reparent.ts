@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { recordActivity } from '../activity';
+import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { failure, success, type Outcome } from '../shared/outcome';
@@ -52,7 +52,7 @@ export async function reparentTask(
 
 	await recordActivity(tx, {
 		organisationId: actor.organisationId,
-		actorPersonId: actor.personId,
+		...actorColumns(actor),
 		target: { taskId: task.id },
 		verb: 'task.project.changed',
 		payload: {

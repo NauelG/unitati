@@ -15,6 +15,7 @@ function note(id: string, occurredAt: string, text = 'Nota'): TimelineEntry {
 		payload: { text },
 		occurredAt: at(occurredAt),
 		actorPersonId: null,
+		actorServiceAccountId: null,
 		actorName: null
 	};
 }

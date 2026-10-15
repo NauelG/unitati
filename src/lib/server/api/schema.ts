@@ -1,8 +1,41 @@
 import { sql } from 'drizzle-orm';
 import { check, index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
-import { users } from '../auth/schema';
+import { userRole, users } from '../auth/schema';
 import { organisations } from '../directory/schema';
 import { timestamps } from '../shared/columns';
+
+/**
+ * Service accounts (ADR 0022): organisation-owned principals with a product role
+ * and no person, so an integration outlives the employee who set it up.
+ *
+ * **Disabled, never deleted.** The activity they wrote names them as its actor;
+ * deleting the row would orphan or cascade that history.
+ */
+export const serviceAccounts = pgTable(
+	'service_accounts',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		role: userRole('role').notNull(),
+		/** Who set it up. The account does not depend on them: it survives their deletion. */
+		createdByUserId: text('created_by_user_id').references(() => users.id, {
+			onDelete: 'set null'
+		}),
+		/** While set, every key of the account answers 401. */
+		disabledAt: timestamp('disabled_at', { withTimezone: true }),
+		...timestamps
+	},
+	(table) => [
+		uniqueIndex('service_accounts_org_name').on(table.organisationId, sql`lower(${table.name})`),
+		// An unattended admin-equivalent credential is the worst possible leak.
+		check('service_accounts_not_admin', sql`${table.role} <> 'admin'`)
+	]
+);
+
+export type ServiceAccount = typeof serviceAccounts.$inferSelect;
 
 /**
  * API keys (ADR 0022). Owned by `api` rather than `auth`: `auth` keeps only
@@ -24,11 +57,13 @@ export const apiKeys = pgTable(
 		organisationId: uuid('organisation_id')
 			.notNull()
 			.references(() => organisations.id, { onDelete: 'cascade' }),
-		/** The key dies with its credential. */
-		ownerUserId: text('owner_user_id')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		/** Equal to the owner for a personal key; differs for service accounts. */
+		/** A personal key dies with its credential. Null for a service-account key. */
+		ownerUserId: text('owner_user_id').references(() => users.id, { onDelete: 'cascade' }),
+		/** Set instead of the owner for a service-account key. Accounts are never deleted. */
+		serviceAccountId: uuid('service_account_id').references(() => serviceAccounts.id, {
+			onDelete: 'restrict'
+		}),
+		/** Equal to the owner for a personal key; the admin who issued it for a service account's. */
 		createdByUserId: text('created_by_user_id').references(() => users.id, {
 			onDelete: 'set null'
 		}),
@@ -46,10 +81,18 @@ export const apiKeys = pgTable(
 	},
 	(table) => [
 		index('api_keys_org_owner').on(table.organisationId, table.ownerUserId),
-		// An owner cannot have two active keys with the same name.
+		index('api_keys_service_account').on(table.serviceAccountId),
+		// A principal (a user or a service account) cannot have two active keys with the same name.
 		uniqueIndex('api_keys_owner_active_name')
-			.on(table.ownerUserId, sql`lower(${table.name})`)
+			.on(
+				sql`coalesce(${table.ownerUserId}, ${table.serviceAccountId}::text)`,
+				sql`lower(${table.name})`
+			)
 			.where(sql`${table.revokedAt} is null`),
+		check(
+			'api_keys_exactly_one_principal',
+			sql`num_nonnulls(${table.ownerUserId}, ${table.serviceAccountId}) = 1`
+		),
 		check('api_keys_scopes_not_empty', sql`cardinality(${table.scopes}) > 0`)
 	]
 );

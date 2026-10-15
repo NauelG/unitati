@@ -113,7 +113,13 @@
 					{#if asset}
 						<RecordRef record={asset} />
 					{/if}
-					{#if item.entry.actorName}· {item.entry.actorName}{/if}
+					{#if item.entry.actorName}· {item.entry.actorName}
+						{#if item.entry.actorServiceAccountId}
+							<span class={badge({ tone: 'neutral', plain: true })}>
+								{m.timeline_service_tag()}
+							</span>
+						{/if}
+					{/if}
 					·
 					<time datetime={item.at.toISOString()}>{formatter.format(item.at)}</time>
 				</li>

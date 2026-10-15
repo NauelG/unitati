@@ -92,7 +92,7 @@
 	import type { AssetTimelineItem } from '#lib/server/links/index.js';
 	import { activitySentence, projectChangedParts } from './activity.js';
 	import RecordRef from './RecordRef.svelte';
-	import StatusBadge from './StatusBadge.svelte';
+	import StatusBadge, { badge } from './StatusBadge.svelte';
 
 	interface Props {
 		/**
@@ -173,6 +173,11 @@
 								<span class={styles.actor()}>
 									{m.timeline_by({ name: entry.actorName })}
 								</span>
+								{#if entry.actorServiceAccountId}
+									<span class={badge({ tone: 'neutral', plain: true })}>
+										{m.timeline_service_tag()}
+									</span>
+								{/if}
 							{/if}
 						</p>
 

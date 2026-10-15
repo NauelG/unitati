@@ -18,6 +18,12 @@ export interface SessionUser {
 	/** Directory record, absent only for a user with no person row. */
 	personId: string | null;
 	/**
+	 * Present only for a service-account key (ADR 0022). Then `id` is the account's
+	 * id, not a Better Auth user id, and `personId` is null: code that assumes a
+	 * user must branch on this or refuse.
+	 */
+	serviceAccountId?: string;
+	/**
 	 * Present only for an API key (ADR 0022): the permissions the key was narrowed
 	 * to. `can()` intersects them with the role's; a session leaves it unset.
 	 */

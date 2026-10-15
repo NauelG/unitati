@@ -3,6 +3,7 @@ import { check, index, jsonb, pgEnum, pgTable, timestamp, uuid } from 'drizzle-o
 import { timestamps } from '../shared/columns';
 import { organisations, people } from '../directory/schema';
 import { assets } from '../assets/schema';
+import { serviceAccounts } from '../api/schema';
 import { projects, tasks } from '../projects/schema';
 import { tickets } from '../service-desk/schema';
 import { ACTIVITY_TARGETS, ACTIVITY_VERBS } from './verbs';
@@ -50,6 +51,10 @@ export const activity = pgTable(
 			.references(() => organisations.id, { onDelete: 'cascade' }),
 		/** Nullable because the system acts too: a scheduled rule has no person. */
 		actorPersonId: uuid('actor_person_id').references(() => people.id, { onDelete: 'set null' }),
+		/** Set instead of a person when an integration acted. Accounts are never deleted. */
+		actorServiceAccountId: uuid('actor_service_account_id').references(() => serviceAccounts.id, {
+			onDelete: 'restrict'
+		}),
 		verb: activityVerb('verb').notNull(),
 		/**
 		 * Shape fixed by the discriminated union in `payload.ts` and validated by
@@ -82,6 +87,10 @@ export const activity = pgTable(
 		 * added to it without a matching column fails to compile here, rather
 		 * than producing a constraint over a column that does not exist.
 		 */
+		check(
+			'activity_at_most_one_actor',
+			sql`num_nonnulls(${table.actorPersonId}, ${table.actorServiceAccountId}) <= 1`
+		),
 		check(
 			'activity_exactly_one_target',
 			sql`${sql.join(

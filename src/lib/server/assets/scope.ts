@@ -1,4 +1,4 @@
-import { and, eq, or, type SQL } from 'drizzle-orm';
+import { and, eq, or, sql, type SQL } from 'drizzle-orm';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { assets } from './schema';
@@ -47,7 +47,12 @@ function visibleAssets(viewer: SessionUser): SQL | null {
 
 	if (can(viewer, 'assets.view.shared')) clauses.push(eq(assets.shared, true));
 
-	if (clauses.length === 0) return null;
+	if (clauses.length === 0) {
+		// Holding `assets.view.own` without a person (a service account) is a
+		// permission that matches nothing, not a missing permission: the route
+		// let it in, so the answer is an empty list rather than an error.
+		return can(viewer, 'assets.view.own') ? (and(organisation, sql`false`) as SQL) : null;
+	}
 
 	return and(organisation, or(...clauses)) as SQL;
 }

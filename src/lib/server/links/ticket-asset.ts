@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { recordActivity } from '../activity';
+import { actorColumns, recordActivity } from '../activity';
 import { can } from '../access/permissions';
 import { requireAssetScope } from '../assets';
 import { assets } from '../assets/schema';
@@ -99,7 +99,7 @@ export async function linkAsset(
 
 	await recordActivity(tx, {
 		organisationId: actor.organisationId,
-		actorPersonId: actor.personId,
+		...actorColumns(actor),
 		target: { ticketId: ticket.id },
 		verb: 'link.asset.added',
 		payload: { assetId: asset.id, assetTag: asset.assetTag, assetName: asset.name }
@@ -156,7 +156,7 @@ export async function unlinkAsset(
 
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { ticketId: pair.ticketId },
 			verb: 'link.asset.removed',
 			payload: { assetId: pair.assetId, assetTag: link.assetTag, assetName: link.assetName }

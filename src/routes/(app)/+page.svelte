@@ -11,7 +11,7 @@
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import RecordRef from '#lib/components/unitati/RecordRef.svelte';
 	import Sparkline from '#lib/components/unitati/Sparkline.svelte';
-	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
+	import StatusBadge, { badge } from '#lib/components/unitati/StatusBadge.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { activitySentence } from '#lib/components/unitati/activity.js';
 	import { m } from '#lib/paraglide/messages.js';
@@ -265,6 +265,11 @@
 										<span class="font-normal text-[var(--ink-muted)]">
 											{m.timeline_by({ name: entry.actorName })}
 										</span>
+										{#if entry.actorServiceAccountId}
+											<span class={badge({ tone: 'neutral', plain: true })}>
+												{m.timeline_service_tag()}
+											</span>
+										{/if}
 									{/if}
 								</p>
 								<div class="mt-[var(--space-1)] flex items-center gap-[var(--space-2)]">

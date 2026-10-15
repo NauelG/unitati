@@ -191,3 +191,85 @@ describe('/settings/api-keys revoke', () => {
 		expect((await authenticateApiKey(theirs.value.key)).ok).toBe(false);
 	});
 });
+
+describe('/settings/api-keys service accounts', () => {
+	it('sends them to an admin only, with the scopes of each account’s own role', async () => {
+		const { admin, technician } = await workspace();
+		await actions.createAccount(event(admin, { name: 'Reader', role: 'employee' }));
+
+		const adminData = (await load(event(admin))) as {
+			serviceAccounts: { name: string; grantable: string[] }[];
+			serviceAccountRoles: string[];
+		};
+		expect(adminData.serviceAccountRoles).toEqual(['technician', 'employee']);
+		expect(adminData.serviceAccounts.map((account) => account.name)).toEqual(['Reader']);
+		// An employee-role account is offered what an employee holds, not what the admin does.
+		expect(adminData.serviceAccounts[0].grantable).toContain('tickets.view.own');
+		expect(adminData.serviceAccounts[0].grantable).not.toContain('assets.manage');
+
+		const technicianData = (await load(event(technician))) as { serviceAccounts: unknown[] };
+		expect(technicianData.serviceAccounts).toEqual([]);
+	});
+
+	it('refuses a technician posting any of the three actions directly', async () => {
+		const { admin, technician } = await workspace();
+		await actions.createAccount(event(admin, { name: 'MDM', role: 'technician' }));
+		const [{ id }] = ((await load(event(admin))) as { serviceAccounts: { id: string }[] })
+			.serviceAccounts;
+
+		await expect(
+			actions.createAccount(event(technician, { name: 'Mine', role: 'technician' }))
+		).rejects.toMatchObject({ status: 403 });
+		await expect(
+			actions.setAccountDisabled(event(technician, { id, disabled: 'true' }))
+		).rejects.toMatchObject({ status: 403 });
+		await expect(
+			actions.createAccountKey(
+				event(technician, {
+					serviceAccountId: id,
+					name: 'k',
+					scopes: 'tickets.view',
+					expiresInDays: '90'
+				})
+			)
+		).rejects.toMatchObject({ status: 403 });
+	});
+
+	it('creates an account, issues it a key, and disables it', async () => {
+		const { admin } = await workspace();
+		expect(
+			await actions.createAccount(event(admin, { name: 'MDM', role: 'technician' }))
+		).toMatchObject({ action: 'createAccount' });
+		const [{ id }] = ((await load(event(admin))) as { serviceAccounts: { id: string }[] })
+			.serviceAccounts;
+
+		const issued = (await actions.createAccountKey(
+			event(admin, {
+				serviceAccountId: id,
+				name: 'agent',
+				scopes: 'assets.manage',
+				expiresInDays: 'never'
+			})
+		)) as Created;
+		expect(issued.key).toMatch(/^unt_/);
+		expect((await authenticateApiKey(issued.key)).ok).toBe(true);
+
+		await actions.setAccountDisabled(event(admin, { id, disabled: 'true' }));
+		expect(await authenticateApiKey(issued.key)).toEqual({ ok: false, error: 'disabled' });
+	});
+
+	it('refuses an admin-role account and a duplicate name as field errors', async () => {
+		const { admin } = await workspace();
+		await actions.createAccount(event(admin, { name: 'MDM', role: 'technician' }));
+
+		const role = (await actions.createAccount(
+			event(admin, { name: 'Root', role: 'admin' })
+		)) as unknown as Refusal;
+		expect([role.status, role.data.field]).toEqual([400, 'role']);
+
+		const duplicate = (await actions.createAccount(
+			event(admin, { name: 'mdm', role: 'employee' })
+		)) as unknown as Refusal;
+		expect([duplicate.status, duplicate.data.field]).toEqual([400, 'name']);
+	});
+});

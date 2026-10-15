@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { STATE_GROUPS, type StateGroup } from '#lib/domain/status.js';
-import { recordActivity } from '../activity';
+import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { uniqueConstraintName } from '../db/errors';
@@ -224,7 +224,7 @@ export async function createProject(
 
 			await recordActivity(tx, {
 				organisationId: actor.organisationId,
-				actorPersonId: actor.personId,
+				...actorColumns(actor),
 				target: { projectId: project.id },
 				verb: 'project.created',
 				payload: { projectTag: project.projectTag, name: project.name }
@@ -258,7 +258,7 @@ export async function updateProject(
 
 			const base = {
 				organisationId: actor.organisationId,
-				actorPersonId: actor.personId,
+				...actorColumns(actor),
 				target: { projectId }
 			};
 
@@ -335,7 +335,7 @@ export async function archiveProject(
 
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { projectId },
 			verb: 'project.archived',
 			payload: {}
@@ -368,7 +368,7 @@ export async function unarchiveProject(
 
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { projectId },
 			verb: 'project.unarchived',
 			payload: {}
