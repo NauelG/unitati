@@ -2,16 +2,17 @@
 
 Typed relations between records of different domains (ticket → asset, ticket → task, ticket → project). Owns the cross-domain graph so no domain has to know another domain's tables. See `docs/domain-model.md` and ADR 0005.
 
-| File                  | Owns                                                                                                                       |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `schema.ts`           | One join table per pair, each with real foreign keys: `ticket_asset`, `ticket_task`, `ticket_project`                      |
-| `ticket-asset.ts`     | `linkAsset` (inside the caller's transaction) and `unlinkAsset` (behind `tickets.manage`)                                  |
-| `ticket-work.ts`      | `linkTask`/`linkProject` (inside the caller's transaction), their `linkTicketTo…` wrappers, `unlinkTask`/`unlinkProject`   |
-| `escalate.ts`         | `escalateTicket`: link an existing task or project, or create one and link it, in one transaction                          |
-| `escalation-draft.ts` | `escalationDraft(ticket)`: the title and description an escalation form pre-fills                                          |
-| `related.ts`          | `relatedTo(viewer, record)`: the uniform read facade over every relation                                                   |
-| `timeline.ts`         | `mergeAssetTimeline`/`mergeTaskTimeline`/`mergeProjectTimeline` (activity + live tickets on one rail), `recentTicketCount` |
-| `index.ts`            | The public surface: callers import from here and never from a file inside                                                  |
+| File                       | Owns                                                                                                                       |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `schema.ts`                | One join table per pair, each with real foreign keys: `ticket_asset`, `ticket_task`, `ticket_project`                      |
+| `ticket-asset.ts`          | `linkAsset` (inside the caller's transaction) and `unlinkAsset` (behind `tickets.manage`)                                  |
+| `ticket-work.ts`           | `linkTask`/`linkProject` (inside the caller's transaction), their `linkTicketTo…` wrappers, `unlinkTask`/`unlinkProject`   |
+| `escalate.ts`              | `escalateTicket`: link an existing task or project, or create one and link it, in one transaction                          |
+| `escalation-draft.ts`      | `escalationDraft(ticket)`: the title and description an escalation form pre-fills                                          |
+| `related.ts`               | `relatedTo(viewer, record)`: the uniform read facade over every relation                                                   |
+| `timeline.ts`              | `mergeAssetTimeline`/`mergeTaskTimeline`/`mergeProjectTimeline` (activity + live tickets on one rail), `recentTicketCount` |
+| `notify-task-completed.ts` | The `task.completed` subscriber: one mail per assigned technician (#152, ADR 0024)                                         |
+| `index.ts`                 | The public surface: callers import from here and never from a file inside                                                  |
 
 ## Decisions worth knowing before changing this
 

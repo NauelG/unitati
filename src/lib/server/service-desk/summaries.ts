@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, notInArray } from 'drizzle-orm';
 import type { Priority, TicketStatus } from '#lib/domain/status.js';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
@@ -58,4 +58,43 @@ export async function isRequester(viewer: SessionUser, ticketId: string): Promis
 		.limit(1);
 
 	return own !== undefined;
+}
+
+/** An unresolved ticket and who it is assigned to, for a notification about it. */
+export interface AssignedOpenTicket extends Omit<TicketRow, 'assigneeName' | 'priority'> {
+	assigneePersonId: string;
+}
+
+/**
+ * The tickets among `ids` of an organisation that still need someone — neither
+ * `resolved` nor `closed` — and have an assignee. Not scoped to a viewer: this
+ * serves a notification the system sends, not a screen somebody reads, so the
+ * caller is trusted to pass ids it found through a relation.
+ */
+export async function assignedOpenTickets(
+	organisationId: string,
+	ids: string[]
+): Promise<AssignedOpenTicket[]> {
+	if (ids.length === 0) return [];
+
+	const rows = await getDb()
+		.select({
+			id: tickets.id,
+			ticketTag: tickets.ticketTag,
+			subject: tickets.subject,
+			status: tickets.status,
+			assigneePersonId: tickets.assigneePersonId
+		})
+		.from(tickets)
+		.where(
+			and(
+				eq(tickets.organisationId, organisationId),
+				inArray(tickets.id, ids),
+				notInArray(tickets.status, ['resolved', 'closed'])
+			)
+		);
+
+	return rows.flatMap(({ assigneePersonId, ...row }) =>
+		assigneePersonId === null ? [] : [{ ...row, assigneePersonId }]
+	);
 }

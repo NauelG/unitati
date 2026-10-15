@@ -7,6 +7,7 @@ Unitati: projects, service desk and ITAM on one data model. Start with `README.m
 - Architecture: server code by business domain, see `docs/adr/0002-server-modules-by-domain.md`. Routes never query the database; domains never import each other's tables (use `links`).
 - Domain vocabulary: `docs/domain-model.md`. New architectural decisions go in `docs/adr/NNNN-title.md`.
 - Code, comments and docs in English. Pull request descriptions are the one exception: they are written in Catalan, see `docs/agents/pull-requests.md`.
+- Cross-domain reactions go through `shared/events.ts` (ADR 0024): emit after commit from the owning domain, subscribe in `subscriptions.ts`; never import another domain's tables to react.
 - Configurable catalogues live under `/settings/{module}`, registered in the settings section registry; never as a route inside the module.
 - Commits: Conventional Commits.
 - Before finishing a change: `npm run check`, `npm run lint`, `npm test`.

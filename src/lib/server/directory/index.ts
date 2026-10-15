@@ -1,4 +1,4 @@
-import { asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { users } from '../auth/schema';
 import type { SessionUser } from '../auth/guards';
@@ -64,6 +64,23 @@ export async function listPeople(organisationId: string): Promise<DirectoryEntry
 		.leftJoin(users, eq(people.userId, users.id))
 		.where(eq(people.organisationId, organisationId))
 		.orderBy(asc(people.fullName));
+}
+
+export interface PersonContact {
+	id: string;
+	fullName: string;
+	/** Empty when the address was never filled in. */
+	email: string;
+}
+
+/** Name and address of the people among `ids` in an organisation, for whoever must reach them. */
+export async function contactsOf(organisationId: string, ids: string[]): Promise<PersonContact[]> {
+	if (ids.length === 0) return [];
+
+	return getDb()
+		.select({ id: people.id, fullName: people.fullName, email: people.email })
+		.from(people)
+		.where(and(eq(people.organisationId, organisationId), inArray(people.id, ids)));
 }
 
 export interface LocationEntry {
