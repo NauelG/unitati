@@ -36,3 +36,5 @@ deployment. There is no public release yet, so the image must not be public eith
   versions can wait until it matters.
 - Pulling needs a token with `read:packages` on the host.
 - Staging keeps its source-checkout flow for now. Moving it onto the image is a separate decision.
+  _(Resolved by [ADR 0025](0025-deployment-agnostic.md): the source-checkout staging is removed and
+  the repository no longer prescribes any deployment.)_

@@ -8,7 +8,9 @@
 // The image runs it before the server on every start (see the Dockerfile CMD);
 // it can also be run alone: docker run --rm --env-file unitati.env IMAGE node scripts/migrate.mjs
 //
-// Migrations are forward-only: see the note in scripts/staging-deploy.sh.
+// Migrations are forward-only (docs/adr/0025-deployment-agnostic.md): a failed
+// deployment does not revert the schema, so a destructive migration needs a plan
+// of its own in the pull request that introduces it.
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
