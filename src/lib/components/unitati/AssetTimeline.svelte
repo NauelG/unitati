@@ -106,7 +106,8 @@
 		items: AssetTimelineItem[];
 		/**
 		 * Whose rail this is: the dot of an event on the record itself takes its
-		 * domain's colour. A project or task rail only carries `activity` items.
+		 * domain's colour. On a task or project rail the live ticket rows read as
+		 * "linked to the ticket" with who did it.
 		 */
 		domain?: 'asset' | 'project';
 		class?: string;
@@ -141,8 +142,15 @@
 					</span>
 					<div class={styles.body()}>
 						<p class={styles.ticket()}>
+							{#if domain !== 'asset'}
+								<!-- On a task or a project the row is a sentence: someone linked a ticket to it. -->
+								<span class={styles.head()}>{m.timeline_ticket_linked()}</span>
+							{/if}
 							<RecordRef record={item.record} />
 							<StatusBadge status={item.status} />
+							{#if item.actorName}
+								<span class={styles.actor()}>{m.timeline_by({ name: item.actorName })}</span>
+							{/if}
 						</p>
 						<time class={styles.time()} datetime={item.at.toISOString()}>
 							{formatter.format(item.at)}

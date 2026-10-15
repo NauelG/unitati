@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ComponentDocPage from '../ComponentDocPage.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
-	import type { AssetRelatedGroup } from '#lib/server/links/related.js';
+	import type { AssetRelatedGroup, RelatedGroup, ViaTask } from '#lib/server/links/related.js';
 
 	const linkedAt = new Date('2026-01-01T10:00:00Z');
 
@@ -54,6 +54,90 @@
 			]
 		}
 	];
+
+	const ticket = (
+		n: number,
+		fields: {
+			status: 'new' | 'in_progress' | 'waiting_on_user' | 'resolved';
+			priority: 'low' | 'normal' | 'high' | 'urgent';
+			assignee: string | null;
+			via?: ViaTask;
+		}
+	) => ({
+		linkedAt,
+		ref: {
+			kind: 'ticket' as const,
+			id: `t${n}`,
+			tag: `TCK-${String(n).padStart(4, '0')}`,
+			title: ['No arranca el VPN', 'Alta de usuario nuevo', 'Impresora sin tóner'][n % 3],
+			href: '#'
+		},
+		...fields
+	});
+
+	const viaTask = (n: number): ViaTask => ({
+		kind: 'task',
+		id: `task${n}`,
+		tag: `TSK-${String(n).padStart(4, '0')}`,
+		title: 'Preparar el puesto',
+		href: '#',
+		status: { group: 'started', name: 'En revisión' }
+	});
+
+	/** The task record: three tickets behind it. */
+	const taskSide: RelatedGroup[] = [
+		{
+			relation: 'resolves',
+			icon: 'ticket',
+			items: [
+				ticket(1, { status: 'in_progress', priority: 'urgent', assignee: 'Marta Soler' }),
+				ticket(2, { status: 'new', priority: 'normal', assignee: null }),
+				ticket(3, { status: 'resolved', priority: 'high', assignee: 'Jordi Vila' })
+			]
+		}
+	];
+
+	/** The project record: direct tickets, and tickets through two tasks (one ticket reaches it twice). */
+	const projectSide: RelatedGroup[] = [
+		{
+			relation: 'handles',
+			icon: 'ticket',
+			items: [ticket(4, { status: 'waiting_on_user', priority: 'normal', assignee: 'Marta Soler' })]
+		},
+		{
+			relation: 'resolves_via_tasks',
+			icon: 'ticket',
+			items: [
+				ticket(1, {
+					status: 'in_progress',
+					priority: 'urgent',
+					assignee: 'Marta Soler',
+					via: viaTask(1)
+				}),
+				ticket(1, {
+					status: 'in_progress',
+					priority: 'urgent',
+					assignee: 'Marta Soler',
+					via: viaTask(2)
+				}),
+				ticket(2, { status: 'new', priority: 'normal', assignee: null, via: viaTask(1) })
+			]
+		}
+	];
+
+	/** What an employee holding only their own tickets is given: the same shape, fewer rows. */
+	const employeeSide: RelatedGroup[] = [
+		{
+			relation: 'handles',
+			icon: 'ticket',
+			items: []
+		},
+		{
+			relation: 'resolves_via_tasks',
+			icon: 'ticket',
+			items: [ticket(2, { status: 'new', priority: 'normal', assignee: null, via: viaTask(1) })]
+		}
+	].filter((group) => group.items.length > 0) as RelatedGroup[];
 </script>
 
 <ComponentDocPage
@@ -71,8 +155,15 @@
 	propsDoc={[
 		{
 			name: 'groups',
-			type: 'AssetRelatedGroup[]',
-			description: 'Agrupados por relación, en el orden del design system.'
+			type: 'RelatedGroup[]',
+			description:
+				'Agrupados por relación, en el orden del design system. Un ticket que llega a un proyecto por dos tareas sale una vez, con las dos.'
+		},
+		{
+			name: 'unlinkable',
+			type: 'RelationName[]',
+			description:
+				'Las relaciones que se desvinculan desde aquí; todas si falta. El proyecto solo desvincula "handles".'
 		},
 		{
 			name: 'unlinkAction',
@@ -124,6 +215,24 @@
 					unlinkAction="#"
 					error="No se pudo desvincular: el ticket sigue abierto."
 				/>
+			</div>
+			<div>
+				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+					Tarea: Resuelve, con desvincular
+				</p>
+				<RelatedRecords groups={taskSide} unlinkAction="#" />
+			</div>
+			<div>
+				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+					Proyecto: Gestiona y Resuelve, vía tareas (solo desvincula lo directo)
+				</p>
+				<RelatedRecords groups={projectSide} unlinkAction="#" unlinkable={['handles']} />
+			</div>
+			<div>
+				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+					Empleado: solo sus solicitudes
+				</p>
+				<RelatedRecords groups={employeeSide} />
 			</div>
 			<div>
 				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">Vacío</p>

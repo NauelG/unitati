@@ -10,6 +10,8 @@
 	import Field from '#lib/components/unitati/Field.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
+	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
+	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
 	import SearchSelectField from '#lib/components/unitati/SearchSelectField.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import Sheet from '#lib/components/unitati/Sheet.svelte';
@@ -226,21 +228,21 @@
 			</WorkPanel>
 		{/if}
 
-		{#await data.timeline}
+		<!-- Streamed (#89): the history and the tickets linked to this task are read
+		     together, because the timeline merges both. -->
+		{#await data.timelineRail}
 			<WorkPanel heading={m.timeline_title()}>
 				<TimelineSkeleton />
 			</WorkPanel>
-		{:then entries}
+		{:then rail}
+			<RelationConstellation centre={{ kind: 'task', tag: task.taskTag }} groups={rail.related} />
+			<RelatedRecords
+				groups={rail.related}
+				unlinkAction={data.canUnlink ? '?/unlinkTicket' : undefined}
+				error={failureFor('unlinkTicket')}
+			/>
 			<WorkPanel heading={m.timeline_title()}>
-				<AssetTimeline
-					domain="project"
-					items={entries.map((entry) => ({
-						kind: 'activity' as const,
-						id: entry.id,
-						at: entry.occurredAt,
-						entry
-					}))}
-				/>
+				<AssetTimeline domain="project" items={rail.timeline} />
 			</WorkPanel>
 		{/await}
 	{/snippet}

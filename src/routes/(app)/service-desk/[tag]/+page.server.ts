@@ -5,7 +5,7 @@ import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
 import { listPeople } from '#lib/server/directory/index.js';
-import { assetRelations, relatedTo, unlinkAsset } from '#lib/server/links/index.js';
+import { relatedTo, unlinkAsset } from '#lib/server/links/index.js';
 import {
 	addComment,
 	addCommentInput,
@@ -44,8 +44,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		// read, so what is linked to it is read on that same footing;
 		// `relatedTo` scopes the other side of each link. Streams in behind
 		// `RelatedRecords` while the rest of the page is already interactive.
-		// Asset relations only: the tasks and projects get their panel in #150.
-		related: relatedTo(user, { kind: 'ticket', id: found.value.id }).then(assetRelations),
+		// All of it feeds the constellation (#151); the panel lists the asset
+		// groups only until the tasks and projects get theirs in #150.
+		related: relatedTo(user, { kind: 'ticket', id: found.value.id }),
 		canManage,
 		canInternal: can(user, 'tickets.comment.internal'),
 		nextStatuses: nextStatuses(found.value.status),

@@ -5,6 +5,7 @@ import { can } from '#lib/server/access/permissions.js';
 import { listActivity } from '#lib/server/activity/index.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 import { listPeople } from '#lib/server/directory/index.js';
+import { mergeTaskTimeline, relatedTo, unlinkTask } from '#lib/server/links/index.js';
 import {
 	fieldsOf,
 	firstField,
@@ -50,10 +51,24 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		projects: projects
 			.filter((project) => project.id !== task.projectId)
 			.map(({ id, projectTag, name }) => ({ id, projectTag, name })),
-		// Streamed: nothing above waits for the history.
-		timeline: listActivity({ organisationId: user.organisationId, target: { taskId: task.id } })
+		// Unlinking concerns the ticket, not the project: it asks for
+		// `tickets.manage`, and an archived project does not take it away (#151).
+		canUnlink: can(user, 'tickets.manage'),
+		// Streamed: nothing above waits for the history. The live half — the
+		// tickets linked to this task, with the status they have today — is merged
+		// in at read time and writes nothing on the task (ADR 0009).
+		timelineRail: timelineRailOf(user, task.id)
 	};
 };
+
+async function timelineRailOf(user: SessionUser, taskId: string) {
+	const [entries, related] = await Promise.all([
+		listActivity({ organisationId: user.organisationId, target: { taskId } }),
+		relatedTo(user, { kind: 'task', id: taskId })
+	]);
+
+	return { timeline: mergeTaskTimeline(entries, related), related };
+}
 
 /** The task an action targets. Gone, or out of the viewer's scope, reads as missing. */
 async function targetOf(user: SessionUser, taskTag: string) {
@@ -154,6 +169,24 @@ export const actions: Actions = {
 		}
 
 		return { action: 'moveToProject' as const };
+	},
+
+	// The link belongs to the ticket: `tickets.manage`, not `projects.manage`,
+	// and open on a task of an archived project. The entry is written on the ticket.
+	unlinkTicket: async ({ request, locals, params }) => {
+		// Whoever can read the task knows it is there, so they are told plainly: 403.
+		const user = requireProjectRead(locals.user);
+		if (!can(user, 'tickets.manage')) error(403, 'Forbidden');
+		const parsed = z.uuid().safeParse((await fieldsOf(request)).get('recordId'));
+		if (!parsed.success) return rejected('unlinkTicket', m.related_unlink_failed());
+
+		const task = await targetOf(user, params.taskTag);
+		const outcome = await unlinkTask(user, { ticketId: parsed.data, taskId: task.id });
+		// Already gone, e.g. a second tab removed it first: the reload shows the truth.
+		if (!outcome.ok && outcome.error !== 'link_not_found') {
+			return rejected('unlinkTicket', m.related_unlink_failed());
+		}
+		return { action: 'unlinkTicket' as const };
 	},
 
 	setAssignees: async ({ request, locals, params }) => {

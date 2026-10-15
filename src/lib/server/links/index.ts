@@ -38,6 +38,7 @@ export type {
 	ProjectStatus,
 	RelatedGroup,
 	RelatedItem,
+	ViaTask,
 	RelationName
 } from './related';
 
@@ -46,6 +47,7 @@ export {
 	mergeTaskTimeline,
 	mergeProjectTimeline,
 	recentTicketCount,
+	openTicketCount,
 	RECENT_MONTHS
 } from './timeline';
 export type { AssetTimelineItem } from './timeline';

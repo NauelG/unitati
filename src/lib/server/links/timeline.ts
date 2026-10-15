@@ -27,6 +27,8 @@ export type AssetTimelineItem =
 			status: TicketStatus;
 			/** On a project's rail: the task the ticket reaches the project through. */
 			via?: RecordRef<'task'>;
+			/** Who linked it, from the link row; `null` when that person is gone. */
+			actorName?: string | null;
 	  };
 
 type TicketItem = Extract<RelatedItem, { ref: { kind: 'ticket' } }>;
@@ -57,6 +59,7 @@ function mergeTimeline(
 			at: item.linkedAt,
 			record: item.ref,
 			status: item.status,
+			...(item.actorName !== undefined ? { actorName: item.actorName } : {}),
 			...(item.via ? { via: item.via } : {})
 		}))
 	];
@@ -109,4 +112,18 @@ export function recentTicketCount(related: readonly RelatedGroup[], now: Date): 
 	const since = monthsBefore(now, RECENT_MONTHS);
 
 	return ticketsIn(related).filter((item) => item.linkedAt >= since).length;
+}
+
+/**
+ * How many tickets behind a record are still open: everything a project handles
+ * directly or through its tasks, except `resolved` and `closed`. A ticket in
+ * both groups counts once. Counted from what the viewer was given, so it can
+ * never include a ticket they cannot see.
+ */
+export function openTicketCount(related: readonly RelatedGroup[]): number {
+	const open = new Set<string>();
+	for (const item of ticketsIn(related)) {
+		if (item.status !== 'resolved' && item.status !== 'closed') open.add(item.ref.id);
+	}
+	return open.size;
 }

@@ -56,6 +56,32 @@
 	];
 
 	const single: AssetTimelineItem[] = [full[3]];
+
+	/** A task's or a project's rail: the live ticket row reads as a sentence, with who linked it. */
+	const linked: AssetTimelineItem[] = [
+		{
+			kind: 'ticket',
+			id: 't9',
+			at: new Date('2026-03-02T09:00:00Z'),
+			record: { kind: 'ticket', id: 't9', tag: 'TCK-0042', title: 'No arranca el VPN', href: '#' },
+			status: 'in_progress',
+			actorName: 'Marta Soler'
+		},
+		{
+			kind: 'activity',
+			id: 'a9',
+			at: new Date('2026-03-01T12:00:00Z'),
+			entry: {
+				id: 'a9',
+				verb: 'task.created',
+				occurredAt: new Date('2026-03-01T12:00:00Z'),
+				actorPersonId: 'p1',
+				actorServiceAccountId: null,
+				actorName: 'Ada Lovelace',
+				payload: { taskTag: 'TSK-0007', title: 'Cambiar disco' }
+			}
+		}
+	];
 </script>
 
 <ComponentDocPage
@@ -80,7 +106,7 @@
 			type: "'asset' | 'project'",
 			default: "'asset'",
 			description:
-				'De quién es la línea: el punto de un evento del propio registro toma el color de su dominio. Una línea de proyecto o tarea solo lleva eventos de actividad.'
+				'De quién es la línea: el punto de un evento del propio registro toma el color de su dominio. En una línea de proyecto o tarea, la fila de un ticket vinculado se lee como frase («Vinculada al ticket»), con quién la hizo.'
 		}
 	]}
 	usage={`<AssetTimeline items={mergeAssetTimeline(activityEntries, relatedGroups)} />`}
@@ -93,6 +119,12 @@
 				Carril completo (alta, nota, cambio de estado, ticket)
 			</p>
 			<AssetTimeline items={full} />
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Tarea o proyecto: «Vinculada al ticket», con quién y cuándo
+			</p>
+			<AssetTimeline domain="project" items={linked} />
 		</div>
 		<div>
 			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">Un solo evento</p>

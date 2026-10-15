@@ -1,6 +1,5 @@
-import type { AssetState, TicketStatus } from '#lib/domain/status.js';
-
-type StatusKey = AssetState | TicketStatus;
+import type { AssetState, StateGroup, TicketStatus } from '#lib/domain/status.js';
+import type { RecordKind, RelatedGroup, RelatedItem } from '#lib/server/links/index.js';
 
 /**
  * The geometry of the relation constellation (S3, #91): where each linked
@@ -8,7 +7,39 @@ type StatusKey = AssetState | TicketStatus;
  * without a DOM; `RelationConstellation.svelte` only draws what this returns.
  */
 
-export type ConstellationKind = 'asset' | 'ticket';
+export type ConstellationKind = 'asset' | 'ticket' | 'task' | 'project';
+
+/** A project has no status column; the constellation only tells the two apart. */
+export type ProjectStanding = 'active' | 'archived';
+
+/**
+ * A linked record, typed per kind so a status can never be read in the wrong
+ * vocabulary: assets and tickets carry their own key, a task its state's group
+ * plus the organisation's name for it, a project whether it is archived.
+ */
+export type ConstellationItem = { tag: string; href: string } & (
+	| { kind: 'asset'; status: AssetState }
+	| { kind: 'ticket'; status: TicketStatus }
+	| { kind: 'task'; status: StateGroup; statusName: string }
+	| { kind: 'project'; status: ProjectStanding }
+);
+
+/** The relations an edge can be named after, as the keys `RelatedRecords` uses. */
+export type EdgeRelation = 'resolved_in' | 'handled_in';
+
+/**
+ * Edges read from the ticket outwards, whichever record's page this is: a
+ * ticket is *resolved in* a task and *handled in* a project. A task and its
+ * project are structural, not a relation, so that edge says nothing.
+ */
+export function edgeRelation(a: ConstellationKind, b: ConstellationKind): EdgeRelation | null {
+	if (a === 'ticket') return b === 'task' ? 'resolved_in' : b === 'project' ? 'handled_in' : null;
+	if (b === 'ticket') return edgeRelation(b, a);
+	return null;
+}
+
+/** Edge labels need room; past this many nodes they would overlap, so only the nodes say it. */
+export const MAX_LABELLED_EDGES = 4;
 
 /** Past this many linked records the ring stops being legible and collapses per kind. */
 export const MAX_CONSTELLATION_NODES = 8;
@@ -17,7 +48,7 @@ export interface ConstellationInput {
 	/** The record whose page this is. */
 	centre: { kind: ConstellationKind; tag: string };
 	/** Flattened from the `RelatedGroup[]` the page already holds: no new query. */
-	items: { kind: ConstellationKind; tag: string; href: string; status: StatusKey }[];
+	items: ConstellationItem[];
 }
 
 interface Point {
@@ -27,7 +58,7 @@ interface Point {
 
 export type ConstellationNode = Point &
 	(
-		| { type: 'record'; kind: ConstellationKind; tag: string; href: string; status: StatusKey }
+		| ({ type: 'record'; relation: EdgeRelation | null } & ConstellationItem)
 		| { type: 'group'; kind: ConstellationKind; count: number }
 	);
 
@@ -39,7 +70,9 @@ export interface ConstellationLayout {
 	centre: Point & { kind: ConstellationKind; tag: string };
 	nodes: ConstellationNode[];
 	/** One per node, from the centre outwards: the order the draw-in staggers in. */
-	edges: { from: Point; to: Point }[];
+	edges: { from: Point; to: Point; relation: EdgeRelation | null }[];
+	/** Whether the edges can carry their relation as text without colliding. */
+	labelEdges: boolean;
 }
 
 const SIZE = 240;
@@ -73,11 +106,9 @@ export function layoutConstellation(input: ConstellationInput): ConstellationLay
 		return slot.type === 'record'
 			? {
 					...point,
+					...slot.item,
 					type: 'record',
-					kind: slot.item.kind,
-					tag: slot.item.tag,
-					href: slot.item.href,
-					status: slot.item.status
+					relation: edgeRelation(input.centre.kind, slot.item.kind)
 				}
 			: { ...point, type: 'group', kind: slot.kind, count: slot.count };
 	});
@@ -89,8 +120,10 @@ export function layoutConstellation(input: ConstellationInput): ConstellationLay
 		nodes,
 		edges: nodes.map((node) => ({
 			from: { x: centre.x, y: centre.y },
-			to: { x: node.x, y: node.y }
-		}))
+			to: { x: node.x, y: node.y },
+			relation: node.type === 'record' ? node.relation : null
+		})),
+		labelEdges: nodes.length <= MAX_LABELLED_EDGES
 	};
 }
 
@@ -102,4 +135,62 @@ function groupByKind(
 	return [...counts.entries()]
 		.sort(([a], [b]) => a.localeCompare(b))
 		.map(([kind, count]) => ({ type: 'group', kind, count }));
+}
+
+type ItemOf<K extends RecordKind> = Extract<RelatedItem, { ref: { kind: K } }>;
+
+/** Narrows an item to one kind, which is what ties its `status` to its vocabulary. */
+function isKind<K extends RecordKind>(item: RelatedItem, kind: K): item is ItemOf<K> {
+	return item.ref.kind === kind;
+}
+
+function toConstellationItem(item: RelatedItem): ConstellationItem | null {
+	// A restricted record has nowhere to go, and a node is a link.
+	if (item.ref.href === null) return null;
+	const place = { tag: item.ref.tag, href: item.ref.href };
+
+	if (isKind(item, 'asset')) return { ...place, kind: 'asset', status: item.status };
+	if (isKind(item, 'ticket')) return { ...place, kind: 'ticket', status: item.status };
+	if (isKind(item, 'task')) {
+		return { ...place, kind: 'task', status: item.status.group, statusName: item.status.name };
+	}
+	if (isKind(item, 'project')) {
+		return { ...place, kind: 'project', status: item.status.archived ? 'archived' : 'active' };
+	}
+	return null;
+}
+
+/**
+ * The constellation's neighbours, read from the groups `RelatedRecords` already
+ * lists: no new query, and nothing in the ring the list does not say.
+ *
+ * On a project, `resolves_via_tasks` contributes the **tasks** carrying
+ * tickets, once each, rather than the tickets again: the ring would otherwise
+ * hold the same request twice.
+ */
+export function constellationItems(groups: readonly RelatedGroup[]): ConstellationItem[] {
+	const items: ConstellationItem[] = [];
+	const seen = new Set<string>();
+	const add = (item: ConstellationItem | null) => {
+		if (!item || seen.has(`${item.kind}:${item.tag}`)) return;
+		seen.add(`${item.kind}:${item.tag}`);
+		items.push(item);
+	};
+
+	for (const group of groups) {
+		for (const item of group.items) {
+			if (group.relation !== 'resolves_via_tasks') add(toConstellationItem(item));
+			else if (item.via) {
+				add({
+					kind: 'task',
+					tag: item.via.tag,
+					href: item.via.href,
+					status: item.via.status.group,
+					statusName: item.via.status.name
+				});
+			}
+		}
+	}
+
+	return items;
 }

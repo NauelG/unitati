@@ -198,7 +198,7 @@
 				groups={relatedGroups}
 			/>
 			<RelatedRecords
-				groups={relatedGroups}
+				groups={relatedGroups.filter((group) => group.relation === 'affects')}
 				unlinkAction={data.canManage ? '?/unlinkAsset' : undefined}
 				error={unlinkError}
 			/>

@@ -19,6 +19,8 @@
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import ProjectProgress from '#lib/components/unitati/ProjectProgress.svelte';
+	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
+	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
 	import RollingNumber from '#lib/components/unitati/RollingNumber.svelte';
 	import SearchSelectField from '#lib/components/unitati/SearchSelectField.svelte';
 	import Sheet from '#lib/components/unitati/Sheet.svelte';
@@ -175,6 +177,12 @@
 						</span>
 					{/if}
 				{/each}
+				{#if data.openTickets > 0}
+					<span>
+						<RollingNumber value={data.openTickets} />
+						{m.project_detail_open_tickets()}
+					</span>
+				{/if}
 			</span>
 		{/snippet}
 		{#snippet actions()}
@@ -321,21 +329,24 @@
 			<ProjectProgress counts={data.progress.counts} />
 		</WorkPanel>
 
+		<RelationConstellation
+			centre={{ kind: 'project', tag: project.projectTag }}
+			groups={data.related}
+		/>
+		<RelatedRecords
+			groups={data.related}
+			unlinkAction={data.canUnlink ? '?/unlinkTicket' : undefined}
+			unlinkable={['handles']}
+			error={failureFor('unlinkTicket')}
+		/>
+
 		{#await data.timeline}
 			<WorkPanel heading={m.timeline_title()}>
 				<TimelineSkeleton />
 			</WorkPanel>
-		{:then entries}
+		{:then items}
 			<WorkPanel heading={m.timeline_title()}>
-				<AssetTimeline
-					domain="project"
-					items={entries.map((entry) => ({
-						kind: 'activity' as const,
-						id: entry.id,
-						at: entry.occurredAt,
-						entry
-					}))}
-				/>
+				<AssetTimeline domain="project" {items} />
 			</WorkPanel>
 		{/await}
 	{/snippet}

@@ -1,8 +1,9 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import type { TicketStatus } from '#lib/domain/status.js';
+import type { Priority, TicketStatus } from '#lib/domain/status.js';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
+import { people } from '../directory/schema';
 import { tickets } from './schema';
 import { requireTicketScope } from './scope';
 
@@ -11,6 +12,9 @@ export interface TicketRow {
 	ticketTag: string;
 	subject: string;
 	status: TicketStatus;
+	priority: Priority;
+	/** Who it is assigned to today, or `null` while nobody has taken it. */
+	assigneeName: string | null;
 }
 
 /**
@@ -28,9 +32,12 @@ export async function ticketSummaries(viewer: SessionUser, ids: string[]): Promi
 			id: tickets.id,
 			ticketTag: tickets.ticketTag,
 			subject: tickets.subject,
-			status: tickets.status
+			status: tickets.status,
+			priority: tickets.priority,
+			assigneeName: people.fullName
 		})
 		.from(tickets)
+		.leftJoin(people, eq(tickets.assigneePersonId, people.id))
 		.where(and(requireTicketScope(viewer), inArray(tickets.id, ids)));
 }
 
