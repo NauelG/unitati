@@ -7,8 +7,14 @@
 export { ticketAsset, ticketTask, ticketProject } from './schema';
 export type { TicketAsset, TicketTask, TicketProject } from './schema';
 
-export { linkAsset, linkAssetToTicket, unlinkAsset } from './ticket-asset';
-export type { LinkAssetFailure, UnlinkAssetFailure, TicketAssetPair } from './ticket-asset';
+export { linkAsset, linkAssetToTicket, linkTicketAssets, unlinkAsset } from './ticket-asset';
+export type {
+	LinkAssetFailure,
+	LinkTicketAssetsFailure,
+	LinkTicketAssetsOutcome,
+	UnlinkAssetFailure,
+	TicketAssetPair
+} from './ticket-asset';
 
 export {
 	linkTask,

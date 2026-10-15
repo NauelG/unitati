@@ -149,3 +149,21 @@ describe('escalate-ticket action (#150)', () => {
 		expect(idsOf(ctx({ permissions: ['tickets.manage'] }))).not.toContain('escalate-ticket');
 	});
 });
+
+describe('link-asset action (#79)', () => {
+	it('is offered with tickets.manage while a ticket record is open', () => {
+		expect(idsOf(ctx({ permissions: ['tickets.manage'], ticketTag: 'TCK-0001' }))).toContain(
+			'link-asset'
+		);
+	});
+
+	it('is absent without tickets.manage', () => {
+		expect(idsOf(ctx({ permissions: ['tickets.view'], ticketTag: 'TCK-0001' }))).not.toContain(
+			'link-asset'
+		);
+	});
+
+	it('is absent away from a ticket record', () => {
+		expect(idsOf(ctx({ permissions: ['tickets.manage'] }))).not.toContain('link-asset');
+	});
+});

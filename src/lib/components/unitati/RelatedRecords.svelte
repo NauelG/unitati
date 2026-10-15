@@ -29,8 +29,11 @@
 </script>
 
 <script lang="ts">
+	import Plus from '@lucide/svelte/icons/plus';
 	import Unlink from '@lucide/svelte/icons/unlink';
-	import { enhance } from '$app/forms';
+	import { toast } from 'svelte-sonner';
+	import { applyAction, enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import { m } from '#lib/paraglide/messages.js';
 	import { relatedRows } from '#lib/related-rows.js';
 	import type {
@@ -39,11 +42,14 @@
 		RelatedItem,
 		RelationName
 	} from '#lib/server/links/index.js';
+	import Alert from './Alert.svelte';
 	import Button from './Button.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import { confirmSubmit } from './confirm-submit.js';
 	import ProjectProgress from './ProjectProgress.svelte';
+	import Dialog from './Dialog.svelte';
 	import RecordRef, { KIND_ICONS } from './RecordRef.svelte';
+	import SearchSelectField from './SearchSelectField.svelte';
 	import StatusBadge, { badge } from './StatusBadge.svelte';
 
 	interface Props {
@@ -86,6 +92,30 @@
 		 * parent can open it, which is also how the gallery shows that state.
 		 */
 		confirming?: string | null;
+		/**
+		 * A form action that links records, posted with the picked ids as repeated
+		 * `ids` fields. Absent for a viewer who may not link: nothing about linking
+		 * renders then. Everything below describes the records in the route's own
+		 * words, because this component knows nothing about assets or tickets.
+		 */
+		linkAction?: string;
+		/** The button and dialog title: "Vincular activo". */
+		linkLabel?: string;
+		/** Answers `?q=` with `[{ value, label }]`, scoped like any other staff search. */
+		linkSearchUrl?: string;
+		linkFieldLabel?: string;
+		linkDescription?: string;
+		linkPlaceholder?: string;
+		/** The primary button, which names the act and the count: "Vincular 3 activos". */
+		linkSubmitLabel?: (count: number) => string;
+		/** Records already linked: offered in the search, but not selectable. */
+		linkedIds?: readonly string[];
+		/** Bindable so a parent (the palette) can open the dialog, and the gallery can show it. */
+		linkOpen?: boolean;
+		/** The last refusal, and the record that caused it; shown inside the open dialog. */
+		linkFailure?: string;
+		linkFailureId?: string | null;
+		linkPending?: boolean;
 		class?: string;
 	}
 
@@ -97,6 +127,18 @@
 		unlinkable,
 		error,
 		confirming = $bindable(null),
+		linkAction,
+		linkLabel,
+		linkSearchUrl,
+		linkFieldLabel,
+		linkDescription,
+		linkPlaceholder,
+		linkSubmitLabel,
+		linkedIds = [],
+		linkOpen = $bindable(false),
+		linkFailure = $bindable(),
+		linkFailureId = $bindable(null),
+		linkPending = $bindable(false),
 		class: className
 	}: Props = $props();
 
@@ -170,13 +212,65 @@
 
 	/** The record whose unlink POST is in flight: blocks Cancel/Escape on its dialog. */
 	let pendingId: string | null = $state(null);
+
+	let picked = $state<string[]>([]);
+	let pickedLabels = $state<Record<string, string>>({});
+
+	// A fresh selection and no stale refusal every time the dialog opens.
+	$effect(() => {
+		if (linkOpen) {
+			picked = [];
+			linkFailure = undefined;
+			linkFailureId = null;
+		}
+	});
+
+	const offender = $derived(linkFailureId ? (pickedLabels[linkFailureId] ?? null) : null);
+	const linkFailureText = $derived(
+		linkFailure && offender
+			? m.related_link_offender({ record: offender, message: linkFailure })
+			: linkFailure
+	);
+
+	function submitLabel(count: number): string {
+		return linkSubmitLabel?.(count) ?? m.related_link();
+	}
+
+	function linkDone(count: number): string {
+		return count === 1 ? m.related_link_done_one({ count }) : m.related_link_done_other({ count });
+	}
 </script>
 
+{#snippet linkButton(variant: 'ghost' | 'secondary')}
+	<Button
+		type="button"
+		{variant}
+		size="sm"
+		aria-label={linkLabel}
+		onclick={() => (linkOpen = true)}
+	>
+		<Plus class="size-4" aria-hidden="true" />
+		{m.related_link()}
+	</Button>
+{/snippet}
+
 <section class={styles.root({ class: className })}>
-	<h2 class={styles.title()}>{m.related_title()}</h2>
+	<div class="flex items-center justify-between gap-[var(--space-2)]">
+		<h2 class={styles.title()}>{m.related_title()}</h2>
+		{#if linkAction && groups.length > 0}
+			{@render linkButton('ghost')}
+		{/if}
+	</div>
 
 	{#if groups.length === 0}
-		<p class={styles.empty()}>{m.related_empty()}</p>
+		<!-- The design system's rule: hide the empty group, offer the Link action in its place. -->
+		{#if linkAction}
+			<div class="mt-[var(--space-2)]">
+				{@render linkButton('secondary')}
+			</div>
+		{:else}
+			<p class={styles.empty()}>{m.related_empty()}</p>
+		{/if}
 	{/if}
 
 	{#each shown as { key, label: heading, group } (key)}
@@ -288,3 +382,71 @@
 		<p class={styles.error()} role="alert">{error}</p>
 	{/if}
 </section>
+
+{#if linkAction}
+	<Dialog
+		open={linkOpen}
+		onOpenChange={(next) => (linkOpen = next)}
+		pending={linkPending}
+		title={linkLabel ?? m.related_link()}
+		description={linkDescription}
+	>
+		<form
+			method="POST"
+			action={linkAction}
+			use:enhance={() => {
+				linkPending = true;
+				linkFailure = undefined;
+				linkFailureId = null;
+				return async ({ result }) => {
+					linkPending = false;
+					if (result.type === 'success') {
+						const linked = Number((result.data as { linked?: unknown } | undefined)?.linked);
+						linkOpen = false;
+						toast.success(linkDone(Number.isFinite(linked) ? linked : picked.length));
+						await invalidateAll();
+					} else if (result.type === 'failure') {
+						// The selection stays: the person fixes one record, not starts over.
+						const data = result.data as { message?: unknown; id?: unknown } | undefined;
+						linkFailure = String(data?.message ?? m.related_link_failed());
+						linkFailureId = typeof data?.id === 'string' ? data.id : null;
+					} else {
+						await applyAction(result);
+					}
+				};
+			}}
+			class="space-y-[var(--space-4)]"
+		>
+			{#if linkFailureText}
+				<Alert tone="danger">{linkFailureText}</Alert>
+			{/if}
+
+			<SearchSelectField
+				label={linkFieldLabel ?? linkLabel ?? m.related_link()}
+				name="ids"
+				placeholder={linkPlaceholder}
+				searchUrl={linkSearchUrl}
+				multiple
+				bind:values={picked}
+				bind:pickedLabels
+				disabledValues={linkedIds}
+				disabledNote={m.related_link_already()}
+			/>
+
+			<div class="flex justify-end gap-[var(--space-2)]">
+				<Button
+					type="button"
+					variant="ghost"
+					size="sm"
+					onclick={() => (linkOpen = false)}
+					disabled={linkPending}
+				>
+					{m.form_cancel()}
+				</Button>
+				<Button type="submit" size="sm" busy={linkPending} disabled={picked.length === 0}>
+					{submitLabel(picked.length)}
+				</Button>
+			</div>
+		</form>
+	</Dialog>
+{/if}

@@ -14,3 +14,5 @@ export const MOVE_TASK_EVENT = 'unitati:move-task';
 
 /** Window event the palette fires and the ticket record listens for (#150). */
 export const ESCALATE_TICKET_EVENT = 'unitati:escalate-ticket';
+/** Window event the palette fires and the ticket record listens for (#79): open "Vincular activo". */
+export const LINK_ASSET_EVENT = 'unitati:link-asset';

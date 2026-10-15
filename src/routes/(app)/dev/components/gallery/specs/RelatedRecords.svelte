@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ComponentDocPage from '../ComponentDocPage.svelte';
+	import Button from '#lib/components/unitati/Button.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import type { AssetRelatedGroup, RelatedGroup, ViaTask } from '#lib/server/links/related.js';
 
@@ -223,6 +224,28 @@
 			]
 		}
 	];
+	// "Vincular" (#79): one panel whose dialog the buttons below drive, since two
+	// modals cannot be open at once.
+	let linkOpen = $state(false);
+	let linkFailure = $state<string>();
+	let linkPending = $state(false);
+
+	const linkProps = {
+		linkAction: '#',
+		linkLabel: 'Vincular activo',
+		linkDescription: 'Elige los activos a los que afecta esta solicitud.',
+		linkFieldLabel: 'Activos',
+		linkPlaceholder: 'Busca por código o nombre',
+		linkSearchUrl: '/service-desk/new/assets/options',
+		linkSubmitLabel: (count: number) =>
+			count === 0 ? 'Vincular' : count === 1 ? 'Vincular 1 activo' : `Vincular ${count} activos`
+	};
+
+	function openDialog(state: 'results' | 'refusal' | 'pending') {
+		linkFailure = state === 'refusal' ? 'El activo no está disponible.' : undefined;
+		linkPending = state === 'pending';
+		linkOpen = true;
+	}
 </script>
 
 <ComponentDocPage
@@ -277,6 +300,28 @@
 			name: 'confirming',
 			type: 'string | null',
 			description: 'Bindable: el id del registro preguntando "¿seguro?", uno a la vez.'
+		},
+		{
+			name: 'linkAction',
+			type: 'string',
+			description:
+				'Form action que vincula, con los ids repetidos en "ids". Ausente no dibuja nada de vincular (empleado, portal, quien no tiene permiso).'
+		},
+		{
+			name: 'linkLabel / linkFieldLabel / linkSearchUrl / linkSubmitLabel',
+			type: 'string | (count) => string',
+			description:
+				'Las palabras y el buscador los pone la ruta: el componente no sabe si vincula activos u otra cosa. El botón primario nombra el acto y el recuento ("Vincular 3 activos").'
+		},
+		{
+			name: 'linkedIds',
+			type: 'string[]',
+			description: 'Ya vinculados: aparecen en la búsqueda, pero no se pueden elegir.'
+		},
+		{
+			name: 'linkOpen',
+			type: 'boolean',
+			description: 'Bindable: la paleta de comandos abre el mismo diálogo.'
 		}
 	]}
 	usage={`<RelatedRecords
@@ -350,6 +395,42 @@
 			<div>
 				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">Vacío</p>
 				<RelatedRecords groups={[]} />
+			</div>
+			<div>
+				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+					Vacío, con Vincular en lugar de la frase
+				</p>
+				<RelatedRecords groups={[]} {...linkProps} />
+			</div>
+			<div>
+				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+					Con elementos y Vincular en la cabecera
+				</p>
+				<RelatedRecords
+					groups={single}
+					unlinkAction="#"
+					{...linkProps}
+					bind:linkOpen
+					bind:linkFailure
+					bind:linkPending
+				/>
+				<div class="mt-2 flex flex-wrap gap-2">
+					<Button type="button" size="sm" variant="secondary" onclick={() => openDialog('results')}>
+						Diálogo con resultados
+					</Button>
+					<Button type="button" size="sm" variant="secondary" onclick={() => openDialog('refusal')}>
+						Diálogo con rechazo
+					</Button>
+					<Button type="button" size="sm" variant="secondary" onclick={() => openDialog('pending')}>
+						Diálogo pendiente
+					</Button>
+				</div>
+			</div>
+			<div>
+				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+					Sin linkAction: no se dibuja nada de vincular
+				</p>
+				<RelatedRecords groups={single} />
 			</div>
 		</div>
 	{/snippet}

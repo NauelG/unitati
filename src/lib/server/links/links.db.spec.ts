@@ -13,7 +13,7 @@ import {
 	createViewer
 } from '../assets/testing/fixtures';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
-import { linkAsset, relatedTo, ticketAsset, unlinkAsset } from './index';
+import { linkAsset, linkTicketAssets, relatedTo, ticketAsset, unlinkAsset } from './index';
 
 /**
  * ADR 0005 stakes the product on this: the database cannot hold a ticket
@@ -281,6 +281,164 @@ describe('the ticket_asset table', () => {
 			links: 0,
 			tickets: 1
 		});
+	});
+});
+
+describe('linkTicketAssets', () => {
+	async function twoAssets() {
+		const scene = await workspace();
+		const laptop = await createAsset(scene.organisation.id, scene.modelId, {
+			assetTag: 'AST-0001',
+			name: 'Laptop'
+		});
+		const printer = await createAsset(scene.organisation.id, scene.modelId, {
+			assetTag: 'AST-0002',
+			name: 'Printer'
+		});
+		return { ...scene, laptop, printer };
+	}
+
+	it('links every asset and records one entry per new pair on the ticket', async () => {
+		const { organisation, technician, ticket, laptop, printer } = await twoAssets();
+
+		const outcome = await linkTicketAssets(technician, [
+			{ ticketId: ticket.id, assetId: laptop.id },
+			{ ticketId: ticket.id, assetId: printer.id }
+		]);
+
+		const links = await getDb().select().from(ticketAsset);
+		const history = await listActivity({
+			organisationId: organisation.id,
+			target: { ticketId: ticket.id }
+		});
+
+		expect({
+			outcome,
+			assetIds: links.map((link) => link.assetId).sort(),
+			verbs: history.map((entry) => entry.verb)
+		}).toEqual({
+			outcome: { ok: true, value: { linked: 2 } },
+			assetIds: [laptop.id, printer.id].sort(),
+			verbs: ['link.asset.added', 'link.asset.added']
+		});
+	});
+
+	it('links nothing when one of the assets is refused, and writes no history', async () => {
+		const { organisation, technician, ticket, laptop } = await twoAssets();
+		const unknown = crypto.randomUUID();
+
+		const outcome = await linkTicketAssets(technician, [
+			{ ticketId: ticket.id, assetId: laptop.id },
+			{ ticketId: ticket.id, assetId: unknown }
+		]);
+
+		const links = await getDb().select().from(ticketAsset);
+		const history = await listActivity({
+			organisationId: organisation.id,
+			target: { ticketId: ticket.id }
+		});
+
+		expect({ outcome, links: links.length, entries: history.length }).toEqual({
+			outcome: { ok: false, error: { reason: 'asset_not_found', id: unknown } },
+			links: 0,
+			entries: 0
+		});
+	});
+
+	it('skips a pair that already exists: no row, no entry, not counted', async () => {
+		const { organisation, technician, ticket, laptop, printer } = await twoAssets();
+		await linkTicketAssets(technician, [{ ticketId: ticket.id, assetId: laptop.id }]);
+
+		const outcome = await linkTicketAssets(technician, [
+			{ ticketId: ticket.id, assetId: laptop.id },
+			{ ticketId: ticket.id, assetId: printer.id }
+		]);
+
+		const links = await getDb().select().from(ticketAsset);
+		const history = await listActivity({
+			organisationId: organisation.id,
+			target: { ticketId: ticket.id }
+		});
+
+		expect({ outcome, links: links.length, entries: history.length }).toEqual({
+			outcome: { ok: true, value: { linked: 1 } },
+			links: 2,
+			entries: 2
+		});
+	});
+
+	it('deduplicates repeated pairs inside one call', async () => {
+		const { organisation, technician, ticket, laptop } = await twoAssets();
+		const pair = { ticketId: ticket.id, assetId: laptop.id };
+
+		const outcome = await linkTicketAssets(technician, [pair, pair]);
+
+		const history = await listActivity({
+			organisationId: organisation.id,
+			target: { ticketId: ticket.id }
+		});
+		expect({ outcome, entries: history.length }).toEqual({
+			outcome: { ok: true, value: { linked: 1 } },
+			entries: 1
+		});
+	});
+
+	it('is refused without tickets.manage', async () => {
+		const { employee, ticket, laptop } = await twoAssets();
+
+		const outcome = await linkTicketAssets(employee, [{ ticketId: ticket.id, assetId: laptop.id }]);
+		const links = await getDb().select().from(ticketAsset);
+
+		expect({ outcome, links: links.length }).toEqual({
+			outcome: { ok: false, error: { reason: 'forbidden' } },
+			links: 0
+		});
+	});
+
+	it('refuses an empty selection', async () => {
+		const { technician } = await twoAssets();
+
+		expect(await linkTicketAssets(technician, [])).toEqual({
+			ok: false,
+			error: { reason: 'empty' }
+		});
+	});
+
+	it('reads another organisation as missing, for the ticket and for the asset', async () => {
+		const { technician, ticket, laptop } = await twoAssets();
+		const globex = await createOrganisation('Globex', 'globex');
+		const globexModel = await createCatalogue(globex.id);
+		const foreignAsset = await createAsset(globex.id, globexModel.modelId);
+		const foreignTechnician = await createViewer(globex.id, 'technician', 'Gina Globex');
+
+		const foreignAssetOutcome = await linkTicketAssets(technician, [
+			{ ticketId: ticket.id, assetId: foreignAsset.id }
+		]);
+		const foreignTicketOutcome = await linkTicketAssets(foreignTechnician, [
+			{ ticketId: ticket.id, assetId: laptop.id }
+		]);
+
+		expect({ foreignAssetOutcome, foreignTicketOutcome }).toEqual({
+			foreignAssetOutcome: {
+				ok: false,
+				error: { reason: 'asset_not_found', id: foreignAsset.id }
+			},
+			foreignTicketOutcome: {
+				ok: false,
+				error: { reason: 'ticket_not_found', id: ticket.id }
+			}
+		});
+	});
+
+	it('links to a closed ticket', async () => {
+		const { technician, ticket, laptop } = await twoAssets();
+		await getDb().update(tickets).set({ status: 'closed' }).where(eq(tickets.id, ticket.id));
+
+		const outcome = await linkTicketAssets(technician, [
+			{ ticketId: ticket.id, assetId: laptop.id }
+		]);
+
+		expect(outcome).toEqual({ ok: true, value: { linked: 1 } });
 	});
 });
 
