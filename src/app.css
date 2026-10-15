@@ -46,8 +46,8 @@
 	--on-danger: #ffffff;
 
 	/* One colour per domain: the three are meant to coexist on screen */
-	--asset: var(--brand);
-	--asset-soft: var(--brand-soft);
+	--asset: #1d5cf0;
+	--asset-soft: #e8efff;
 	--desk: #6544e8;
 	--desk-soft: #f0ebff;
 	--project: #0b7653;
@@ -164,12 +164,15 @@
  * handle the first and silently fail the second. Specificity ties with
  * `:root` (0-1-0) and wins on source order.
  *
- * Four tokens are deliberately absent because they do not change:
+ * Two tokens are deliberately absent because they do not change:
  * `--action-accent` and `--on-action-accent` hold the same value in both
  * themes (their *contrast* still shifts — 3.3:1 on `action` in light, 4.9:1 in
- * dark — because `--action` moved underneath them), and `--asset` / `--asset-soft`
- * are aliases of `--brand` / `--brand-soft`, so they follow automatically.
- * Restating any of the four would mean two edits to change one colour.
+ * dark — because `--action` moved underneath them). Restating them would mean
+ * two edits to change one colour.
+ *
+ * `--asset` / `--asset-soft` are NOT aliases of `--brand` / `--brand-soft`: domain
+ * colours are semantic and the brand is decorative (#157, Q5), so a customer
+ * repainting the brand must not repaint assets. They are restated below.
  */
 .dark {
 	/* Surfaces and ink */
@@ -193,6 +196,8 @@
 	--on-danger: #0b1016;
 
 	/* One colour per domain: lightened to stay text-safe on the dark canvas */
+	--asset: #78a2ff;
+	--asset-soft: #16244a;
 	--desk: #a890ff;
 	--desk-soft: #251d4a;
 	--project: #4fd3a2;
