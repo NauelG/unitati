@@ -6,6 +6,7 @@ import {
 	mergeAssetTimeline,
 	mergeProjectTimeline,
 	mergeTaskTimeline,
+	openTicketCount,
 	recentTicketCount
 } from './timeline';
 
@@ -177,7 +178,8 @@ describe('mergeTaskTimeline and mergeProjectTimeline', () => {
 			id: 'id-TSK-0001',
 			tag: 'TSK-0001',
 			title: 'Book the van',
-			href: '/tasks/TSK-0001'
+			href: '/tasks/TSK-0001',
+			status: { group: 'started' as const, name: 'En curso' }
 		};
 		const reached = { ...ticket('TCK-0003', '2026-04-01T10:00:00Z'), via };
 
@@ -202,5 +204,77 @@ describe('mergeTaskTimeline and mergeProjectTimeline', () => {
 		);
 
 		expect(item).not.toHaveProperty('via');
+	});
+});
+
+describe('the actor of a live entry', () => {
+	it('is kept on the task rail, even when the person is gone', () => {
+		const [named, gone] = mergeTaskTimeline(
+			[],
+			[
+				{
+					relation: 'resolves',
+					icon: 'ticket',
+					items: [
+						{ ...ticket('TCK-0005', '2026-04-02T10:00:00Z'), actorName: 'Marta Soler' },
+						{ ...ticket('TCK-0006', '2026-04-01T10:00:00Z'), actorName: null }
+					]
+				}
+			]
+		);
+
+		expect(named).toMatchObject({ actorName: 'Marta Soler' });
+		expect(gone).toMatchObject({ actorName: null });
+	});
+
+	it('is absent when the relation was read without it', () => {
+		const [item] = mergeTaskTimeline(
+			[],
+			[
+				{
+					relation: 'resolves',
+					icon: 'ticket',
+					items: [ticket('TCK-0007', '2026-04-01T10:00:00Z')]
+				}
+			]
+		);
+
+		expect(item).not.toHaveProperty('actorName');
+	});
+});
+
+describe('openTicketCount', () => {
+	const group = (relation: 'handles' | 'resolves_via_tasks', ...items: RelatedItem[]) => ({
+		relation,
+		icon: 'ticket' as const,
+		items
+	});
+
+	it('leaves out resolved and closed tickets', () => {
+		expect(
+			openTicketCount([
+				group(
+					'handles',
+					ticket('TCK-0001', '2026-04-01T10:00:00Z', 'new'),
+					ticket('TCK-0002', '2026-04-01T10:00:00Z', 'waiting_on_user'),
+					ticket('TCK-0003', '2026-04-01T10:00:00Z', 'resolved'),
+					ticket('TCK-0004', '2026-04-01T10:00:00Z', 'closed')
+				)
+			])
+		).toBe(2);
+	});
+
+	it('counts a ticket once when it is handled directly and reached through two tasks', () => {
+		const direct = ticket('TCK-0001', '2026-04-01T10:00:00Z', 'in_progress');
+		expect(
+			openTicketCount([
+				group('handles', direct),
+				group('resolves_via_tasks', direct, direct, ticket('TCK-0002', '2026-04-01T10:00:00Z'))
+			])
+		).toBe(2);
+	});
+
+	it('is zero with nothing linked', () => {
+		expect(openTicketCount([])).toBe(0);
 	});
 });

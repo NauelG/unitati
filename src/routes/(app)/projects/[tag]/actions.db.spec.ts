@@ -9,6 +9,9 @@ import {
 import { listActivity } from '#lib/server/activity/index.js';
 import { getProject, listTasks } from '#lib/server/projects/index.js';
 import { actionEvent, outcomeOf } from '#lib/server/projects/testing/action-event.js';
+import { linkTicketToProject, linkTicketToTask, relatedTo } from '#lib/server/links/index.js';
+import { createQueue, createTicket } from '#lib/server/service-desk/testing/fixtures.js';
+import { changeTicketStatus } from '#lib/server/service-desk/index.js';
 import { actions, load } from './+page.server';
 
 async function setup() {
@@ -26,7 +29,8 @@ describe('writing to a project record', () => {
 			() => actions.archive(actionEvent(employee, {}, params)),
 			() => actions.unarchive(actionEvent(employee, {}, params)),
 			() => actions.createTask(actionEvent(employee, { title: 'Nope' }, params)),
-			() => actions.moveTask(actionEvent(employee, {}, params))
+			() => actions.moveTask(actionEvent(employee, {}, params)),
+			() => actions.unlinkTicket(actionEvent(employee, { recordId: crypto.randomUUID() }, params))
 		]) {
 			expect((await outcomeOf(run)).thrown?.status).toBe(403);
 		}
@@ -334,5 +338,81 @@ describe('loading the project record for the board', () => {
 		expect(data.tasks.map((task) => task.id)).toEqual([mine.id]);
 		expect(data.states).toHaveLength(5);
 		expect(data.canManage).toBe(false);
+	});
+});
+
+describe('the tickets behind a project record', () => {
+	async function scene() {
+		const base = await setup();
+		const { organisation, technician, employee, project } = base;
+		const queue = await createQueue(organisation.id);
+		const states = await statesByGroup(organisation.id);
+		const [one, two] = await Promise.all([
+			createTaskRow(organisation.id, project.id, states.started.id),
+			createTaskRow(organisation.id, project.id, states.started.id)
+		]);
+		const make = (subject: string, requester = employee.personId!) =>
+			createTicket(organisation.id, queue.id, requester, { subject });
+		return { ...base, one, two, make, technician };
+	}
+
+	const event = (user: unknown, params: Record<string, string>) =>
+		({
+			locals: { user },
+			params,
+			url: new URL('http://localhost/projects/x'),
+			cookies: { get: () => undefined, set: () => undefined }
+		}) as never;
+
+	it('counts open tickets once, direct plus via tasks, leaving resolved and closed out', async () => {
+		const { technician, project, one, two, make, params } = await scene();
+		const both = await make('Reaches two tasks');
+		const direct = await make('Direct');
+		const done = await make('Done');
+		await linkTicketToTask(technician, { ticketId: both.id, taskId: one.id });
+		await linkTicketToTask(technician, { ticketId: both.id, taskId: two.id });
+		await linkTicketToProject(technician, { ticketId: direct.id, projectId: project.id });
+		await linkTicketToProject(technician, { ticketId: done.id, projectId: project.id });
+		await changeTicketStatus(technician, done.ticketTag, 'in_progress');
+		await changeTicketStatus(technician, done.ticketTag, 'resolved');
+
+		const data = (await load(event(technician, params))) as { openTickets: number };
+
+		expect(data.openTickets).toBe(2);
+	});
+
+	it('unlinks a direct ticket on an archived project and writes the entry on the ticket', async () => {
+		const { technician, organisation, project, make, params } = await scene();
+		const ticket = await make('Direct');
+		await linkTicketToProject(technician, { ticketId: ticket.id, projectId: project.id });
+		const { archiveProject } = await import('#lib/server/projects/index.js');
+		await archiveProject(technician, project.id);
+
+		const { returned } = await outcomeOf(() =>
+			actions.unlinkTicket(actionEvent(technician, { recordId: ticket.id }, params))
+		);
+
+		expect(returned).toMatchObject({ action: 'unlinkTicket' });
+		expect(await relatedTo(technician, { kind: 'project', id: project.id })).toEqual([]);
+		const onTicket = await listActivity({
+			organisationId: organisation.id,
+			target: { ticketId: ticket.id }
+		});
+		expect(onTicket.map((entry) => entry.verb)).toContain('link.project.removed');
+	});
+
+	it('keeps the live ticket entries of the timeline to the direct links', async () => {
+		const { technician, project, one, make, params } = await scene();
+		const direct = await make('Direct');
+		const via = await make('Via a task');
+		await linkTicketToProject(technician, { ticketId: direct.id, projectId: project.id });
+		await linkTicketToTask(technician, { ticketId: via.id, taskId: one.id });
+
+		const data = (await load(event(technician, params))) as {
+			timeline: Promise<{ kind: string; record?: { tag: string } }[]>;
+		};
+		const tickets = (await data.timeline).filter((item) => item.kind === 'ticket');
+
+		expect(tickets.map((item) => item.record?.tag)).toEqual([direct.ticketTag]);
 	});
 });

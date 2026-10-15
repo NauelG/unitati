@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ComponentDocPage from '../ComponentDocPage.svelte';
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
-	import type { AssetRelatedGroup } from '#lib/server/links/related.js';
+	import type { AssetRelatedGroup, RelatedGroup } from '#lib/server/links/related.js';
 
 	const linkedAt = new Date('2026-01-01T10:00:00Z');
 
@@ -29,6 +29,84 @@
 	}
 
 	const centre = { kind: 'asset' as const, tag: 'AST-0231' };
+
+	/** A ticket with an asset, a task and a project around it. */
+	const ticketCentre = { kind: 'ticket' as const, tag: 'TCK-0042' };
+	const ticketSide: RelatedGroup[] = [
+		{
+			relation: 'affects',
+			icon: 'asset',
+			items: [
+				{
+					linkedAt,
+					ref: { kind: 'asset', id: 'a', tag: 'AST-0231', title: 'MacBook Pro 14"', href: '#' },
+					status: 'in_repair'
+				}
+			]
+		},
+		{
+			relation: 'resolved_in',
+			icon: 'task',
+			items: [
+				{
+					linkedAt,
+					ref: { kind: 'task', id: 't', tag: 'TSK-0007', title: 'Cambiar disco', href: '#' },
+					status: { group: 'started', name: 'En revisión' }
+				}
+			]
+		},
+		{
+			relation: 'handled_in',
+			icon: 'project',
+			items: [
+				{
+					linkedAt,
+					ref: {
+						kind: 'project',
+						id: 'p',
+						tag: 'PRJ-0003',
+						title: 'Renovación de equipos',
+						href: '#'
+					},
+					status: { archived: true, progress: null }
+				}
+			]
+		}
+	];
+
+	/** A project: a direct ticket, and the tasks that carry tickets. */
+	const projectCentre = { kind: 'project' as const, tag: 'PRJ-0003' };
+	const via = (n: number) => ({
+		kind: 'task' as const,
+		id: `task${n}`,
+		tag: `TSK-000${n}`,
+		title: 'Cambiar disco',
+		href: '#',
+		status: { group: n === 1 ? ('started' as const) : ('completed' as const), name: 'Nombre' }
+	});
+	const projectSide: RelatedGroup[] = [
+		{
+			relation: 'handles',
+			icon: 'ticket',
+			items: [
+				{
+					linkedAt,
+					ref: { kind: 'ticket', id: 'x', tag: 'TCK-0050', title: 'Alta', href: '#' },
+					status: 'new'
+				}
+			]
+		},
+		{
+			relation: 'resolves_via_tasks',
+			icon: 'ticket',
+			items: [1, 2].map((n) => ({
+				linkedAt,
+				ref: { kind: 'ticket' as const, id: `y${n}`, tag: `TCK-006${n}`, title: 'VPN', href: '#' },
+				status: 'in_progress' as const,
+				via: via(n)
+			}))
+		}
+	];
 </script>
 
 <ComponentDocPage
@@ -46,13 +124,14 @@
 	propsDoc={[
 		{
 			name: 'centre',
-			type: `{ kind: 'asset' | 'ticket'; tag: string }`,
+			type: `{ kind: 'asset' | 'ticket' | 'task' | 'project'; tag: string }`,
 			description: 'El registro cuya página es.'
 		},
 		{
 			name: 'groups',
-			type: 'AssetRelatedGroup[]',
-			description: 'El mismo array que recibe RelatedRecords.'
+			type: 'RelatedGroup[]',
+			description:
+				'El mismo array que recibe RelatedRecords. En un proyecto, las tareas con solicitudes sustituyen a esas solicitudes. Con cuatro nodos o menos las aristas de solicitud↔tarea/proyecto llevan su relación escrita.'
 		}
 	]}
 	usage={`<RelationConstellation centre={{ kind: 'asset', tag: asset.assetTag }} groups={related} />`}
@@ -72,6 +151,20 @@
 			<div>
 				<p class="mb-[var(--space-2)] text-xs text-[var(--ink-muted)]">11 vínculos (agrupado)</p>
 				<RelationConstellation {centre} groups={tickets(11)} />
+			</div>
+		</div>
+		<div class="mt-[var(--space-5)] grid gap-[var(--space-5)] md:grid-cols-3">
+			<div>
+				<p class="mb-[var(--space-2)] text-xs text-[var(--ink-muted)]">
+					Solicitud: activo, tarea y proyecto
+				</p>
+				<RelationConstellation centre={ticketCentre} groups={ticketSide} />
+			</div>
+			<div>
+				<p class="mb-[var(--space-2)] text-xs text-[var(--ink-muted)]">
+					Proyecto: solicitud directa y tareas con solicitudes
+				</p>
+				<RelationConstellation centre={projectCentre} groups={projectSide} />
 			</div>
 		</div>
 		<p class="mt-[var(--space-3)] text-xs text-[var(--ink-muted)]">

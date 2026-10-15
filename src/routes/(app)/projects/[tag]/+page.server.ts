@@ -12,6 +12,12 @@ import { listActivity } from '#lib/server/activity/index.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 import { listPeople } from '#lib/server/directory/index.js';
 import {
+	mergeProjectTimeline,
+	openTicketCount,
+	relatedTo,
+	unlinkProject
+} from '#lib/server/links/index.js';
+import {
 	fieldsOf,
 	firstField,
 	orNull,
@@ -47,11 +53,16 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 
 	// What the viewer can see of the project: an employee gets their own tasks
 	// and counts of exactly those (the domain scopes both from the same viewer).
-	const [tasks, states, progress, people] = await Promise.all([
+	const [tasks, states, progress, people, related] = await Promise.all([
 		listTasks(user, { projectId: project.id }),
 		listStates(user),
 		projectProgress(user, project.id),
-		canManage && project.archivedAt === null ? listPeople(user.organisationId) : Promise.resolve([])
+		canManage && project.archivedAt === null
+			? listPeople(user.organisationId)
+			: Promise.resolve([]),
+		// The tickets behind this project, already scoped to what the viewer may
+		// see: an employee gets their own, and every count below follows suit.
+		relatedTo(user, { kind: 'project', id: project.id })
 	]);
 	if (!progress.ok) error(404, 'Not found');
 
@@ -86,11 +97,24 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 		// not disabled ones.
 		canManage,
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
-		// Streamed: nothing above waits for the history.
+		related,
+		// The header's summary value: direct plus via tasks, resolved and closed left out.
+		openTickets: openTicketCount(related),
+		// Unlinking concerns the ticket, so it is `tickets.manage` and it survives
+		// the project being archived (#151).
+		canUnlink: can(user, 'tickets.manage'),
+		// Streamed: nothing above waits for the history. Its live half is the
+		// tickets linked to the project itself; the ones that arrive through a
+		// task are on that task's rail, not here.
 		timeline: listActivity({
 			organisationId: user.organisationId,
 			target: { projectId: project.id }
-		})
+		}).then((entries) =>
+			mergeProjectTimeline(
+				entries,
+				related.filter((group) => group.relation === 'handles')
+			)
+		)
 	};
 };
 
@@ -175,6 +199,27 @@ export const actions: Actions = {
 		const outcome = await archiveProject(user, project.id);
 		if (!outcome.ok) error(404, 'Not found');
 		return { action: 'archive' as const };
+	},
+
+	// The link belongs to the ticket: `tickets.manage`, open on an archived project.
+	// Tickets that arrive through a task are unlinked from the task, never here.
+	unlinkTicket: async ({ request, locals, params }) => {
+		// Whoever can read the project knows it is there, so they are told plainly: 403.
+		const user = requireProjectRead(locals.user);
+		if (!can(user, 'tickets.manage')) error(403, 'Forbidden');
+		const parsed = z.uuid().safeParse((await fieldsOf(request)).get('recordId'));
+		if (!parsed.success) return rejected('unlinkTicket', m.related_unlink_failed());
+
+		const project = await targetOf(user, params.tag);
+		const outcome = await unlinkProject(user, {
+			ticketId: parsed.data,
+			projectId: project.id
+		});
+		// Already gone, e.g. a second tab removed it first: the reload shows the truth.
+		if (!outcome.ok && outcome.error !== 'link_not_found') {
+			return rejected('unlinkTicket', m.related_unlink_failed());
+		}
+		return { action: 'unlinkTicket' as const };
 	},
 
 	unarchive: async ({ locals, params }) => {

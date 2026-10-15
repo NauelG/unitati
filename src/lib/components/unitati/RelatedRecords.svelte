@@ -21,6 +21,7 @@
 			],
 			items: 'mt-[var(--space-2)] m-0 flex list-none flex-col gap-[var(--space-2)] p-0',
 			item: 'flex flex-wrap items-center gap-[var(--space-2)]',
+			meta: 'flex basis-full flex-wrap items-center gap-x-[var(--space-2)] text-xs text-[var(--ink-muted)]',
 			empty: 'mt-[var(--space-2)] text-sm text-[var(--ink-muted)]',
 			error: 'mt-[var(--space-2)] text-[13px] leading-[18px] text-[var(--danger)]'
 		}
@@ -31,21 +32,28 @@
 	import Unlink from '@lucide/svelte/icons/unlink';
 	import { enhance } from '$app/forms';
 	import { m } from '#lib/paraglide/messages.js';
-	import type { AssetRelatedGroup } from '#lib/server/links/index.js';
+	import { relatedRows } from '#lib/related-rows.js';
+	import type { RelatedGroup, RelatedItem, RelationName } from '#lib/server/links/index.js';
 	import Button from './Button.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import { confirmSubmit } from './confirm-submit.js';
 	import RecordRef, { KIND_ICONS } from './RecordRef.svelte';
-	import StatusBadge from './StatusBadge.svelte';
+	import StatusBadge, { badge } from './StatusBadge.svelte';
 
 	interface Props {
-		groups: AssetRelatedGroup[];
+		groups: RelatedGroup[];
 		/**
 		 * A form action that unlinks one record, posted with its id as `recordId`.
 		 * Absent for a viewer who may not unlink, and then no control is drawn:
 		 * the domain refuses them anyway, but a button that can only fail is noise.
 		 */
 		unlinkAction?: string;
+		/**
+		 * The relations whose items can be unlinked from here; every group when
+		 * absent. A project unlinks what it handles directly, and leaves the
+		 * tickets that arrive through a task to the task's own page.
+		 */
+		unlinkable?: readonly RelationName[];
 		/**
 		 * Shown when the last unlink was refused: inside the still-open
 		 * `ConfirmDialog` while JS re-submitted it, or under the panel for a
@@ -64,6 +72,7 @@
 	let {
 		groups,
 		unlinkAction,
+		unlinkable,
 		error,
 		confirming = $bindable(null),
 		class: className
@@ -71,15 +80,39 @@
 
 	const styles = related();
 
-	/** Singular and plural wording of each relation: "Equipo afectado" / "Equipos afectados". */
+	/**
+	 * Singular and plural wording of each relation: "Equipo afectado" / "Equipos
+	 * afectados". The ones that are a verb ("Resuelve") do not inflect.
+	 */
 	const LABELS = {
 		affects: [() => m.related_affects_one(), () => m.related_affects_other()],
-		affected_by: [() => m.related_affected_by_one(), () => m.related_affected_by_other()]
-	} as const;
+		affected_by: [() => m.related_affected_by_one(), () => m.related_affected_by_other()],
+		resolved_in: [() => m.related_resolved_in(), () => m.related_resolved_in()],
+		handled_in: [() => m.related_handled_in(), () => m.related_handled_in()],
+		resolves: [() => m.related_resolves(), () => m.related_resolves()],
+		handles: [() => m.related_handles(), () => m.related_handles()],
+		resolves_via_tasks: [() => m.related_resolves_via_tasks(), () => m.related_resolves_via_tasks()]
+	} as const satisfies Record<RelationName, readonly [() => string, () => string]>;
 
-	function label(group: AssetRelatedGroup): string {
+	function label(group: RelatedGroup, count: number): string {
 		const [one, other] = LABELS[group.relation];
-		return group.items.length === 1 ? one() : other();
+		return count === 1 ? one() : other();
+	}
+
+	function canUnlink(group: RelatedGroup): boolean {
+		return Boolean(unlinkAction) && (!unlinkable || unlinkable.includes(group.relation));
+	}
+
+	/** The question the confirmation asks: losing an asset's context is not losing a task's. */
+	function ask(group: RelatedGroup, tag: string): string {
+		return group.relation === 'affects' || group.relation === 'affected_by'
+			? m.related_unlink_ask({ tag })
+			: m.related_unlink_ask_work({ tag });
+	}
+
+	/** A task or a project is not a status key: the badge takes the state's own name. */
+	function projectArchived(item: RelatedItem): boolean {
+		return typeof item.status === 'object' && 'archived' in item.status && item.status.archived;
 	}
 
 	/** The record whose unlink POST is in flight: blocks Cancel/Escape on its dialog. */
@@ -95,19 +128,39 @@
 
 	{#each groups as group (group.relation)}
 		{@const Icon = KIND_ICONS[group.icon]}
+		{@const rows = relatedRows(group)}
 		<div class={styles.group()}>
 			<h3 class={styles.label()}>
 				<Icon class="size-3.5" aria-hidden="true" />
-				{label(group)}
+				{label(group, rows.length)}
 			</h3>
 
 			<ul class={styles.items()}>
-				{#each group.items as item (item.ref.id)}
+				{#each rows as { item, vias } (item.ref.id)}
 					<li class={styles.item()}>
-						<RecordRef record={item.ref} />
-						<StatusBadge status={item.status} />
+						{#if item.ref.href === null}
+							<!-- The requester's reduced view (ADR 0007): the code and the state, nowhere to go. -->
+							<span class="inline-flex min-w-0 items-center gap-[var(--space-1)] text-[13px]">
+								<span class="shrink-0 font-mono text-xs font-semibold">{item.ref.tag}</span>
+								<span class="min-w-0 truncate text-[var(--ink)]">{item.ref.title}</span>
+							</span>
+						{:else}
+							<RecordRef record={{ ...item.ref, href: item.ref.href }} />
+						{/if}
 
-						{#if unlinkAction}
+						{#if typeof item.status === 'string'}
+							<StatusBadge status={item.status} />
+						{:else if 'group' in item.status}
+							<StatusBadge status={item.status.group} label={item.status.name} />
+						{:else if projectArchived(item)}
+							<span class={badge({ tone: 'neutral' })}>{m.related_project_archived()}</span>
+						{/if}
+
+						{#if 'priority' in item && item.priority}
+							<StatusBadge status={item.priority} />
+						{/if}
+
+						{#if canUnlink(group)}
 							<Button
 								type="button"
 								variant="ghost"
@@ -127,7 +180,7 @@
 									if (!next) confirming = null;
 								}}
 								title={m.related_unlink()}
-								description={m.related_unlink_ask({ tag: item.ref.tag })}
+								description={ask(group, item.ref.tag)}
 								confirmLabel={m.related_unlink_confirm()}
 								pending={pendingId === item.ref.id}
 								error={confirming === item.ref.id ? error : null}
@@ -148,6 +201,20 @@
 									</form>
 								{/snippet}
 							</ConfirmDialog>
+						{/if}
+
+						{#if 'assignee' in item || vias.length > 0}
+							<p class={styles.meta()}>
+								{#if 'assignee' in item}
+									<span>{item.assignee ?? m.related_unassigned()}</span>
+								{/if}
+								{#if vias.length > 0}
+									<span>{m.related_via()}</span>
+									{#each vias as via (via.id)}
+										<RecordRef record={via} />
+									{/each}
+								{/if}
+							</p>
 						{/if}
 					</li>
 				{/each}

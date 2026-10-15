@@ -35,17 +35,25 @@
 			},
 			kind: {
 				ticket: { dot: 'bg-[var(--desk)]' },
-				asset: { dot: 'bg-[var(--asset)]' }
+				asset: { dot: 'bg-[var(--asset)]' },
+				task: { dot: 'bg-[var(--project)]' },
+				project: { dot: 'bg-[var(--project)]' }
 			}
 		}
 	});
 </script>
 
 <script lang="ts">
-	import { layoutConstellation, type ConstellationNode } from '#lib/constellation.js';
+	import {
+		constellationItems,
+		layoutConstellation,
+		type ConstellationKind,
+		type ConstellationNode,
+		type EdgeRelation
+	} from '#lib/constellation.js';
 	import { handRecordMorphTo } from '#lib/motion.js';
 	import { m } from '#lib/paraglide/messages.js';
-	import type { AssetRelatedGroup } from '#lib/server/links/index.js';
+	import type { RelatedGroup } from '#lib/server/links/index.js';
 	import WorkPanel from './WorkPanel.svelte';
 	import { statusLabel } from './status.js';
 
@@ -62,8 +70,8 @@
 	 */
 	interface Props {
 		/** The record whose page this is. */
-		centre: { kind: 'asset' | 'ticket'; tag: string };
-		groups: AssetRelatedGroup[];
+		centre: { kind: ConstellationKind; tag: string };
+		groups: RelatedGroup[];
 		class?: string;
 	}
 
@@ -72,43 +80,69 @@
 	const layout = $derived(
 		layoutConstellation({
 			centre,
-			items: groups.flatMap((group) =>
-				group.items.map((item) => ({
-					kind: item.ref.kind,
-					tag: item.ref.tag,
-					href: item.ref.href,
-					status: item.status
-				}))
-			)
+			items: constellationItems(groups)
 		})
 	);
 
 	const KIND_LABEL = {
 		ticket: () => m.constellation_kind_ticket(),
-		asset: () => m.constellation_kind_asset()
-	} as const;
+		asset: () => m.constellation_kind_asset(),
+		task: () => m.constellation_kind_task(),
+		project: () => m.constellation_kind_project()
+	} as const satisfies Record<ConstellationKind, () => string>;
+
+	const RELATION_LABEL = {
+		resolved_in: () => m.constellation_relation_resolved_in(),
+		handled_in: () => m.constellation_relation_handled_in()
+	} as const satisfies Record<EdgeRelation, () => string>;
+
+	/** The status in the words of the node's own vocabulary: a task says its state's name. */
+	function nodeStatus(node: Extract<ConstellationNode, { type: 'record' }>): string {
+		switch (node.kind) {
+			case 'task':
+				return node.statusName;
+			case 'project':
+				return node.status === 'archived'
+					? m.constellation_project_archived()
+					: m.constellation_project_active();
+			default:
+				return statusLabel(node.status);
+		}
+	}
 
 	function percent(value: number, size: number): string {
 		return `${(value / size) * 100}%`;
 	}
 
 	function recordLabel(node: Extract<ConstellationNode, { type: 'record' }>): string {
-		return m.constellation_node_label({
+		const label = m.constellation_node_label({
 			kind: KIND_LABEL[node.kind](),
 			tag: node.tag,
-			status: statusLabel(node.status)
+			status: nodeStatus(node)
 		});
+		return node.relation ? `${label}, ${RELATION_LABEL[node.relation]()}` : label;
 	}
 
 	function groupLabel(node: Extract<ConstellationNode, { type: 'group' }>): string {
-		if (node.kind === 'ticket') {
-			return node.count === 1
-				? m.constellation_group_tickets_one()
-				: m.constellation_group_tickets_other({ count: node.count });
+		const one = node.count === 1;
+		switch (node.kind) {
+			case 'ticket':
+				return one
+					? m.constellation_group_tickets_one()
+					: m.constellation_group_tickets_other({ count: node.count });
+			case 'asset':
+				return one
+					? m.constellation_group_assets_one()
+					: m.constellation_group_assets_other({ count: node.count });
+			case 'task':
+				return one
+					? m.constellation_group_tasks_one()
+					: m.constellation_group_tasks_other({ count: node.count });
+			case 'project':
+				return one
+					? m.constellation_group_projects_one()
+					: m.constellation_group_projects_other({ count: node.count });
 		}
-		return node.count === 1
-			? m.constellation_group_assets_one()
-			: m.constellation_group_assets_other({ count: node.count });
 	}
 
 	const styles = constellation();
@@ -136,6 +170,20 @@
 						stroke-width="1"
 						vector-effect="non-scaling-stroke"
 					/>
+					{#if layout.labelEdges && edge.relation}
+						<text
+							class="ut-constellation-edge-label"
+							x={(edge.from.x + edge.to.x) / 2}
+							y={(edge.from.y + edge.to.y) / 2}
+							text-anchor="middle"
+							dominant-baseline="central"
+							font-size="9"
+							fill="var(--ink-muted)"
+							stroke="var(--surface-1)"
+							stroke-width="3"
+							paint-order="stroke">{RELATION_LABEL[edge.relation]()}</text
+						>
+					{/if}
 				{/each}
 			</svg>
 

@@ -1,11 +1,12 @@
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { assetHref, projectHref, taskHref, ticketHref } from '#lib/domain/routes.js';
-import type { AssetState, StateGroup, TicketStatus } from '#lib/domain/status.js';
+import type { AssetState, Priority, StateGroup, TicketStatus } from '#lib/domain/status.js';
 import { can } from '../access/permissions';
 import { requireAssetScope } from '../assets';
 import { assets } from '../assets/schema';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
+import { listPeople } from '../directory';
 import {
 	projectProgress,
 	projectSummaries,
@@ -71,19 +72,34 @@ export interface ProjectStatus {
 	progress: ProjectProgress | null;
 }
 
+/** The task a ticket reaches a project through: a reference, plus where the task stands. */
+export type ViaTask = RecordRef<'task'> & { status: TaskStatus };
+
 export type RelatedItem = {
 	/** When the relation was made — what orders a timeline. */
 	linkedAt: Date;
+	/**
+	 * Who made it, from the link row: shown on the live entry of a task's or a
+	 * project's timeline. `null` when the person is gone; absent where the
+	 * relation is read without it.
+	 */
+	actorName?: string | null;
 	/**
 	 * Set only on the requester's reduced view of a task or project outside
 	 * their scope: draw the code, the title and the state, and no link.
 	 */
 	restricted?: true;
 	/** On `resolves_via_tasks`: the task of the project the ticket is linked to. */
-	via?: RecordRef<'task'>;
+	via?: ViaTask;
 } & (
 	| { ref: RecordRef<'asset'>; status: AssetState }
-	| { ref: RecordRef<'ticket'>; status: TicketStatus }
+	| {
+			ref: RecordRef<'ticket'>;
+			status: TicketStatus;
+			/** Present where the ticket is listed beside work (#151): what a technician scans for. */
+			priority?: Priority;
+			assignee?: string | null;
+	  }
 	| { ref: RecordRef<'task'> | RestrictedRecordRef<'task'>; status: TaskStatus }
 	| { ref: RecordRef<'project'> | RestrictedRecordRef<'project'>; status: ProjectStatus }
 );
@@ -227,6 +243,18 @@ function taskRef(task: TaskSummary): RecordRef<'task'> {
 	};
 }
 
+function viaTask(task: TaskSummary): ViaTask {
+	return { ...taskRef(task), status: { group: task.stateGroup, name: task.stateName } };
+}
+
+/** A link row seen from the ticket side: which ticket, since when, and by whom. */
+interface TicketLink {
+	ticketId: string;
+	linkedAt: Date;
+	createdByPersonId: string | null;
+	via?: ViaTask;
+}
+
 /**
  * How the viewer stands to this ticket's work, or `null` for "no business here".
  *
@@ -349,18 +377,18 @@ async function projectsHandling(
 }
 
 /** The tickets of `links` the viewer may see, in the links' order. */
-async function ticketItems(
-	viewer: SessionUser,
-	links: { ticketId: string; linkedAt: Date; via?: RecordRef<'task'> }[]
-): Promise<RelatedItem[]> {
-	const byId = new Map(
-		(
-			await ticketSummaries(
-				viewer,
-				links.map((link) => link.ticketId)
-			)
-		).map((ticket) => [ticket.id, ticket])
-	);
+async function ticketItems(viewer: SessionUser, links: TicketLink[]): Promise<RelatedItem[]> {
+	if (links.length === 0) return [];
+
+	const [summaries, directory] = await Promise.all([
+		ticketSummaries(
+			viewer,
+			links.map((link) => link.ticketId)
+		),
+		listPeople(viewer.organisationId)
+	]);
+	const byId = new Map(summaries.map((ticket) => [ticket.id, ticket]));
+	const names = new Map(directory.map((person) => [person.id, person.fullName]));
 
 	return links.flatMap((link): RelatedItem[] => {
 		const ticket = byId.get(link.ticketId);
@@ -370,7 +398,10 @@ async function ticketItems(
 			{
 				ref: ticketRef(ticket),
 				status: ticket.status,
+				priority: ticket.priority,
+				assignee: ticket.assigneeName,
 				linkedAt: link.linkedAt,
+				actorName: link.createdByPersonId ? (names.get(link.createdByPersonId) ?? null) : null,
 				...(link.via ? { via: link.via } : {})
 			}
 		];
@@ -379,7 +410,11 @@ async function ticketItems(
 
 async function ticketsResolvedBy(viewer: SessionUser, taskId: string): Promise<RelatedItem[]> {
 	const links = await getDb()
-		.select({ ticketId: ticketTask.ticketId, linkedAt: ticketTask.createdAt })
+		.select({
+			ticketId: ticketTask.ticketId,
+			linkedAt: ticketTask.createdAt,
+			createdByPersonId: ticketTask.createdByPersonId
+		})
 		.from(ticketTask)
 		.where(and(eq(ticketTask.organisationId, viewer.organisationId), eq(ticketTask.taskId, taskId)))
 		.orderBy(asc(ticketTask.createdAt), asc(ticketTask.id));
@@ -389,7 +424,11 @@ async function ticketsResolvedBy(viewer: SessionUser, taskId: string): Promise<R
 
 async function ticketsHandledBy(viewer: SessionUser, projectId: string): Promise<RelatedItem[]> {
 	const links = await getDb()
-		.select({ ticketId: ticketProject.ticketId, linkedAt: ticketProject.createdAt })
+		.select({
+			ticketId: ticketProject.ticketId,
+			linkedAt: ticketProject.createdAt,
+			createdByPersonId: ticketProject.createdByPersonId
+		})
 		.from(ticketProject)
 		.where(
 			and(
@@ -416,7 +455,8 @@ async function ticketsViaTasksOf(viewer: SessionUser, projectId: string): Promis
 		.select({
 			ticketId: ticketTask.ticketId,
 			taskId: ticketTask.taskId,
-			linkedAt: ticketTask.createdAt
+			linkedAt: ticketTask.createdAt,
+			createdByPersonId: ticketTask.createdByPersonId
 		})
 		.from(ticketTask)
 		.where(
@@ -432,7 +472,8 @@ async function ticketsViaTasksOf(viewer: SessionUser, projectId: string): Promis
 		links.map((link) => ({
 			ticketId: link.ticketId,
 			linkedAt: link.linkedAt,
-			via: taskRef(visible.get(link.taskId)!)
+			createdByPersonId: link.createdByPersonId,
+			via: viaTask(visible.get(link.taskId)!)
 		}))
 	);
 }
