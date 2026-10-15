@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 import type { AssetState } from '#lib/domain/status.js';
-import { listActivity, recordActivity, type TimelineEntry } from '../activity';
+import { listActivity, actorColumns, recordActivity, type TimelineEntry } from '../activity';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
@@ -500,7 +500,7 @@ export async function registerAsset(
 
 			await recordActivity(tx, {
 				organisationId: actor.organisationId,
-				actorPersonId: actor.personId,
+				...actorColumns(actor),
 				target: { assetId: row.id },
 				verb: 'asset.created',
 				payload: { assetTag: row.assetTag, name: row.name }
@@ -603,7 +603,7 @@ export async function assignCustody(
 
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { assetId: asset.id },
 			verb: 'custody.assigned',
 			payload: { toPersonId: person.id, toPersonName: person.fullName }
@@ -651,7 +651,7 @@ export async function returnCustody(
 
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { assetId: asset.id },
 			verb: 'custody.returned',
 			payload: { fromPersonId: asset.custodianPersonId, fromPersonName: person.fullName }
@@ -686,7 +686,7 @@ export async function changeState(
 
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { assetId: asset.id },
 			verb: 'state.changed',
 			payload: { from: asset.state, to }
@@ -729,7 +729,7 @@ export async function changeLocation(
 
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { assetId: asset.id },
 			verb: 'location.changed',
 			payload: {
@@ -759,7 +759,7 @@ export async function addNote(
 
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { assetId: asset.id },
 			verb: 'note.added',
 			payload: { text: body }
