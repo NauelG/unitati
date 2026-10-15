@@ -138,6 +138,91 @@
 			items: [ticket(2, { status: 'new', priority: 'normal', assignee: null, via: viaTask(1) })]
 		}
 	].filter((group) => group.items.length > 0) as RelatedGroup[];
+
+	const progress = {
+		counts: { backlog: 1, unstarted: 1, started: 2, completed: 4, cancelled: 0 },
+		total: 8,
+		ratio: 0.5
+	};
+	const taskRef = (id: string, tag: string, title: string, href: string | null) => ({
+		kind: 'task' as const,
+		id,
+		tag,
+		title,
+		href
+	});
+	const projectRef = (id: string, tag: string, title: string, href: string | null) => ({
+		kind: 'project' as const,
+		id,
+		tag,
+		title,
+		href
+	});
+
+	/** The ticket record, as staff read it: the work it was escalated to (#150). */
+	const ticketWork: RelatedGroup[] = [
+		{
+			relation: 'resolved_in',
+			icon: 'task',
+			items: [
+				{
+					linkedAt,
+					projectTag: 'PRJ-007',
+					ref: taskRef('10', 'TSK-0042', 'Cambiar tóner', '#'),
+					status: { group: 'started', name: 'En revisión' }
+				}
+			]
+		},
+		{
+			relation: 'handled_in',
+			icon: 'project',
+			items: [
+				{
+					linkedAt,
+					ref: projectRef('11', 'PRJ-007', 'Renovar impresoras', '#'),
+					status: { archived: false, progress }
+				},
+				{
+					linkedAt,
+					ref: projectRef('12', 'PRJ-003', 'Migración antigua', '#'),
+					status: { archived: true, progress: null }
+				}
+			]
+		}
+	];
+
+	/** What the requesting employee gets: an out-of-scope target comes back without a link or a project. */
+	const forRequester: RelatedGroup[] = [
+		{
+			relation: 'resolved_in',
+			icon: 'task',
+			items: [
+				{
+					linkedAt,
+					ref: taskRef('10', 'TSK-0042', 'Cambiar tóner', '#'),
+					status: { group: 'completed', name: 'Hecho' }
+				},
+				{
+					linkedAt: new Date('2026-01-02T10:00:00Z'),
+					restricted: true,
+					ref: taskRef('13', 'TSK-0050', 'Revisar cableado', null),
+					status: { group: 'started', name: 'En curso' }
+				}
+			]
+		},
+		{
+			relation: 'handled_in',
+			icon: 'project',
+			items: [
+				{
+					linkedAt: new Date('2026-01-03T10:00:00Z'),
+					restricted: true,
+					ref: projectRef('14', 'PRJ-009', 'Obra planta 2', null),
+					status: { archived: false, progress: null }
+				}
+			]
+		}
+	];
 </script>
 
 <ComponentDocPage
@@ -169,6 +254,19 @@
 			name: 'unlinkAction',
 			type: 'string',
 			description: 'Form action que desvincula; ausente oculta el control.'
+		},
+		{
+			name: 'unlinkActions',
+			type: 'Partial<Record<RecordKind, string>>',
+			description:
+				'Form action por tipo de registro (asset, task, project), para un panel que los mezcla. Gana sobre unlinkAction; un tipo sin entrada no dibuja control.'
+		},
+		{
+			name: 'requester',
+			type: 'boolean',
+			default: 'false',
+			description:
+				'La lectura del solicitante: Resuelto en y Gestionado en se funden en «En seguimiento en», sin desvincular. Un item sin href se dibuja como texto.'
 		},
 		{
 			name: 'error',
@@ -227,6 +325,21 @@
 					Proyecto: Gestiona y Resuelve, vía tareas (solo desvincula lo directo)
 				</p>
 				<RelatedRecords groups={projectSide} unlinkAction="#" unlinkable={['handles']} />
+			</div>
+			<div>
+				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+					Ticket: trabajo escalado, con desvincular por tipo
+				</p>
+				<RelatedRecords
+					groups={ticketWork}
+					unlinkActions={{ asset: '#', task: '#', project: '#' }}
+				/>
+			</div>
+			<div>
+				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+					Solicitante: En seguimiento en, sin enlace fuera de su alcance
+				</p>
+				<RelatedRecords groups={forRequester} requester />
 			</div>
 			<div>
 				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">

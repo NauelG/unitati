@@ -1,4 +1,6 @@
 <script lang="ts">
+	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
+	import EscalateSheet from '#lib/components/unitati/EscalateSheet.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
@@ -15,7 +17,8 @@
 		type PendingThreadItem
 	} from '#lib/components/unitati/TicketThread.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
-	import { focusFirstField } from '#lib/keymap.js';
+	import { focusFirstField, keymapRegistry } from '#lib/keymap.js';
+	import { ESCALATE_TICKET_EVENT, paletteContext } from '#lib/palette-context.svelte.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { PRIORITIES } from '#lib/domain/status.js';
 	import { m } from '#lib/paraglide/messages.js';
@@ -88,10 +91,43 @@
 	);
 
 	const unlinkError = $derived(
-		form && 'action' in form && form.action === 'unlinkAsset' && 'message' in form
+		form &&
+			'action' in form &&
+			(form.action === 'unlinkAsset' ||
+				form.action === 'unlinkTask' ||
+				form.action === 'unlinkProject') &&
+			'message' in form
 			? form.message
 			: undefined
 	);
+
+	/**
+	 * The escalation Sheet (#150). The header button, the palette and the keymap
+	 * all open this one. It is only wired up for someone who may manage tickets.
+	 */
+	let escalateOpen = $state(false);
+	const escalation = $derived(data.escalation);
+
+	$effect(() => {
+		if (!escalation) return;
+		const open = () => (escalateOpen = true);
+		paletteContext.escalatableTicketTag = ticket.ticketTag;
+		window.addEventListener(ESCALATE_TICKET_EVENT, open);
+		const unregister = keymapRegistry.register({
+			id: 'tickets.escalate',
+			keys: ['e'],
+			scope: 'global',
+			group: m.keymap_group_tickets(),
+			label: m.keymap_entry_escalate_ticket(),
+			permission: 'tickets.manage',
+			run: open
+		});
+		return () => {
+			window.removeEventListener(ESCALATE_TICKET_EVENT, open);
+			paletteContext.escalatableTicketTag = null;
+			unregister();
+		};
+	});
 
 	const replyError = $derived(
 		form && 'action' in form && form.action === 'reply' && 'message' in form
@@ -135,7 +171,16 @@
 			status={localStatus}
 			priority={localPriority}
 			{provenance}
-		/>
+		>
+			{#snippet actions()}
+				{#if escalation}
+					<Button variant="secondary" onclick={() => (escalateOpen = true)}>
+						<ArrowUpRight class="size-4" aria-hidden="true" />
+						{m.ticket_escalate_action()}
+					</Button>
+				{/if}
+			{/snippet}
+		</TicketDetailLayout>
 
 		<div class="mt-[var(--space-5)]">
 			<TicketThread items={localThread} attachmentHref={(id) => `/attachments/${id}`} />
@@ -198,8 +243,10 @@
 				groups={relatedGroups}
 			/>
 			<RelatedRecords
-				groups={relatedGroups.filter((group) => group.relation === 'affects')}
-				unlinkAction={data.canManage ? '?/unlinkAsset' : undefined}
+				groups={relatedGroups}
+				unlinkActions={data.canManage
+					? { asset: '?/unlinkAsset', task: '?/unlinkTask', project: '?/unlinkProject' }
+					: {}}
 				error={unlinkError}
 			/>
 		{/await}
@@ -322,3 +369,21 @@
 		{/if}
 	{/snippet}
 </PageLayout>
+
+{#if escalation}
+	<EscalateSheet
+		open={escalateOpen}
+		onOpenChange={(next) => (escalateOpen = next)}
+		ticket={{
+			tag: ticket.ticketTag,
+			statusLabel: statusLabel(localStatus),
+			assigneeName: localAssigneeName
+		}}
+		draft={escalation.draft}
+		projectName={ticket.subject}
+		canCreate={escalation.canCreate}
+		people={peopleOptions}
+		defaultOwnerId={data.user.personId}
+		searchBase="/service-desk/{encodeURIComponent(ticket.ticketTag)}/escalate"
+	/>
+{/if}

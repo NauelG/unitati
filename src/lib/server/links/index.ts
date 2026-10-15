@@ -57,3 +57,9 @@ export type { EscalationTarget, EscalateFailure, Escalated } from './escalate';
 
 export { escalationDraft } from './escalation-draft';
 export type { EscalationDraft } from './escalation-draft';
+
+export { taskChoices, projectChoices } from './escalation-targets';
+export type { TaskChoice, ProjectChoice } from './escalation-targets';
+
+export { parseEscalation, invalidField } from './escalation-input';
+export type { EscalationField, ParsedEscalation } from './escalation-input';

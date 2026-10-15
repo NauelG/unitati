@@ -91,6 +91,8 @@ export type RelatedItem = {
 	restricted?: true;
 	/** On `resolves_via_tasks`: the task of the project the ticket is linked to. */
 	via?: ViaTask;
+	/** On a task the staff viewer may open: the code of its project, as secondary text. Never for the requester. */
+	projectTag?: string;
 } & (
 	| { ref: RecordRef<'asset'>; status: AssetState }
 	| {
@@ -309,7 +311,12 @@ async function tasksResolving(
 					: { kind: 'task', id: task.id, tag: task.taskTag, title: task.title, href: null },
 				status: { group: task.stateGroup, name: task.stateName },
 				linkedAt: link.linkedAt,
-				...(task.inScope ? {} : { restricted: true as const })
+				// The project of a task is staff business: the requester's payload never carries it.
+				...(task.inScope
+					? standing === 'staff'
+						? { projectTag: task.projectTag }
+						: {}
+					: { restricted: true as const })
 			}
 		];
 	});
@@ -348,7 +355,8 @@ async function projectsHandling(
 			// Reused from the projects domain rather than recomputed. Only for what
 			// the viewer can open: the counts of a project they cannot see would be
 			// a window onto it.
-			const progress = project.inScope ? await projectProgress(viewer, project.id) : null;
+			const progress =
+				project.inScope && standing === 'staff' ? await projectProgress(viewer, project.id) : null;
 
 			return [
 				{

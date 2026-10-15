@@ -136,6 +136,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/Dialog.svelte')
 	},
 	{
+		id: 'escalate-sheet',
+		name: 'EscalateSheet',
+		category: 'feedback',
+		summary: 'Escalar un ticket a una tarea o un proyecto, nuevo o existente (#150).',
+		sourceFile: 'EscalateSheet.svelte',
+		load: () => import('./specs/EscalateSheet.svelte')
+	},
+	{
 		id: 'sheet',
 		name: 'Sheet',
 		category: 'feedback',

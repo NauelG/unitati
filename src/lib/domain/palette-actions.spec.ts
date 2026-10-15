@@ -134,3 +134,18 @@ describe('move-task action (#120)', () => {
 		expect(idsOf(ctx({ permissions: ['projects.manage'] }))).not.toContain('move-task');
 	});
 });
+
+describe('escalate-ticket action (#150)', () => {
+	it('is offered with tickets.manage while an escalatable ticket is open', () => {
+		expect(
+			idsOf(ctx({ permissions: ['tickets.manage'], escalatableTicketTag: 'TCK-0001' }))
+		).toContain('escalate-ticket');
+	});
+
+	it('is absent without tickets.manage or without an open ticket', () => {
+		expect(
+			idsOf(ctx({ permissions: ['tickets.view'], escalatableTicketTag: 'TCK-0001' }))
+		).not.toContain('escalate-ticket');
+		expect(idsOf(ctx({ permissions: ['tickets.manage'] }))).not.toContain('escalate-ticket');
+	});
+});

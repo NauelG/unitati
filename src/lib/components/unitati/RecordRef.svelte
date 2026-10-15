@@ -61,7 +61,8 @@
 			kind: 'asset' | 'ticket' | 'project' | 'task';
 			tag: string;
 			title: string;
-			href: string;
+			/** `null` for a record the viewer may know of but not open: drawn as plain text, not a link. */
+			href: string | null;
 		};
 		class?: string;
 	}
@@ -77,13 +78,27 @@
 	detail header's code chip for the same record — clicking this chip morphs
 	the tag into place exactly as clicking the list row would.
 -->
-<a
-	href={record.href}
-	data-record-ref={record.tag}
-	style:view-transition-name={toViewTransitionName('record', record.tag)}
-	class={styles.root({ class: className })}
->
+{#snippet content()}
 	<Icon class={styles.icon()} aria-hidden="true" />
 	<span class={styles.tag()}>{record.tag}</span>
 	<span class={styles.title()}>{record.title}</span>
-</a>
+{/snippet}
+
+{#if record.href}
+	<a
+		href={record.href}
+		data-record-ref={record.tag}
+		style:view-transition-name={toViewTransitionName('record', record.tag)}
+		class={styles.root({ class: className })}
+	>
+		{@render content()}
+	</a>
+{:else}
+	<!-- Restricted (ADR 0007): the code and title are the requester's to read, the page is not. -->
+	<span
+		data-record-ref={record.tag}
+		class={styles.root({ class: ['hover:no-underline', className].filter(Boolean).join(' ') })}
+	>
+		{@render content()}
+	</span>
+{/if}

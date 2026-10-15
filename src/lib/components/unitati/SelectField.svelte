@@ -3,6 +3,10 @@
 		value: string;
 		label: string;
 		disabled?: boolean;
+		/** A record's code, for a caller that must name the pick without parsing the label. */
+		tag?: string;
+		/** The record's own title, beside `tag`, for the same reason. */
+		title?: string;
 	}
 </script>
 

@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { m } from '#lib/paraglide/messages.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
-import { assetRelations, relatedTo } from '#lib/server/links/index.js';
+import { relatedTo } from '#lib/server/links/index.js';
 import {
 	addComment,
 	addCommentInput,
@@ -25,8 +25,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 
 	// For an employee `relatedTo` narrows to the equipment they could have
 	// attached themselves, so a colleague's laptop added by staff stays out.
-	// The tasks and projects it was escalated to get their panel with #150.
-	const related = assetRelations(await relatedTo(user, { kind: 'ticket', id: found.value.id }));
+	// The work it was escalated to comes back reduced to code, title and state
+	// even outside the employee's scope (ADR 0007), with no link when restricted.
+	const related = await relatedTo(user, { kind: 'ticket', id: found.value.id });
 
 	return { ticket: found.value, thread: thread.value, related };
 };

@@ -58,6 +58,12 @@
 		values?: string[];
 		/** Labels for already-selected remote values not in the first page of results. */
 		selectedLabels?: Record<string, string>;
+		/**
+		 * Told which option was just chosen, or `null` when the selection was
+		 * cleared. For a caller that needs more than the `value`, such as the
+		 * code a remote option's label leads with. Single selection only.
+		 */
+		onpick?: (option: SelectOption | null) => void;
 		class?: string;
 	}
 
@@ -79,6 +85,7 @@
 		multiple = false,
 		values = $bindable([]),
 		selectedLabels,
+		onpick,
 		class: className
 	}: Props = $props();
 
@@ -187,6 +194,7 @@
 		pickedLabel = option.label;
 		query = '';
 		open = false;
+		onpick?.(option);
 	}
 
 	function clear(event: MouseEvent) {
@@ -195,6 +203,7 @@
 		pickedValue = undefined;
 		pickedLabel = undefined;
 		query = '';
+		onpick?.(null);
 	}
 </script>
 
