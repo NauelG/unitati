@@ -35,7 +35,7 @@
 
 	{#if data.related.length > 0}
 		<div class="mt-[var(--space-6)]">
-			<RelatedRecords groups={data.related} />
+			<RelatedRecords groups={data.related} requester />
 		</div>
 	{/if}
 

@@ -3,6 +3,7 @@ import ArrowRightLeftIcon from '@lucide/svelte/icons/arrow-right-left';
 import FolderKanbanIcon from '@lucide/svelte/icons/folder-kanban';
 import HouseIcon from '@lucide/svelte/icons/house';
 import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
+import ArrowUpRightIcon from '@lucide/svelte/icons/arrow-up-right';
 import ListChecksIcon from '@lucide/svelte/icons/list-checks';
 import PackageIcon from '@lucide/svelte/icons/package';
 import PlusIcon from '@lucide/svelte/icons/plus';
@@ -27,7 +28,8 @@ import {
 export type PaletteActionTarget =
 	| { kind: 'navigate'; href: string }
 	| { kind: 'assign-to-me'; ticketTag: string }
-	| { kind: 'move-task' };
+	| { kind: 'move-task' }
+	| { kind: 'escalate-ticket' };
 
 export interface PaletteActionDef {
 	id: string;
@@ -42,6 +44,8 @@ export interface PaletteActionContext {
 	ticketTag?: string;
 	/** The task whose record is open, only while it can be moved (not archived) — #120. */
 	movableTaskTag?: string | null;
+	/** The ticket whose record is open and can be escalated — #150. */
+	escalatableTicketTag?: string | null;
 	/** The viewer's own directory record — "Asignar a mí" needs one to exist. */
 	personId?: string | null;
 	/** Hides the gallery action the same way the dev nav link already is (ADR 0013). */
@@ -95,6 +99,14 @@ export function derivePaletteActions(ctx: PaletteActionContext): PaletteActionDe
 					label: m.palette_action_move_task(),
 					icon: ArrowRightLeftIcon,
 					target: { kind: 'move-task' }
+				}
+			: null,
+		hasAnyPermission(ctx.permissions, 'tickets.manage') && ctx.escalatableTicketTag
+			? {
+					id: 'escalate-ticket',
+					label: m.palette_action_escalate(),
+					icon: ArrowUpRightIcon,
+					target: { kind: 'escalate-ticket' }
 				}
 			: null,
 		hasAnyPermission(ctx.permissions, ASSET_READ_PERMISSIONS)

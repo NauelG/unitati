@@ -1,11 +1,22 @@
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { z } from 'zod';
+import { TICKET_READ_PERMISSIONS } from '#lib/domain/access.js';
 import { PRIORITIES, TICKET_STATUSES } from '#lib/domain/status.js';
+import { escalateFailureMessage } from '#lib/escalation-errors.js';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
-import { requirePermission } from '#lib/server/auth/guards.js';
+import { requireAnyPermission, requirePermission } from '#lib/server/auth/guards.js';
 import { listPeople } from '#lib/server/directory/index.js';
-import { relatedTo, unlinkAsset } from '#lib/server/links/index.js';
+import {
+	escalateTicket,
+	escalationDraft,
+	invalidField,
+	parseEscalation,
+	relatedTo,
+	unlinkAsset,
+	unlinkProject,
+	unlinkTask
+} from '#lib/server/links/index.js';
 import {
 	addComment,
 	addCommentInput,
@@ -17,11 +28,18 @@ import {
 	nextStatuses,
 	readTicketForm,
 	setTicketPriority,
-	ticketThread
+	ticketThread,
+	type ThreadItem
 } from '#lib/server/service-desk/index.js';
 import { failureMessage } from '#lib/ticket-errors.js';
 import { fieldsOf, rejected } from '../../assets/form-data';
 import type { Actions, PageServerLoad } from './$types';
+
+/** The opening message is the thread's first comment: there is no `description` column. */
+function firstMessage(thread: ThreadItem[]): string | null {
+	const first = thread.find((item) => item.kind === 'comment');
+	return first?.kind === 'comment' ? first.body : null;
+}
 
 export const load: PageServerLoad = async ({ locals, params }) => {
 	const user = requirePermission(locals.user, 'tickets.view');
@@ -44,16 +62,63 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		// read, so what is linked to it is read on that same footing;
 		// `relatedTo` scopes the other side of each link. Streams in behind
 		// `RelatedRecords` while the rest of the page is already interactive.
-		// All of it feeds the constellation (#151); the panel lists the asset
-		// groups only until the tasks and projects get theirs in #150.
+		// The whole of it: the constellation draws every relation, the panel lists them.
 		related: relatedTo(user, { kind: 'ticket', id: found.value.id }),
 		canManage,
+		// What the escalation Sheet needs: only for someone who may escalate.
+		escalation: canManage
+			? {
+					draft: escalationDraft({
+						subject: found.value.subject,
+						description: firstMessage(thread.value)
+					}),
+					canCreate: can(user, 'projects.manage')
+				}
+			: null,
 		canInternal: can(user, 'tickets.comment.internal'),
 		nextStatuses: nextStatuses(found.value.status),
 		queues: queues.map(({ id, name }) => ({ id, name })),
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName }))
 	};
 };
+
+/**
+ * Escalating and unlinking work. Somebody who can read tickets but not manage
+ * them (the requester) knows the page exists and is told plainly: 403. Anybody
+ * who cannot read tickets at all gets the usual 404.
+ */
+function requireEscalator(user: App.Locals['user']) {
+	const reader = requireAnyPermission(user, TICKET_READ_PERMISSIONS);
+	if (!can(reader, 'tickets.manage')) error(403, 'Forbidden');
+	return reader;
+}
+
+/** An escalation refusal the Sheet can place under the field it is about. */
+const rejectedField = (field: string, message: string) =>
+	fail(400, { action: 'escalate', message, id: null, field });
+
+async function unlinkWork(
+	{ locals, request, params }: Parameters<Actions[string]>[0],
+	kind: 'task' | 'project'
+) {
+	const user = requireEscalator(locals.user);
+	const name = kind === 'task' ? 'unlinkTask' : 'unlinkProject';
+	const parsed = z.object({ recordId: z.uuid() }).safeParse(await fieldsOf(request));
+	if (!parsed.success) return rejected(name, m.related_unlink_failed());
+
+	const found = await getTicketByTag(user, params.tag);
+	if (!found.ok) error(404, 'Not found');
+
+	const outcome =
+		kind === 'task'
+			? await unlinkTask(user, { ticketId: found.value.id, taskId: parsed.data.recordId })
+			: await unlinkProject(user, { ticketId: found.value.id, projectId: parsed.data.recordId });
+	// Already gone, e.g. a second tab removed it first: the page reloads and shows the truth.
+	if (!outcome.ok && outcome.error !== 'link_not_found') {
+		return rejected(name, m.related_unlink_failed());
+	}
+	return { action: name };
+}
 
 export const actions: Actions = {
 	reply: async ({ locals, request, params }) => {
@@ -130,6 +195,29 @@ export const actions: Actions = {
 			return rejected('unlinkAsset', m.related_unlink_failed());
 		}
 		return { action: 'unlinkAsset' as const };
+	},
+
+	unlinkTask: (event) => unlinkWork(event, 'task'),
+	unlinkProject: (event) => unlinkWork(event, 'project'),
+
+	escalate: async ({ locals, request, params }) => {
+		const user = requireEscalator(locals.user);
+		const fields = await fieldsOf(request);
+
+		const parsed = parseEscalation(fields);
+		if (!parsed.ok) return rejectedField(parsed.field, escalateFailureMessage('invalid_input'));
+
+		const found = await getTicketByTag(user, params.tag);
+		if (!found.ok) error(404, 'Not found');
+
+		const outcome = await escalateTicket(user, found.value.id, parsed.target);
+		if (!outcome.ok) {
+			if (outcome.error === 'ticket_not_found') error(404, 'Not found');
+			const field = outcome.error === 'invalid_input' ? invalidField(parsed.target.kind) : null;
+			const message = escalateFailureMessage(outcome.error);
+			return field ? rejectedField(field, message) : rejected('escalate', message);
+		}
+		return { action: 'escalate' as const, escalated: outcome.value };
 	},
 
 	queue: async ({ locals, request, params }) => {

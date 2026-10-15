@@ -8,7 +8,11 @@
 	import { isProduction } from '#lib/environment.js';
 	import { formatKeys, isMacPlatform } from '#lib/keymap.js';
 	import { m } from '#lib/paraglide/messages.js';
-	import { MOVE_TASK_EVENT, paletteContext } from '#lib/palette-context.svelte.js';
+	import {
+		ESCALATE_TICKET_EVENT,
+		MOVE_TASK_EVENT,
+		paletteContext
+	} from '#lib/palette-context.svelte.js';
 	import RecordRef from './RecordRef.svelte';
 
 	/**
@@ -59,6 +63,10 @@
 			// The record that owns the dialog is listening (#120).
 			open = false;
 			window.dispatchEvent(new CustomEvent(MOVE_TASK_EVENT));
+		} else if (action.target.kind === 'escalate-ticket') {
+			// The ticket record that owns the Sheet is listening (#150).
+			open = false;
+			window.dispatchEvent(new CustomEvent(ESCALATE_TICKET_EVENT));
 		} else assignToMe(action.target.ticketTag);
 	}
 
@@ -70,6 +78,7 @@
 			permissions,
 			ticketTag,
 			movableTaskTag: paletteContext.movableTaskTag,
+			escalatableTicketTag: paletteContext.escalatableTicketTag,
 			personId,
 			isProduction: isProduction(APP_ENV)
 		})

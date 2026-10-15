@@ -19,6 +19,8 @@ export interface TaskSummary {
 	id: string;
 	taskTag: string;
 	title: string;
+	/** The project the task is in. Only ever shown to a viewer who may open the task. */
+	projectTag: string;
 	stateGroup: StateGroup;
 	stateName: string;
 	inScope: boolean;
@@ -56,11 +58,13 @@ function taskSelection(viewer: SessionUser) {
 			id: tasks.id,
 			taskTag: tasks.taskTag,
 			title: tasks.title,
+			projectTag: projects.projectTag,
 			stateGroup: states.group,
 			stateName: states.name,
 			inScope: sql<boolean>`(${taskScope(viewer)})`
 		})
 		.from(tasks)
+		.innerJoin(projects, eq(tasks.projectId, projects.id))
 		.innerJoin(states, eq(tasks.stateId, states.id));
 }
 

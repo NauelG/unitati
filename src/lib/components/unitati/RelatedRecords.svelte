@@ -33,10 +33,16 @@
 	import { enhance } from '$app/forms';
 	import { m } from '#lib/paraglide/messages.js';
 	import { relatedRows } from '#lib/related-rows.js';
-	import type { RelatedGroup, RelatedItem, RelationName } from '#lib/server/links/index.js';
+	import type {
+		RecordKind,
+		RelatedGroup,
+		RelatedItem,
+		RelationName
+	} from '#lib/server/links/index.js';
 	import Button from './Button.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import { confirmSubmit } from './confirm-submit.js';
+	import ProjectProgress from './ProjectProgress.svelte';
 	import RecordRef, { KIND_ICONS } from './RecordRef.svelte';
 	import StatusBadge, { badge } from './StatusBadge.svelte';
 
@@ -48,6 +54,20 @@
 		 * the domain refuses them anyway, but a button that can only fail is noise.
 		 */
 		unlinkAction?: string;
+		/**
+		 * The same, per kind of record, for a panel that mixes them (a ticket's:
+		 * assets, tasks and projects each have their own action). Wins over
+		 * `unlinkAction` for the kinds it names; a kind without an entry draws no
+		 * control.
+		 */
+		unlinkActions?: Partial<Record<RecordKind, string>>;
+		/**
+		 * The requester's reading: *Resuelto en* and *Gestionado en* merge into one
+		 * *En seguimiento en*, and nothing can be unlinked. What it leaves out (the
+		 * project of a task, progress) is not theirs to know, and the server does
+		 * not send it either.
+		 */
+		requester?: boolean;
 		/**
 		 * The relations whose items can be unlinked from here; every group when
 		 * absent. A project unlinks what it handles directly, and leaves the
@@ -72,6 +92,8 @@
 	let {
 		groups,
 		unlinkAction,
+		unlinkActions,
+		requester = false,
 		unlinkable,
 		error,
 		confirming = $bindable(null),
@@ -99,9 +121,40 @@
 		return count === 1 ? one() : other();
 	}
 
-	function canUnlink(group: RelatedGroup): boolean {
-		return Boolean(unlinkAction) && (!unlinkable || unlinkable.includes(group.relation));
+	/** The action that unlinks this item, or nothing: the requester, a restricted item or a kind without one cannot. */
+	function actionFor(group: RelatedGroup, item: RelatedItem): string | undefined {
+		if (requester || item.restricted) return undefined;
+		if (unlinkActions) return unlinkActions[item.ref.kind];
+		return unlinkAction && (!unlinkable || unlinkable.includes(group.relation))
+			? unlinkAction
+			: undefined;
 	}
+
+	/** What is drawn: the groups as they come, or for the requester the work ones merged into one. */
+	const shown = $derived.by((): { key: string; label: string | null; group: RelatedGroup }[] => {
+		const plain = (group: RelatedGroup) => ({ key: group.relation, label: null, group });
+		if (!requester) return groups.map(plain);
+
+		const isWork = (group: RelatedGroup) =>
+			group.relation === 'resolved_in' || group.relation === 'handled_in';
+		const merged = groups
+			.filter(isWork)
+			.flatMap((group) => group.items)
+			.sort((a, b) => a.linkedAt.getTime() - b.linkedAt.getTime());
+
+		return [
+			...groups.filter((group) => !isWork(group)).map(plain),
+			...(merged.length > 0
+				? [
+						{
+							key: 'followed_in',
+							label: m.related_followed_in(),
+							group: { relation: 'resolved_in' as const, icon: 'task' as const, items: merged }
+						}
+					]
+				: [])
+		];
+	});
 
 	/** The question the confirmation asks: losing an asset's context is not losing a task's. */
 	function ask(group: RelatedGroup, tag: string): string {
@@ -126,17 +179,18 @@
 		<p class={styles.empty()}>{m.related_empty()}</p>
 	{/if}
 
-	{#each groups as group (group.relation)}
+	{#each shown as { key, label: heading, group } (key)}
 		{@const Icon = KIND_ICONS[group.icon]}
 		{@const rows = relatedRows(group)}
 		<div class={styles.group()}>
 			<h3 class={styles.label()}>
 				<Icon class="size-3.5" aria-hidden="true" />
-				{label(group, rows.length)}
+				{heading ?? label(group, rows.length)}
 			</h3>
 
 			<ul class={styles.items()}>
 				{#each rows as { item, vias } (item.ref.id)}
+					{@const unlinkHere = actionFor(group, item)}
 					<li class={styles.item()}>
 						{#if item.ref.href === null}
 							<!-- The requester's reduced view (ADR 0007): the code and the state, nowhere to go. -->
@@ -154,13 +208,21 @@
 							<StatusBadge status={item.status.group} label={item.status.name} />
 						{:else if projectArchived(item)}
 							<span class={badge({ tone: 'neutral' })}>{m.related_project_archived()}</span>
+						{:else if 'progress' in item.status && item.status.progress}
+							<ProjectProgress counts={item.status.progress.counts} class="w-28" />
+						{:else}
+							<StatusBadge status="started" label={m.related_project_active()} />
+						{/if}
+
+						{#if 'projectTag' in item && item.projectTag}
+							<span class="font-mono text-xs text-[var(--ink-muted)]">{item.projectTag}</span>
 						{/if}
 
 						{#if 'priority' in item && item.priority}
 							<StatusBadge status={item.priority} />
 						{/if}
 
-						{#if canUnlink(group)}
+						{#if unlinkHere}
 							<Button
 								type="button"
 								variant="ghost"
@@ -188,7 +250,7 @@
 								{#snippet action(confirm)}
 									<form
 										method="POST"
-										action={unlinkAction}
+										action={unlinkHere}
 										use:enhance={confirmSubmit({
 											onPending: (pending) => (pendingId = pending ? item.ref.id : null),
 											onSettled: (succeeded) => {
