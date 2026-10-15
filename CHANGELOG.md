@@ -5,6 +5,14 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.41.1] - 2026-10-15
+
+### Changed
+
+- The assets domain colour no longer aliases the brand colour (#158, slice 1 of #157): `--asset` and
+  `--asset-soft` are literal values in `:root` and `.dark`, and `tokens.json` follows. No rendered
+  pixel changes; it lets a customer repaint the brand later without repainting assets.
+
 ## [0.41.0] - 2026-10-15
 
 ### Added
