@@ -10,7 +10,7 @@ minor bumps carry features and patch bumps carry fixes.
 ### Added
 
 - Container image. A `Dockerfile` builds the production app as one Node image that runs in every
-  environment, `scripts/migrate.mjs` applies the migrations from inside it, and a workflow
+  environment, the container applies pending migrations (`scripts/migrate.mjs`) on start, and a workflow
   publishes `ghcr.io/nauelg/unitati:X.Y.Z` (private) and tags `vX.Y.Z` for every version that
   reaches `main` once CI is green (ADR 0023).
 

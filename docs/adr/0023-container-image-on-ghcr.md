@@ -21,11 +21,13 @@ deployment. There is no public release yet, so the image must not be public eith
    `main`. When `package.json` carries a version with no `vX.Y.Z` tag, it pushes `X.Y.Z` and
    `latest`, and then creates the tag. The tag is created last, so a tag always means that its
    image exists. A merge that does not bump the version publishes nothing.
-4. **Migrations are a separate, explicit step**, `node scripts/migrate.mjs`, not part of boot. The
-   image carries production dependencies only, so it uses drizzle-orm's runtime migrator (same
-   files, same journal) instead of `drizzle-kit`. Booting does not migrate: two replicas starting
-   together must not race on the schema, and a failed migration must not look like a failed
-   start.
+4. **The container migrates on start**: its command runs `node scripts/migrate.mjs` and then the
+   server. The journal makes it a no-op when nothing is pending, and a failed migration exits the
+   container instead of serving a half-migrated schema. The image carries production dependencies
+   only, so it uses drizzle-orm's runtime migrator (same files, same journal) instead of
+   `drizzle-kit`. The accepted limit: several replicas starting together could race on the schema.
+   That is not a case today; if it becomes one, the migration moves to a one-shot step or takes an
+   advisory lock.
 5. **State lives outside the image**: attachments in the `/data/uploads` volume, data in Postgres.
 
 ## Consequences

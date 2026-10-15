@@ -47,6 +47,6 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"
 
-# Migrations are a separate, explicit step:
-#   docker run --rm --env-file unitati.env IMAGE node scripts/migrate.mjs
-CMD ["node", "build"]
+# Pending migrations are applied on every start; with none pending it is a no-op.
+# If one fails the container exits, so a half-migrated app never serves traffic.
+CMD ["sh", "-c", "node scripts/migrate.mjs && exec node build"]

@@ -5,7 +5,8 @@
 // the same SQL files and the same journal, which is all `drizzle-kit migrate`
 // does too.
 //
-//   docker run --rm --env-file unitati.env IMAGE node scripts/migrate.mjs
+// The image runs it before the server on every start (see the Dockerfile CMD);
+// it can also be run alone: docker run --rm --env-file unitati.env IMAGE node scripts/migrate.mjs
 //
 // Migrations are forward-only: see the note in scripts/staging-deploy.sh.
 import { drizzle } from 'drizzle-orm/postgres-js';
