@@ -5,6 +5,20 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.41.0] - 2026-10-15
+
+### Added
+
+- Tickets seen from the work behind them (#151, slice 6c of #11). The task record lists the
+  tickets it resolves and the project record the ones it handles directly and the ones that reach
+  it through its tasks (once per ticket, naming each task), each with its status, priority and
+  assignee. Unlinking asks for confirmation and needs `tickets.manage`, also on a task of an
+  archived project; it is written on the ticket. Task and project timelines show "Vinculada al
+  ticket" with date and actor, merged live and without activity rows on the task or project. The
+  project header counts the open tickets behind it. An employee sees only their own tickets and the
+  counts follow. The relation constellation learns task and project nodes, with their own status
+  vocabularies and labelled edges, on the ticket, task and project records.
+
 ## [0.40.0] - 2026-10-15
 
 ### Added
