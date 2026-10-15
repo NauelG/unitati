@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.41.1-1d5cf0" alt="Version 0.41.1" />
+  <img src="https://img.shields.io/badge/version-0.41.2-1d5cf0" alt="Version 0.41.2" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
 </p>
@@ -234,6 +234,26 @@ of earlier versions no longer exists in adapter-node 6.
 Unitati is served at the **root of its origin**: `kit.paths.base` stays empty. A deployment that
 needs isolation gets its own hostname, port or Tailscale Service, never a subpath — see
 [ADR 0014](docs/adr/0014-served-at-the-root-of-the-origin.md).
+
+### Container image
+
+Every version on `main` is published as a **private** image on GitHub Container Registry,
+`ghcr.io/nauelg/unitati`, tagged `X.Y.Z` and `latest`
+([ADR 0023](docs/adr/0023-container-image-on-ghcr.md)). The same build runs in every environment;
+configuration is environment variables only (see `.env.example`).
+
+```sh
+# once per host: a classic PAT with read:packages
+echo "$GHCR_TOKEN" | docker login ghcr.io -u NauelG --password-stdin
+
+docker pull ghcr.io/nauelg/unitati:0.41.2
+docker run -d --name unitati --env-file unitati.env -p 3000:3000 \
+  -v unitati-uploads:/data/uploads ghcr.io/nauelg/unitati:0.41.2
+```
+
+The container applies pending migrations on every start, then serves; with nothing pending that
+is a no-op, and a failed migration stops the container. Ticket attachments live in the
+`/data/uploads` volume. To build locally: `docker build -t unitati:dev .`
 
 ## Contributing
 
