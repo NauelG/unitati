@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.41.2] - 2026-10-15
+
+### Added
+
+- Container image. A `Dockerfile` builds the production app as one Node image that runs in every
+  environment, `scripts/migrate.mjs` applies the migrations from inside it, and a workflow
+  publishes `ghcr.io/nauelg/unitati:X.Y.Z` (private) and tags `vX.Y.Z` for every version that
+  reaches `main` once CI is green (ADR 0023).
+
 ## [0.41.1] - 2026-10-15
 
 ### Changed
