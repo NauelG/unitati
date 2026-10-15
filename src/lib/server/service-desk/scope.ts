@@ -1,4 +1,4 @@
-import { and, eq, type SQL } from 'drizzle-orm';
+import { and, eq, sql, type SQL } from 'drizzle-orm';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { tickets } from './schema';
@@ -20,8 +20,12 @@ function visibleTickets(viewer: SessionUser): SQL | null {
 	 * written against it would become `requester_person_id is null`. The clause
 	 * has to be dropped, not parameterised with null.
 	 */
-	if (can(viewer, 'tickets.view.own') && viewer.personId !== null) {
-		return and(organisation, eq(tickets.requesterPersonId, viewer.personId)) as SQL;
+	if (can(viewer, 'tickets.view.own')) {
+		// A principal with no person (a service account) holds the permission but
+		// has no tickets of its own: nothing, rather than an error.
+		return viewer.personId !== null
+			? (and(organisation, eq(tickets.requesterPersonId, viewer.personId)) as SQL)
+			: (and(organisation, sql`false`) as SQL);
 	}
 
 	return null;
