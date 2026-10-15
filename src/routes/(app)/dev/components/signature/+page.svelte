@@ -11,7 +11,7 @@
 	import { springIn } from '#lib/motion.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import { countToken, rollingSummary } from '#lib/rolling.js';
-	import type { RelatedGroup } from '#lib/server/links/related.js';
+	import type { AssetRelatedGroup } from '#lib/server/links/related.js';
 
 	/**
 	 * The signature moments (#91), each with the one causal relation it
@@ -62,7 +62,7 @@
 	const STEPS = 4;
 
 	const linkedAt = new Date('2026-01-01T10:00:00Z');
-	function tickets(count: number): RelatedGroup[] {
+	function tickets(count: number): AssetRelatedGroup[] {
 		return [
 			{
 				relation: 'affected_by',

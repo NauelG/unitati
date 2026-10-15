@@ -25,6 +25,8 @@ export type AssetTimelineItem =
 			at: Date;
 			record: RecordRef<'ticket'>;
 			status: TicketStatus;
+			/** On a project's rail: the task the ticket reaches the project through. */
+			via?: RecordRef<'task'>;
 	  };
 
 type TicketItem = Extract<RelatedItem, { ref: { kind: 'ticket' } }>;
@@ -38,7 +40,7 @@ function ticketsIn(groups: readonly RelatedGroup[]): TicketItem[] {
 }
 
 /** Newest first, with the id breaking ties so the order never changes between two reads. */
-export function mergeAssetTimeline(
+function mergeTimeline(
 	entries: readonly TimelineEntry[],
 	related: readonly RelatedGroup[]
 ): AssetTimelineItem[] {
@@ -54,12 +56,24 @@ export function mergeAssetTimeline(
 			id: item.ref.id,
 			at: item.linkedAt,
 			record: item.ref,
-			status: item.status
+			status: item.status,
+			...(item.via ? { via: item.via } : {})
 		}))
 	];
 
 	return items.sort((a, b) => b.at.getTime() - a.at.getTime() || (a.id < b.id ? 1 : -1));
 }
+
+export const mergeAssetTimeline = mergeTimeline;
+
+/**
+ * A task's and a project's rails are the same merge (#149, used by #151): their
+ * own events from `activity`, and the tickets linked to them as live relations.
+ * The ticket's `link.task.added` hangs off the ticket, so it never reaches this
+ * rail a second time.
+ */
+export const mergeTaskTimeline = mergeTimeline;
+export const mergeProjectTimeline = mergeTimeline;
 
 /** The window "N tickets in 6 months" is measured over. */
 export const RECENT_MONTHS = 6;

@@ -3,7 +3,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import { STATE_GROUPS, type StateGroup } from '#lib/domain/status.js';
 import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
-import { getDb } from '../db';
+import { getDb, type Transaction } from '../db';
 import { uniqueConstraintName } from '../db/errors';
 import { people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
@@ -194,6 +194,45 @@ export async function projectProgressMany(
 export type CreateProjectFailure = 'owner_not_found' | 'duplicate_project_tag';
 export type UpdateProjectFailure = ProjectWriteFailure | CreateProjectFailure;
 
+/**
+ * The body of `createProject`, for a caller that owns the transaction (an
+ * escalation, #149). Like `openTask`, it leaves constraint violations to its
+ * caller.
+ */
+export async function openProject(
+	tx: Transaction,
+	actor: SessionUser,
+	values: ReturnType<typeof createProjectInput.parse>
+): Promise<Outcome<{ id: string; projectTag: string }, CreateProjectFailure>> {
+	requireManage(actor);
+
+	if (values.ownerPersonId && !(await findPerson(tx, actor.organisationId, values.ownerPersonId))) {
+		return failure('owner_not_found' as const);
+	}
+
+	const [project] = await tx
+		.insert(projects)
+		.values({
+			organisationId: actor.organisationId,
+			name: values.name,
+			description: values.description,
+			ownerPersonId: values.ownerPersonId ?? null,
+			dueDate: values.dueDate ?? null,
+			projectTag: values.projectTag
+		})
+		.returning({ id: projects.id, projectTag: projects.projectTag, name: projects.name });
+
+	await recordActivity(tx, {
+		organisationId: actor.organisationId,
+		...actorColumns(actor),
+		target: { projectId: project.id },
+		verb: 'project.created',
+		payload: { projectTag: project.projectTag, name: project.name }
+	});
+
+	return success({ id: project.id, projectTag: project.projectTag });
+}
+
 export async function createProject(
 	actor: SessionUser,
 	input: CreateProjectInput
@@ -202,36 +241,7 @@ export async function createProject(
 	const values = createProjectInput.parse(input);
 
 	try {
-		return await getDb().transaction(async (tx) => {
-			if (
-				values.ownerPersonId &&
-				!(await findPerson(tx, actor.organisationId, values.ownerPersonId))
-			) {
-				return failure('owner_not_found' as const);
-			}
-
-			const [project] = await tx
-				.insert(projects)
-				.values({
-					organisationId: actor.organisationId,
-					name: values.name,
-					description: values.description,
-					ownerPersonId: values.ownerPersonId ?? null,
-					dueDate: values.dueDate ?? null,
-					projectTag: values.projectTag
-				})
-				.returning({ id: projects.id, projectTag: projects.projectTag, name: projects.name });
-
-			await recordActivity(tx, {
-				organisationId: actor.organisationId,
-				...actorColumns(actor),
-				target: { projectId: project.id },
-				verb: 'project.created',
-				payload: { projectTag: project.projectTag, name: project.name }
-			});
-
-			return success({ id: project.id, projectTag: project.projectTag });
-		});
+		return await getDb().transaction((tx) => openProject(tx, actor, values));
 	} catch (error) {
 		if (uniqueConstraintName(error) === 'projects_org_tag') return failure('duplicate_project_tag');
 		throw error;

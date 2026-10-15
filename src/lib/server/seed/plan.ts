@@ -427,3 +427,87 @@ export function buildProjectsPlan(): ProjectsPlan {
 		]
 	};
 }
+
+/* -------------------------------------------------------------------------- */
+/* Escalations                                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Where a seeded ticket was escalated to. Tasks and projects are named, never
+ * identified: their ids and tags are minted on the day the seed runs.
+ */
+export type PlannedEscalationTarget =
+	/** Creates the task; `key` lets a later entry link to the same one. */
+	| {
+			kind: 'new_task';
+			key: string;
+			projectName: string;
+			title: string;
+			description: string | null;
+	  }
+	/** The task a `new_task` entry created earlier in this plan. */
+	| { kind: 'planned_task'; key: string }
+	/** A task the projects plan created. */
+	| { kind: 'existing_task'; projectName: string; taskTitle: string }
+	| { kind: 'existing_project'; projectName: string };
+
+export interface PlannedEscalation {
+	/** The seeded ticket, by subject: its tag comes from a sequence. */
+	ticketSubject: string;
+	target: PlannedEscalationTarget;
+}
+
+export interface EscalationsPlan {
+	escalations: PlannedEscalation[];
+}
+
+/**
+ * One ticket per shape the product has to show: a new task, two more tickets on
+ * that same task, an existing project, a `resolved` ticket on a task, and the
+ * employee's own ticket on a task **outside their scope** (the requester's
+ * restricted view, ADR 0007). Names must match the tickets and projects plans.
+ */
+export function buildEscalationsPlan(): EscalationsPlan {
+	const task = 'Revisar el equipamiento de la planta 2';
+
+	return {
+		escalations: [
+			{
+				ticketSubject: 'El monitor parpadea',
+				target: {
+					kind: 'new_task',
+					key: 'planta-2',
+					projectName: 'Renovación de portátiles',
+					title: task,
+					description: 'Parpadeos, impresora y ratones: todo lo de la planta 2 de una vez.'
+				}
+			},
+			{
+				ticketSubject: 'La impresora de la planta 2 no imprime',
+				target: { kind: 'planned_task', key: 'planta-2' }
+			},
+			{ ticketSubject: 'El ratón va a saltos', target: { kind: 'planned_task', key: 'planta-2' } },
+			{
+				ticketSubject: 'No puedo conectarme a la VPN desde casa',
+				target: { kind: 'existing_project', projectName: 'Mudanza a la nueva oficina' }
+			},
+			{
+				ticketSubject: 'Necesito Office en el portátil nuevo',
+				target: {
+					kind: 'existing_task',
+					projectName: 'Renovación de portátiles',
+					taskTitle: 'Pedir presupuesto a dos proveedores'
+				}
+			},
+			{
+				// Eva is on "Reservar el camión", not on this task, so for her it is out of scope.
+				ticketSubject: 'Quiero cambiar mi puesto de sitio',
+				target: {
+					kind: 'existing_task',
+					projectName: 'Mudanza a la nueva oficina',
+					taskTitle: 'Inventariar el mobiliario'
+				}
+			}
+		]
+	};
+}

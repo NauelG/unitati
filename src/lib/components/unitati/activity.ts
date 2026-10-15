@@ -83,6 +83,27 @@ export function activitySentence(entry: ActivityEntry): string {
 		case 'link.asset.removed':
 			return m.activity_link_asset_removed();
 
+		// The snapshot, not today's name: the task may have been renamed since.
+		case 'link.task.added':
+			return m.activity_link_task_added({
+				task: `${entry.payload.taskTag} ${entry.payload.taskTitle}`
+			});
+
+		case 'link.task.removed':
+			return m.activity_link_task_removed({
+				task: `${entry.payload.taskTag} ${entry.payload.taskTitle}`
+			});
+
+		case 'link.project.added':
+			return m.activity_link_project_added({
+				project: `${entry.payload.projectTag} ${entry.payload.projectName}`
+			});
+
+		case 'link.project.removed':
+			return m.activity_link_project_removed({
+				project: `${entry.payload.projectTag} ${entry.payload.projectName}`
+			});
+
 		case 'project.created':
 			return m.activity_project_created();
 

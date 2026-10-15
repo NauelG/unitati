@@ -24,6 +24,9 @@ export const RESERVED_TASK_TAGS: ReadonlySet<string> = new Set(['new']);
 
 const nonEmpty = z.string().trim().min(1);
 
+/** The longest task title the product accepts; an escalation draft is cut to it. */
+export const TASK_TITLE_MAX = 200;
+
 const tagOf = (reserved: ReadonlySet<string>) =>
 	nonEmpty.refine((tag) => !reserved.has(tag.toLowerCase()), 'reserved');
 
@@ -54,7 +57,7 @@ export const updateProjectInput = z.object({
 });
 
 export const createTaskInput = z.object({
-	title: nonEmpty,
+	title: nonEmpty.max(TASK_TITLE_MAX),
 	description: optionalText,
 	dueDate: dueDate.optional(),
 	/** Omitted: the task lands in the first open state (`defaultTaskState`). */

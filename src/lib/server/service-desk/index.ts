@@ -47,6 +47,8 @@ export type {
 /** Tickets opened per day, for the KPI sparkline (#90). */
 export { ticketOpeningsSparkline } from './sparkline';
 
+export { requireTicketScope } from './scope';
+
 export { ticketThread, addComment, getAttachment } from './comments';
 export type { ThreadItem, ThreadAttachment, AddCommentFailure } from './comments';
 

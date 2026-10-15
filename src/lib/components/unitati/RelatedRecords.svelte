@@ -31,7 +31,7 @@
 	import Unlink from '@lucide/svelte/icons/unlink';
 	import { enhance } from '$app/forms';
 	import { m } from '#lib/paraglide/messages.js';
-	import type { RelatedGroup } from '#lib/server/links/index.js';
+	import type { AssetRelatedGroup } from '#lib/server/links/index.js';
 	import Button from './Button.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import { confirmSubmit } from './confirm-submit.js';
@@ -39,7 +39,7 @@
 	import StatusBadge from './StatusBadge.svelte';
 
 	interface Props {
-		groups: RelatedGroup[];
+		groups: AssetRelatedGroup[];
 		/**
 		 * A form action that unlinks one record, posted with its id as `recordId`.
 		 * Absent for a viewer who may not unlink, and then no control is drawn:
@@ -77,7 +77,7 @@
 		affected_by: [() => m.related_affected_by_one(), () => m.related_affected_by_other()]
 	} as const;
 
-	function label(group: RelatedGroup): string {
+	function label(group: AssetRelatedGroup): string {
 		const [one, other] = LABELS[group.relation];
 		return group.items.length === 1 ? one() : other();
 	}

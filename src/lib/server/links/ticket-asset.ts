@@ -37,7 +37,7 @@ export type LinkAssetFailure = 'ticket_not_found' | 'asset_not_found' | 'already
  * that rule from `service-desk` would make the two domains depend on each other,
  * because `createTicket` is the thing that calls `linkAsset`.
  */
-async function ticketInOrganisation(tx: Transaction, actor: SessionUser, ticketId: string) {
+export async function ticketInOrganisation(tx: Transaction, actor: SessionUser, ticketId: string) {
 	const [ticket] = await tx
 		.select({ id: tickets.id })
 		.from(tickets)
