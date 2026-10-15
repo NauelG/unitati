@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import { enhance } from '$app/forms';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
@@ -27,7 +28,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.project_new_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.project_new_title())}</title>
 </svelte:head>
 
 <!--

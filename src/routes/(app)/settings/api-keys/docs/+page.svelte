@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import EmptyState from '#lib/components/unitati/EmptyState.svelte';
 	import MethodBadge, { type HttpMethod } from '#lib/components/unitati/MethodBadge.svelte';
@@ -59,7 +60,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.api_docs_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.api_docs_title())}</title>
 </svelte:head>
 
 <PageLayout variant="index">

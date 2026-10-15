@@ -17,6 +17,26 @@
 		defaultVariants: { size: 'md' }
 	});
 
+	/**
+	 * The text stand-ins for the artwork once the brand is customised. Their size
+	 * follows the `logo` variant so a swap never moves the layout: a wordmark's
+	 * type matches the lockup's height, a monogram is the mark's own square.
+	 */
+	const wordmark = tv({
+		base: 'block max-w-full truncate font-display font-semibold text-[var(--ink)] select-none',
+		variants: { size: { sm: 'text-base', md: 'text-lg', lg: 'text-2xl' } },
+		defaultVariants: { size: 'md' }
+	});
+
+	const monogram = tv({
+		base: [
+			'inline-flex shrink-0 items-center justify-center select-none',
+			'rounded-[var(--radius-sm)] bg-[var(--brand)] font-display font-semibold text-[var(--on-brand)]'
+		],
+		variants: { size: { sm: 'size-6 text-sm', md: 'size-7 text-base', lg: 'size-10 text-xl' } },
+		defaultVariants: { size: 'md' }
+	});
+
 	export type LogoSize = NonNullable<VariantProps<typeof logo>['size']>;
 	export type LogoVariant = 'mark' | 'lockup';
 </script>
@@ -25,21 +45,30 @@
 	import lockup from '#lib/assets/brand/unitati-lockup.svg';
 	import lockupInverse from '#lib/assets/brand/unitati-lockup-inverse.svg';
 	import mark from '#lib/assets/brand/unitati-mark.svg';
-	import { m } from '#lib/paraglide/messages.js';
+	import { currentBrand } from '#lib/brand.svelte.js';
+	import { monogramLetter, type BrandView } from '#lib/domain/brand.js';
 
 	interface Props {
 		/** `lockup` is the mark plus the wordmark; `mark` is the symbol alone, for tight spaces. */
 		variant?: LogoVariant;
 		size?: LogoSize;
 		class?: string;
+		/** Defaults to the page's brand; passed explicitly by the gallery and the component tests. */
+		brand?: Pick<BrandView, 'productName' | 'customised'>;
 	}
 
-	let { variant = 'lockup', size, class: className }: Props = $props();
+	let { variant = 'lockup', size, class: className, brand = currentBrand() }: Props = $props();
 
 	const classes = $derived(logo({ size, class: className }));
 </script>
 
 <!--
+	The golden rule (ADR 0026): once the brand is customised, Unitati's art never
+	shows. A customised brand with nothing uploaded falls back to **HTML text**, not
+	a generated image: it costs no request, needs no font loading on the server,
+	and follows `--brand` on its own once the colour is configurable. The
+	wordmark is ink, so it reads in both themes without a second cut.
+
 	Dark mode (#90). Only the **lockup** has a second cut, and only because its
 	wordmark is drawn in flat ink (`#0F1720`): on the `--surface-0` of the dark
 	theme that word all but disappears. `unitati-lockup-inverse.svg` is the same
@@ -65,9 +94,19 @@
 	the visible-in-light copy; the inverse is `aria-hidden` so a screen reader
 	announces the brand once, not twice, whichever one is painted.
 -->
-{#if variant === 'mark'}
-	<img src={mark} alt={m.app_name()} class={classes} />
+{#if brand.customised}
+	{#if variant === 'mark'}
+		<span role="img" aria-label={brand.productName} class={monogram({ size, class: className })}>
+			{monogramLetter(brand.productName)}
+		</span>
+	{:else}
+		<span role="img" aria-label={brand.productName} class={wordmark({ size, class: className })}>
+			{brand.productName}
+		</span>
+	{/if}
+{:else if variant === 'mark'}
+	<img src={mark} alt={brand.productName} class={classes} />
 {:else}
-	<img src={lockup} alt={m.app_name()} class="{classes} dark:hidden" />
+	<img src={lockup} alt={brand.productName} class="{classes} dark:hidden" />
 	<img src={lockupInverse} alt="" aria-hidden="true" class="{classes} hidden dark:block" />
 {/if}

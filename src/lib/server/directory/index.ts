@@ -6,6 +6,8 @@ import { departments, locations, organisations, people, teams } from './schema';
 
 export { organisations, people, departments, locations, teams } from './schema';
 export type { Organisation, Person, Department, Location, Team } from './schema';
+export { getBrand, resetBrandCache, updateBranding } from './branding';
+export type { UpdateBrandingFailure } from './branding';
 
 /**
  * Resolves a signed-in credential into the person it belongs to, which is what

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import Plus from '@lucide/svelte/icons/plus';
 	import Search from '@lucide/svelte/icons/search';
 	import { goto } from '$app/navigation';
@@ -122,7 +123,7 @@
 {/snippet}
 
 <svelte:head>
-	<title>{m.tickets_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.tickets_title())}</title>
 </svelte:head>
 
 <PageLayout variant="index">

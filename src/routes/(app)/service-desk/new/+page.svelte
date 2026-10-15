@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import { enhance } from '$app/forms';
 	import Alert from '#lib/components/unitati/Alert.svelte';
 	import AssetPicker from '#lib/components/unitati/AssetPicker.svelte';
@@ -30,7 +31,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.ticket_new_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.ticket_new_title())}</title>
 </svelte:head>
 
 <PageLayout variant="form">

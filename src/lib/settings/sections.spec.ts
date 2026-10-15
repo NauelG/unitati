@@ -47,6 +47,18 @@ describe('visibleSections', () => {
 		expect(visibleSections(employee)).toEqual([]);
 	});
 
+	it('shows the branding section before API keys, to whoever may manage the organisation', () => {
+		const administrator = ['organisation.manage', 'api.keys.manage'];
+
+		expect(visibleSections(administrator).map((section) => section.href)).toEqual([
+			'/settings/platform/branding',
+			'/settings/api-keys'
+		]);
+		expect(
+			visibleSections(['api.keys.manage']).some((s) => s.href === '/settings/platform/branding')
+		).toBe(false);
+	});
+
 	it('registers the asset and service-desk catalogues under their module, for the permission their routes always enforced', () => {
 		const assetsManager = visibleSections(['assets.manage']).map((section) => section.href);
 		const deskManager = visibleSections(['tickets.manage']).map((section) => section.href);

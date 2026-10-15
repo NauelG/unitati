@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import { m } from '#lib/paraglide/messages.js';
@@ -11,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.settings_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.settings_title())}</title>
 </svelte:head>
 
 <PageLayout variant="index">

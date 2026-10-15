@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import Archive from '@lucide/svelte/icons/archive';
 	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
 	import FolderKanban from '@lucide/svelte/icons/folder-kanban';
@@ -139,7 +140,7 @@
 {/snippet}
 
 <svelte:head>
-	<title>{m.projects_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.projects_title())}</title>
 </svelte:head>
 
 <PageLayout variant="index">

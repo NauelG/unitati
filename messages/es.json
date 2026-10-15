@@ -1,7 +1,6 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 
-	"app_name": "Unitati",
 	"app_tagline": "Proyectos, soporte e inventario sobre un único modelo de datos.",
 
 	"nav_overview": "Inicio",
@@ -79,7 +78,7 @@
 	"env_staging": "Preproducción",
 	"env_notice": "Entorno no productivo",
 
-	"login_title": "Entra en Unitati",
+	"login_title": "Entra en {name}",
 	"login_lede": "Proyectos, soporte e inventario sobre un único modelo de datos.",
 	"login_email_label": "Correo electrónico",
 	"login_email_placeholder": "nombre@empresa.com",
@@ -90,7 +89,7 @@
 	"login_unexpected": "No se ha podido entrar. Inténtalo de nuevo.",
 
 	"setup_title": "Crea la cuenta de administración",
-	"setup_lede": "Aún no hay nadie en esta instalación. La primera cuenta administra Unitati.",
+	"setup_lede": "Aún no hay nadie en esta instalación. La primera cuenta administra {name}.",
 	"setup_name_label": "Nombre",
 	"setup_name_placeholder": "Nombre y apellidos",
 	"setup_submit": "Crear cuenta y entrar",
@@ -297,7 +296,7 @@
 	"overview_pending": "Los paneles llegan con el inventario y el soporte.",
 
 	"overview_checklist_title": "Primeros pasos",
-	"overview_checklist_lede": "Completa estos pasos para tener Unitati listo para el día a día.",
+	"overview_checklist_lede": "Completa estos pasos para tener {name} listo para el día a día.",
 	"overview_checklist_remaining_title": "Pasos pendientes",
 	"overview_checklist_progress": "{done} de {total} completados",
 	"overview_checklist_register_asset_title": "Registra un activo",
@@ -673,9 +672,17 @@
 	"tasks_empty_search_title": "Sin resultados",
 	"field_remove_item": "Quitar {item} de {label}",
 	"settings_module_platform": "Plataforma",
+	"settings_section_branding": "Marca",
+	"branding_title": "Marca",
+	"branding_lede": "Cómo se llama esta instalación para quien la usa.",
+	"branding_product_name": "Nombre del producto",
+	"branding_product_name_hint": "Aparece en el título de la pestaña, en el acceso y en lugar del logo si no subes uno.",
+	"branding_product_name_error": "Escribe un nombre de entre 1 y 40 caracteres, sin caracteres de control.",
+	"branding_save": "Guardar",
+	"branding_saved": "Marca guardada.",
 	"settings_section_api_keys": "Claves de API",
 	"api_keys_title": "Claves de API",
-	"api_keys_lede": "Credenciales para que otras herramientas hablen con Unitati. Cada clave actúa como tú, limitada a los permisos que le des.",
+	"api_keys_lede": "Credenciales para que otras herramientas hablen con {name}. Cada clave actúa como tú, limitada a los permisos que le des.",
 	"api_keys_create": "Nueva clave",
 	"api_keys_name": "Nombre",
 	"api_keys_key": "Clave",

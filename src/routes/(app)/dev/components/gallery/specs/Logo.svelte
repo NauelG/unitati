@@ -1,6 +1,8 @@
 <script lang="ts">
 	import ComponentDocPage from '../ComponentDocPage.svelte';
 	import Logo from '#lib/components/unitati/Logo.svelte';
+
+	const brand = { productName: 'Acme Desk', customised: true };
 </script>
 
 <ComponentDocPage
@@ -25,10 +27,18 @@
 			name: 'size',
 			type: "'sm' | 'md' | 'lg'",
 			description: 'Controla la altura; el ancho sigue la proporción del arte.'
+		},
+		{
+			name: 'brand',
+			type: '{ productName: string; customised: boolean }',
+			default: 'la marca de la página',
+			description:
+				'Con customised, el arte de Unitati nunca aparece: el lockup pasa a ser el nombre en texto y el mark, una inicial sobre el color de marca.'
 		}
 	]}
 	usage={`<Logo variant="lockup" size="sm" />
-<Logo variant="mark" size="sm" />`}
+<Logo variant="mark" size="sm" />
+<Logo brand={{ productName: 'Acme Desk', customised: true }} />`}
 	referenceHref="https://github.com/NauelG/unitati/blob/main/docs/design/design-system.html"
 	referenceLabel="Design system — marca"
 >
@@ -47,6 +57,19 @@
 				<Logo variant="mark" size="sm" />
 				<Logo variant="mark" size="md" />
 				<Logo variant="mark" size="lg" />
+			</div>
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Personalizada, sin logos subidos
+			</p>
+			<div class="flex flex-wrap items-center gap-[var(--space-5)]">
+				<Logo variant="lockup" size="sm" {brand} />
+				<Logo variant="lockup" size="md" {brand} />
+				<Logo variant="lockup" size="lg" {brand} />
+				<Logo variant="mark" size="sm" {brand} />
+				<Logo variant="mark" size="md" {brand} />
+				<Logo variant="mark" size="lg" {brand} />
 			</div>
 		</div>
 	{/snippet}

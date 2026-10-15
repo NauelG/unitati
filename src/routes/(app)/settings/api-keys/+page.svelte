@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle, productName } from '#lib/brand.svelte.js';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import Alert from '#lib/components/unitati/Alert.svelte';
@@ -125,12 +126,12 @@
 </script>
 
 <svelte:head>
-	<title>{m.api_keys_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.api_keys_title())}</title>
 </svelte:head>
 
 <PageLayout variant="index">
 	<PageHeader title={m.api_keys_title()}>
-		{#snippet summary()}{m.api_keys_lede()}{/snippet}
+		{#snippet summary()}{m.api_keys_lede({ name: productName() })}{/snippet}
 		{#snippet actions()}
 			<Button variant="ghost" href="/settings/api-keys/docs">{m.api_keys_docs_link()}</Button>
 			<Button onclick={() => openCreate()}>{m.api_keys_create()}</Button>

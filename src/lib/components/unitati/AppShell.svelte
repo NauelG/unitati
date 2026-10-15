@@ -73,6 +73,7 @@
 </script>
 
 <script lang="ts">
+	import { productName } from '#lib/brand.svelte.js';
 	import { onMount, tick, type Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { browser } from '$app/env';
@@ -520,7 +521,7 @@
 		-->
 		<nav class={appShell().sidebar()} aria-label={m.nav_main()} data-sveltekit-preload-data="hover">
 			<div class={appShell({ rail: collapsed }).brandbar()}>
-				<a href="/" class="rounded-[var(--radius-sm)]" aria-label={m.app_name()}>
+				<a href="/" class="rounded-[var(--radius-sm)]" aria-label={productName()}>
 					<Logo variant={collapsed ? 'mark' : 'lockup'} size="sm" />
 				</a>
 				<button
@@ -561,7 +562,7 @@
 				<MenuIcon class="size-5" aria-hidden="true" />
 			</button>
 
-			<a href="/" class="rounded-[var(--radius-sm)] md:hidden" aria-label={m.app_name()}>
+			<a href="/" class="rounded-[var(--radius-sm)] md:hidden" aria-label={productName()}>
 				<Logo variant="mark" size="sm" />
 			</a>
 

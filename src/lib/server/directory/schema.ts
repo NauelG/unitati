@@ -1,7 +1,18 @@
-import { relations } from 'drizzle-orm';
-import { boolean, index, pgTable, primaryKey, text, unique, uuid } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
+import {
+	boolean,
+	check,
+	index,
+	pgTable,
+	primaryKey,
+	text,
+	unique,
+	uuid
+} from 'drizzle-orm/pg-core';
 import { timestamps } from '../shared/columns';
 import { users } from '../auth/schema';
+
+const PRODUCT_NAME_BACKSTOP = 400;
 
 /**
  * The directory: who exists, where they sit, and which of them can sign in.
@@ -18,6 +29,32 @@ export const organisations = pgTable('organisations', {
 	slug: text('slug').notNull().unique(),
 	...timestamps
 });
+
+/**
+ * The organisation's brand (ADR 0026), 1:1 with `organisations`. No row means the
+ * default brand: it is created on first save, never on setup.
+ *
+ * The `CHECK` counts code points with `char_length`, so it is only a backstop;
+ * the 40-grapheme rule (what a person counts as a character) lives in the domain.
+ * One grapheme can be many code points (a ZWJ emoji is five), so the bound is
+ * deliberately loose: it must never refuse a name the domain accepted.
+ */
+export const organisationBranding = pgTable(
+	'organisation_branding',
+	{
+		organisationId: uuid('organisation_id')
+			.primaryKey()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		productName: text('product_name').notNull(),
+		...timestamps
+	},
+	(table) => [
+		check(
+			'organisation_branding_product_name_length',
+			sql`char_length(btrim(${table.productName})) between 1 and ${sql.raw(String(PRODUCT_NAME_BACKSTOP))}`
+		)
+	]
+);
 
 export const departments = pgTable(
 	'departments',
@@ -122,6 +159,8 @@ export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
 }));
 
 export type Organisation = typeof organisations.$inferSelect;
+export type OrganisationBranding = typeof organisationBranding.$inferSelect;
+export type NewOrganisationBranding = typeof organisationBranding.$inferInsert;
 export type Person = typeof people.$inferSelect;
 export type Department = typeof departments.$inferSelect;
 export type Location = typeof locations.$inferSelect;

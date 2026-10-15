@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle, productName } from '#lib/brand.svelte.js';
 	import { untrack } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import AppVersion from '#lib/components/AppVersion.svelte';
@@ -18,7 +19,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.setup_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.setup_title())}</title>
 </svelte:head>
 
 <div class="grid min-h-screen bg-[var(--surface-0)] lg:grid-cols-2">
@@ -35,7 +36,9 @@
 				<h1 class="mt-[var(--space-5)] font-display text-xl font-semibold text-[var(--ink)]">
 					{m.setup_title()}
 				</h1>
-				<p class="mt-[var(--space-1)] text-sm text-[var(--ink-muted)]">{m.setup_lede()}</p>
+				<p class="mt-[var(--space-1)] text-sm text-[var(--ink-muted)]">
+					{m.setup_lede({ name: productName() })}
+				</p>
 
 				<form method="POST" use:enhance class="mt-[var(--space-6)] space-y-[var(--space-4)]">
 					<Field

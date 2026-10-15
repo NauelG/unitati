@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import ArrowRightLeft from '@lucide/svelte/icons/arrow-right-left';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import Search from '@lucide/svelte/icons/search';
@@ -150,7 +151,7 @@
 {/snippet}
 
 <svelte:head>
-	<title>{m.tasks_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.tasks_title())}</title>
 </svelte:head>
 
 <PageLayout variant="index">

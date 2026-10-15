@@ -14,6 +14,7 @@ import { load as loadModels } from './assets/models/+page.server';
 import { load as loadCategories } from './assets/categories/+page.server';
 import { load as loadManufacturers } from './assets/manufacturers/+page.server';
 import { load as loadQueues } from './service-desk/queues/+page.server';
+import { load as loadBranding, actions as brandingActions } from './platform/branding/+page.server';
 
 /**
  * The Settings screens' server seam: who gets in, what the catalogue screen is
@@ -82,6 +83,38 @@ describe('the moved catalogues (#126)', () => {
 		for (const load of [loadModels, loadCategories, loadManufacturers, loadQueues]) {
 			expect(await statusOf(() => load(event(technician)))).toBeUndefined();
 		}
+	});
+});
+
+describe('/settings/platform/branding', () => {
+	it('answers 403 to a technician, for the load and for the action', async () => {
+		const { technician } = await createWorkspace();
+
+		expect(await statusOf(() => loadBranding(event(technician)))).toBe(403);
+		expect(
+			await statusOf(() => brandingActions.save(event(technician, { productName: 'Acme Desk' })))
+		).toBe(403);
+	});
+
+	it('lets an administrator open it and rename the product', async () => {
+		const { admin } = await createWorkspace();
+
+		expect(await statusOf(() => loadBranding(event(admin)))).toBeUndefined();
+		const saved = await brandingActions.save(event(admin, { productName: 'Acme Desk' }));
+
+		expect(saved).toEqual({ saved: true, productName: 'Acme Desk' });
+	});
+
+	it('refuses an invalid name with the typed text echoed back', async () => {
+		const { admin } = await createWorkspace();
+
+		const refused = (await brandingActions.save(event(admin, { productName: '   ' }))) as {
+			status: number;
+			data: { productName: string; error: string };
+		};
+
+		expect(refused.status).toBe(400);
+		expect(refused.data.productName).toBe('   ');
 	});
 });
 

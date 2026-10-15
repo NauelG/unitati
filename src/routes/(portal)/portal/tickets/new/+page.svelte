@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import { enhance } from '$app/forms';
 	import AssetPicker from '#lib/components/unitati/AssetPicker.svelte';
 	import type { PickedAsset } from '#lib/components/unitati/asset-choice.js';
@@ -19,7 +20,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.portal_new_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.portal_new_title())}</title>
 </svelte:head>
 
 <PageLayout variant="form">
