@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, exists, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Priority, TicketStatus } from '#lib/domain/status.js';
-import { recordActivity } from '../activity';
+import { actorColumns, recordActivity } from '../activity';
 import { linkAsset } from '../links';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
@@ -395,7 +395,7 @@ export async function createTicket(
 
 			await recordActivity(tx, {
 				organisationId: actor.organisationId,
-				actorPersonId: actor.personId,
+				...actorColumns(actor),
 				target: { ticketId: ticket.id },
 				verb: 'ticket.created',
 				payload: {
@@ -477,7 +477,7 @@ export async function changeTicketStatus(
 
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { ticketId: ticket.id },
 			verb: 'ticket.status.changed',
 			payload: { from: ticket.status, to }
@@ -518,7 +518,7 @@ export async function setTicketPriority(
 
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { ticketId: ticket.id },
 			verb: 'ticket.priority.changed',
 			payload: { from: ticket.priority, to }
@@ -558,7 +558,7 @@ export async function assignTicket(
 
 		const base = {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { ticketId: ticket.id }
 		};
 
@@ -610,7 +610,7 @@ export async function moveTicketToQueue(
 
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
-			actorPersonId: actor.personId,
+			...actorColumns(actor),
 			target: { ticketId: ticket.id },
 			verb: 'ticket.queue.changed',
 			payload: {
