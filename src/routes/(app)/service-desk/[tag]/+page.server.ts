@@ -224,10 +224,11 @@ export const actions: Actions = {
 	linkAssets: async ({ locals, request, params }) => {
 		const user = requirePermission(locals.user, 'tickets.manage');
 		const ids = (await request.formData()).getAll('ids').filter((id) => typeof id === 'string');
-		if (ids.length === 0) return rejected('linkAssets', m.related_link_nothing_selected());
 
 		const found = await getTicketByTag(user, params.tag);
 		if (!found.ok) error(404, 'Not found');
+
+		if (ids.length === 0) return rejected('linkAssets', m.related_link_nothing_selected());
 
 		const parsed = z.array(z.uuid()).safeParse(ids);
 		if (!parsed.success) return rejected('linkAssets', m.related_link_asset_unavailable());
