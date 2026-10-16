@@ -217,13 +217,14 @@ describe('resetBranding', () => {
 		await updateBranding(admin, { productName: 'Acme Desk', brandColor: '#c81e1e' });
 		await setBrandAsset(admin, 'lockup', await png());
 		await setBrandAsset(admin, 'mark', await png());
+		expect((await getBrand(acme.id)).customised).toBe(true);
 
 		const outcome = await resetBranding(admin);
 
 		expect(outcome).toEqual({ ok: true, value: DEFAULT_BRAND });
 		expect(await getDb().select().from(organisationBranding)).toEqual([]);
 		expect(await slotsOf(acme.id)).toEqual([]);
-		resetBrandCache();
+		// No cache reset here: `resetBranding` itself must drop the cached customised view.
 		expect(await getBrand(acme.id)).toEqual(DEFAULT_BRAND);
 	});
 

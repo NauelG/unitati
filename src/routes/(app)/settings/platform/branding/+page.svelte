@@ -148,9 +148,6 @@
 			<h2 id="branding-danger" class="text-sm font-semibold text-[var(--danger)]">
 				{m.branding_restore_zone()}
 			</h2>
-			<p class="mt-[var(--space-1)] text-sm text-[var(--ink-muted)]">
-				{m.branding_restore_body()}
-			</p>
 			<Button
 				class="mt-[var(--space-3)]"
 				type="button"
