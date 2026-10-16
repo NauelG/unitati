@@ -5,8 +5,8 @@ import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { uniqueConstraintName } from '../db/errors';
-import { locationPaths } from '../directory/locations';
-import { locations, people } from '../directory/schema';
+import { locationPaths } from '../directory';
+import { people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
 import { assetModels, assets, categories, manufacturers } from './schema';
@@ -494,12 +494,10 @@ async function foreignReference(
 	}
 
 	if (refs.locationId) {
-		const [location] = await getDb()
-			.select({ id: locations.id })
-			.from(locations)
-			.where(and(eq(locations.id, refs.locationId), eq(locations.organisationId, organisationId)))
-			.limit(1);
-		if (!location) return 'location_not_found';
+		// Through `directory`'s own function, not its table: an id from another
+		// organisation has no path here, which is the same as not existing.
+		const paths = await locationPaths(organisationId, [refs.locationId]);
+		if (!paths.has(refs.locationId)) return 'location_not_found';
 	}
 
 	return null;

@@ -58,7 +58,16 @@ describe('applyPlan, locations', () => {
 			['Warehouse', 'WH']
 		]);
 		expect(listed[0]).toMatchObject({ latitude: 41.3874, longitude: 2.1686 });
+		expect(listed.find((entry) => entry.path === 'Girona office')).toMatchObject({
+			latitude: 41.9794,
+			longitude: 2.8214
+		});
 		expect(listed.find((entry) => entry.path === 'Warehouse')?.latitude).toBeNull();
+		expect(listed.find((entry) => entry.path === 'Remote')).toMatchObject({
+			code: null,
+			latitude: null,
+			longitude: null
+		});
 
 		const used = new Set(plan.assets.map((asset) => asset.location));
 		expect(used.has('Barcelona office')).toBe(true);
