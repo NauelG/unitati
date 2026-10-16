@@ -5,6 +5,19 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.45.0] - 2026-10-16
+
+### Added
+
+- A technician can link assets to a ticket that is already open (#79): a _Vincular_ action in the
+  ticket's related-records panel (and _Vincular activo_ in the command palette) opens a dialog with
+  a multi-select asset search. Several assets link in one submit, all or nothing; assets already
+  linked are shown but cannot be picked; a refusal names the offending asset and keeps the
+  selection. Works for every ticket status. Employees and the portal see no link control, and a
+  hand-posted `?/linkAssets` gets 403. The domain core, `linkTicketAssets`, is idempotent per pair
+  and will serve the asset record too (#168). `createTicket` and `POST /tickets/{tag}/assets` are
+  unchanged.
+
 ## [0.44.0] - 2026-10-16
 
 ### Added
