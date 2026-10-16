@@ -1,0 +1,2 @@
+ALTER TABLE "organisation_branding" ADD COLUMN "brand_color" text;--> statement-breakpoint
+ALTER TABLE "organisation_branding" ADD CONSTRAINT "organisation_branding_brand_color_hex" CHECK ("organisation_branding"."brand_color" ~ '^#[0-9a-f]{6}$');

@@ -46,9 +46,12 @@ export const organisationBranding = pgTable(
 			.primaryKey()
 			.references(() => organisations.id, { onDelete: 'cascade' }),
 		productName: text('product_name').notNull(),
+		/** Lowercase `#rrggbb`; `NULL` keeps Unitati's own tokens (#160). */
+		brandColor: text('brand_color'),
 		...timestamps
 	},
 	(table) => [
+		check('organisation_branding_brand_color_hex', sql`${table.brandColor} ~ '^#[0-9a-f]{6}$'`),
 		check(
 			'organisation_branding_product_name_length',
 			sql`char_length(btrim(${table.productName})) between 1 and ${sql.raw(String(PRODUCT_NAME_BACKSTOP))}`

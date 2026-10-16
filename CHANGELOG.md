@@ -5,6 +5,19 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.47.0] - 2026-10-16
+
+### Added
+
+- Per-organisation branding, third slice (#160, slice 3 of #157, ADR 0026): an administrator picks
+  one brand colour at `/settings/platform/branding`. Unitati derives the rest of the brand family
+  for light and dark in OKLCH, moving lightness until brand-coloured text reaches WCAG AA (4.5:1)
+  on both the surface and the soft tint, and says so when it had to adjust the colour. The server
+  injects the result as an inline `<style id="ut-brand">`, so the first paint is already branded,
+  and the editor previews the light and dark derivations live before saving. The primary button
+  (`--action`), domain colours and states are never repainted. _Usar el color de Unitati_ clears
+  the colour and brings the original blue back.
+
 ## [0.46.0] - 2026-10-16
 
 ### Added

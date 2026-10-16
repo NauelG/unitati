@@ -1,5 +1,6 @@
 import { asc, eq } from 'drizzle-orm';
 import { z } from 'zod';
+import { brandCss, deriveBrand, parseHex, type Hex } from '#lib/domain/brand-color.js';
 import {
 	DEFAULT_BRAND,
 	DEFAULT_PRODUCT_NAME,
@@ -50,13 +51,25 @@ async function installationOrganisation(): Promise<string | null> {
 	return installationOrganisationId;
 }
 
-/** Customised means the brand differs from Unitati's default. #160 and #161 extend it. */
-function isCustomised(row: { productName: string }): boolean {
-	return row.productName !== DEFAULT_PRODUCT_NAME;
+interface BrandingRow {
+	productName: string;
+	brandColor: string | null;
 }
 
-function viewOf(row: { productName: string }): BrandView {
-	return { productName: row.productName, customised: isCustomised(row) };
+/** Customised means the brand differs from Unitati's default. #161 extends it. */
+function isCustomised(row: BrandingRow): boolean {
+	return row.productName !== DEFAULT_PRODUCT_NAME || row.brandColor !== null;
+}
+
+/** The stylesheet is derived here, once, and cached with the view: never per request. */
+function viewOf(row: BrandingRow): BrandView {
+	const brandColor = row.brandColor as Hex | null;
+	return {
+		productName: row.productName,
+		customised: isCustomised(row),
+		brandColor,
+		css: brandColor ? brandCss(deriveBrand(brandColor)) : null
+	};
 }
 
 /**
@@ -72,7 +85,10 @@ export async function getBrand(organisationId: string | null): Promise<BrandView
 	if (cached) return cached;
 
 	const [row] = await getDb()
-		.select({ productName: organisationBranding.productName })
+		.select({
+			productName: organisationBranding.productName,
+			brandColor: organisationBranding.brandColor
+		})
 		.from(organisationBranding)
 		.where(eq(organisationBranding.organisationId, id))
 		.limit(1);
@@ -90,29 +106,47 @@ const productName = z
 
 const brandingInput = z.object({ productName });
 
-export type UpdateBrandingFailure = 'forbidden' | 'invalid-product-name';
+export type UpdateBrandingFailure = 'forbidden' | 'invalid-product-name' | 'invalid-brand-color';
 
 /**
- * Saves the brand. Takes an object so a later field (the colour, #160) is a new
- * optional key rather than a second function.
+ * Saves the brand. Takes an object so each new field is an optional key rather
+ * than another function. `brandColor`: a hex sets it, `null` clears it, and
+ * leaving it out keeps what is stored.
  */
 export async function updateBranding(
 	user: SessionUser,
-	input: { productName: string }
+	input: { productName: string; brandColor?: string | null }
 ): Promise<Outcome<BrandView, UpdateBrandingFailure>> {
 	if (!can(user, 'organisation.manage')) return failure('forbidden');
 
-	const parsed = brandingInput.safeParse(input);
+	const parsed = brandingInput.safeParse({ productName: input.productName });
 	if (!parsed.success) return failure('invalid-product-name');
 
+	let brandColor: Hex | null | undefined;
+	if (input.brandColor === undefined || input.brandColor === null) {
+		brandColor = input.brandColor;
+	} else {
+		const hex = parseHex(input.brandColor);
+		if (!hex) return failure('invalid-brand-color');
+		brandColor = hex;
+	}
+
+	const colour = brandColor === undefined ? {} : { brandColor };
 	const [row] = await getDb()
 		.insert(organisationBranding)
-		.values({ organisationId: user.organisationId, productName: parsed.data.productName })
+		.values({
+			organisationId: user.organisationId,
+			productName: parsed.data.productName,
+			...colour
+		})
 		.onConflictDoUpdate({
 			target: organisationBranding.organisationId,
-			set: { productName: parsed.data.productName, updatedAt: new Date() }
+			set: { productName: parsed.data.productName, ...colour, updatedAt: new Date() }
 		})
-		.returning({ productName: organisationBranding.productName });
+		.returning({
+			productName: organisationBranding.productName,
+			brandColor: organisationBranding.brandColor
+		});
 
 	const view = viewOf(row);
 	brands.delete(user.organisationId);
