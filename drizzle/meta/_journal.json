@@ -71,6 +71,13 @@
       "when": 1792066111447,
       "tag": "0009_organisation_branding",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792151297434,
+      "tag": "0010_organisation_brand_color",
+      "breakpoints": true
     }
   ]
 }

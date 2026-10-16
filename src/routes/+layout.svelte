@@ -8,7 +8,7 @@
 	import { prefersReducedMotion, registerViewTransitionSettle } from '#lib/motion.js';
 	import type { LayoutProps } from './$types';
 
-	let { children }: LayoutProps = $props();
+	let { children, data }: LayoutProps = $props();
 
 	/**
 	 * View Transitions (#87): must live in the root layout — `onNavigate` only
@@ -34,6 +34,16 @@
 <svelte:head>
 	<link rel="icon" type="image/svg+xml" href={favicon} />
 	<link rel="apple-touch-icon" href={appleTouchIcon} />
+	<!--
+		The brand colour (#160), injected on the server so the first paint is already
+		branded. `{@html}` is acceptable only because `brandCss` (#lib/domain/brand-color)
+		builds the sheet exclusively from validated `Hex` values: it holds no user text
+		and cannot carry markup. Never feed anything else through here.
+	-->
+	{#if data.brand.css}
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -- validated hex only, see the comment above -->
+		{@html `<style id="ut-brand">${data.brand.css}</style>`}
+	{/if}
 </svelte:head>
 
 <!--

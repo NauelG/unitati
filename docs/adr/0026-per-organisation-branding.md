@@ -30,7 +30,12 @@ product name.
    art never shows. Without uploaded assets a text wordmark replaces the lockup and a monogram
    replaces the mark, as HTML rather than generated images.
 6. **One colour, derived.** The administrator picks a single hex; the rest of the family is derived
-   in OKLCH so text contrast holds in both themes. The primary action stays ink.
+   in OKLCH so text contrast holds in both themes. The primary action stays ink. Lightness moves in
+   0.01 steps until the colour reaches 4.5:1 against both the surface and its own soft tint (the
+   named constants live in `src/lib/domain/brand-color.ts`); out-of-gamut colours lose chroma, never
+   hue. The server injects the result as an inline `<style id="ut-brand">` built only from
+   validated hex values, so `{@html}` carries no user text. `NULL` injects nothing and leaves
+   `app.css` untouched.
 7. **Assets live in the database** (`bytea`), processed before storage, and only the processed result
    is kept. They reference `organisation_branding` with `ON DELETE CASCADE`.
 8. **"Powered by Unitati" cannot be removed:** no setting, env var or prop. It shows only when the

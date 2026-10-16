@@ -17,12 +17,20 @@ export const actions: Actions = {
 		const user = requireSettingsSection(locals.user, SECTION);
 		const data = await request.formData();
 		const productName = String(data.get('productName') ?? '');
+		// An empty colour field is "use Unitati's": the action maps it to `null`.
+		const rawColor = String(data.get('brandColor') ?? '').trim();
 
-		const outcome = await updateBranding(user, { productName });
+		const outcome = await updateBranding(user, {
+			productName,
+			brandColor: rawColor === '' ? null : rawColor
+		});
 		if (!outcome.ok) {
+			const colourRefused = outcome.error === 'invalid-brand-color';
 			return fail(outcome.error === 'forbidden' ? 403 : 400, {
 				productName,
-				error: m.branding_product_name_error()
+				brandColor: rawColor,
+				error: colourRefused ? null : m.branding_product_name_error(),
+				colorError: colourRefused ? m.branding_color_error() : null
 			});
 		}
 
