@@ -10,6 +10,7 @@ export {
 	getBrand,
 	getBrandAsset,
 	removeBrandAsset,
+	resetBranding,
 	resetBrandCache,
 	setBrandAsset,
 	updateBranding
