@@ -65,6 +65,8 @@ const TAG_BY_PREFIX: Record<string, string> = {
 	tickets: 'Service desk',
 	queues: 'Service desk',
 	assets: 'Assets',
+	tasks: 'Projects',
+	projects: 'Projects',
 	people: 'Directory'
 };
 
@@ -76,8 +78,11 @@ export function tagOf(useCaseId: string): string {
 const ERROR_DESCRIPTIONS = {
 	'400': 'The request is not valid. `error.issues` names each field that failed.',
 	'401': 'The API key is missing, malformed, expired or revoked.',
+	'403': 'The key may see the record but may not create the records the request asks for.',
 	'404': 'There is no such resource, or the key may not know about it.',
 	'409': 'The request conflicts with the current state, for example an illegal transition.',
+	'422':
+		'The request is well formed, but the domain refuses the values, for example an empty title.',
 	'429': 'Too many requests. Wait `Retry-After` seconds.'
 } as const;
 
@@ -155,8 +160,18 @@ function operationOf(endpoint: Endpoint, schemas: Record<string, JsonSchema>): O
 	const input = convert(endpoint.input, 'input');
 	Object.assign(schemas, input.defs);
 
-	const properties = (input.schema.properties ?? {}) as Record<string, JsonSchema>;
-	const required = new Set((input.schema.required ?? []) as string[]);
+	// A body that is a union (an escalation names its target by a discriminator) has
+	// no `properties` of its own: the alternatives carry them, each with the path
+	// parameters alongside.
+	const variants = (input.schema.oneOf ?? input.schema.anyOf) as JsonSchema[] | undefined;
+	const properties = (
+		variants
+			? Object.assign({}, ...variants.map((variant) => variant.properties ?? {}))
+			: (input.schema.properties ?? {})
+	) as Record<string, JsonSchema>;
+	const required = new Set(
+		(variants ? [] : ((input.schema.required ?? []) as string[])) as string[]
+	);
 	const pathNames = pathParameterNames(endpoint.path);
 	const carriesBody = endpoint.method === 'POST' || endpoint.method === 'PATCH';
 
@@ -186,8 +201,33 @@ function operationOf(endpoint: Endpoint, schemas: Record<string, JsonSchema>): O
 		Object.entries(properties).filter(([name]) => !pathNames.includes(name))
 	);
 	const bodyRequired = [...required].filter((name) => !pathNames.includes(name));
-	const body: OpenApiOperation['requestBody'] =
-		carriesBody && Object.keys(bodyProperties).length > 0
+	const withoutPath = (variant: JsonSchema): JsonSchema => ({
+		...variant,
+		properties: Object.fromEntries(
+			Object.entries((variant.properties ?? {}) as Record<string, JsonSchema>).filter(
+				([name]) => !pathNames.includes(name)
+			)
+		),
+		required: ((variant.required ?? []) as string[]).filter((name) => !pathNames.includes(name))
+	});
+	const body: OpenApiOperation['requestBody'] = variants
+		? carriesBody
+			? {
+					required: true,
+					content: {
+						'application/json': {
+							schema: {
+								...(input.schema.discriminator
+									? { discriminator: input.schema.discriminator }
+									: {}),
+								oneOf: variants.map(withoutPath)
+							},
+							...(endpoint.example === undefined ? {} : { example: endpoint.example })
+						}
+					}
+				}
+			: undefined
+		: carriesBody && Object.keys(bodyProperties).length > 0
 			? {
 					required: bodyRequired.length > 0,
 					content: {
@@ -229,6 +269,9 @@ function operationOf(endpoint: Endpoint, schemas: Record<string, JsonSchema>): O
 	responses['401'] = errorResponse('401');
 	responses['404'] = errorResponse('404');
 	if (endpoint.method !== 'GET') responses['409'] = errorResponse('409');
+	for (const status of endpoint.refusals ?? []) {
+		responses[String(status)] = errorResponse(String(status) as '403' | '422');
+	}
 	responses['429'] = errorResponse('429');
 
 	return {

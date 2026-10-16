@@ -56,7 +56,7 @@ describe('escalateTicket', () => {
 			links: (await getDb().select().from(ticketTask)).length,
 			verbs: await verbsOn(organisation.id, { ticketId: ticket.id })
 		}).toEqual({
-			outcome: { ok: true, value: { kind: 'task', id: task.id, tag: 'TSK-0001' } },
+			outcome: { ok: true, value: { kind: 'task', id: task.id, tag: 'TSK-0001', created: true } },
 			links: 1,
 			verbs: ['link.task.added']
 		});
@@ -75,7 +75,10 @@ describe('escalateTicket', () => {
 			links: (await getDb().select().from(ticketProject)).length,
 			verbs: await verbsOn(organisation.id, { ticketId: ticket.id })
 		}).toEqual({
-			outcome: { ok: true, value: { kind: 'project', id: project.id, tag: 'PRJ-0001' } },
+			outcome: {
+				ok: true,
+				value: { kind: 'project', id: project.id, tag: 'PRJ-0001', created: true }
+			},
 			links: 1,
 			verbs: ['link.project.added']
 		});

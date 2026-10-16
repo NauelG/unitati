@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ENDPOINTS } from './index';
 
@@ -19,6 +20,12 @@ describe('the endpoint registry', () => {
 				'tickets.queue',
 				'tickets.assets.link',
 				'tickets.assets.unlink',
+				'tickets.escalate',
+				'tickets.work.list',
+				'tickets.task.unlink',
+				'tickets.project.unlink',
+				'tasks.tickets.list',
+				'projects.tickets.list',
 				'queues.list'
 			])
 		);
@@ -36,5 +43,17 @@ describe('the endpoint registry', () => {
 
 	it('never serves a PATCH on tickets: every change to a ticket is a rule', () => {
 		expect(ENDPOINTS.filter((endpoint) => endpoint.method === 'PATCH')).toEqual([]);
+	});
+
+	it('keeps the endpoints an adapter: none imports a table or the database (ADR 0022)', () => {
+		const directory = new URL('.', import.meta.url);
+		const files = readdirSync(directory).filter(
+			(file) => file.endsWith('.ts') && !file.endsWith('.spec.ts')
+		);
+
+		for (const file of files) {
+			const source = readFileSync(new URL(file, directory), 'utf8');
+			expect(source, file).not.toMatch(/getDb|from 'drizzle-orm|from '[./]+\/db'|\/schema'/);
+		}
 	});
 });

@@ -15,6 +15,15 @@ export function refusal(failure: string): ApiError {
 			{ path: ['requesterPersonId'], message: 'The requester is required.' }
 		]);
 	}
+	// Creating is a capability of its own, held on top of the ticket's: the caller
+	// knows the record exists, so this is a refusal and not a missing page.
+	if (failure === 'forbidden_create') {
+		return new ApiError(403, 'forbidden_create', 'The key may not create this record.');
+	}
+	// The domain parsed the values and found them unusable (an empty title).
+	if (failure === 'invalid_input') {
+		return new ApiError(422, 'invalid_input', 'The values are not valid.');
+	}
 	if (
 		failure.endsWith('_not_found') ||
 		failure === 'forbidden' ||

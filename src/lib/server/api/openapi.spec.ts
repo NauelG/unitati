@@ -86,7 +86,7 @@ describe('the OpenAPI document built from the real registry', () => {
 		);
 		expect(byId['tickets.list'].tags).toEqual(['Service desk']);
 		expect(byId['queues.list'].tags).toEqual(['Service desk']);
-		expect(document.tags).toEqual([{ name: 'Service desk' }]);
+		expect(document.tags).toEqual([{ name: 'Service desk' }, { name: 'Projects' }]);
 	});
 
 	it('takes path parameters, query and body from the input schema', () => {
@@ -104,6 +104,20 @@ describe('the OpenAPI document built from the real registry', () => {
 		expect(comment.requestBody?.content['application/json'].schema).toMatchObject({
 			required: ['body']
 		});
+	});
+
+	it('documents the escalation body as a union on its target, without the path parameter', () => {
+		const escalate = document.paths['/tickets/{tag}/escalations'].post;
+		const schema = escalate.requestBody?.content['application/json'].schema as {
+			oneOf: { properties: Record<string, unknown> }[];
+		};
+
+		expect(schema.oneOf).toHaveLength(4);
+		expect(schema.oneOf.every((variant) => 'target' in variant.properties)).toBe(true);
+		expect(schema.oneOf.some((variant) => 'tag' in variant.properties)).toBe(false);
+		expect(escalate.parameters).toMatchObject([{ name: 'tag', in: 'path', required: true }]);
+		expect(Object.keys(escalate.responses)).toEqual(expect.arrayContaining(['201', '403', '422']));
+		expect(document.paths['/tickets'].post.responses['403']).toBeUndefined();
 	});
 
 	it('answers 201, 204 and 200 as the registry says, and shares the error envelope', () => {
