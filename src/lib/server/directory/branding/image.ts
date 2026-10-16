@@ -11,7 +11,7 @@ import { failure, success, type Outcome } from '../../shared/outcome';
  */
 
 export type { UploadSlot, DerivedSlot, BrandAssetSlot } from '#lib/domain/brand.js';
-import type { UploadSlot } from '#lib/domain/brand.js';
+import { LOGO_MAX_BYTES, type UploadSlot } from '#lib/domain/brand.js';
 
 export type ImageFailure =
 	| 'too-large'
@@ -31,7 +31,7 @@ export interface ProcessedImage {
 	height: number | null;
 }
 
-export const MAX_INPUT_BYTES = 5 * 1024 * 1024;
+export const MAX_INPUT_BYTES = LOGO_MAX_BYTES;
 export const MAX_INPUT_PIXELS = 40_000_000;
 export const MAX_OUTPUT_BYTES = 256 * 1024;
 /** 3× the largest rendered height (h-10 = 40px). */

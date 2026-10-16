@@ -1,5 +1,5 @@
 import { page } from '$app/state';
-import { DEFAULT_BRAND, type BrandView } from '#lib/domain/brand.js';
+import { DEFAULT_BRAND, type BrandAssetSlot, type BrandView } from '#lib/domain/brand.js';
 
 /**
  * The organisation's brand as the current page sees it (ADR 0026). The root
@@ -24,4 +24,18 @@ export function productName(): string {
 /** A `<title>`: the parts the page names, then the product, joined with " · ". */
 export function documentTitle(...parts: string[]): string {
 	return [...parts, productName()].join(' · ');
+}
+
+/**
+ * Where an uploaded image is served from: `/brand/<kebab-slot>?v=<sha256>`, or `null`
+ * when the slot holds nothing. The hash makes the URL content-addressed, so a new
+ * upload is a new URL and the old one can be cached for a year. The only place these
+ * URLs are built.
+ */
+export function brandAssetUrl(
+	slot: BrandAssetSlot,
+	brand: Pick<BrandView, 'assets'> = currentBrand()
+): string | null {
+	const asset = brand.assets[slot];
+	return asset ? `/brand/${slot.replaceAll('_', '-')}?v=${asset.sha256}` : null;
 }

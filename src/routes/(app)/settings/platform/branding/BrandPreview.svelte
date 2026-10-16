@@ -5,15 +5,18 @@
 	import Logo from '#lib/components/unitati/Logo.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import { deriveBrand, parseHex, type BrandTokens } from '#lib/domain/brand-color.js';
+	import type { BrandView } from '#lib/domain/brand.js';
 	import { m } from '#lib/paraglide/messages.js';
 
 	interface Props {
 		/** What the colour field holds right now, typed or picked: parsed here, on every input. */
 		color: string;
 		productName: string;
+		/** The saved logos: an upload applies on submit, so the preview never shows a pending file. */
+		assets: BrandView['assets'];
 	}
 
-	let { color, productName }: Props = $props();
+	let { color, productName, assets }: Props = $props();
 
 	/** The blue Unitati ships, used while the field is empty or not yet a valid hex. */
 	const UNITATI_BLUE = '#1d5cf0';
@@ -21,7 +24,11 @@
 	const input = $derived(parseHex(color));
 	const result = $derived(deriveBrand(input ?? UNITATI_BLUE));
 	const adjusted = $derived(input !== null && result.adjusted);
-	const brand = $derived({ productName: productName.trim() || 'Unitati', customised: true });
+	const brand = $derived({
+		productName: productName.trim() || 'Unitati',
+		customised: true,
+		assets
+	});
 
 	function vars(tokens: BrandTokens): string {
 		return [

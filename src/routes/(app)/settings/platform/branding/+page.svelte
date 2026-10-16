@@ -9,6 +9,7 @@
 	import { parseHex } from '#lib/domain/brand-color.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import BrandPreview from './BrandPreview.svelte';
+	import LogoSlotRow from './LogoSlotRow.svelte';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -17,6 +18,19 @@
 
 	/** What the person typed if the save was refused, so a mistake never costs them the text. */
 	const failed = $derived(form && 'error' in form ? form : null);
+
+	const logoRows = $derived([
+		{ slot: 'lockup', label: m.branding_logo_lockup(), hint: m.branding_logo_lockup_hint() },
+		{
+			slot: 'lockup_dark',
+			label: m.branding_logo_lockup_dark(),
+			hint: m.branding_logo_lockup_dark_hint()
+		},
+		{ slot: 'mark', label: m.branding_logo_mark(), hint: m.branding_logo_mark_hint() }
+	] as const);
+
+	/** The refusal of the last upload, keyed by the slot that earned it. */
+	const assetError = $derived(form && 'assetError' in form ? form.assetError : null);
 
 	let formEl: HTMLFormElement | undefined = $state();
 
@@ -100,10 +114,23 @@
 			</Button>
 		</div>
 
-		<BrandPreview {color} {productName} />
+		<BrandPreview {color} {productName} assets={data.brand.assets} />
 
 		<div class="flex items-center gap-[var(--space-3)]">
 			<Button type="submit" {busy}>{m.branding_save()}</Button>
 		</div>
 	</form>
+
+	<section class="mt-[var(--space-8)] space-y-[var(--space-4)]" aria-labelledby="brand-logos-title">
+		<h2 id="brand-logos-title" class="text-sm font-semibold text-[var(--ink)]">
+			{m.branding_logos_title()}
+		</h2>
+		{#each logoRows as row (row.slot)}
+			<LogoSlotRow
+				{...row}
+				brand={data.brand}
+				serverError={assetError?.slot === row.slot ? assetError.message : undefined}
+			/>
+		{/each}
+	</section>
 </PageLayout>
