@@ -19,7 +19,11 @@
 	} from '#lib/components/unitati/TicketThread.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { focusFirstField, keymapRegistry } from '#lib/keymap.js';
-	import { ESCALATE_TICKET_EVENT, paletteContext } from '#lib/palette-context.svelte.js';
+	import {
+		ESCALATE_TICKET_EVENT,
+		LINK_ASSET_EVENT,
+		paletteContext
+	} from '#lib/palette-context.svelte.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { PRIORITIES } from '#lib/domain/status.js';
 	import { m } from '#lib/paraglide/messages.js';
@@ -128,6 +132,15 @@
 			paletteContext.escalatableTicketTag = null;
 			unregister();
 		};
+	});
+
+	// The palette's "Vincular activo" opens the panel's own dialog (#79).
+	let linkOpen = $state(false);
+	$effect(() => {
+		if (!data.canManage) return;
+		const open = () => (linkOpen = true);
+		window.addEventListener(LINK_ASSET_EVENT, open);
+		return () => window.removeEventListener(LINK_ASSET_EVENT, open);
 	});
 
 	const replyError = $derived(
@@ -243,12 +256,27 @@
 				centre={{ kind: 'ticket', tag: ticket.ticketTag }}
 				groups={relatedGroups}
 			/>
+			{@const assetGroups = relatedGroups.filter((group) => group.relation === 'affects')}
 			<RelatedRecords
 				groups={relatedGroups}
 				unlinkActions={data.canManage
 					? { asset: '?/unlinkAsset', task: '?/unlinkTask', project: '?/unlinkProject' }
 					: {}}
 				error={unlinkError}
+				linkAction={data.canManage ? '?/linkAssets' : undefined}
+				linkLabel={m.related_link_asset()}
+				linkDescription={m.related_link_asset_lede()}
+				linkFieldLabel={m.related_link_asset_field()}
+				linkPlaceholder={m.related_link_asset_placeholder()}
+				linkSearchUrl="/service-desk/new/assets/options"
+				linkSubmitLabel={(count) =>
+					count === 0
+						? m.related_link_asset_submit_none()
+						: count === 1
+							? m.related_link_asset_submit_one({ count })
+							: m.related_link_asset_submit_other({ count })}
+				linkedIds={assetGroups.flatMap((group) => group.items.map((item) => item.ref.id))}
+				bind:linkOpen
 			/>
 		{/await}
 

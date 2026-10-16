@@ -2,6 +2,7 @@ import type { LucideIcon } from '@lucide/svelte';
 import ArrowRightLeftIcon from '@lucide/svelte/icons/arrow-right-left';
 import FolderKanbanIcon from '@lucide/svelte/icons/folder-kanban';
 import HouseIcon from '@lucide/svelte/icons/house';
+import LinkIcon from '@lucide/svelte/icons/link';
 import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
 import ArrowUpRightIcon from '@lucide/svelte/icons/arrow-up-right';
 import ListChecksIcon from '@lucide/svelte/icons/list-checks';
@@ -29,7 +30,8 @@ export type PaletteActionTarget =
 	| { kind: 'navigate'; href: string }
 	| { kind: 'assign-to-me'; ticketTag: string }
 	| { kind: 'move-task' }
-	| { kind: 'escalate-ticket' };
+	| { kind: 'escalate-ticket' }
+	| { kind: 'link-asset' };
 
 export interface PaletteActionDef {
 	id: string;
@@ -91,6 +93,14 @@ export function derivePaletteActions(ctx: PaletteActionContext): PaletteActionDe
 					label: m.palette_action_assign_me(),
 					icon: UserCheckIcon,
 					target: { kind: 'assign-to-me', ticketTag: ctx.ticketTag }
+				}
+			: null,
+		hasAnyPermission(ctx.permissions, 'tickets.manage') && ctx.ticketTag
+			? {
+					id: 'link-asset',
+					label: m.palette_action_link_asset(),
+					icon: LinkIcon,
+					target: { kind: 'link-asset' }
 				}
 			: null,
 		hasAnyPermission(ctx.permissions, 'projects.manage') && ctx.movableTaskTag

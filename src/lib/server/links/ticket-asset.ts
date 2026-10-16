@@ -59,6 +59,44 @@ async function visibleAsset(tx: Transaction, actor: SessionUser, assetId: string
 }
 
 /**
+ * Writes one link and its `link.asset.added` entry; `false` when the pair was
+ * already there and nothing was written.
+ *
+ * `do nothing` instead of letting the unique constraint raise: a violation
+ * aborts the surrounding transaction in Postgres, and a second attempt at the
+ * same link is a business outcome, not a reason to lose the ticket being opened.
+ */
+async function insertLink(
+	tx: Transaction,
+	actor: SessionUser,
+	ticketId: string,
+	asset: { id: string; assetTag: string; name: string }
+): Promise<boolean> {
+	const inserted = await tx
+		.insert(ticketAsset)
+		.values({
+			organisationId: actor.organisationId,
+			ticketId,
+			assetId: asset.id,
+			createdByPersonId: actor.personId
+		})
+		.onConflictDoNothing({ target: [ticketAsset.ticketId, ticketAsset.assetId] })
+		.returning({ id: ticketAsset.id });
+
+	if (inserted.length === 0) return false;
+
+	await recordActivity(tx, {
+		organisationId: actor.organisationId,
+		...actorColumns(actor),
+		target: { ticketId },
+		verb: 'link.asset.added',
+		payload: { assetId: asset.id, assetTag: asset.assetTag, assetName: asset.name }
+	});
+
+	return true;
+}
+
+/**
  * Links an asset to a ticket.
  *
  * **The ticket is the caller's to authorise; the asset is ours to check.** The
@@ -81,29 +119,8 @@ export async function linkAsset(
 	const asset = await visibleAsset(tx, actor, pair.assetId);
 	if (!asset) return failure('asset_not_found');
 
-	// `do nothing` instead of letting the unique constraint raise: a violation
-	// aborts the surrounding transaction in Postgres, and a second attempt at the
-	// same link is a business outcome, not a reason to lose the ticket being opened.
-	const inserted = await tx
-		.insert(ticketAsset)
-		.values({
-			organisationId: actor.organisationId,
-			ticketId: ticket.id,
-			assetId: asset.id,
-			createdByPersonId: actor.personId
-		})
-		.onConflictDoNothing({ target: [ticketAsset.ticketId, ticketAsset.assetId] })
-		.returning({ id: ticketAsset.id });
-
-	if (inserted.length === 0) return failure('already_linked');
-
-	await recordActivity(tx, {
-		organisationId: actor.organisationId,
-		...actorColumns(actor),
-		target: { ticketId: ticket.id },
-		verb: 'link.asset.added',
-		payload: { assetId: asset.id, assetTag: asset.assetTag, assetName: asset.name }
-	});
+	const created = await insertLink(tx, actor, ticket.id, asset);
+	if (!created) return failure('already_linked');
 
 	return success(undefined);
 }
@@ -117,6 +134,62 @@ export async function linkAssetToTicket(
 	pair: TicketAssetPair
 ): Promise<Outcome<void, LinkAssetFailure>> {
 	return getDb().transaction((tx) => linkAsset(tx, actor, pair));
+}
+
+export type LinkTicketAssetsFailure =
+	| { reason: 'forbidden' }
+	| { reason: 'ticket_not_found' | 'asset_not_found'; id: string }
+	| { reason: 'empty' };
+
+export type LinkTicketAssetsOutcome =
+	{ ok: true; value: { linked: number } } | { ok: false; error: LinkTicketAssetsFailure };
+
+/** Thrown inside the transaction to roll it back, carrying the refusal out. */
+class Refusal extends Error {
+	constructor(readonly failure: LinkTicketAssetsFailure) {
+		super(failure.reason);
+	}
+}
+
+/**
+ * Links several assets to tickets as one act, all or nothing: the first refusal
+ * rolls everything back and names the record that caused it. This is the core
+ * behind both directions (from the ticket record and from the asset record).
+ *
+ * **Idempotent per pair**, unlike `linkAsset`: a pair that already exists is
+ * skipped (no row, no entry, not counted), the same rule as the ticket ↔ work
+ * links. Repeated pairs inside one call collapse to one. Anything outside the
+ * actor's scope reads as missing, like everywhere else in this module.
+ */
+export async function linkTicketAssets(
+	actor: SessionUser,
+	pairs: readonly TicketAssetPair[]
+): Promise<LinkTicketAssetsOutcome> {
+	if (!can(actor, 'tickets.manage')) return { ok: false, error: { reason: 'forbidden' } };
+
+	const unique = [
+		...new Map(pairs.map((pair) => [`${pair.ticketId}:${pair.assetId}`, pair])).values()
+	];
+	if (unique.length === 0) return { ok: false, error: { reason: 'empty' } };
+
+	try {
+		return await getDb().transaction(async (tx) => {
+			let linked = 0;
+			for (const pair of unique) {
+				const ticket = await ticketInOrganisation(tx, actor, pair.ticketId);
+				if (!ticket) throw new Refusal({ reason: 'ticket_not_found', id: pair.ticketId });
+
+				const asset = await visibleAsset(tx, actor, pair.assetId);
+				if (!asset) throw new Refusal({ reason: 'asset_not_found', id: pair.assetId });
+
+				if (await insertLink(tx, actor, ticket.id, asset)) linked += 1;
+			}
+			return { ok: true as const, value: { linked } };
+		});
+	} catch (error) {
+		if (error instanceof Refusal) return { ok: false, error: error.failure };
+		throw error;
+	}
 }
 
 export type UnlinkAssetFailure = 'forbidden' | 'not_linked';

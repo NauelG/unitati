@@ -64,6 +64,18 @@
 		 * code a remote option's label leads with. Single selection only.
 		 */
 		onpick?: (option: SelectOption | null) => void;
+		/**
+		 * Remote values that are offered but cannot be picked (already linked, say),
+		 * shown with `disabledNote` after the label. Only meaningful with `multiple`.
+		 */
+		disabledValues?: readonly string[];
+		disabledNote?: string;
+		/**
+		 * The labels of everything picked so far, by value. Bindable so a caller can
+		 * name a selection in its own words (a refusal that points at one record)
+		 * without reaching into the component.
+		 */
+		pickedLabels?: Record<string, string>;
 		class?: string;
 	}
 
@@ -86,6 +98,9 @@
 		values = $bindable([]),
 		selectedLabels,
 		onpick,
+		disabledValues = [],
+		disabledNote,
+		pickedLabels = $bindable({}),
 		class: className
 	}: Props = $props();
 
@@ -161,7 +176,6 @@
 
 	// Labels learned from picks in this component, so a chip keeps its text
 	// after the remote results that produced it have been replaced.
-	let pickedLabels = $state<Record<string, string>>({});
 	const chips = $derived(
 		values.map((v) => ({
 			value: v,
@@ -289,7 +303,7 @@
 					{#each candidates as option (option.value)}
 						<Command.Item
 							value={option.value}
-							disabled={option.disabled}
+							disabled={option.disabled || disabledValues.includes(option.value)}
 							onSelect={() => select(option)}
 							aria-selected={multiple ? values.includes(option.value) : undefined}
 						>
@@ -297,6 +311,9 @@
 								<span aria-hidden="true">✓</span>
 							{/if}
 							{option.label}
+							{#if disabledValues.includes(option.value) && disabledNote}
+								<span class="ml-auto text-xs text-[var(--ink-muted)]">{disabledNote}</span>
+							{/if}
 						</Command.Item>
 					{/each}
 				</Command.List>

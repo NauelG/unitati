@@ -10,6 +10,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import {
 		ESCALATE_TICKET_EVENT,
+		LINK_ASSET_EVENT,
 		MOVE_TASK_EVENT,
 		paletteContext
 	} from '#lib/palette-context.svelte.js';
@@ -67,6 +68,10 @@
 			// The ticket record that owns the Sheet is listening (#150).
 			open = false;
 			window.dispatchEvent(new CustomEvent(ESCALATE_TICKET_EVENT));
+		} else if (action.target.kind === 'link-asset') {
+			// The ticket record owns the dialog and is listening (#79).
+			open = false;
+			window.dispatchEvent(new CustomEvent(LINK_ASSET_EVENT));
 		} else assignToMe(action.target.ticketTag);
 	}
 

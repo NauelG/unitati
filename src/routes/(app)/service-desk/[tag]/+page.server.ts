@@ -11,6 +11,7 @@ import {
 	escalateTicket,
 	escalationDraft,
 	invalidField,
+	linkTicketAssets,
 	parseEscalation,
 	relatedTo,
 	unlinkAsset,
@@ -218,6 +219,34 @@ export const actions: Actions = {
 			return field ? rejectedField(field, message) : rejected('escalate', message);
 		}
 		return { action: 'escalate' as const, escalated: outcome.value };
+	},
+
+	linkAssets: async ({ locals, request, params }) => {
+		const user = requirePermission(locals.user, 'tickets.manage');
+		const ids = (await request.formData()).getAll('ids').filter((id) => typeof id === 'string');
+
+		const found = await getTicketByTag(user, params.tag);
+		if (!found.ok) error(404, 'Not found');
+
+		if (ids.length === 0) return rejected('linkAssets', m.related_link_nothing_selected());
+
+		const parsed = z.array(z.uuid()).safeParse(ids);
+		if (!parsed.success) return rejected('linkAssets', m.related_link_asset_unavailable());
+
+		const outcome = await linkTicketAssets(
+			user,
+			parsed.data.map((assetId) => ({ ticketId: found.value.id, assetId }))
+		);
+		if (!outcome.ok) {
+			const { reason } = outcome.error;
+			if (reason === 'forbidden') error(403, 'Forbidden');
+			if (reason === 'empty') return rejected('linkAssets', m.related_link_nothing_selected());
+			if (reason === 'ticket_not_found') {
+				return rejected('linkAssets', m.related_link_ticket_gone());
+			}
+			return rejected('linkAssets', m.related_link_asset_unavailable(), outcome.error.id);
+		}
+		return { action: 'linkAssets' as const, linked: outcome.value.linked };
 	},
 
 	queue: async ({ locals, request, params }) => {
