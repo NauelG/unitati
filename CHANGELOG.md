@@ -5,6 +5,19 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.48.0] - 2026-10-16
+
+### Added
+
+- The logo pipeline behind white-label branding (#161, slice 4a of #157), with no screen yet. An
+  uploaded lockup, dark lockup or mark (PNG, JPEG, WebP or SVG, detected by content) is normalised
+  before it is stored in Postgres: rasters are rotated, converted to sRGB, trimmed, resized and
+  re-encoded as lossless WebP without metadata; SVGs go through `svgo` with scripts, event handlers,
+  `<foreignObject>` and external references removed. The favicon and the apple-touch icon are
+  generated from the mark.
+- `GET /brand/{lockup,lockup-dark,mark,favicon,apple-touch}` serves them inline, without a session,
+  with a CSP and sandbox, an `ETag`, and `immutable` caching when `?v=` matches the content hash.
+
 ## [0.47.0] - 2026-10-16
 
 ### Added

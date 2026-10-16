@@ -2,7 +2,11 @@ import { relations, sql } from 'drizzle-orm';
 import {
 	boolean,
 	check,
+	customType,
+	foreignKey,
 	index,
+	integer,
+	pgEnum,
 	pgTable,
 	primaryKey,
 	text,
@@ -11,6 +15,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { timestamps } from '../shared/columns';
 import { users } from '../auth/schema';
+import { BRAND_ASSET_SLOTS } from '#lib/domain/brand.js';
 
 const PRODUCT_NAME_BACKSTOP = 400;
 
@@ -56,6 +61,59 @@ export const organisationBranding = pgTable(
 			'organisation_branding_product_name_length',
 			sql`char_length(btrim(${table.productName})) between 1 and ${sql.raw(String(PRODUCT_NAME_BACKSTOP))}`
 		)
+	]
+);
+
+/**
+ * Postgres `bytea`. The installed drizzle-orm does not export one, so this maps it
+ * to the `Uint8Array` the image module produces; the driver hands back a `Buffer`.
+ */
+const bytea = customType<{ data: Uint8Array; driverData: Buffer }>({
+	dataType: () => 'bytea',
+	toDriver: (value) => Buffer.from(value),
+	fromDriver: (value) => new Uint8Array(value)
+});
+
+export const brandAssetSlot = pgEnum('brand_asset_slot', BRAND_ASSET_SLOTS);
+
+/** Backstop for `MAX_OUTPUT_BYTES` in `branding/image.ts`; the domain refuses earlier. */
+const BRAND_ASSET_MAX_BYTES = 262_144;
+
+/**
+ * The processed brand images (ADR 0026, #161): only the output of the image
+ * pipeline is stored, never the original. The FK points at the branding row, not
+ * the organisation, so restoring the default brand (#163) cascades every image
+ * and an image can never exist without its branding.
+ */
+export const organisationBrandAssets = pgTable(
+	'organisation_brand_assets',
+	{
+		organisationId: uuid('organisation_id').notNull(),
+		slot: brandAssetSlot('slot').notNull(),
+		contentType: text('content_type').notNull(),
+		data: bytea('data').notNull(),
+		sha256: text('sha256').notNull(),
+		width: integer('width'),
+		height: integer('height'),
+		...timestamps
+	},
+	(table) => [
+		primaryKey({ columns: [table.organisationId, table.slot] }),
+		// Named by hand: the generated name is longer than Postgres's 63 characters.
+		foreignKey({
+			name: 'organisation_brand_assets_branding_fk',
+			columns: [table.organisationId],
+			foreignColumns: [organisationBranding.organisationId]
+		}).onDelete('cascade'),
+		check(
+			'organisation_brand_assets_content_type',
+			sql`${table.contentType} in ('image/svg+xml', 'image/webp', 'image/png')`
+		),
+		check(
+			'organisation_brand_assets_data_size',
+			sql`octet_length(${table.data}) <= ${sql.raw(String(BRAND_ASSET_MAX_BYTES))}`
+		),
+		check('organisation_brand_assets_sha256', sql`${table.sha256} ~ '^[0-9a-f]{64}$'`)
 	]
 );
 

@@ -12,6 +12,14 @@ export const UPSTREAM_PRODUCT_NAME = 'Unitati';
 
 export const PRODUCT_NAME_MAX = 40;
 
+export const UPLOAD_SLOTS = ['lockup', 'lockup_dark', 'mark'] as const;
+export const DERIVED_SLOTS = ['favicon', 'apple_touch'] as const;
+export const BRAND_ASSET_SLOTS = [...UPLOAD_SLOTS, ...DERIVED_SLOTS] as const;
+
+export type UploadSlot = (typeof UPLOAD_SLOTS)[number];
+export type DerivedSlot = (typeof DERIVED_SLOTS)[number];
+export type BrandAssetSlot = (typeof BRAND_ASSET_SLOTS)[number];
+
 /** What every page receives as `page.data.brand`. */
 export interface BrandView {
 	productName: string;
@@ -24,13 +32,16 @@ export interface BrandView {
 	 * built once with the view and cached with it. `null` injects nothing.
 	 */
 	css: string | null;
+	/** Metadata of the stored images, never their bytes: those are served from `/brand/*`. */
+	assets: Partial<Record<BrandAssetSlot, { sha256: string; contentType: string }>>;
 }
 
 export const DEFAULT_BRAND: BrandView = {
 	productName: DEFAULT_PRODUCT_NAME,
 	customised: false,
 	brandColor: null,
-	css: null
+	css: null,
+	assets: {}
 };
 
 /** Counts user-perceived characters, so a ZWJ emoji or "ñ" written with a combining mark is one. */

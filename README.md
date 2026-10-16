@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.47.0-1d5cf0" alt="Version 0.47.0" />
+  <img src="https://img.shields.io/badge/version-0.48.0-1d5cf0" alt="Version 0.48.0" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
 </p>
@@ -204,6 +204,10 @@ introduces them.
 
 ### Deploying
 
+Image processing uses [`sharp`](https://sharp.pixelplumbing.com/), a native dependency. It ships
+prebuilt binaries for linux x64/arm64 (glibc and musl) and macOS, so `npm ci` needs no build
+toolchain on those platforms.
+
 `node --env-file=.env build` serves on port 3000. Behind a reverse proxy, adapter-node must be
 told its public origin or **every form submission is rejected** as cross-site: set
 `PROTOCOL_HEADER=x-forwarded-proto` and `HOST_HEADER=x-forwarded-host`. The `ORIGIN` variable
@@ -224,9 +228,9 @@ configuration is environment variables only (see `.env.example`).
 # once per host: a classic PAT with read:packages
 echo "$GHCR_TOKEN" | docker login ghcr.io -u NauelG --password-stdin
 
-docker pull ghcr.io/nauelg/unitati:0.47.0
+docker pull ghcr.io/nauelg/unitati:0.48.0
 docker run -d --name unitati --env-file unitati.env -p 3000:3000 \
-  -v unitati-uploads:/data/uploads ghcr.io/nauelg/unitati:0.47.0
+  -v unitati-uploads:/data/uploads ghcr.io/nauelg/unitati:0.48.0
 ```
 
 The container applies pending migrations on every start, then serves; with nothing pending that

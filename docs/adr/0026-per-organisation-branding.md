@@ -59,7 +59,9 @@ product name.
 
 - One N=1 assumption lives in the public resolver (`getBrand(null)` takes the first
   organisation). It is revisited with #42.
-- `sharp` becomes a native dependency once the asset slices land (#161).
+- `sharp` is a native dependency since #161. It ships prebuilt binaries for linux x64/arm64 (glibc and
+  musl) and macOS, so `npm ci` needs no toolchain; any other platform would have to build libvips.
+  It rasterises with the server's fonts, so derived icons come only from an uploaded mark.
 - The brand is cached in memory per organisation and invalidated on write. That assumes a single
   Node process: several replicas would need invalidation across processes, or a short TTL.
 - The table's `CHECK` on `product_name` counts code points (`char_length`), and one grapheme can be
