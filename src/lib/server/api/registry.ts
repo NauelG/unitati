@@ -14,7 +14,7 @@ export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 /** A refusal a handler raises on purpose; the dispatcher maps it to the envelope. */
 export class ApiError extends Error {
 	constructor(
-		readonly status: 400 | 404 | 409,
+		readonly status: 400 | 403 | 404 | 409 | 422,
 		readonly code: string,
 		message: string,
 		/** Field-level problems, in the shape Zod reports them, for a `400` the handler found itself. */
@@ -62,6 +62,12 @@ export interface Endpoint<I extends z.ZodType = z.ZodType, O extends z.ZodType =
 	example?: Record<string, unknown>;
 	/** The success status. `200` unless it creates something; `204` is implied by a `z.null()` output. */
 	status?: 200 | 201;
+	/**
+	 * Refusals beyond the ones every operation can raise (`400`, `401`, `404`,
+	 * `409`, `429`), so the documentation lists them: `403` for an act the key may
+	 * name but not do, `422` for input that parses and that the domain rejects.
+	 */
+	refusals?: readonly (403 | 422)[];
 	/** "Any of", like `requireAnyPermission`. Never empty. */
 	permissions: readonly [Permission, ...Permission[]];
 	/** Path parameters, query string and JSON body, merged; path parameters win. */

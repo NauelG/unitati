@@ -45,6 +45,8 @@ export interface Escalated {
 	kind: 'task' | 'project';
 	id: string;
 	tag: string;
+	/** `false` when the ticket was already linked to this target and nothing was written. */
+	created: boolean;
 }
 
 /**
@@ -75,14 +77,24 @@ async function run(
 			const linked = await linkTask(tx, actor, { ticketId, taskId: target.taskId });
 			if (!linked.ok) return failure(linked.error);
 			const task = await taskSnapshot(tx, actor.organisationId, target.taskId);
-			return success({ kind: 'task', id: target.taskId, tag: task!.taskTag });
+			return success({
+				kind: 'task',
+				id: target.taskId,
+				tag: task!.taskTag,
+				created: linked.value.created
+			});
 		}
 
 		case 'existing_project': {
 			const linked = await linkProject(tx, actor, { ticketId, projectId: target.projectId });
 			if (!linked.ok) return failure(linked.error);
 			const project = await projectSnapshot(tx, actor.organisationId, target.projectId);
-			return success({ kind: 'project', id: target.projectId, tag: project!.projectTag });
+			return success({
+				kind: 'project',
+				id: target.projectId,
+				tag: project!.projectTag,
+				created: linked.value.created
+			});
 		}
 
 		case 'new_task': {
@@ -105,7 +117,12 @@ async function run(
 			const linked = await linkTask(tx, actor, { ticketId, taskId: opened.value.id });
 			if (!linked.ok) throw new Abort(linked.error);
 
-			return success({ kind: 'task', id: opened.value.id, tag: opened.value.taskTag });
+			return success({
+				kind: 'task',
+				id: opened.value.id,
+				tag: opened.value.taskTag,
+				created: true
+			});
 		}
 
 		case 'new_project': {
@@ -121,7 +138,12 @@ async function run(
 			const linked = await linkProject(tx, actor, { ticketId, projectId: opened.value.id });
 			if (!linked.ok) throw new Abort(linked.error);
 
-			return success({ kind: 'project', id: opened.value.id, tag: opened.value.projectTag });
+			return success({
+				kind: 'project',
+				id: opened.value.id,
+				tag: opened.value.projectTag,
+				created: true
+			});
 		}
 	}
 }
