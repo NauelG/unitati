@@ -28,7 +28,7 @@
 	import type { Snippet } from 'svelte';
 	import type { PageProps } from './$types';
 	import AssetFields from '../AssetFields.svelte';
-	import { options, stateOptions } from '../options';
+	import { locationOptions, options, stateOptions } from '../options';
 
 	let { data, form }: PageProps = $props();
 
@@ -66,7 +66,7 @@
 	});
 	const stateChoices = stateOptions();
 	const personOptions = $derived(options(data.people, (person) => person.fullName));
-	const locationOptions = $derived(options(data.locations, (entry) => entry.name));
+	const locationChoices = $derived(locationOptions(data.locations));
 	const editModelOptions = $derived(
 		options(data.editModels, (entry) => `${entry.manufacturerName} · ${entry.name}`)
 	);
@@ -88,7 +88,7 @@
 	// rather than `null`.
 	let localState = $state(asset.visibility === 'full' ? asset.state : ASSET_STATES[0]);
 	let localLocationId = $state(asset.visibility === 'full' ? asset.locationId : null);
-	let localLocationName = $state(asset.locationName);
+	let localLocationName = $state(asset.locationPath);
 	let localCustodianPersonId = $state(asset.visibility === 'full' ? asset.custodianPersonId : null);
 	let localCustodianName = $state(asset.visibility === 'full' ? asset.custodianName : null);
 	/** `addNote` has no display value of its own to flip — clearing the box is the feedback; see the form below. */
@@ -101,7 +101,7 @@
 			localCustodianPersonId = asset.custodianPersonId;
 			localCustodianName = asset.custodianName;
 		}
-		localLocationName = asset.locationName;
+		localLocationName = asset.locationPath;
 	});
 
 	/**
@@ -354,7 +354,7 @@
 								const nextId = typeof next === 'string' && next !== '' ? next : null;
 								localLocationId = nextId;
 								localLocationName = nextId
-									? (data.locations.find((candidate) => candidate.id === nextId)?.name ??
+									? (data.locations.find((candidate) => candidate.id === nextId)?.path ??
 										previousName)
 									: null;
 								return () => {
@@ -368,7 +368,7 @@
 								label={m.asset_detail_location()}
 								name="locationId"
 								placeholder={m.asset_form_no_location()}
-								options={locationOptions}
+								options={locationChoices}
 								value={localLocationId ?? ''}
 							/>
 							{@render failure('changeLocation')}

@@ -115,7 +115,7 @@ describe('the list an employee is sent', () => {
 		expect(printer).toBeDefined();
 		expect(Object.keys(printer!).sort()).toEqual([
 			'assetTag',
-			'locationName',
+			'locationPath',
 			'name',
 			'visibility'
 		]);
@@ -143,7 +143,7 @@ describe('the page an employee is sent for one asset', () => {
 
 		expect(Object.keys(data.asset).sort()).toEqual([
 			'assetTag',
-			'locationName',
+			'locationPath',
 			'name',
 			'visibility'
 		]);

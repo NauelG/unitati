@@ -37,6 +37,22 @@ export interface PlannedAsset {
 	events: PlannedEvent[];
 }
 
+/**
+ * A node of the demo location tree. Identified by its **path** (`Barcelona
+ * office › Floor 1`), not its name: "Floor 1" exists under two buildings on
+ * purpose, to exercise the sibling-unique rule (ADR 0027). Parents precede their
+ * children, so inserting in order is enough.
+ */
+export interface PlannedLocation {
+	path: string;
+	name: string;
+	/** The parent's path, or `null` for a root. */
+	parent: string | null;
+	code: string | null;
+	latitude: number | null;
+	longitude: number | null;
+}
+
 export type PlannedEvent =
 	| { kind: 'assign'; personEmail: string }
 	| { kind: 'return' }
@@ -48,7 +64,7 @@ export interface InventoryPlan {
 	manufacturers: string[];
 	categories: string[];
 	models: PlannedModel[];
-	locations: string[];
+	locations: PlannedLocation[];
 	people: PlannedPerson[];
 	assets: PlannedAsset[];
 }
@@ -112,7 +128,40 @@ const MODELS: PlannedModel[] = [
 	{ name: 'Odyssey G5', manufacturer: 'Samsung', category: 'Monitors' }
 ];
 
-const LOCATIONS = ['Barcelona office', 'Girona office', 'Warehouse', 'Remote'];
+const SEPARATOR = ' › ';
+
+function place(
+	parent: PlannedLocation | null,
+	name: string,
+	code: string | null,
+	coordinates: [number, number] | null = null
+): PlannedLocation {
+	return {
+		path: parent ? `${parent.path}${SEPARATOR}${name}` : name,
+		name,
+		parent: parent?.path ?? null,
+		code,
+		latitude: coordinates?.[0] ?? null,
+		longitude: coordinates?.[1] ?? null
+	};
+}
+
+const BARCELONA = place(null, 'Barcelona office', 'BCN', [41.3874, 2.1686]);
+const BARCELONA_FLOOR_1 = place(BARCELONA, 'Floor 1', 'BCN-1');
+const GIRONA = place(null, 'Girona office', 'GRO', [41.9794, 2.8214]);
+
+const LOCATIONS: PlannedLocation[] = [
+	BARCELONA,
+	BARCELONA_FLOOR_1,
+	place(BARCELONA_FLOOR_1, 'Meeting room A', 'BCN-1-A'),
+	place(BARCELONA, 'Floor 2', 'BCN-2'),
+	GIRONA,
+	place(GIRONA, 'Floor 1', 'GRO-1'),
+	place(null, 'Warehouse', 'WH'),
+	place(null, 'Remote', null)
+];
+
+const LOCATION_PATHS = LOCATIONS.map((location) => location.path);
 
 const NAMES = [
 	'Ada Lovelace',
@@ -211,7 +260,7 @@ export function buildPlan(count = DEFAULT_ASSET_COUNT, seed = DEFAULT_SEED): Inv
 		]);
 		const hasSerial = random.chance(0.85);
 		const generatedSerial = serial();
-		const location = random.chance(0.85) ? random.pick(LOCATIONS) : null;
+		const location = random.chance(0.85) ? random.pick(LOCATION_PATHS) : null;
 		const holder = random.pick(people);
 		const nextHolder = random.pick(people);
 		const handedOver = random.chance(0.15);
@@ -219,7 +268,7 @@ export function buildPlan(count = DEFAULT_ASSET_COUNT, seed = DEFAULT_SEED): Inv
 		const inDrawer = random.chance(0.05);
 		const note = random.pick(NOTES);
 		const relocates = random.chance(0.12);
-		const newLocation = random.pick(LOCATIONS);
+		const newLocation = random.pick(LOCATION_PATHS);
 		const stagedViaStock = random.chance(0.6);
 
 		// The floor printers are the shared assets: nobody holds them, everybody

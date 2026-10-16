@@ -5,6 +5,24 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.54.0] - 2026-10-18
+
+### Added
+
+- Locations are now a hierarchy you can manage (#178, first slice of #177). A location can sit
+  under another (building, floor, room), carries an optional code, address, notes and coordinates,
+  and is created, edited, moved and deleted from the new _Ubicaciones_ section of Settings, in a
+  side sheet. Wherever an asset shows its location it now shows the full path
+  (`Barcelona office › Floor 1`), including the location pickers and the shared view an employee
+  sees, which still carries the path only. The demo seed builds a small tree of offices, floors and
+  a meeting room. ADR 0027.
+
+### Changed
+
+- Deleting a location that still has children or assets is refused with a message naming both;
+  before, an asset silently lost its location. The `location.changed` entry on an asset's timeline
+  now records the path instead of the bare name.
+
 ## [0.53.0] - 2026-10-18
 
 ### Added

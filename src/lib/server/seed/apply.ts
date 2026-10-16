@@ -75,11 +75,25 @@ export async function applyPlan(actor: SessionUser, plan: InventoryPlan): Promis
 		(await listAssetModels(organisationId)).map((e) => [`${e.manufacturerName}/${e.name}`, e.id])
 	);
 
-	await getDb()
-		.insert(locations)
-		.values(plan.locations.map((name) => ({ organisationId, name })))
-		.onConflictDoNothing();
-	const locationIds = new Map((await listLocations(organisationId)).map((e) => [e.name, e.id]));
+	// Parents precede children in the plan. Resolved by **path**, never by name:
+	// "Floor 1" exists under two buildings.
+	const locationIds = new Map((await listLocations(organisationId)).map((e) => [e.path, e.id]));
+	for (const planned of plan.locations) {
+		if (locationIds.has(planned.path)) continue;
+		const [inserted] = await getDb()
+			.insert(locations)
+			.values({
+				organisationId,
+				parentId: planned.parent === null ? null : (locationIds.get(planned.parent) ?? null),
+				name: planned.name,
+				code: planned.code,
+				latitude: planned.latitude,
+				longitude: planned.longitude
+			})
+			.onConflictDoNothing()
+			.returning({ id: locations.id });
+		if (inserted) locationIds.set(planned.path, inserted.id);
+	}
 
 	await getDb()
 		.insert(people)
@@ -87,8 +101,8 @@ export async function applyPlan(actor: SessionUser, plan: InventoryPlan): Promis
 		.onConflictDoNothing();
 	const personIds = new Map((await listPeople(organisationId)).map((e) => [e.email, e.id]));
 
-	const locationId = (name: string | null) =>
-		name === null ? null : (locationIds.get(name) ?? null);
+	const locationId = (path: string | null) =>
+		path === null ? null : (locationIds.get(path) ?? null);
 	const summary: ApplySummary = { registered: 0, skipped: 0, refused: [] };
 
 	for (const planned of plan.assets) {

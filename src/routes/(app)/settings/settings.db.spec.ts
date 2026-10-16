@@ -8,11 +8,13 @@ import {
 } from '#lib/server/projects/index.js';
 import { createWorkspace, statesByGroup } from '#lib/server/projects/testing/fixtures.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
+import { visibleSections } from '#lib/settings/sections.js';
 import { load as loadSettings } from './+layout.server';
 import { load as loadStates, actions } from './projects/states/+page.server';
 import { load as loadModels } from './assets/models/+page.server';
 import { load as loadCategories } from './assets/categories/+page.server';
 import { load as loadManufacturers } from './assets/manufacturers/+page.server';
+import { load as loadLocations, actions as locationActions } from './assets/locations/+page.server';
 import { load as loadQueues } from './service-desk/queues/+page.server';
 import { load as loadBranding, actions as brandingActions } from './platform/branding/+page.server';
 
@@ -83,6 +85,75 @@ describe('the moved catalogues (#126)', () => {
 		for (const load of [loadModels, loadCategories, loadManufacturers, loadQueues]) {
 			expect(await statusOf(() => load(event(technician)))).toBeUndefined();
 		}
+	});
+});
+
+describe('/settings/assets/locations', () => {
+	it('answers 403 to an employee, for the load and for every action', async () => {
+		const { employee } = await createWorkspace();
+
+		expect(await statusOf(() => loadLocations(event(employee)))).toBe(403);
+		for (const name of ['create', 'update', 'delete'] as const) {
+			expect(await statusOf(() => locationActions[name](event(employee)))).toBe(403);
+		}
+	});
+
+	it('lets a technician in, and the section is visible for assets.manage only', async () => {
+		const { technician } = await createWorkspace();
+
+		expect(await statusOf(() => loadLocations(event(technician)))).toBeUndefined();
+		for (const name of ['create', 'update', 'delete'] as const) {
+			expect(await statusOf(() => locationActions[name](event(technician)))).not.toBe(403);
+		}
+
+		const hrefs = (permissions: string[]) =>
+			visibleSections(permissions).map((section) => section.href);
+		expect(hrefs(['assets.manage'])).toContain('/settings/assets/locations');
+		expect(hrefs(['assets.view', 'tickets.manage', 'projects.manage'])).not.toContain(
+			'/settings/assets/locations'
+		);
+	});
+
+	it('creates, nests and lists a location, then refuses to delete it while it is in use', async () => {
+		const { technician } = await createWorkspace();
+
+		const created = await locationActions.create(
+			event(technician, {
+				name: 'Barcelona office',
+				code: 'BCN',
+				latitude: '41,3874',
+				longitude: '2,1686'
+			})
+		);
+		expect(created).toMatchObject({ action: 'create', message: null });
+
+		const [root] = ((await loadLocations(event(technician))) as { locations: { id: string }[] })
+			.locations;
+		await locationActions.create(event(technician, { name: 'Floor 1', parentId: root.id }));
+
+		const loaded = (await loadLocations(event(technician))) as {
+			locations: { path: string; depth: number; assets: number; latitude: number | null }[];
+		};
+		expect(loaded.locations.map((entry) => [entry.path, entry.depth, entry.assets])).toEqual([
+			['Barcelona office', 0, 0],
+			['Barcelona office › Floor 1', 1, 0]
+		]);
+		expect(loaded.locations[0].latitude).toBe(41.3874);
+
+		const refusal = (await locationActions.delete(
+			event(technician, { id: root.id })
+		)) as unknown as Refusal;
+		expect(refusal.data.message).toBe('No se puede eliminar: tiene 1 ubicación hija.');
+	});
+
+	it('answers a duplicate on the field it belongs to', async () => {
+		const { technician } = await createWorkspace();
+		await locationActions.create(event(technician, { name: 'HQ', code: 'HQ' }));
+
+		const refusal = (await locationActions.create(
+			event(technician, { name: 'HQ 2', code: 'HQ' })
+		)) as unknown as { data: { errors: Record<string, string> } };
+		expect(Object.keys(refusal.data.errors)).toEqual(['code']);
 	});
 });
 

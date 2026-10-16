@@ -10,7 +10,7 @@
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import AssetFields from '../AssetFields.svelte';
-	import { options, stateOptions } from '../options';
+	import { locationOptions, options, stateOptions } from '../options';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -39,7 +39,7 @@
 		options(data.models, (entry) => `${entry.manufacturerName} · ${entry.name}`)
 	);
 	const stateChoices = stateOptions();
-	const locationOptions = $derived(options(data.locations, (entry) => entry.name));
+	const locationChoices = $derived(locationOptions(data.locations));
 	const manufacturerOptions = $derived(options(data.manufacturers, (entry) => entry.name));
 	const categoryOptions = $derived(options(data.categories, (entry) => entry.name));
 
@@ -86,7 +86,7 @@
 						label={m.asset_form_location()}
 						name="locationId"
 						placeholder={m.asset_form_no_location()}
-						options={locationOptions}
+						options={locationChoices}
 						bind:value={$form.locationId}
 						error={$errors.locationId?.[0]}
 					/>

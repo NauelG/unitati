@@ -34,7 +34,7 @@ const row = (overrides: Partial<FullAssetView> = {}): FullAssetView => ({
 	custodianPersonId: null,
 	custodianName: null,
 	locationId: 'location-1',
-	locationName: 'Planta 2',
+	locationPath: 'Edifici › Planta 2',
 	...overrides
 });
 
@@ -60,7 +60,7 @@ describe('viewAsset', () => {
 			visibility: 'shared',
 			assetTag: 'AST-0001',
 			name: 'Floor printer',
-			locationName: 'Planta 2'
+			locationPath: 'Edifici › Planta 2'
 		});
 	});
 
@@ -85,7 +85,7 @@ describe('viewAsset', () => {
 			visibility: 'shared',
 			assetTag: 'AST-0001',
 			name: 'Floor printer',
-			locationName: 'Planta 2'
+			locationPath: 'Edifici › Planta 2'
 		});
 	});
 
@@ -96,13 +96,13 @@ describe('viewAsset', () => {
 	});
 
 	it('reports a shared asset with no location as having none', () => {
-		const nowhere = row({ locationId: null, locationName: null });
+		const nowhere = row({ locationId: null, locationPath: null });
 
 		expect(viewAsset(nowhere, viewer('employee'))).toEqual({
 			visibility: 'shared',
 			assetTag: 'AST-0001',
 			name: 'Floor printer',
-			locationName: null
+			locationPath: null
 		});
 	});
 });

@@ -57,7 +57,7 @@ describe('buildPlan', () => {
 	it('only refers to people, models and locations that exist in the plan', () => {
 		const plan = buildPlan(200);
 		const emails = new Set(plan.people.map((person) => person.email));
-		const locations = new Set(plan.locations);
+		const locations = new Set(plan.locations.map((location) => location.path));
 
 		for (const asset of plan.assets) {
 			expect(plan.models[asset.model]).toBeDefined();

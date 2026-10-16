@@ -5,7 +5,7 @@ import { activity } from '../activity';
 import { advanceAssetTagSequence, assets, listAssets, registerAsset } from '../assets';
 import { createCatalogue, createOrganisation, createViewer } from '../assets/testing/fixtures';
 import { getDb } from '../db';
-import { people } from '../directory';
+import { listLocations, people } from '../directory';
 import {
 	ensureDefaultStates,
 	listProjects,
@@ -36,6 +36,35 @@ async function activityRows() {
 	const [row] = await getDb().select({ total: count() }).from(activity);
 	return row.total;
 }
+
+describe('applyPlan, locations', () => {
+	it('seeds the location tree, once, and puts assets at leaves and at inner nodes', async () => {
+		const organisation = await createOrganisation();
+		const admin = await createViewer(organisation.id, 'admin', 'Ada Admin');
+		const plan = buildPlan(200);
+
+		await applyPlan(admin, plan);
+		await applyPlan(admin, plan);
+
+		const listed = await listLocations(organisation.id);
+		expect(listed.map((entry) => [entry.path, entry.code])).toEqual([
+			['Barcelona office', 'BCN'],
+			['Barcelona office › Floor 1', 'BCN-1'],
+			['Barcelona office › Floor 1 › Meeting room A', 'BCN-1-A'],
+			['Barcelona office › Floor 2', 'BCN-2'],
+			['Girona office', 'GRO'],
+			['Girona office › Floor 1', 'GRO-1'],
+			['Remote', null],
+			['Warehouse', 'WH']
+		]);
+		expect(listed[0]).toMatchObject({ latitude: 41.3874, longitude: 2.1686 });
+		expect(listed.find((entry) => entry.path === 'Warehouse')?.latitude).toBeNull();
+
+		const used = new Set(plan.assets.map((asset) => asset.location));
+		expect(used.has('Barcelona office')).toBe(true);
+		expect(used.has('Barcelona office › Floor 1')).toBe(true);
+	});
+});
 
 describe('applyPlan', () => {
 	it('creates the planned assets, with their history', async () => {

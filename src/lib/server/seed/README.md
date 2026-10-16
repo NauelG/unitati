@@ -1,7 +1,7 @@
 # seed
 
 `npm run db:seed`: a believable inventory for development — 200 assets with custody, state,
-location and notes, spread over 13 models, 26 people and 4 locations.
+location and notes, spread over 13 models, 26 people and 8 locations in a tree.
 
 ## Properties
 

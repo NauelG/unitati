@@ -162,7 +162,7 @@
 		<span class="text-[var(--ink-muted)]">{m.assets_no_custodian()}</span>
 	{/if}
 {/snippet}
-{#snippet location(row: AssetView)}{row.locationName ?? '—'}{/snippet}
+{#snippet location(row: AssetView)}{row.locationPath ?? '—'}{/snippet}
 
 <svelte:head>
 	<title>{documentTitle(m.assets_title())}</title>

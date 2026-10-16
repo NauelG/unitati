@@ -18,6 +18,8 @@ Draft. Names here become folder names in `src/lib/server/<domain>/` (see [ADR 00
 
 The **brand** is how an organisation presents the product: its product name, colour and logos ([ADR 0026](adr/0026-per-organisation-branding.md)). A brand is **customised** when it differs from Unitati's default; from then on Unitati's own art never shows, and a text wordmark and a monogram stand in until logos are uploaded. A **brand asset** is one processed image in a slot: the admin uploads the `lockup`, `lockup_dark` and `mark`; the `favicon` and `apple_touch` icons are **derived** from the mark and never uploaded. Only the processed output is stored. **Powered by** is the fixed attribution to Unitati shown beside a customised brand; it cannot be turned off.
 
+A **location** is a place, nested without types: a building contains floors, a floor contains rooms ([ADR 0027](adr/0027-locations-hierarchy-coordinates-and-deletion.md)). Its **path** (`Barcelona office › Floor 1`) is how it is shown, because a name is only unique among siblings. Its **code** (`BCN-1`) is a short identifier unique in the whole organisation, and it may have coordinates, both latitude and longitude or neither. An asset's location cannot be deleted from under it; a person's can.
+
 `Organisation` exists so the schema is tenant-ready while exactly one row is used: every aggregate root carries `organisation_id` ([ADR 0004](adr/0004-tenancy.md)).
 
 `State` carries a user-chosen name and a system-owned `StateGroup` (`backlog`, `unstarted`, `started`, `completed`, `cancelled`). That split is how a catalogue stays configurable while the structure does not — the shape Plane uses. The group is fixed when a state is created and never changes; code depends on the group, never on the name. A `Task` sits in exactly one `State`, and its board column is ordered by a fractional `position`.
@@ -37,6 +39,8 @@ erDiagram
     ASSET }o--|| ASSET_MODEL : "is a"
     ASSET_MODEL }o--|| CATEGORY : "in"
     ASSET }o--o| LOCATION : "located at"
+    LOCATION ||--o{ LOCATION : "contains"
+    PERSON }o--o| LOCATION : "sits at"
     PERSON }o--o| DEPARTMENT : "belongs to"
     PERSON }o--o{ TEAM : "member of"
 
