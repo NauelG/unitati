@@ -11,6 +11,7 @@
 	import {
 		ESCALATE_TICKET_EVENT,
 		LINK_ASSET_EVENT,
+		LINK_TICKET_EVENT,
 		MOVE_TASK_EVENT,
 		paletteContext
 	} from '#lib/palette-context.svelte.js';
@@ -72,6 +73,10 @@
 			// The ticket record owns the dialog and is listening (#79).
 			open = false;
 			window.dispatchEvent(new CustomEvent(LINK_ASSET_EVENT));
+		} else if (action.target.kind === 'link-ticket') {
+			// The asset record owns the dialog and is listening (#168).
+			open = false;
+			window.dispatchEvent(new CustomEvent(LINK_TICKET_EVENT));
 		} else assignToMe(action.target.ticketTag);
 	}
 
@@ -84,6 +89,7 @@
 			ticketTag,
 			movableTaskTag: paletteContext.movableTaskTag,
 			escalatableTicketTag: paletteContext.escalatableTicketTag,
+			linkableAssetTag: paletteContext.linkableAssetTag,
 			personId,
 			isProduction: isProduction(APP_ENV)
 		})

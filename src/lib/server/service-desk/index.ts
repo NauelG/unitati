@@ -24,6 +24,7 @@ export type { Queue, Ticket, TicketComment, Attachment } from './schema';
 
 export {
 	listTickets,
+	listTicketChoices,
 	getTicketByTag,
 	getWrittenTicket,
 	createTicket,
@@ -40,6 +41,7 @@ export type {
 	Deps,
 	TicketView,
 	TicketListRequest,
+	TicketChoice,
 	CreateTicketFailure,
 	TicketSummary
 } from './tickets';

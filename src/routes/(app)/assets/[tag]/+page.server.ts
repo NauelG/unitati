@@ -24,11 +24,13 @@ import {
 } from '#lib/server/auth/guards.js';
 import { listLocations, listPeople } from '#lib/server/directory/index.js';
 import {
+	linkTicketAssets,
 	mergeAssetTimeline,
 	RECENT_MONTHS,
 	recentTicketCount,
 	assetRelations,
 	relatedTo,
+	unlinkAsset,
 	type AssetTimelineItem,
 	type AssetRelatedGroup
 } from '#lib/server/links/index.js';
@@ -134,6 +136,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		recentMonths: RECENT_MONTHS,
 		canManage,
 		canCheckout,
+		// Links are written on the ticket, so the ticket permission decides (#168).
+		canLinkTickets: asset.visibility === 'full' && can(user, 'tickets.manage'),
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
 		locations,
 		editForm,
@@ -241,5 +245,49 @@ export const actions: Actions = {
 			);
 		}
 		return { action: 'addNote' as const };
+	},
+
+	linkTickets: async ({ request, locals, params }) => {
+		const user = requirePermission(locals.user, 'tickets.manage');
+		const ids = (await request.formData()).getAll('ids').filter((id) => typeof id === 'string');
+
+		const asset = await targetOf(user, params.tag);
+
+		if (ids.length === 0) return rejected('linkTickets', m.related_link_ticket_nothing_selected());
+
+		const parsed = z.array(z.uuid()).safeParse(ids);
+		if (!parsed.success) return rejected('linkTickets', m.related_link_ticket_unavailable());
+
+		const outcome = await linkTicketAssets(
+			user,
+			parsed.data.map((ticketId) => ({ ticketId, assetId: asset.id }))
+		);
+		if (!outcome.ok) {
+			const { reason } = outcome.error;
+			if (reason === 'forbidden') error(403, 'Forbidden');
+			if (reason === 'empty') {
+				return rejected('linkTickets', m.related_link_ticket_nothing_selected());
+			}
+			if (reason === 'asset_not_found') return rejected('linkTickets', m.asset_error_gone());
+			return rejected('linkTickets', m.related_link_ticket_unavailable(), outcome.error.id);
+		}
+		return { action: 'linkTickets' as const, linked: outcome.value.linked };
+	},
+
+	unlinkTicket: async ({ request, locals, params }) => {
+		const user = requirePermission(locals.user, 'tickets.manage');
+		const parsed = z.object({ recordId: z.uuid() }).safeParse(await fieldsOf(request));
+		if (!parsed.success) return rejected('unlinkTicket', m.related_unlink_failed());
+
+		const asset = await targetOf(user, params.tag);
+		const outcome = await unlinkAsset(user, { ticketId: parsed.data.recordId, assetId: asset.id });
+
+		// Already gone, e.g. a second tab removed it first: the page reloads and
+		// shows the truth, so there is nothing to apologise for.
+		if (!outcome.ok && outcome.error === 'forbidden') error(403, 'Forbidden');
+		if (!outcome.ok && outcome.error !== 'not_linked') {
+			return rejected('unlinkTicket', m.related_unlink_failed());
+		}
+		return { action: 'unlinkTicket' as const };
 	}
 };

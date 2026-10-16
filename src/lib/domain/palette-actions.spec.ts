@@ -167,3 +167,21 @@ describe('link-asset action (#79)', () => {
 		expect(idsOf(ctx({ permissions: ['tickets.manage'] }))).not.toContain('link-asset');
 	});
 });
+
+describe('link-ticket action (#168)', () => {
+	it('is offered with tickets.manage while a linkable asset record is open', () => {
+		expect(idsOf(ctx({ permissions: ['tickets.manage'], linkableAssetTag: 'AST-0001' }))).toContain(
+			'link-ticket'
+		);
+	});
+
+	it('is absent without tickets.manage', () => {
+		expect(
+			idsOf(ctx({ permissions: ['tickets.view'], linkableAssetTag: 'AST-0001' }))
+		).not.toContain('link-ticket');
+	});
+
+	it('is absent away from a linkable asset record', () => {
+		expect(idsOf(ctx({ permissions: ['tickets.manage'] }))).not.toContain('link-ticket');
+	});
+});

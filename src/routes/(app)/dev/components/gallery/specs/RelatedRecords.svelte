@@ -224,6 +224,37 @@
 			]
 		}
 	];
+	/** The asset record (#168): the tickets raised on this machine, closed ones included, each with its status. */
+	const assetTickets: AssetRelatedGroup[] = [
+		{
+			relation: 'affected_by',
+			icon: 'ticket',
+			items: [
+				{
+					linkedAt,
+					ref: { kind: 'ticket', id: 't1', tag: 'TCK-0093', title: 'Pantalla parpadea', href: '#' },
+					status: 'in_progress'
+				},
+				{
+					linkedAt,
+					ref: { kind: 'ticket', id: 't2', tag: 'TCK-0071', title: 'Batería hinchada', href: '#' },
+					status: 'closed'
+				}
+			]
+		}
+	];
+
+	const ticketLinkProps = {
+		linkAction: '#',
+		linkLabel: 'Vincular ticket',
+		linkDescription: 'Elige los tickets que han afectado a este activo.',
+		linkFieldLabel: 'Tickets',
+		linkPlaceholder: 'Busca por código o asunto',
+		linkSearchUrl: '/dev/components/assets',
+		linkSubmitLabel: (count: number) =>
+			count === 0 ? 'Vincular' : count === 1 ? 'Vincular 1 ticket' : `Vincular ${count} tickets`
+	};
+
 	// "Vincular" (#79): one panel whose dialog the buttons below drive, since two
 	// modals cannot be open at once.
 	let linkOpen = $state(false);
@@ -425,6 +456,18 @@
 						Diálogo pendiente
 					</Button>
 				</div>
+			</div>
+			<div>
+				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+					Ficha de activo: tickets con su estado, vincular y desvincular (#168)
+				</p>
+				<RelatedRecords groups={assetTickets} unlinkAction="#" {...ticketLinkProps} />
+			</div>
+			<div>
+				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+					Ficha de activo sin tickets: ofrece Vincular ticket
+				</p>
+				<RelatedRecords groups={[]} {...ticketLinkProps} />
 			</div>
 			<div>
 				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">

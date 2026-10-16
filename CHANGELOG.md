@@ -5,6 +5,18 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.49.0] - 2026-10-16
+
+### Added
+
+- Link and unlink tickets from the asset record (#168). The rail gains a related-tickets panel
+  above the constellation, with _Vincular ticket_ (also in the command palette) opening the same
+  dialog as the ticket record: the picker offers tickets in every status, `resolved` and `closed`
+  included, with the status in the label, and already-linked ones are shown but not selectable.
+  Several tickets link at once, all or nothing, and a refusal names the offending ticket.
+  Unlinking asks for confirmation. Both need `tickets.manage`; the panel is not rendered for the
+  reduced shared-asset view. New `listTicketChoices` in the service-desk domain.
+
 ## [0.48.0] - 2026-10-16
 
 ### Added
