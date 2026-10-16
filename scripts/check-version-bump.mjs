@@ -28,7 +28,12 @@ const EXEMPT_PATTERNS = [
 	// when they do. Listing only .gitignore here was an oversight.
 	/^\.gitignore$/,
 	/^\.prettierignore$/,
-	/^\.eslintignore$/
+	/^\.eslintignore$/,
+	// The agent skills installer keeps its lockfile at the root while the skills
+	// themselves live under .agents/: both are agent tooling, neither ships.
+	/^skills-lock\.json$/,
+	// This gate is CI tooling; editing the policy is not an app release.
+	/^scripts\/check-version-bump\.mjs$/
 ];
 
 const git = (args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
