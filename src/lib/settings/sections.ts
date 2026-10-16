@@ -65,6 +65,12 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
 	},
 	{
 		module: 'platform',
+		href: '/settings/platform/branding',
+		label: m.settings_section_branding,
+		permission: 'organisation.manage'
+	},
+	{
+		module: 'platform',
 		href: '/settings/api-keys',
 		label: m.settings_section_api_keys,
 		permission: 'api.keys.manage'

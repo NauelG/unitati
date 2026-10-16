@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
@@ -18,7 +19,7 @@
 </script>
 
 <svelte:head>
-	<title>{ticket.ticketTag} · {ticket.subject} · {m.app_name()}</title>
+	<title>{documentTitle(ticket.ticketTag, ticket.subject)}</title>
 </svelte:head>
 
 <PageLayout variant="index">

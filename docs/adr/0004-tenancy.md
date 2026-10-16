@@ -29,7 +29,8 @@ Model the data for many organisations; ship the experience for one.
    no second code path for "the single-tenant case".
 
 Explicitly out of scope: organisation management UI, organisation switching, subdomain or
-path routing, per-organisation branding, billing, cross-organisation reporting.
+path routing, ~~per-organisation branding~~ (per-organisation branding: see
+[ADR 0026](0026-per-organisation-branding.md)), billing, cross-organisation reporting.
 
 Row Level Security is **not** adopted now. It is defence in depth rather than a feature,
 and it costs connection roles and operational complexity. It can be added on top of this

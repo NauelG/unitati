@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import { enhance } from '$app/forms';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
@@ -74,7 +75,7 @@
 </script>
 
 <svelte:head>
-	<title>{title} · {m.app_name()}</title>
+	<title>{documentTitle(title)}</title>
 </svelte:head>
 
 <PageLayout variant="index">

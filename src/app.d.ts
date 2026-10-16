@@ -1,6 +1,7 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 import type { ApiAuthState } from '#lib/server/api/index.js';
+import type { BrandView } from '#lib/domain/brand.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 
 declare global {
@@ -18,7 +19,10 @@ declare global {
 			 */
 			api?: ApiAuthState;
 		}
-		// interface PageData {}
+		interface PageData {
+			/** The organisation's brand, loaded for every page by the root layout (ADR 0026). */
+			brand: BrandView;
+		}
 		// interface PageState {}
 		// interface Platform {}
 	}

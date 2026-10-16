@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.44.0] - 2026-10-16
+
+### Added
+
+- Per-organisation branding, first slice (#159, slice 2 of #157, ADR 0026): an administrator can
+  rename the product at `/settings/platform/branding`. The name replaces "Unitati" in tab titles,
+  the sign-in and setup screens, the checklist and API-keys copy, and the logo links. Once the
+  name is customised, Unitati's art never shows: a text wordmark (and a monogram in the collapsed
+  rail and mobile top bar) takes its place. The brand is loaded on the server for every page, signed
+  in or not, so nothing flashes.
+
 ## [0.43.0] - 2026-10-15
 
 ### Added

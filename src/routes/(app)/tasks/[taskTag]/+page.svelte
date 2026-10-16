@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import ArrowRightLeft from '@lucide/svelte/icons/arrow-right-left';
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import { tick } from 'svelte';
@@ -91,7 +92,7 @@
 {/snippet}
 
 <svelte:head>
-	<title>{task.taskTag} · {task.title} · {m.app_name()}</title>
+	<title>{documentTitle(task.taskTag, task.title)}</title>
 </svelte:head>
 
 <PageLayout variant="record">

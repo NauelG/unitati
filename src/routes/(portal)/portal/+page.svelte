@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import Plus from '@lucide/svelte/icons/plus';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Pager from '#lib/components/unitati/Pager.svelte';
@@ -15,7 +16,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.portal_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.portal_title())}</title>
 </svelte:head>
 
 <PageLayout variant="index">

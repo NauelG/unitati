@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
@@ -151,7 +152,7 @@
 {/snippet}
 
 <svelte:head>
-	<title>{asset.assetTag} · {asset.name} · {m.app_name()}</title>
+	<title>{documentTitle(asset.assetTag, asset.name)}</title>
 </svelte:head>
 
 <PageLayout variant="record">

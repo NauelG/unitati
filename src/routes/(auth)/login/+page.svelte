@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle, productName } from '#lib/brand.svelte.js';
 	import { untrack } from 'svelte';
 	import { APP_ENV } from '$app/env/public';
 	import { superForm } from 'sveltekit-superforms';
@@ -20,7 +21,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.login_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.login_title({ name: productName() }))}</title>
 </svelte:head>
 
 <div class="grid min-h-screen bg-[var(--surface-0)] lg:grid-cols-2">
@@ -35,7 +36,7 @@
 			>
 				<Logo size="lg" class="lg:hidden" />
 				<h1 class="mt-[var(--space-5)] font-display text-xl font-semibold text-[var(--ink)]">
-					{m.login_title()}
+					{m.login_title({ name: productName() })}
 				</h1>
 				<p class="mt-[var(--space-1)] text-sm text-[var(--ink-muted)]">{m.login_lede()}</p>
 

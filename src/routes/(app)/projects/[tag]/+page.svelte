@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import Archive from '@lucide/svelte/icons/archive';
 	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
 	import Pencil from '@lucide/svelte/icons/pencil';
@@ -144,7 +145,7 @@
 {/snippet}
 
 <svelte:head>
-	<title>{project.projectTag} · {project.name} · {m.app_name()}</title>
+	<title>{documentTitle(project.projectTag, project.name)}</title>
 </svelte:head>
 
 <PageLayout variant="record">

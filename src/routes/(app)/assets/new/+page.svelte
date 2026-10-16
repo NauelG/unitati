@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import { untrack } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import Button from '#lib/components/unitati/Button.svelte';
@@ -46,7 +47,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.asset_new_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.asset_new_title())}</title>
 </svelte:head>
 
 <PageLayout variant="record">

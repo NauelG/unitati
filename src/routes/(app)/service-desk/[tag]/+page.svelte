@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 	import EscalateSheet from '#lib/components/unitati/EscalateSheet.svelte';
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
@@ -150,7 +151,7 @@
 {/snippet}
 
 <svelte:head>
-	<title>{ticket.ticketTag} · {ticket.subject} · {m.app_name()}</title>
+	<title>{documentTitle(ticket.ticketTag, ticket.subject)}</title>
 </svelte:head>
 
 <PageLayout variant="record">

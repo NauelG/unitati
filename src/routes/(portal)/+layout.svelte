@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { productName } from '#lib/brand.svelte.js';
 	import AppVersion from '#lib/components/AppVersion.svelte';
 	import Logo from '#lib/components/unitati/Logo.svelte';
 	import ThemeToggle from '#lib/components/unitati/ThemeToggle.svelte';
@@ -13,7 +14,7 @@
 	<header
 		class="flex h-14 items-center justify-between border-b border-[var(--border)] bg-[var(--surface-1)] px-6"
 	>
-		<a href="/portal" class="rounded-[var(--radius-sm)]" aria-label={m.app_name()}>
+		<a href="/portal" class="rounded-[var(--radius-sm)]" aria-label={productName()}>
 			<Logo size="md" />
 		</a>
 

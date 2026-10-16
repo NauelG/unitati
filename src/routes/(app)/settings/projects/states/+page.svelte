@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import { enhance } from '$app/forms';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
@@ -104,7 +105,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.project_states_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.project_states_title())}</title>
 </svelte:head>
 
 <PageLayout variant="index">

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle, productName } from '#lib/brand.svelte.js';
 	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import Circle from '@lucide/svelte/icons/circle';
 	import { scale } from 'svelte/transition';
@@ -110,13 +111,15 @@
 {/snippet}
 
 <svelte:head>
-	<title>{m.overview_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.overview_title())}</title>
 </svelte:head>
 
 <PageLayout variant="index" class="pb-[var(--space-12)]">
 	<PageHeader title={m.overview_greeting({ name: data.user.name })}>
 		{#snippet summary()}
-			{data.mode === 'empty' ? m.overview_checklist_lede() : m.overview_pending()}
+			{data.mode === 'empty'
+				? m.overview_checklist_lede({ name: productName() })
+				: m.overview_pending()}
 		{/snippet}
 	</PageHeader>
 

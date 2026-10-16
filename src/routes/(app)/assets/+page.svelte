@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import Plus from '@lucide/svelte/icons/plus';
 	import Search from '@lucide/svelte/icons/search';
@@ -164,7 +165,7 @@
 {#snippet location(row: AssetView)}{row.locationName ?? '—'}{/snippet}
 
 <svelte:head>
-	<title>{m.assets_title()} · {m.app_name()}</title>
+	<title>{documentTitle(m.assets_title())}</title>
 </svelte:head>
 
 <PageLayout variant="index">
