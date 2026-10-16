@@ -86,7 +86,12 @@ describe('the OpenAPI document built from the real registry', () => {
 		);
 		expect(byId['tickets.list'].tags).toEqual(['Service desk']);
 		expect(byId['queues.list'].tags).toEqual(['Service desk']);
-		expect(document.tags).toEqual([{ name: 'Service desk' }, { name: 'Projects' }]);
+		expect(byId['assets.list'].tags).toEqual(['Assets']);
+		expect(document.tags).toEqual([
+			{ name: 'Service desk' },
+			{ name: 'Projects' },
+			{ name: 'Assets' }
+		]);
 	});
 
 	it('takes path parameters, query and body from the input schema', () => {

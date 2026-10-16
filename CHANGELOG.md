@@ -5,6 +5,24 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.50.0] - 2026-10-16
+
+### Added
+
+- Asset use cases over `/api/v1` (#137, slice D of #35): `assets.list`, `assets.get`,
+  `assets.timeline`, `assets.register`, `assets.update` (the one `PATCH`, a plain field edit),
+  `assets.custody.assign`, `assets.custody.return`, `assets.state`, `assets.location` and
+  `assets.note`. Assets are addressed by tag. Reads return a `visibility` discriminator: `full`, or
+  `shared` (name and location only, ADR 0007). Writes copy the permissions of the matching UI route
+  action (`assets.manage`, `assets.checkout`), pinned by a registry test. Renaming a tag answers
+  with the new `Location`; the old URL is `404`. All of it appears in the API documentation under
+  _Assets_.
+
+### Changed
+
+- Assigning custody of an asset somebody already holds is now refused (`already_in_custody`)
+  instead of silently overwriting the holder, in the API and in the asset record.
+
 ## [0.49.0] - 2026-10-16
 
 ### Added

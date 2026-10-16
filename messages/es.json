@@ -259,6 +259,7 @@
 	"action_note_label": "Texto de la nota",
 	"action_note_submit": "Añadir nota",
 	"action_error_person_missing": "La persona elegida ya no existe.",
+	"action_error_already_in_custody": "El activo ya está en custodia de alguien. Devuélvelo primero.",
 	"action_error_not_in_custody": "El activo ya no estaba en custodia de nadie.",
 	"action_error_empty_note": "Escribe la nota.",
 	"action_error_invalid": "Revisa el valor elegido.",
