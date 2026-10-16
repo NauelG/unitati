@@ -12,6 +12,7 @@
 	import Field from '#lib/components/unitati/Field.svelte';
 	import { toViewTransitionName } from '#lib/motion.js';
 	import { optimisticEnhance } from '#lib/optimistic.js';
+	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
@@ -21,6 +22,8 @@
 	import TimelineSkeleton from '#lib/components/unitati/TimelineSkeleton.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { focusFirstField } from '#lib/keymap.js';
+	import { LINK_TICKET_EVENT, paletteContext } from '#lib/palette-context.svelte.js';
+	import Skeleton from '#lib/components/unitati/Skeleton.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Snippet } from 'svelte';
 	import type { PageProps } from './$types';
@@ -42,6 +45,25 @@
 	});
 
 	const asset = $derived(data.asset);
+
+	const unlinkTicketError = $derived(
+		form && 'action' in form && form.action === 'unlinkTicket' && 'message' in form
+			? form.message
+			: undefined
+	);
+
+	// The palette's "Vincular ticket" opens the panel's own dialog (#168).
+	let linkOpen = $state(false);
+	$effect(() => {
+		if (!data.canLinkTickets) return;
+		const open = () => (linkOpen = true);
+		paletteContext.linkableAssetTag = asset.assetTag;
+		window.addEventListener(LINK_TICKET_EVENT, open);
+		return () => {
+			paletteContext.linkableAssetTag = null;
+			window.removeEventListener(LINK_TICKET_EVENT, open);
+		};
+	});
 	const stateChoices = stateOptions();
 	const personOptions = $derived(options(data.people, (person) => person.fullName));
 	const locationOptions = $derived(options(data.locations, (entry) => entry.name));
@@ -397,11 +419,46 @@
 			skeleton sized to match the real rail exactly (no CLS when it swaps).
 		-->
 		{#await data.timelineRail}
+			{#if asset.visibility === 'full'}
+				<!-- Same box as the related-tickets panel it stands in for: title, one row, no shift. -->
+				<div
+					class="mb-[var(--space-4)] space-y-[var(--space-3)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-4)]"
+					aria-hidden="true"
+				>
+					<Skeleton class="h-5 w-40" />
+					<Skeleton class="h-8 w-full" />
+				</div>
+			{/if}
 			<WorkPanel heading={m.timeline_title()} actions={timelineTag}>
 				<TimelineSkeleton />
 			</WorkPanel>
 		{:then rail}
 			{#if rail.timeline}
+				{#if asset.visibility === 'full'}
+					{@const ticketGroups = rail.related.filter((group) => group.relation === 'affected_by')}
+					{#if data.canLinkTickets || ticketGroups.length > 0}
+						<RelatedRecords
+							groups={ticketGroups}
+							unlinkAction={data.canLinkTickets ? '?/unlinkTicket' : undefined}
+							error={unlinkTicketError}
+							linkAction={data.canLinkTickets ? '?/linkTickets' : undefined}
+							linkLabel={m.related_link_ticket()}
+							linkDescription={m.related_link_ticket_lede()}
+							linkFieldLabel={m.related_link_ticket_field()}
+							linkPlaceholder={m.related_link_ticket_placeholder()}
+							linkSearchUrl="/assets/{encodeURIComponent(asset.assetTag)}/tickets"
+							linkSubmitLabel={(count) =>
+								count === 0
+									? m.related_link_ticket_submit_none()
+									: count === 1
+										? m.related_link_ticket_submit_one({ count })
+										: m.related_link_ticket_submit_other({ count })}
+							linkedIds={ticketGroups.flatMap((group) => group.items.map((item) => item.ref.id))}
+							bind:linkOpen
+							class="mb-[var(--space-4)]"
+						/>
+					{/if}
+				{/if}
 				<RelationConstellation
 					centre={{ kind: 'asset', tag: asset.assetTag }}
 					groups={rail.related}

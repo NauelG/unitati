@@ -153,6 +153,61 @@ export async function listTickets(
 	return page(rows, counted?.total ?? 0, window);
 }
 
+export interface TicketChoice {
+	id: string;
+	ticketTag: string;
+	subject: string;
+	status: TicketStatus;
+}
+
+export interface TicketChoiceRequest {
+	search?: string;
+}
+
+/** A picker shows a short list and asks again as the term narrows. */
+const TICKET_CHOICES = 10;
+/** The term comes from a query string. */
+const MAX_TERM_LENGTH = 100;
+
+/**
+ * The tickets a viewer may pick from, for a form that attaches one to something
+ * (the asset record's "Vincular ticket", #168). Apart from `listTickets` because
+ * a picker needs the narrowest shape, and because it offers **every** status:
+ * the ticket that explains last month's fault is usually `resolved` or `closed`.
+ *
+ * The id is safe to return: the row passed the viewer's own ticket scope first.
+ * Whether they may link it is decided again where the link is written.
+ *
+ * Partial matching on tag and subject, with `%`, `_` and the escape character
+ * escaped so the term is text and not a pattern. Most recently updated first.
+ */
+export async function listTicketChoices(
+	viewer: SessionUser,
+	request: TicketChoiceRequest = {}
+): Promise<TicketChoice[]> {
+	const term = request.search?.trim().slice(0, MAX_TERM_LENGTH);
+	const pattern = term ? `%${term.replace(/[\\%_]/g, '\\$&')}%` : null;
+
+	return getDb()
+		.select({
+			id: tickets.id,
+			ticketTag: tickets.ticketTag,
+			subject: tickets.subject,
+			status: tickets.status
+		})
+		.from(tickets)
+		.where(
+			and(
+				requireTicketScope(viewer),
+				pattern
+					? or(sql`${tickets.ticketTag} ilike ${pattern}`, sql`${tickets.subject} ilike ${pattern}`)
+					: undefined
+			)
+		)
+		.orderBy(desc(tickets.updatedAt), asc(tickets.id))
+		.limit(TICKET_CHOICES);
+}
+
 /**
  * The count `AppShell` prints beside the Service desk link: every ticket not
  * `resolved` or `closed`. Takes a bare `organisationId` rather than a

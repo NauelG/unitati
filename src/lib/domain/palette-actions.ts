@@ -31,7 +31,8 @@ export type PaletteActionTarget =
 	| { kind: 'assign-to-me'; ticketTag: string }
 	| { kind: 'move-task' }
 	| { kind: 'escalate-ticket' }
-	| { kind: 'link-asset' };
+	| { kind: 'link-asset' }
+	| { kind: 'link-ticket' };
 
 export interface PaletteActionDef {
 	id: string;
@@ -44,6 +45,8 @@ export interface PaletteActionContext {
 	permissions: readonly string[];
 	/** The ticket tag, only when the viewer is on that ticket's own detail page. */
 	ticketTag?: string;
+	/** The asset whose record is open and can have tickets linked to it — #168. */
+	linkableAssetTag?: string | null;
 	/** The task whose record is open, only while it can be moved (not archived) — #120. */
 	movableTaskTag?: string | null;
 	/** The ticket whose record is open and can be escalated — #150. */
@@ -101,6 +104,14 @@ export function derivePaletteActions(ctx: PaletteActionContext): PaletteActionDe
 					label: m.palette_action_link_asset(),
 					icon: LinkIcon,
 					target: { kind: 'link-asset' }
+				}
+			: null,
+		hasAnyPermission(ctx.permissions, 'tickets.manage') && ctx.linkableAssetTag
+			? {
+					id: 'link-ticket',
+					label: m.palette_action_link_ticket(),
+					icon: LinkIcon,
+					target: { kind: 'link-ticket' }
 				}
 			: null,
 		hasAnyPermission(ctx.permissions, 'projects.manage') && ctx.movableTaskTag
