@@ -204,6 +204,10 @@ introduces them.
 
 ### Deploying
 
+Image processing uses [`sharp`](https://sharp.pixelplumbing.com/), a native dependency. It ships
+prebuilt binaries for linux x64/arm64 (glibc and musl) and macOS, so `npm ci` needs no build
+toolchain on those platforms.
+
 `node --env-file=.env build` serves on port 3000. Behind a reverse proxy, adapter-node must be
 told its public origin or **every form submission is rejected** as cross-site: set
 `PROTOCOL_HEADER=x-forwarded-proto` and `HOST_HEADER=x-forwarded-host`. The `ORIGIN` variable
