@@ -8,6 +8,9 @@
 	import Flag from '@lucide/svelte/icons/flag';
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import Link from '@lucide/svelte/icons/link';
+	import MapPinMinus from '@lucide/svelte/icons/map-pin-minus';
+	import MapPinPen from '@lucide/svelte/icons/map-pin-pen';
+	import MapPinPlus from '@lucide/svelte/icons/map-pin-plus';
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import MessageSquare from '@lucide/svelte/icons/message-square';
 	import PackagePlus from '@lucide/svelte/icons/package-plus';
@@ -91,7 +94,10 @@
 		'task.project.changed': ArrowRightLeft,
 		'person.created': UserPlus,
 		'person.deactivated': UserRoundX,
-		'person.department.changed': ArrowRightLeft
+		'person.department.changed': ArrowRightLeft,
+		'catalogue.location.created': MapPinPlus,
+		'catalogue.location.updated': MapPinPen,
+		'catalogue.location.deleted': MapPinMinus
 	};
 </script>
 

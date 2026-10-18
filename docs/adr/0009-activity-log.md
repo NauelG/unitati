@@ -100,3 +100,23 @@ what lets a linked ticket show today's status instead of the status it had when 
 - **A dedicated `custody` table beside the activity log.** Rejected: the activity table with a
   typed foreign key, a verb and a payload already _is_ a table of custody events. Building the
   second one is the duplication this ADR was written to prevent.
+
+## Addendum: a target without a foreign key (locations, #179)
+
+`activity.location_id` is the sixth target and the first with **no foreign key**. Every other
+target uses `cascade`, which is right for a record whose history is meaningless without it. A
+location is different: its deletion is itself an event an audit (#24) needs to read afterwards.
+`restrict` would forbid deleting any location with history, `cascade` would erase the entry that
+records the delete, and `set null` would break `activity_exactly_one_target`. So the column is a
+bare `uuid`, still counted by the `CHECK` and indexed like the others.
+
+The rule that follows: **an entry for a target without a foreign key carries its own snapshot.**
+Nothing can be resolved through the id once the row is gone, so `catalogue.location.*` payloads hold
+the name and the full path as they read when written (`updated` holds the path _after_ the change,
+and both parent paths for a move). Nothing is joined at read time, which is also why the
+organisation feed shows these entries with no record link.
+
+Only locations have this history among the catalogues, because moving or renaming one changes what
+every asset in it "is at". The `catalogue.` verb prefix reserves the space; each further catalogue
+needs its own decision. A move writes one entry, on the moved location: descendants and assets have
+no row that changed.

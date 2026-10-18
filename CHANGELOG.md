@@ -5,6 +5,18 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.57.0] - 2026-10-18
+
+### Added
+
+- Activity log for locations (#179). Creating, editing, moving and deleting a location now writes a
+  `catalogue.location.created` / `updated` / `deleted` entry in the same transaction, attributed to
+  the person or service account that acted. An update records only the fields that changed (a move
+  carries the parent's id and path on both sides); a save that changes nothing, or a refused write,
+  records nothing. The entries read as sentences in the Overview feed. `activity.location_id` is the
+  first target without a foreign key, so an entry outlives the location it describes (ADR 0009,
+  addendum).
+
 ## [0.56.0] - 2026-10-18
 
 ### Added

@@ -99,6 +99,13 @@
       "when": 1792320602095,
       "tag": "0013_global_search",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792322273535,
+      "tag": "0014_location_activity",
+      "breakpoints": true
     }
   ]
 }

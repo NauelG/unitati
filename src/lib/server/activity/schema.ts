@@ -65,7 +65,7 @@ export const activity = pgTable(
 		/** When it happened, which is not when the row was inserted. */
 		occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
 
-		// Exactly one of the five is set. A new entity with history costs a column
+		// Exactly one of the six is set. A new entity with history costs a column
 		// and a term in the CHECK; at four principal entities that is cheap, and it
 		// buys a foreign key per target that a polymorphic `record_type` cannot.
 		assetId: uuid('asset_id').references(() => assets.id, { onDelete: 'cascade' }),
@@ -73,6 +73,14 @@ export const activity = pgTable(
 		taskId: uuid('task_id').references(() => tasks.id, { onDelete: 'cascade' }),
 		projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
 		personId: uuid('person_id').references(() => people.id, { onDelete: 'cascade' }),
+		/**
+		 * The first target **without a foreign key**, on purpose (ADR 0009,
+		 * addendum). `restrict` would forbid deleting any location with history,
+		 * `cascade` would erase the very entry that records the delete, and
+		 * `set null` would break `activity_exactly_one_target`. Entries for a
+		 * location therefore carry their own name and path snapshots.
+		 */
+		locationId: uuid('location_id'),
 
 		...timestamps
 	},
@@ -82,7 +90,7 @@ export const activity = pgTable(
 		 * which rejects two targets as well as none, where
 		 * `a is not null or b is not null` accepts both set.
 		 *
-		 * Derived from `ACTIVITY_TARGETS` so the five names are spelled once.
+		 * Derived from `ACTIVITY_TARGETS` so the six names are spelled once.
 		 * Indexing `table` by those keys is what makes the list honest: a name
 		 * added to it without a matching column fails to compile here, rather
 		 * than producing a constraint over a column that does not exist.
@@ -105,6 +113,7 @@ export const activity = pgTable(
 		index('activity_task_occurred').on(table.taskId, table.occurredAt),
 		index('activity_project_occurred').on(table.projectId, table.occurredAt),
 		index('activity_person_occurred').on(table.personId, table.occurredAt),
+		index('activity_location_occurred').on(table.locationId, table.occurredAt),
 		index('activity_org_occurred').on(table.organisationId, table.occurredAt)
 	]
 );

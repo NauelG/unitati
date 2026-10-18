@@ -91,7 +91,7 @@ describe('the exactly-one-target CHECK', () => {
 	});
 
 	/** Every target column named in `verbs.ts` must satisfy the constraint alone. */
-	it('accepts each of the five targets on its own', async () => {
+	it('accepts each target on its own', async () => {
 		const { organisation, asset, person, ticket } = await scenario();
 		await ensureDefaultStates(getDb(), organisation.id);
 		const { backlog } = await statesByGroup(organisation.id);
@@ -102,7 +102,9 @@ describe('the exactly-one-target CHECK', () => {
 			personId: person.id,
 			ticketId: ticket.id,
 			taskId: task.id,
-			projectId: project.id
+			projectId: project.id,
+			// No row behind it: the one target without a foreign key.
+			locationId: crypto.randomUUID()
 		};
 
 		const refusals = await Promise.all(

@@ -3,6 +3,7 @@ import { getDb, type Database, type Transaction } from '../db';
 import { constraintViolation, uniqueConstraintName } from '../db/errors';
 import type { SessionUser } from '../auth/guards';
 import { failure, success, type Outcome } from '../shared/outcome';
+import { actorColumns, recordActivity } from '../activity';
 import { locations, organisations } from './schema';
 import type { LocationInput } from './validation';
 
@@ -139,11 +140,25 @@ export async function createLocation(
 	}
 
 	try {
-		const [row] = await getDb()
-			.insert(locations)
-			.values({ ...input, organisationId: actor.organisationId })
-			.returning({ id: locations.id });
-		return success(row);
+		// The entry commits with the row (ADR 0009): a catalogue change an audit
+		// depends on is never anonymous, and never half-recorded.
+		return await getDb().transaction(async (tx) => {
+			const [row] = await tx
+				.insert(locations)
+				.values({ ...input, organisationId: actor.organisationId })
+				.returning({ id: locations.id });
+
+			const path =
+				(await locationPaths(actor.organisationId, [row.id], tx)).get(row.id) ?? input.name;
+			await recordActivity(tx, {
+				organisationId: actor.organisationId,
+				...actorColumns(actor),
+				target: { locationId: row.id },
+				verb: 'catalogue.location.created',
+				payload: { name: input.name, path, ...snapshotOf(input) }
+			});
+			return success(row);
+		});
 	} catch (error) {
 		const duplicate = duplicateOf(error);
 		if (duplicate) return failure(duplicate);
@@ -152,6 +167,20 @@ export async function createLocation(
 		throw error;
 	}
 }
+
+/** The fields a created entry snapshots besides the name and path it derives. */
+function snapshotOf(input: LocationInput) {
+	return {
+		parentId: input.parentId,
+		code: input.code,
+		address: input.address,
+		notes: input.notes,
+		latitude: input.latitude,
+		longitude: input.longitude
+	};
+}
+
+const SCALAR_FIELDS = ['name', 'code', 'address', 'notes', 'latitude', 'longitude'] as const;
 
 /** True when `candidateId` is somewhere below `ancestorId`. */
 async function isDescendant(
@@ -191,7 +220,7 @@ export async function updateLocation(
 			}
 
 			const [current] = await tx
-				.select({ id: locations.id })
+				.select()
 				.from(locations)
 				.where(and(eq(locations.id, id), eq(locations.organisationId, actor.organisationId)))
 				.limit(1);
@@ -206,10 +235,51 @@ export async function updateLocation(
 				}
 			}
 
+			// Only what differs is recorded, and a save that changes nothing records
+			// nothing — and does not touch the row either.
+			const changes: Record<string, { from: unknown; to: unknown }> = {};
+			for (const field of SCALAR_FIELDS) {
+				if (current[field] !== input[field]) {
+					changes[field] = { from: current[field], to: input[field] };
+				}
+			}
+			const moved = current.parentId !== input.parentId;
+			if (Object.keys(changes).length === 0 && !moved) return success(undefined);
+
+			// Paths are read before the write for the old parent and after it for
+			// this location, so the entry says where it was and where it now is.
+			const before = await locationPaths(
+				actor.organisationId,
+				current.parentId ? [current.parentId] : [],
+				tx
+			);
+
 			await tx
 				.update(locations)
 				.set({ ...input, updatedAt: new Date() })
 				.where(eq(locations.id, id));
+
+			const after = await locationPaths(
+				actor.organisationId,
+				[id, ...(input.parentId ? [input.parentId] : [])],
+				tx
+			);
+			if (moved) {
+				changes.parent = {
+					from: current.parentId
+						? { id: current.parentId, path: before.get(current.parentId) ?? '' }
+						: null,
+					to: input.parentId ? { id: input.parentId, path: after.get(input.parentId) ?? '' } : null
+				};
+			}
+
+			await recordActivity(tx, {
+				organisationId: actor.organisationId,
+				...actorColumns(actor),
+				target: { locationId: id },
+				verb: 'catalogue.location.updated',
+				payload: { path: after.get(id) ?? input.name, changes }
+			});
 			return success(undefined);
 		});
 	} catch (error) {
@@ -231,11 +301,28 @@ export async function deleteLocation(
 	id: string
 ): Promise<Outcome<void, LocationDeleteFailure>> {
 	try {
-		const rows = await getDb()
-			.delete(locations)
-			.where(and(eq(locations.id, id), eq(locations.organisationId, actor.organisationId)))
-			.returning({ id: locations.id });
-		return rows.length === 0 ? failure('not_found') : success(undefined);
+		return await getDb().transaction(async (tx) => {
+			const [current] = await tx
+				.select({ name: locations.name, code: locations.code })
+				.from(locations)
+				.where(and(eq(locations.id, id), eq(locations.organisationId, actor.organisationId)))
+				.limit(1);
+			if (!current) return failure('not_found');
+
+			// The path has to be read while the row still exists: afterwards there is
+			// nothing left to climb, and the entry must carry its own snapshot.
+			const path = (await locationPaths(actor.organisationId, [id], tx)).get(id) ?? current.name;
+
+			await tx.delete(locations).where(eq(locations.id, id));
+			await recordActivity(tx, {
+				organisationId: actor.organisationId,
+				...actorColumns(actor),
+				target: { locationId: id },
+				verb: 'catalogue.location.deleted',
+				payload: { name: current.name, path, code: current.code }
+			});
+			return success(undefined);
+		});
 	} catch (error) {
 		if (constraintViolation(error)?.code === '23503') return failure('in_use');
 		throw error;

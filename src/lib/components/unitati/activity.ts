@@ -166,11 +166,62 @@ export function activitySentence(entry: ActivityEntry): string {
 				to: entry.payload.toDepartmentName ?? m.activity_department_none()
 			});
 
+		case 'catalogue.location.created':
+			return m.activity_location_created({ path: entry.payload.path });
+
+		case 'catalogue.location.updated':
+			return locationUpdatedSentence(entry.payload);
+
+		case 'catalogue.location.deleted':
+			return m.activity_location_deleted({ path: entry.payload.path });
+
 		default: {
 			const unhandled: never = entry;
 			throw new Error(`Unhandled activity verb: ${JSON.stringify(unhandled)}`);
 		}
 	}
+}
+
+type LocationUpdatedPayload = Extract<
+	ActivityEntry,
+	{ verb: 'catalogue.location.updated' }
+>['payload'];
+
+/** The changed fields as the words a reader knows them by; latitude and longitude read as one. */
+function locationChangedFields(changes: LocationUpdatedPayload['changes']): string[] {
+	const fields: string[] = [];
+	if (changes.name) fields.push(m.activity_location_field_name());
+	if (changes.parent) fields.push(m.activity_location_field_parent());
+	if (changes.code) fields.push(m.activity_location_field_code());
+	if (changes.address) fields.push(m.activity_location_field_address());
+	if (changes.notes) fields.push(m.activity_location_field_notes());
+	if (changes.latitude || changes.longitude) {
+		fields.push(m.activity_location_field_coordinates());
+	}
+	return fields;
+}
+
+/**
+ * A rename or a move alone reads as itself; anything else is one "edited"
+ * sentence listing what changed, so a multi-field save is a single line and not
+ * a paragraph.
+ */
+function locationUpdatedSentence(payload: LocationUpdatedPayload): string {
+	const { changes, path } = payload;
+	const fields = locationChangedFields(changes);
+
+	if (fields.length === 1 && changes.name) {
+		return m.activity_location_renamed({ from: changes.name.from, to: changes.name.to });
+	}
+	if (fields.length === 1 && changes.parent) {
+		const name = path.split(' › ').at(-1) ?? path;
+		return m.activity_location_moved({
+			name,
+			from: changes.parent.from?.path ?? m.activity_location_top_level(),
+			to: changes.parent.to?.path ?? m.activity_location_top_level()
+		});
+	}
+	return m.activity_location_edited({ path, fields: fields.join(', ') });
 }
 
 export type ProjectChangedPart = { text: string } | { project: { tag: string; name: string } };
