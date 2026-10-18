@@ -45,7 +45,7 @@
 	import lockup from '#lib/assets/brand/unitati-lockup.svg';
 	import lockupInverse from '#lib/assets/brand/unitati-lockup-inverse.svg';
 	import mark from '#lib/assets/brand/unitati-mark.svg';
-	import { currentBrand } from '#lib/brand.svelte.js';
+	import { brandAssetUrl, currentBrand } from '#lib/brand.svelte.js';
 	import { monogramLetter, type BrandView } from '#lib/domain/brand.js';
 
 	interface Props {
@@ -54,12 +54,26 @@
 		size?: LogoSize;
 		class?: string;
 		/** Defaults to the page's brand; passed explicitly by the gallery and the component tests. */
-		brand?: Pick<BrandView, 'productName' | 'customised'>;
+		brand?: Pick<BrandView, 'productName' | 'customised'> &
+			Partial<Pick<BrandView, 'assets'>> & {
+				/** Replaces an uploaded image's URL: lets the gallery show art with no upload behind it. */
+				urls?: Partial<Record<'lockup' | 'lockup_dark' | 'mark', string>>;
+			};
 	}
 
 	let { variant = 'lockup', size, class: className, brand = currentBrand() }: Props = $props();
 
 	const classes = $derived(logo({ size, class: className }));
+	/** Uploaded art is the customer's own, so it is contained rather than sized by the viewBox. */
+	const artClasses = $derived(`${classes} max-w-full object-contain object-left`);
+
+	const assetUrl = (slot: 'lockup' | 'lockup_dark' | 'mark') =>
+		brand.urls?.[slot] ?? brandAssetUrl(slot, { assets: brand.assets ?? {} });
+
+	/** Where the lockup comes from in each theme; `null` is the text wordmark. */
+	const lockupLight = $derived(assetUrl('lockup'));
+	const lockupDark = $derived(assetUrl('lockup_dark') ?? lockupLight);
+	const markSrc = $derived(assetUrl('mark'));
 </script>
 
 <!--
@@ -90,19 +104,72 @@
 	is a single global, so it could not tell the two columns of that page apart,
 	while a CSS variant resolves per element.
 
+	Uploaded art (#162) follows the same mechanism. When the brand is customised, each
+	theme resolves its own source, and the golden rule fills the gaps:
+
+	| variant | light                           | dark                                         |
+	| ------- | ------------------------------- | -------------------------------------------- |
+	| lockup  | `lockup` upload, else wordmark  | `lockup_dark`, else `lockup`, else wordmark  |
+	| mark    | `mark` upload, else monogram    | same as light (the mark has no dark cut)     |
+
+	When the two themes resolve to the same source one element is rendered; when they
+	differ, both are, swapped by `dark:hidden` / `hidden dark:block`. Choosing the
+	source in JS would repaint the wrong cut on a hard reload, as described above.
+	Uploaded images are `decoding="async"` but never `loading="lazy"`: the logo is
+	above the fold. `max-w-full object-contain` keeps a wide logo inside the 248 px
+	sidebar and the portal header.
+
 	Both files are therefore in the markup, one of them hidden. `alt` lives on
 	the visible-in-light copy; the inverse is `aria-hidden` so a screen reader
 	announces the brand once, not twice, whichever one is painted.
 -->
+{#snippet art(src: string, visibility: string, visible: boolean)}
+	<img
+		{src}
+		alt={visible ? brand.productName : ''}
+		aria-hidden={visible ? undefined : 'true'}
+		decoding="async"
+		class="{artClasses} {visibility}"
+	/>
+{/snippet}
+
+{#snippet text(visibility: string, visible: boolean)}
+	<span
+		role={visible ? 'img' : undefined}
+		aria-label={visible ? brand.productName : undefined}
+		aria-hidden={visible ? undefined : 'true'}
+		class="{wordmark({ size, class: className })} {visibility}"
+	>
+		{brand.productName}
+	</span>
+{/snippet}
+
 {#if brand.customised}
 	{#if variant === 'mark'}
-		<span role="img" aria-label={brand.productName} class={monogram({ size, class: className })}>
-			{monogramLetter(brand.productName)}
-		</span>
+		{#if markSrc}
+			{@render art(markSrc, '', true)}
+		{:else}
+			<span role="img" aria-label={brand.productName} class={monogram({ size, class: className })}>
+				{monogramLetter(brand.productName)}
+			</span>
+		{/if}
+	{:else if lockupLight === lockupDark}
+		{#if lockupLight}
+			{@render art(lockupLight, '', true)}
+		{:else}
+			{@render text('', true)}
+		{/if}
 	{:else}
-		<span role="img" aria-label={brand.productName} class={wordmark({ size, class: className })}>
-			{brand.productName}
-		</span>
+		{#if lockupLight}
+			{@render art(lockupLight, 'dark:hidden', true)}
+		{:else}
+			{@render text('dark:hidden', true)}
+		{/if}
+		{#if lockupDark}
+			{@render art(lockupDark, 'hidden dark:block', false)}
+		{:else}
+			{@render text('hidden dark:block', false)}
+		{/if}
 	{/if}
 {:else if variant === 'mark'}
 	<img src={mark} alt={brand.productName} class={classes} />

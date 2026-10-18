@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { onNavigate } from '$app/navigation';
+	import { brandAssetUrl } from '#lib/brand.svelte.js';
 	import { ModeWatcher } from 'mode-watcher';
 	import appleTouchIcon from '#lib/assets/apple-touch-icon.png';
 	import favicon from '#lib/assets/favicon.svg';
@@ -9,6 +10,13 @@
 	import type { LayoutProps } from './$types';
 
 	let { children, data }: LayoutProps = $props();
+
+	// Browser icons (#162). Once the brand is customised, Unitati's bundled icons never
+	// show: the mark's generated icons do, or a monogram when there is no mark.
+	const markUrl = $derived(brandAssetUrl('mark', data.brand));
+	const faviconUrl = $derived(brandAssetUrl('favicon', data.brand));
+	const appleTouchUrl = $derived(brandAssetUrl('apple_touch', data.brand));
+	const markIsSvg = $derived(data.brand.assets.mark?.contentType === 'image/svg+xml');
 
 	/**
 	 * View Transitions (#87): must live in the root layout — `onNavigate` only
@@ -32,8 +40,26 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" type="image/svg+xml" href={favicon} />
-	<link rel="apple-touch-icon" href={appleTouchIcon} />
+	{#if !data.brand.customised}
+		<link rel="icon" type="image/svg+xml" href={favicon} />
+		<link rel="apple-touch-icon" href={appleTouchIcon} />
+	{:else if markUrl && faviconUrl}
+		<link rel="icon" type="image/png" sizes="64x64" href={faviconUrl} />
+		<!-- After the PNG, so a browser that supports SVG icons picks the crisp one. -->
+		{#if markIsSvg}
+			<link rel="icon" type="image/svg+xml" href={markUrl} />
+		{/if}
+		{#if appleTouchUrl}
+			<link rel="apple-touch-icon" href={appleTouchUrl} />
+		{/if}
+	{:else}
+		<!-- No mark: a monogram favicon and, deliberately, no apple-touch-icon (Q11). -->
+		<link
+			rel="icon"
+			type="image/svg+xml"
+			href="/brand/monogram.svg?v={data.brand.monogramVersion}"
+		/>
+	{/if}
 	<!--
 		The brand colour (#160), injected on the server so the first paint is already
 		branded. `{@html}` is acceptable only because `brandCss` (#lib/domain/brand-color)

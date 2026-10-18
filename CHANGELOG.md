@@ -5,6 +5,23 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.51.0] - 2026-10-18
+
+### Added
+
+- Logos in the product (#162, slice 4b of #157). `/settings/platform/branding` gains a _Logotipos_
+  section to upload, replace and remove the horizontal logo, its dark-theme variant and the symbol,
+  with a checkerboard thumbnail per slot, a client-side 5 MB pre-check and one Spanish message per
+  refusal. `Logo` renders the uploaded art with the golden-rule fallbacks (dark lockup, then
+  lockup, then wordmark; mark, then monogram), keeping the CSS-only dark swap so a hard reload never
+  flashes the wrong cut. The brand preview shows the saved logos.
+- Browser icons follow the brand. A customised brand with a mark emits the generated PNG favicon
+  (plus the SVG mark when it is one) and the apple-touch icon; without a mark it gets a monogram
+  SVG favicon from the new public `GET /brand/monogram.svg` and no apple-touch icon. Unitati's own
+  icons never appear once the brand is customised.
+- `brandAssetUrl` is the single builder of `/brand/<slot>?v=<sha256>` URLs; `monogramSvg` and
+  `monogramSpec` draw the monogram; `BrandView.monogramVersion` versions it.
+
 ## [0.50.0] - 2026-10-16
 
 ### Added
@@ -22,6 +39,7 @@ minor bumps carry features and patch bumps carry fixes.
 
 - Assigning custody of an asset somebody already holds is now refused (`already_in_custody`)
   instead of silently overwriting the holder, in the API and in the asset record.
+  ||||||| parent of f11a624 (feat: logos in the product, brand-aware Logo and favicons (#162))
 
 ## [0.49.0] - 2026-10-16
 

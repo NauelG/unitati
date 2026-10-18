@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { brandCss, deriveBrand, parseHex, type Hex } from '#lib/domain/brand-color.js';
@@ -7,6 +8,7 @@ import {
 	PRODUCT_NAME_MAX,
 	UPLOAD_SLOTS,
 	graphemeCount,
+	monogramSpec,
 	type BrandAssetSlot,
 	type BrandView,
 	type UploadSlot
@@ -88,12 +90,17 @@ async function loadAssets(organisationId: string): Promise<BrandView['assets']> 
 /** The stylesheet is derived here, once, and cached with the view: never per request. */
 function viewOf(row: BrandingRow, assets: BrandView['assets']): BrandView {
 	const brandColor = row.brandColor as Hex | null;
+	const { letter, background, foreground } = monogramSpec(row.productName, brandColor);
 	return {
 		productName: row.productName,
 		customised: isCustomised(row, assets),
 		brandColor,
 		css: brandColor ? brandCss(deriveBrand(brandColor)) : null,
-		assets
+		assets,
+		monogramVersion: createHash('sha256')
+			.update(letter + background + foreground)
+			.digest('hex')
+			.slice(0, 16)
 	};
 }
 
