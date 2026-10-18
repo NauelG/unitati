@@ -21,7 +21,6 @@ import {
 import {
 	addComment,
 	addCommentInput,
-	MAX_COMMENT_LENGTH,
 	assignTicket,
 	changeTicketStatus,
 	getTicketByTag,
@@ -127,14 +126,18 @@ export const actions: Actions = {
 		const user = requirePermission(locals.user, 'tickets.view');
 		const { fields, files } = await readTicketForm(request);
 
-		if ((fields.body ?? '').trim().length > MAX_COMMENT_LENGTH) {
-			return rejected('reply', failureMessage('body_too_long'));
-		}
 		const input = addCommentInput.safeParse({
 			body: fields.body ?? '',
 			visibility: fields.visibility === 'internal' ? 'internal' : 'public'
 		});
-		if (!input.success) return rejected('reply', m.ticket_error_invalid());
+		if (!input.success) {
+			// The schema's own bound, not a second copy of the number.
+			const tooLong = input.error.issues.some((issue) => issue.code === 'too_big');
+			return rejected(
+				'reply',
+				tooLong ? failureMessage('body_too_long') : m.ticket_error_invalid()
+			);
+		}
 
 		const outcome = await addComment(user, params.tag, input.data, files);
 		if (!outcome.ok) {
