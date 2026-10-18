@@ -90,7 +90,7 @@
 				<div class="rounded-[var(--radius-md)] border border-[var(--border)] p-[var(--space-4)]">
 					<p class="font-mono text-xs text-[var(--ink-muted)]">--{token.name}</p>
 					<p class="mt-1 text-sm font-semibold text-[var(--ink)]">{token.value}</p>
-					<p class="mt-1 text-[13px] text-[var(--ink-muted)]">{token.usage}</p>
+					<p class="mt-1 text-small text-[var(--ink-muted)]">{token.usage}</p>
 					<div
 						class="mt-[var(--space-3)] h-2 w-8 rounded-[var(--radius-full)] bg-[var(--brand)] transition-transform ease-[var(--ease-out)] group-hover:scale-x-150"
 						style:transition-duration="var(--{token.name})"

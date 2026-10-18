@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The segmented choice: native radios (arrow keys, one tab stop and the form
@@ -9,7 +9,7 @@
 	export const segmented = tv({
 		slots: {
 			root: 'flex flex-col gap-[var(--space-2)] border-0 p-0 m-0',
-			legend: 'p-0 text-[13px] leading-4 font-medium text-[var(--ink)]',
+			legend: 'p-0 text-label text-[var(--ink)]',
 			track: [
 				'inline-flex w-fit max-w-full flex-wrap gap-[var(--space-1)] rounded-[var(--radius-md)]',
 				'bg-[var(--surface-2)] p-[var(--space-1)]'

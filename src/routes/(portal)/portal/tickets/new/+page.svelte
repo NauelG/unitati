@@ -43,8 +43,7 @@
 		<Field label={m.ticket_form_subject()} name="subject" value={values.subject} required />
 
 		<label class="flex flex-col gap-[var(--space-1)]">
-			<span class="text-[13px] leading-4 font-medium text-[var(--ink)]">{m.ticket_form_body()}</span
-			>
+			<span class="text-label text-[var(--ink)]">{m.ticket_form_body()}</span>
 			<textarea
 				name="body"
 				required
@@ -62,17 +61,17 @@
 		/>
 
 		<label class="flex flex-col gap-[var(--space-1)]">
-			<span class="text-[13px] leading-4 font-medium text-[var(--ink)]">
+			<span class="text-label text-[var(--ink)]">
 				{m.ticket_form_attachments()}
 			</span>
 			<input type="file" name="files" multiple class="text-sm" />
-			<span class="text-[13px] leading-[18px] text-[var(--ink-muted)]">
+			<span class="text-small text-[var(--ink-muted)]">
 				{m.ticket_form_attachments_hint()}
 			</span>
 		</label>
 
 		{#if form && 'message' in form}
-			<p class="text-[13px] leading-[18px] text-[var(--danger)]" role="alert">{form.message}</p>
+			<p class="text-small text-[var(--danger)]" role="alert">{form.message}</p>
 		{/if}
 
 		<div class="flex items-center gap-[var(--space-3)]">

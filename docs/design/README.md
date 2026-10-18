@@ -48,6 +48,40 @@ usage note) and `assets/css/tokens.css` (the custom property). Components must n
 hardcode a colour; they reference `var(--token)` so that light and dark themes keep
 working.
 
+## Typography
+
+Every size is a named role, a single Tailwind utility that sets size, line-height, tracking and
+weight together. The family stays separate (`font-display`, `font-sans`, `font-mono`). Roles come
+from `assets/tokens.json` `type.groups` and are defined in `src/app.css` `@theme inline`.
+
+| Utility          | Size / line-height | Tracking  | Weight | Family  | Use                                          |
+| ---------------- | ------------------ | --------- | ------ | ------- | -------------------------------------------- |
+| `text-display`   | 36 / 42            | `-0.02em` | 700    | display | Login pitch line, one per screen             |
+| `text-title-1`   | 24 / 30            | `-0.02em` | 600    | display | Module index page title                      |
+| `text-title-2`   | 18 / 26            | `-0.01em` | 600    | display | Record title in a detail view                |
+| `text-title-3`   | 16 / 22            | -         | 600    | sans    | Panel, dialog and sheet headings             |
+| `text-body-lg`   | 16 / 24            | -         | 400    | sans    | Long-form text: ticket thread, composer      |
+| `text-body`      | 14 / 20            | -         | 400    | sans    | Default UI text (`text-sm` is the same)      |
+| `text-label`     | 13 / 16            | -         | 500    | sans    | Form labels, button text, breadcrumbs        |
+| `text-small`     | 13 / 18            | -         | 400    | sans    | Metadata, helper text, errors                |
+| `text-caption`   | 12 / 16            | `0.04em`  | 600    | sans    | Column headers, badges (sentence case)       |
+| `text-record-id` | 12 / 18            | `-0.01em` | 500    | mono    | Record tags; add `tabular-nums` where needed |
+| `text-mono`      | 11 / 16            | -         | 400    | mono    | Version, serials, keyboard hints             |
+
+`body-strong` is `text-body font-medium`. No arbitrary `text-[Npx]` or `leading-[Npx]` outside the
+vendored `ui/` folder: if a role is missing, add it to `app.css` and `tokens.json` in the same
+change. `src/lib/components/unitati/type-roles.guard.spec.ts` enforces this. Components build
+classes with `tv` from `#lib/tv.js`, which teaches tailwind-merge that a role is a font size and not a
+colour.
+
+## Spacing
+
+`--space-N` custom properties and Tailwind numerals (`mb-2`, `py-2`, `gap-1`) spell the same
+values: Tailwind's 4 px base equals `--space-N`. Decision: `unitati/` components use
+`[var(--space-N)]`, because they are the handoff made code; routes may use Tailwind numerals for
+layout glue, but never for a value that `tokens.json` names (the padding of a panel, the gap of a
+form row). There is no repo-wide rewrite; the rule only stops new drift.
+
 ## Unpacking a new handoff
 
 Design handoffs arrive as one self-contained HTML file with every asset inlined as a

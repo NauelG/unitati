@@ -33,7 +33,7 @@
 		<div class="flex flex-wrap items-center gap-[var(--space-6)]">
 			<div class="flex items-center gap-[var(--space-3)]">
 				<ThemeToggle />
-				<span class="text-[13px] text-[var(--ink-muted)]">Ábrelo: cambia el tema de la app.</span>
+				<span class="text-small text-[var(--ink-muted)]">Ábrelo: cambia el tema de la app.</span>
 			</div>
 
 			<dl class="flex flex-col gap-1 font-mono text-xs">
@@ -54,7 +54,7 @@
 	{/snippet}
 
 	{#snippet notes()}
-		<div class="flex flex-col gap-[var(--space-3)] text-sm leading-[22px] text-[var(--ink)]">
+		<div class="flex flex-col gap-[var(--space-3)] text-sm text-[var(--ink)]">
 			<p>
 				<strong>Este es el único componente de la galería que actúa sobre la app entera.</strong> El
 				botón "Ver en oscuro" de arriba envuelve la demo en un

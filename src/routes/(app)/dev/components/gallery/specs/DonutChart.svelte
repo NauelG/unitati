@@ -79,7 +79,7 @@
 		</div>
 
 		<div class="flex flex-col gap-[var(--space-3)]">
-			<p class="text-[13px] text-[var(--ink-muted)]">
+			<p class="text-small text-[var(--ink-muted)]">
 				El color de cada porción sale de la misma tabla que lee StatusBadge, así que una porción y
 				la insignia del mismo estado no pueden discrepar:
 			</p>
@@ -99,7 +99,7 @@
 	{/snippet}
 
 	{#snippet notes()}
-		<div class="flex flex-col gap-[var(--space-3)] text-sm leading-[22px] text-[var(--ink)]">
+		<div class="flex flex-col gap-[var(--space-3)] text-sm text-[var(--ink)]">
 			<p>
 				<strong
 					>La regla dura de la fase 9: todo gráfico se entrega con estado vacío o no se entrega.</strong

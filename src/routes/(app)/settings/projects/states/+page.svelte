@@ -266,7 +266,7 @@
 				<input type="hidden" name="id" value={dialog.editingId} />
 			{/if}
 			<label class="flex flex-col gap-[var(--space-1)]">
-				<span class="text-[13px] leading-4 font-medium text-[var(--ink)]">
+				<span class="text-label text-[var(--ink)]">
 					{m.project_states_name()}
 				</span>
 				<input name="name" bind:value={draftName} class={input} required />
@@ -275,11 +275,11 @@
 			{#if dialog.editingId}
 				<!-- The group is fixed when the state is created (#121): shown, never submitted. -->
 				<div class="flex flex-col gap-[var(--space-1)]">
-					<span class="text-[13px] leading-4 font-medium text-[var(--ink)]">
+					<span class="text-label text-[var(--ink)]">
 						{m.project_states_group()}
 					</span>
 					<div><StatusBadge status={dialog.editing?.group ?? STATE_GROUPS[0]} /></div>
-					<p class="text-[13px] leading-[18px] text-[var(--ink-muted)]">
+					<p class="text-small text-[var(--ink-muted)]">
 						{m.project_states_group_fixed()}
 					</p>
 				</div>
@@ -294,7 +294,7 @@
 			{/if}
 
 			{#if dialogFailure}
-				<p class="text-[13px] leading-[18px] text-[var(--danger)]" role="alert">
+				<p class="text-small text-[var(--danger)]" role="alert">
 					{dialogFailure}
 				</p>
 			{/if}

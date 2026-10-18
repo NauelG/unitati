@@ -162,7 +162,7 @@
 
 {#snippet failure(action: string)}
 	{#if form && 'action' in form && form.action === action && 'message' in form}
-		<p class="text-[13px] leading-[18px] text-[var(--danger)]" role="alert">{form.message}</p>
+		<p class="text-small text-[var(--danger)]" role="alert">{form.message}</p>
 	{/if}
 {/snippet}
 
@@ -241,7 +241,7 @@
 			</dl>
 
 			{#if asset.visibility === 'shared'}
-				<p class="mt-[var(--space-4)] text-[13px] leading-[18px] text-[var(--ink-muted)]">
+				<p class="mt-[var(--space-4)] text-small text-[var(--ink-muted)]">
 					{m.asset_detail_shared_notice()}
 				</p>
 			{/if}

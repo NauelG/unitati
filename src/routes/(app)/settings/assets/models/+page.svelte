@@ -201,9 +201,7 @@
 			{/if}
 
 			<label class="flex flex-col gap-[var(--space-1)]">
-				<span class="text-[13px] leading-4 font-medium text-[var(--ink)]"
-					>{m.catalogue_column_name()}</span
-				>
+				<span class="text-label text-[var(--ink)]">{m.catalogue_column_name()}</span>
 				<input name="name" bind:value={draftName} class={control} required />
 			</label>
 
@@ -225,7 +223,7 @@
 			/>
 
 			{#if dialogFailure}
-				<p class="text-[13px] leading-[18px] text-[var(--danger)]" role="alert">
+				<p class="text-small text-[var(--danger)]" role="alert">
 					{dialogFailure}
 				</p>
 			{/if}

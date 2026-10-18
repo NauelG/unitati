@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	export const HTTP_METHODS = ['GET', 'POST', 'PATCH', 'DELETE'] as const;
 	export type HttpMethod = (typeof HTTP_METHODS)[number];

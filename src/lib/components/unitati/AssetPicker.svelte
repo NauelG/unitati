@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * Picks several assets: the ones chosen sit above as chips, each carrying a
@@ -14,11 +14,11 @@
 	export const picker = tv({
 		slots: {
 			root: 'flex flex-col gap-[var(--space-2)]',
-			label: 'text-[13px] leading-4 font-medium text-[var(--ink)]',
+			label: 'text-label text-[var(--ink)]',
 			chips: 'flex flex-wrap gap-[var(--space-2)]',
 			chip: [
 				'inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-full)] py-[2px] pr-[var(--space-1)] pl-[var(--space-3)]',
-				'bg-[var(--asset-soft)] text-[13px] leading-5 text-[var(--asset)]'
+				'bg-[var(--asset-soft)] text-small text-[var(--asset)]'
 			],
 			tag: 'font-mono text-xs font-semibold',
 			remove: [
@@ -37,8 +37,8 @@
 				'text-sm leading-5 text-[var(--ink)] hover:bg-[var(--surface-2)]'
 			],
 			optionTag: 'font-mono text-xs font-semibold text-[var(--asset)]',
-			empty: 'px-[var(--space-3)] py-[var(--space-2)] text-[13px] text-[var(--ink-muted)]',
-			help: 'text-[13px] leading-[18px] text-[var(--ink-muted)]'
+			empty: 'px-[var(--space-3)] py-[var(--space-2)] text-small text-[var(--ink-muted)]',
+			help: 'text-small text-[var(--ink-muted)]'
 		}
 	});
 

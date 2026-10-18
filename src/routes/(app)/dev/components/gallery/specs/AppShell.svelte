@@ -157,7 +157,7 @@
 			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
 				Viewport alto, para ver que el scroll queda en main — y colapsada
 			</p>
-			<p class="mb-2 text-[13px] leading-[18px] text-[var(--ink-muted)]">
+			<p class="mb-2 text-small text-[var(--ink-muted)]">
 				Pulsa el botón de colapsar en la barra de marca, arriba a la izquierda, para ver el estado
 				colapsado. No hay una especimen "colapsada" separada a propósito:
 				<code class="font-mono">collapsed</code> no es una prop de este componente, es el atributo

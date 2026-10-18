@@ -362,7 +362,7 @@
 
 	{#each patterns as pattern (pattern.title)}
 		<WorkPanel heading={pattern.title}>
-			<p class="text-sm leading-[22px] text-[var(--ink)]">{pattern.body}</p>
+			<p class="text-sm text-[var(--ink)]">{pattern.body}</p>
 			<div class="mt-[var(--space-3)] flex flex-wrap gap-[var(--space-2)]">
 				{#each pattern.links as link (link.id)}
 					<a
@@ -455,9 +455,7 @@
 	</PageHeader>
 
 	<section>
-		<h3 class="text-[15px] leading-[22px] font-semibold text-[var(--ink)]">
-			Índice de lista — una fila y cincuenta filas
-		</h3>
+		<h3 class="text-title-3 text-[var(--ink)]">Índice de lista — una fila y cincuenta filas</h3>
 		<div class="mt-[var(--space-3)] grid gap-[var(--space-5)] lg:grid-cols-2">
 			<div>
 				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">Una fila</p>
@@ -486,7 +484,7 @@
 	</section>
 
 	<section>
-		<h3 class="text-[15px] leading-[22px] font-semibold text-[var(--ink)]">
+		<h3 class="text-title-3 text-[var(--ink)]">
 			Ficha de ticket — mensajes públicos/internos y activo relacionado largo
 		</h3>
 		<div class="mt-[var(--space-3)] grid gap-[var(--space-5)] lg:grid-cols-[1fr_320px]">
@@ -509,9 +507,7 @@
 	</section>
 
 	<section>
-		<h3 class="text-[15px] leading-[22px] font-semibold text-[var(--ink)]">
-			Ficha de activo — valores largos
-		</h3>
+		<h3 class="text-title-3 text-[var(--ink)]">Ficha de activo — valores largos</h3>
 		<div class="mt-[var(--space-3)] grid gap-[var(--space-4)] sm:grid-cols-2">
 			<WorkPanel heading="Detalles">
 				<dl class="divide-y divide-[var(--border)]">
@@ -536,9 +532,7 @@
 	</section>
 
 	<section>
-		<h3 class="text-[15px] leading-[22px] font-semibold text-[var(--ink)]">
-			Fila de catálogo — una fila y cincuenta filas
-		</h3>
+		<h3 class="text-title-3 text-[var(--ink)]">Fila de catálogo — una fila y cincuenta filas</h3>
 		<div class="mt-[var(--space-3)] grid gap-[var(--space-5)] lg:grid-cols-2">
 			{#each [1, 50] as count (count)}
 				<div>

@@ -17,7 +17,7 @@
 	import Unlink from '@lucide/svelte/icons/unlink';
 	import UserCheck from '@lucide/svelte/icons/user-check';
 	import UserMinus from '@lucide/svelte/icons/user-minus';
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 	import type { ActivityVerb } from '#lib/server/activity/index.js';
 
 	/**

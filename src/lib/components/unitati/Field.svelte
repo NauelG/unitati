@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The `.ut-field` family: a label, a control, and one line of help that turns
@@ -11,14 +11,14 @@
 			// `min-w-0` below `sm`: a fixed 220px floor overflows a 320px toolbar. (`basis-[220px]` would set the
 			// *height* in the many column-direction parents, so the floor is a min-width instead.)
 			root: 'flex min-w-0 flex-col sm:min-w-[220px] gap-[var(--space-1)]',
-			label: 'text-[13px] leading-4 font-medium text-[var(--ink)]',
+			label: 'text-label text-[var(--ink)]',
 			input: [
 				'h-[var(--size-control-md)] w-full box-border px-[var(--space-3)]',
 				'rounded-[var(--radius-md)] border bg-[var(--surface-1)]',
 				'text-base md:text-sm leading-5 text-[var(--ink)] transition-colors ut-transition-fast',
 				'placeholder:text-[var(--ink-muted)] disabled:opacity-50'
 			],
-			help: 'text-[13px] leading-[18px]'
+			help: 'text-small'
 		},
 		variants: {
 			invalid: {

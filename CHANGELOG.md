@@ -5,6 +5,20 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.55.0] - 2026-10-18
+
+### Changed
+
+- Named typography roles (#185). The twelve roles of `tokens.json` are now Tailwind utilities
+  (`text-title-1`, `text-label`, `text-small`, `text-record-id`, …) and every arbitrary
+  `text-[13px]` / `leading-[18px]` / `leading-[22px]` / `text-[15px]` outside the vendored `ui/`
+  became the role it imitated; a guard test keeps them out. Panel, dialog and sheet titles now share
+  one metric (16/22), page titles are tracked as the spec says, the record title of a ticket and
+  its tag use `title-2` and `record-id`, the thread and composer use `body-lg`, and the login pitch
+  line is `display` (36/42). `PageHeader` gains `level="index" | "record"`. `tv()` now comes from
+  `#lib/tv.js`, which teaches tailwind-merge that a role is a font size. Spec fix: column headers are
+  sentence case (ADR 0008); the design README gains Typography and Spacing rules.
+
 ## [0.54.0] - 2026-10-18
 
 ### Added

@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The short-task dialog shape (issue #100, ADR 0020): one to three fields
@@ -32,8 +32,8 @@
 				// scrollbar styling as `Sheet`'s own scroll region.
 				'ut-scrollbar max-h-[calc(100dvh-2*var(--space-6))] overflow-y-auto overscroll-contain'
 			],
-			title: 'text-base font-semibold text-[var(--ink)]',
-			description: 'mt-[var(--space-2)] text-sm leading-[22px] text-[var(--ink-muted)]'
+			title: 'text-title-3 text-[var(--ink)]',
+			description: 'mt-[var(--space-2)] text-sm text-[var(--ink-muted)]'
 		}
 	});
 </script>

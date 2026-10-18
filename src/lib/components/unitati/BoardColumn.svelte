@@ -69,7 +69,7 @@
 			: 'justify-between'}"
 	>
 		<h3
-			class="min-w-0 truncate text-[13px] leading-[18px] font-semibold text-[var(--ink)] {collapsed
+			class="min-w-0 truncate text-small font-semibold text-[var(--ink)] {collapsed
 				? '[writing-mode:vertical-rl]'
 				: ''}"
 			title={collapsed

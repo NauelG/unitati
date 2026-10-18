@@ -149,7 +149,7 @@
 
 {#snippet failure(action: string)}
 	{#if form && 'action' in form && form.action === action && 'message' in form}
-		<p class="text-[13px] leading-[18px] text-[var(--danger)]" role="alert">{form.message}</p>
+		<p class="text-small text-[var(--danger)]" role="alert">{form.message}</p>
 	{/if}
 {/snippet}
 

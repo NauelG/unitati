@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The record-detail toolbar (#86): a data-driven breadcrumb trail,
@@ -13,7 +13,7 @@
 	export const breadcrumbs = tv({
 		slots: {
 			root: 'flex h-14 items-center border-b border-[var(--border)]',
-			list: 'flex min-w-0 items-center gap-[var(--space-2)] text-[13px] leading-4 font-medium text-[var(--ink-muted)]',
+			list: 'flex min-w-0 items-center gap-[var(--space-2)] text-label text-[var(--ink-muted)]',
 			item: 'flex items-center gap-[var(--space-2)] truncate',
 			link: 'truncate hover:text-[var(--ink)] hover:underline',
 			current: 'truncate text-[var(--ink)]',

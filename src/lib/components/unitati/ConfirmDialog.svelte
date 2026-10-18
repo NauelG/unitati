@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The shared "are you sure?" shell (#99), composed around shadcn-svelte's
@@ -21,9 +21,9 @@
 				'-translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-lg)] border border-[var(--border)]',
 				'bg-[var(--surface-1)] p-[var(--space-5)] shadow-[var(--shadow-lg)] outline-none'
 			],
-			title: 'text-base font-semibold text-[var(--ink)]',
-			description: 'mt-[var(--space-2)] text-sm leading-[22px] text-[var(--ink-muted)]',
-			error: 'mt-[var(--space-3)] text-[13px] leading-[18px] text-[var(--danger)]',
+			title: 'text-title-3 text-[var(--ink)]',
+			description: 'mt-[var(--space-2)] text-sm text-[var(--ink-muted)]',
+			error: 'mt-[var(--space-3)] text-small text-[var(--danger)]',
 			footer: 'mt-[var(--space-5)] flex flex-wrap justify-end gap-[var(--space-2)]'
 		}
 	});

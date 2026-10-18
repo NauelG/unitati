@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * A ticket's record header: code, status, priority as chips, then the
@@ -11,9 +11,9 @@
 		slots: {
 			root: 'flex flex-wrap items-start justify-between gap-[var(--space-4)]',
 			chips: 'flex flex-wrap items-center gap-[var(--space-2)]',
-			tag: 'font-mono text-xs font-medium text-[var(--ink-muted)]',
-			title: 'mt-1 font-display text-lg font-semibold text-[var(--ink)]',
-			provenance: 'mt-[var(--space-1)] text-[13px] leading-[18px] text-[var(--ink-muted)]',
+			tag: 'font-mono text-record-id text-[var(--ink-muted)]',
+			title: 'mt-1 font-display text-title-2 text-[var(--ink)]',
+			provenance: 'mt-[var(--space-1)] text-small text-[var(--ink-muted)]',
 			actions: 'flex flex-wrap items-center gap-[var(--space-2)]'
 		}
 	});

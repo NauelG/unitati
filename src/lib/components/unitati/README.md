@@ -62,6 +62,10 @@ here because this is the folder they govern.
   conditional style is a variant, not an `if` returning a string.
 - **Status arrives as a key, never as text.** `status.ts` holds the vocabulary and maps each key
   to a tone and a message, so a label is translatable and a typo is a type error.
+- **Sizes come from `text-<role>`, never an arbitrary value.** `text-title-3`, `text-label`,
+  `text-small`, … set size, line-height, tracking and weight together (`src/app.css`, from
+  `tokens.json`). A missing role is added there, not spelt as `text-[13px]`; the guard
+  `type-roles.guard.spec.ts` fails the build otherwise.
 - **Colour means a domain or a state, never a person.** `Avatar` has no tone variant on purpose.
 
 ## What is deliberately missing

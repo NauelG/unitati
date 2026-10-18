@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The `.ut-alert` family: static, persistent feedback that stays in context
@@ -14,7 +14,7 @@
 		slots: {
 			root: [
 				'flex gap-[var(--space-3)] rounded-[var(--radius-lg)] border p-[var(--space-4)]',
-				'text-sm leading-[22px]'
+				'text-sm'
 			],
 			icon: 'mt-0.5 size-4 shrink-0',
 			body: 'flex-1 min-w-0',

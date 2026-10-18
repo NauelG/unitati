@@ -81,7 +81,7 @@
 					class="space-y-3"
 				>
 					<label class="flex flex-col gap-1">
-						<span class="text-[13px] font-medium text-[var(--ink)]">Nombre</span>
+						<span class="text-label text-[var(--ink)]">Nombre</span>
 						<input class={input} required />
 					</label>
 					<div class="flex justify-end gap-2">
@@ -106,7 +106,7 @@
 			>
 				<form onsubmit={(event) => (event.preventDefault(), (openEdit = false))} class="space-y-3">
 					<label class="flex flex-col gap-1">
-						<span class="text-[13px] font-medium text-[var(--ink)]">Nombre</span>
+						<span class="text-label text-[var(--ink)]">Nombre</span>
 						<input class={input} bind:value={draftName} required />
 					</label>
 					<div class="flex justify-end gap-2">
@@ -131,7 +131,7 @@
 			>
 				<form class="space-y-3">
 					<label class="flex flex-col gap-1">
-						<span class="text-[13px] font-medium text-[var(--ink)]">Nombre</span>
+						<span class="text-label text-[var(--ink)]">Nombre</span>
 						<input class={input} disabled value="Guardando…" />
 					</label>
 					<div class="flex justify-end gap-2">
@@ -143,7 +143,7 @@
 		</div>
 	{/snippet}
 	{#snippet notes()}
-		<p class="text-sm leading-[22px] text-[var(--ink)]">
+		<p class="text-sm text-[var(--ink)]">
 			A diferencia de <code>ConfirmDialog</code>, este componente no construye ningún botón: todo el
 			<code>&lt;form&gt;</code>, incluida su fila Guardar/Cancelar, vive en <code>children</code>
 			— el caso de uso es un formulario real, no una pregunta sí/no. Las catálogos de modelos, fabricantes

@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The `.ut-shell` family: sidebar, nav rows, section headings and the
@@ -592,7 +592,7 @@
 
 			<div class={appShell().sidebarFooter()}>
 				{#if settings}{@render settings({ rail: collapsed })}{/if}
-				<div class="ut-nav-label px-[var(--space-2)] font-mono text-[11px] text-[var(--ink-muted)]">
+				<div class="ut-nav-label px-[var(--space-2)] font-mono text-mono text-[var(--ink-muted)]">
 					<AppVersion layout="stacked" />
 				</div>
 			</div>
@@ -650,7 +650,7 @@
 			</div>
 			<div class={appShell().sidebarFooter()}>
 				{#if settings}{@render settings({ rail: false })}{/if}
-				<div class="ut-nav-label px-[var(--space-2)] font-mono text-[11px] text-[var(--ink-muted)]">
+				<div class="ut-nav-label px-[var(--space-2)] font-mono text-mono text-[var(--ink-muted)]">
 					<AppVersion layout="stacked" />
 				</div>
 			</div>

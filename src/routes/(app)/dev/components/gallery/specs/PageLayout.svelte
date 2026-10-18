@@ -77,7 +77,7 @@
 			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
 				Las tres variantes a 375 / 1440 / 1920px — móvil, portátil, escritorio ancho
 			</p>
-			<p class="mb-2 text-[13px] leading-[18px] text-[var(--ink-muted)]">
+			<p class="mb-2 text-small text-[var(--ink-muted)]">
 				Cada caja fija su propio ancho solo para simular el viewport de la especimen — nunca el
 				ancho de la página real, que PageLayout decide él mismo. Por debajo de 1100px, record deja
 				la columna lateral debajo de la principal.

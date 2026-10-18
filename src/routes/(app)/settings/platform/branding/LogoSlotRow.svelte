@@ -89,7 +89,7 @@
 	</div>
 
 	<div class="space-y-[var(--space-2)]">
-		<label for="logo-file-{slot}" class="block text-[13px] leading-4 font-medium text-[var(--ink)]">
+		<label for="logo-file-{slot}" class="block text-label text-[var(--ink)]">
 			{label}
 		</label>
 		<input
@@ -105,9 +105,7 @@
 		/>
 		<p
 			id="logo-help-{slot}"
-			class="text-[13px] leading-[18px] {error
-				? 'text-[var(--danger)]'
-				: 'text-[var(--ink-muted)]'}"
+			class="text-small {error ? 'text-[var(--danger)]' : 'text-[var(--ink-muted)]'}"
 			role={error ? 'alert' : undefined}
 		>
 			{error || hint}
