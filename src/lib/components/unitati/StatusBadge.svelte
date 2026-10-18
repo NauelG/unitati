@@ -13,6 +13,8 @@
 		base: [
 			'inline-flex items-center gap-[var(--space-1)] h-[22px] px-[var(--space-2)]',
 			'rounded-[var(--radius-full)] text-xs leading-4 font-semibold tracking-[0.04em] whitespace-nowrap',
+			// A task state's name is user-authored and has no measure of its own.
+			'max-w-[24ch] overflow-hidden text-ellipsis',
 			"before:content-[''] before:size-1.5 before:rounded-[var(--radius-full)] before:bg-current"
 		],
 		variants: {
@@ -102,7 +104,7 @@
 </script>
 
 {#if resolved}
-	<span class={badge({ tone: resolved.tone, pulsing, class: className })}
-		>{label ?? resolved.label}</span
+	<span class={badge({ tone: resolved.tone, pulsing, class: className })} title={label}
+		><span class="min-w-0 truncate">{label ?? resolved.label}</span></span
 	>
 {/if}

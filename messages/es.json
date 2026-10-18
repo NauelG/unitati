@@ -942,5 +942,14 @@
 	"escalate_toast_project_linked": "Ticket vinculado a {tag}",
 	"related_followed_in": "En seguimiento en",
 	"related_project_active": "Activo",
-	"related_unlink_ask_work": "El ticket dejará de aparecer en {tag}; no se borra nada más."
+	"related_unlink_ask_work": "El ticket dejará de aparecer en {tag}; no se borra nada más.",
+	"shell_skip_to_content": "Saltar al contenido",
+	"dialog_close": "Cerrar",
+	"error_not_found_title": "Página no encontrada",
+	"error_not_found_description": "La dirección no existe o el registro ya no está disponible.",
+	"error_forbidden_title": "Sin acceso",
+	"error_forbidden_description": "Tu cuenta no tiene permiso para ver esta página.",
+	"error_generic_title": "Algo ha salido mal",
+	"error_generic_description": "No hemos podido completar la petición. Inténtalo de nuevo en unos momentos.",
+	"error_back_home": "Volver al inicio"
 }

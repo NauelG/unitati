@@ -1,10 +1,14 @@
 <script lang="ts">
 	import '../app.css';
+	import { onMount } from 'svelte';
 	import { onNavigate } from '$app/navigation';
 	import { brandAssetUrl } from '#lib/brand.svelte.js';
 	import { ModeWatcher } from 'mode-watcher';
 	import appleTouchIcon from '#lib/assets/apple-touch-icon.png';
 	import favicon from '#lib/assets/favicon.svg';
+	import unboundedFont from '@fontsource-variable/unbounded/files/unbounded-latin-wght-normal.woff2?url';
+	import instrumentSansFont from '@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2?url';
+	import { markHydrated } from '#lib/hydration.svelte.js';
 	import { THEME_CANVAS_COLORS } from '#lib/theme.js';
 	import { prefersReducedMotion, registerViewTransitionSettle } from '#lib/motion.js';
 	import type { LayoutProps } from './$types';
@@ -17,6 +21,9 @@
 	const faviconUrl = $derived(brandAssetUrl('favicon', data.brand));
 	const appleTouchUrl = $derived(brandAssetUrl('apple_touch', data.brand));
 	const markIsSvg = $derived(data.brand.assets.mark?.contentType === 'image/svg+xml');
+
+	// Viewer-dependent text (time zones) repaints with the real value from here on.
+	onMount(markHydrated);
 
 	/**
 	 * View Transitions (#87): must live in the root layout — `onNavigate` only
@@ -40,6 +47,15 @@
 </script>
 
 <svelte:head>
+	<!-- Only the two faces above the fold; Martian Mono loads when first used. -->
+	<link rel="preload" as="font" type="font/woff2" crossorigin="anonymous" href={unboundedFont} />
+	<link
+		rel="preload"
+		as="font"
+		type="font/woff2"
+		crossorigin="anonymous"
+		href={instrumentSansFont}
+	/>
 	{#if !data.brand.customised}
 		<link rel="icon" type="image/svg+xml" href={favicon} />
 		<link rel="apple-touch-icon" href={appleTouchIcon} />

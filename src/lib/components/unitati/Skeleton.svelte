@@ -45,6 +45,11 @@
 	let { class: className, label }: Props = $props();
 </script>
 
-<div class={skeleton({ class: className })} role={label ? 'status' : undefined} aria-live="polite">
+<div
+	class={skeleton({ class: className })}
+	role={label ? 'status' : undefined}
+	aria-live={label ? 'polite' : undefined}
+	aria-hidden={label ? undefined : 'true'}
+>
 	{#if label}<span class="sr-only">{label}</span>{/if}
 </div>

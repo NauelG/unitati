@@ -3,6 +3,7 @@
 	import { formatKeys, isMacPlatform, keymapRegistry, type KeymapEntry } from '#lib/keymap.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import { dialog } from './Dialog.svelte';
+	import CloseButton from './CloseButton.svelte';
 
 	/**
 	 * The `?` overlay (#88): rendered **from the keymap module**, never
@@ -33,7 +34,7 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class={styles.content({ class: 'max-w-[480px]' })}>
+	<Dialog.Content class={styles.content({ class: 'max-w-[480px]' })} showCloseButton={false}>
 		<Dialog.Header>
 			<Dialog.Title class={styles.title()}>{m.keymap_overlay_title()}</Dialog.Title>
 			<Dialog.Description class={styles.description()}>
@@ -60,5 +61,7 @@
 				</div>
 			{/each}
 		</div>
+
+		<CloseButton kind="dialog" class="absolute top-2 right-2" />
 	</Dialog.Content>
 </Dialog.Root>

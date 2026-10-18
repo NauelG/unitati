@@ -5,6 +5,23 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.52.0] - 2026-10-18
+
+### Fixed
+
+- Accessibility and layout basics in the shell and the shared components (#184). Every field, textarea,
+  checkbox, switch, tab and command input now shows the 3:1 focus outline instead of the 2:1 halo; a
+  skip link (_Saltar al contenido_) leads to `<main>`; a field error is announced the moment it
+  appears; controls lose the 300 ms double-tap delay on touch; `Dialog`, `Sheet`, the drawer and the
+  `?` overlay close with a Spanish accessible name (new `CloseButton`) and no longer chain scroll to
+  the page. A 404 or other error now renders a styled Spanish page (inside the shell when signed in).
+  On narrow viewports the side rail of a record page falls below the main column, as ADR 0018 says,
+  and `min-h-screen` / `100vh` became `dvh`. Dates in the ticket thread, the asset timeline and the
+  ticket header no longer mismatch between the server and the browser time zone. The empty-state disc
+  is neutral rather than brand-coloured, the danger button has a hover state (`--danger-hover`), the
+  sidebar hover gains an edge, the collapsed sidebar no longer flashes the lockup, and the display and
+  body fonts are preloaded.
+
 ## [0.51.0] - 2026-10-18
 
 ### Added

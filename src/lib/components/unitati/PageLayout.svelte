@@ -31,7 +31,7 @@
 						'min-[1100px]:grid-cols-[minmax(0,1fr)_340px]'
 					],
 					main: 'flex min-w-0 flex-col gap-[var(--space-5)]',
-					side: 'flex min-w-0 flex-col gap-[var(--space-4)] max-[1099px]:order-first'
+					side: 'flex min-w-0 flex-col gap-[var(--space-4)]'
 				},
 				/** Create/edit forms and prose: a fixed measure, never the ceiling. */
 				form: {

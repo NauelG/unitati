@@ -22,7 +22,7 @@
 	<title>{documentTitle(m.setup_title())}</title>
 </svelte:head>
 
-<div class="grid min-h-screen bg-[var(--surface-0)] lg:grid-cols-2">
+<div class="grid min-h-dvh bg-[var(--surface-0)] lg:grid-cols-2">
 	<AuthBrandPanel />
 
 	<div class="flex items-center justify-center p-6 sm:p-12">

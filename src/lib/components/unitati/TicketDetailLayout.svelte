@@ -59,8 +59,10 @@
 <div class={styles.root({ class: className })}>
 	<div class="min-w-0">
 		<div class={styles.chips()}>
-			<span class={styles.tag()} style:view-transition-name={ticketTagViewTransitionName}
-				>{ticketTag}</span
+			<span
+				class={styles.tag()}
+				translate="no"
+				style:view-transition-name={ticketTagViewTransitionName}>{ticketTag}</span
 			>
 			<StatusBadge {status} />
 			<StatusBadge status={priority} />

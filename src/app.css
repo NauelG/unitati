@@ -60,6 +60,7 @@
 	--warning: #995700;
 	--warning-soft: #fff1d9;
 	--danger: #c2261c;
+	--danger-hover: #a51f16;
 	--danger-soft: #fdecea;
 	--scrim: rgba(11, 16, 22, 0.48);
 
@@ -210,6 +211,7 @@
 	--warning: #f2b54a;
 	--warning-soft: #38290c;
 	--danger: #ff8173;
+	--danger-hover: #ff9a8f;
 	--danger-soft: #3c1614;
 	--scrim: rgba(0, 0, 0, 0.6);
 
@@ -325,6 +327,24 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-section {
 
 html[data-sidebar-collapsed] .ut-sidebar .ut-nav-children {
 	display: none;
+}
+
+/* The brand row: lockup expanded, mark on the rail, chosen before paint like everything above. */
+.ut-sidebar .ut-brand-mark {
+	display: none;
+}
+
+html[data-sidebar-collapsed] .ut-sidebar .ut-brand-lockup {
+	display: none;
+}
+
+html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
+	display: inline;
+}
+
+html[data-sidebar-collapsed] .ut-sidebar .ut-brandbar {
+	flex-direction: column;
+	gap: var(--space-1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -589,6 +609,12 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-children {
  * now sit *under* a ring that carries the actual message.
  */
 [data-slot='button']:focus-visible,
+[data-slot='input']:focus-visible,
+[data-slot='textarea']:focus-visible,
+[data-slot='checkbox']:focus-visible,
+[data-slot='switch']:focus-visible,
+[data-slot='tabs-trigger']:focus-visible,
+[data-slot='command-input']:focus-visible,
 [data-slot='select-trigger']:focus-visible,
 [data-slot='input-group']:has([data-slot='input-group-control']:focus-visible),
 [data-slot='dialog-close']:focus-visible,
@@ -596,6 +622,15 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-children {
 [data-slot='popover-close']:focus-visible {
 	outline: 2px solid var(--focus);
 	outline-offset: 2px;
+}
+
+/* The vendored `ring-ring/50` halo would double the solid ring on fields. */
+[data-slot='input']:focus-visible,
+[data-slot='textarea']:focus-visible,
+[data-slot='checkbox']:focus-visible,
+[data-slot='switch']:focus-visible,
+[data-slot='command-input']:focus-visible {
+	box-shadow: none;
 }
 
 /*
@@ -713,6 +748,20 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-children {
 		background-color: var(--surface-0);
 		color: var(--ink);
 		font-family: var(--font-sans);
+		/* The app paints its own `active:` states. */
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	/* No 300 ms double-tap delay on touch; one place, covers every control. */
+	button,
+	a,
+	input,
+	select,
+	textarea,
+	[role='button'],
+	[role='tab'],
+	[role='menuitem'] {
+		touch-action: manipulation;
 	}
 
 	/*
@@ -725,6 +774,7 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-nav-children {
 	 */
 	h1 {
 		font-family: var(--font-display);
+		text-wrap: balance;
 	}
 
 	:focus-visible {

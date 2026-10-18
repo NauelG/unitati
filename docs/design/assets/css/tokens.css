@@ -27,6 +27,7 @@
   --warning:#995700;
   --warning-soft:#fff1d9;
   --danger:#c2261c;
+  --danger-hover:#a51f16;
   --danger-soft:#fdecea;
   --on-danger:#ffffff;
   --scrim:rgba(11, 16, 22, 0.48);
@@ -67,6 +68,7 @@
   --warning:#f2b54a;
   --warning-soft:#38290c;
   --danger:#ff8173;
+  --danger-hover:#ff9a8f;
   --danger-soft:#3c1614;
   --on-danger:#0b1016;
   --scrim:rgba(0, 0, 0, 0.6);

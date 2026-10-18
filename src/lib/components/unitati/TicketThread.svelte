@@ -58,7 +58,7 @@
 	import Paperclip from '@lucide/svelte/icons/paperclip';
 	import { assetHref } from '#lib/domain/routes.js';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale } from '#lib/paraglide/runtime.js';
+	import { formatDateTime } from '#lib/format-date.js';
 	import type { ThreadItem } from '#lib/server/service-desk/index.js';
 	import type { TimelineEntry } from '#lib/server/activity/index.js';
 	import { activitySentence } from './activity.js';
@@ -94,11 +94,6 @@
 			href: assetHref(entry.payload.assetTag)
 		};
 	}
-
-	// Per render, never at module scope: the locale is a per-request preference.
-	const formatter = $derived(
-		new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short' })
-	);
 </script>
 
 {#if items.length === 0}
@@ -121,7 +116,7 @@
 						{/if}
 					{/if}
 					·
-					<time datetime={item.at.toISOString()}>{formatter.format(item.at)}</time>
+					<time datetime={item.at.toISOString()}>{formatDateTime(item.at)}</time>
 				</li>
 			{:else if item.kind === 'pending'}
 				<!-- Perceived speed (#89): the reply the visitor just sent, before the
@@ -157,7 +152,7 @@
 								</span>
 							{/if}
 							<time class={styles.time()} datetime={item.createdAt.toISOString()}>
-								{formatter.format(item.createdAt)}
+								{formatDateTime(item.createdAt)}
 							</time>
 						</div>
 

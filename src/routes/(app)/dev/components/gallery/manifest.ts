@@ -136,6 +136,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/Dialog.svelte')
 	},
 	{
+		id: 'close-button',
+		name: 'CloseButton',
+		category: 'feedback',
+		summary: 'El botón de cerrar de un overlay, con nombre accesible en español.',
+		sourceFile: 'CloseButton.svelte',
+		load: () => import('./specs/CloseButton.svelte')
+	},
+	{
 		id: 'escalate-sheet',
 		name: 'EscalateSheet',
 		category: 'feedback',

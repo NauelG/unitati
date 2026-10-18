@@ -32,7 +32,7 @@
 					'bg-[var(--surface-1)] text-[var(--ink)] shadow-[inset_0_0_0_1px_var(--border-strong)] hover:bg-[var(--surface-2)]',
 				ghost: 'bg-transparent text-[var(--ink)] hover:bg-[var(--surface-2)]',
 				danger:
-					'bg-[var(--danger)] text-[var(--on-danger)] shadow-[inset_0_-2px_0_var(--bevel-danger)] active:shadow-none'
+					'bg-[var(--danger)] text-[var(--on-danger)] shadow-[inset_0_-2px_0_var(--bevel-danger)] hover:bg-[var(--danger-hover)] active:shadow-none'
 			},
 			size: {
 				sm: 'h-[var(--size-control-sm)] px-[var(--space-3)] text-xs leading-4',
