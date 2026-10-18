@@ -48,7 +48,7 @@ describe('the endpoint registry', () => {
 
 	it('serves a PATCH only where a field edit has no transition rule (ADR 0022)', () => {
 		const patched = ENDPOINTS.filter((endpoint) => endpoint.method === 'PATCH');
-		expect(patched.map((endpoint) => endpoint.id)).toEqual(['assets.update']);
+		expect(patched.map((endpoint) => endpoint.id)).toEqual(['assets.update', 'locations.update']);
 	});
 
 	it('declares every asset use case, each with a description and an example where it writes', () => {
