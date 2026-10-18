@@ -40,6 +40,11 @@
 		 * Prefer a visible `label` whenever there is room for one.
 		 */
 		labelHidden?: boolean;
+		/**
+		 * Fired after the user picks an option, with the new value (`null` for the
+		 * empty choice). For a select that submits its form on change.
+		 */
+		onchange?: (value: string | null) => void;
 		class?: string;
 	}
 
@@ -55,6 +60,7 @@
 		disabled,
 		autocomplete,
 		labelHidden = false,
+		onchange,
 		// No fallback: a form library hands over `undefined` for an optional field,
 		// and Svelte refuses `bind:value={undefined}` into a prop that has one.
 		value = $bindable(),
@@ -80,6 +86,7 @@
 
 	function onValueChange(next: string) {
 		value = next === '' ? null : next;
+		onchange?.(value);
 	}
 </script>
 

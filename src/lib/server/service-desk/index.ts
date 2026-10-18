@@ -79,4 +79,7 @@ export type { CreateTicketInput, AddCommentInput, QueueInput, UploadedFile } fro
 
 export { readTicketForm } from './form-data';
 
+export { parseTicketOrder, DEFAULT_TICKET_ORDER, TICKET_SORT_KEYS } from './ticket-order';
+export type { TicketOrder, TicketSortKey } from './ticket-order';
+
 export { ticketHits } from './search';

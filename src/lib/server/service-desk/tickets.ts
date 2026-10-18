@@ -15,6 +15,7 @@ import { resolvedMail, sendQuietly, type Mailer } from './mail';
 import { queues, ticketComments, tickets, attachments } from './schema';
 import { requireTicketScope, seesInternal } from './scope';
 import type { Storage } from './storage';
+import { DEFAULT_TICKET_ORDER, type TicketOrder } from './ticket-order';
 import { canTransition } from './transitions';
 import {
 	attachmentProblem,
@@ -123,7 +124,15 @@ export interface TicketListRequest extends PageRequest {
 	search?: string;
 	queueId?: string;
 	status?: TicketStatus;
+	/** Defaults to the most recently touched first. */
+	order?: TicketOrder;
 }
+
+const ORDER_COLUMNS = {
+	status: tickets.status,
+	priority: tickets.priority,
+	updatedAt: tickets.updatedAt
+};
 
 export async function listTickets(
 	viewer: SessionUser,
@@ -131,6 +140,7 @@ export async function listTickets(
 ): Promise<Page<TicketView>> {
 	const window = pageWindow(request);
 	const term = request.search?.trim();
+	const order = request.order ?? DEFAULT_TICKET_ORDER;
 	const where = and(
 		requireTicketScope(viewer),
 		term ? matchesSearch(term, viewer) : undefined,
@@ -140,8 +150,8 @@ export async function listTickets(
 
 	const rows = await ticketsWithRelations()
 		.where(where)
-		// Newest first; the id breaks ties so a row cannot appear on two pages.
-		.orderBy(desc(tickets.createdAt), asc(tickets.id))
+		// The id breaks ties so a row cannot appear on two pages.
+		.orderBy((order.direction === 'asc' ? asc : desc)(ORDER_COLUMNS[order.key]), asc(tickets.id))
 		.limit(window.limit)
 		.offset(window.offset);
 

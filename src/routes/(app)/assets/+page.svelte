@@ -5,17 +5,21 @@
 	import Search from '@lucide/svelte/icons/search';
 	import SearchX from '@lucide/svelte/icons/search-x';
 	import { goto } from '$app/navigation';
+	import { navigating, page } from '$app/state';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import DataTable, { type DataTableColumn } from '#lib/components/unitati/DataTable.svelte';
 	import DonutChart, { type DonutSlice } from '#lib/components/unitati/DonutChart.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
+	import ListToolbar from '#lib/components/unitati/ListToolbar.svelte';
 	import Pager from '#lib/components/unitati/Pager.svelte';
 	import RollingText from '#lib/components/unitati/RollingText.svelte';
 	import { rollingSummary } from '#lib/rolling.js';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
+	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import { statusColour, statusLabel } from '#lib/components/unitati/status.js';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatKeys, isMacPlatform, keymapRegistry } from '#lib/keymap.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { AssetView } from '#lib/server/assets/index.js';
@@ -26,6 +30,8 @@
 	// Not `$bindable` state of the URL: the box is seeded from it, and submitting
 	// the form is what writes it back. The page is a function of the URL.
 	let term = $derived(data.search);
+
+	const count = $derived(new Intl.NumberFormat(getLocale()));
 
 	/** Roving focus's active row (#88), read by the `a`/`e`/`l` keymap verbs below. */
 	let activeKey = $state<string | null>(null);
@@ -207,53 +213,57 @@
 		drops them, the list keeps them, so "nothing is in repair" is still
 		readable.
 	-->
-	<section
-		class="mt-[var(--space-6)] flex flex-wrap items-center gap-[var(--space-6)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-5)]"
-		aria-label={m.chart_assets_by_state()}
-	>
-		<DonutChart {slices} label={m.chart_assets_by_state()} />
+	<WorkPanel heading={m.chart_assets_by_state()} class="mt-[var(--space-6)]">
+		<div class="flex flex-wrap items-center gap-[var(--space-6)]">
+			<DonutChart {slices} label={m.chart_assets_by_state()} />
 
-		<dl class="flex min-w-0 flex-col gap-[var(--space-2)]">
-			{#each data.distribution as entry (entry.state)}
-				<div class="flex items-center gap-[var(--space-2)]">
-					<dt class="flex items-center gap-[var(--space-2)]">
-						<span
-							class="size-2.5 shrink-0 rounded-[var(--radius-full)]"
-							style:background-color={statusColour(entry.state)}
-							aria-hidden="true"
-						></span>
-						<span class="text-sm text-[var(--ink)]">{statusLabel(entry.state)}</span>
-					</dt>
-					<dd
-						class="ml-auto pl-[var(--space-3)] font-mono text-sm text-[var(--ink-muted)] tabular-nums"
-					>
-						{entry.count}
-					</dd>
-				</div>
-			{/each}
-		</dl>
-	</section>
+			<dl class="flex min-w-0 flex-col gap-[var(--space-2)]">
+				{#each data.distribution as entry (entry.state)}
+					<div class="flex items-center gap-[var(--space-2)]">
+						<dt class="flex items-center gap-[var(--space-2)]">
+							<span
+								class="size-2.5 shrink-0 rounded-[var(--radius-full)]"
+								style:background-color={statusColour(entry.state)}
+								aria-hidden="true"
+							></span>
+							<span class="text-sm text-[var(--ink)]">{statusLabel(entry.state)}</span>
+						</dt>
+						<dd
+							class="ml-auto pl-[var(--space-3)] font-mono text-sm text-[var(--ink-muted)] tabular-nums"
+							translate="no"
+						>
+							{count.format(entry.count)}
+						</dd>
+					</div>
+				{/each}
+			</dl>
+		</div>
+	</WorkPanel>
 
-	<form method="GET" role="search" class="mt-[var(--space-6)] flex items-end gap-[var(--space-3)]">
-		<!-- layout-ok: a bounded search field, not a page container -->
-		<Field
-			label={m.assets_search_label()}
-			name="q"
-			type="search"
-			placeholder={data.seesWholeInventory
-				? m.assets_search_placeholder()
-				: m.assets_search_placeholder_limited()}
-			bind:value={term}
-			class="w-full max-w-md"
-		/>
-		<span class="ut-kbd self-center" aria-hidden="true">{formatKeys(['/'], mac)}</span>
-		<Button type="submit" variant="secondary">
-			<Search class="size-4" aria-hidden="true" />
-			{m.assets_search_submit()}
-		</Button>
-	</form>
+	<div class="mt-[var(--space-6)]">
+		<ListToolbar>
+			<!-- layout-ok: a bounded search field, not a page container -->
+			<Field
+				label={m.assets_search_label()}
+				name="q"
+				type="search"
+				autocomplete="off"
+				placeholder={data.seesWholeInventory
+					? m.assets_search_placeholder()
+					: m.assets_search_placeholder_limited()}
+				bind:value={term}
+				class="w-full max-w-md"
+			>
+				{#snippet trailing()}
+					<span class="ut-kbd" aria-hidden="true">{formatKeys(['/'], mac)}</span>
+				{/snippet}
+			</Field>
+			<Button type="submit" variant="secondary">
+				<Search class="size-4" aria-hidden="true" />
+				{m.assets_search_submit()}
+			</Button>
+		</ListToolbar>
 
-	<div class="mt-[var(--space-5)]">
 		{#snippet emptyAction()}
 			{#if data.search}
 				<Button href="?" variant="secondary" size="sm">{m.assets_clear_filter()}</Button>
@@ -275,6 +285,8 @@
 			href={(row) => `/assets/${encodeURIComponent(row.assetTag)}`}
 			bind:activeKey
 			compact
+			loading={navigating.to?.route.id === page.route.id}
+			class="rounded-t-none"
 			{emptyMessage}
 			{emptyTitle}
 			{emptyIcon}

@@ -3,7 +3,12 @@ import { TICKET_STATUSES } from '#lib/domain/status.js';
 import { can } from '#lib/server/access/permissions.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
 import { pageWindowFrom } from '#lib/server/shared/pagination.js';
-import { listQueues, listTickets, ticketSummary } from '#lib/server/service-desk/index.js';
+import {
+	listQueues,
+	listTickets,
+	parseTicketOrder,
+	ticketSummary
+} from '#lib/server/service-desk/index.js';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -15,8 +20,17 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const queueId = z.uuid().safeParse(url.searchParams.get('queue')).data;
 	const status = z.enum(TICKET_STATUSES).safeParse(url.searchParams.get('status')).data;
 
+	const order = parseTicketOrder(url.searchParams);
+
 	const [result, queues, summary] = await Promise.all([
-		listTickets(user, { page: window.page, perPage: window.perPage, search, queueId, status }),
+		listTickets(user, {
+			page: window.page,
+			perPage: window.perPage,
+			search,
+			queueId,
+			status,
+			order
+		}),
 		listQueues(user),
 		// The same scope as the list (#84): a filter narrows `result`, not this.
 		ticketSummary(user)
@@ -25,6 +39,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	return {
 		result,
 		search,
+		order,
 		summary,
 		queueId: queueId ?? '',
 		status: status ?? '',

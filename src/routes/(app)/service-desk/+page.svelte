@@ -1,12 +1,17 @@
 <script lang="ts">
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Plus from '@lucide/svelte/icons/plus';
+	import Inbox from '@lucide/svelte/icons/inbox';
 	import Search from '@lucide/svelte/icons/search';
+	import SearchX from '@lucide/svelte/icons/search-x';
 	import { goto } from '$app/navigation';
 	import { navigating, page } from '$app/state';
 	import ListToolbar from '#lib/components/unitati/ListToolbar.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
-	import DataTable, { type DataTableColumn } from '#lib/components/unitati/DataTable.svelte';
+	import DataTable, {
+		type DataTableColumn,
+		type DataTableSort
+	} from '#lib/components/unitati/DataTable.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import Pager from '#lib/components/unitati/Pager.svelte';
 	import RollingText from '#lib/components/unitati/RollingText.svelte';
@@ -17,6 +22,7 @@
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import { TICKET_STATUSES } from '#lib/domain/status.js';
 	import { statusLabel } from '#lib/components/unitati/status.js';
+	import { formatDateTime, formatRelative } from '#lib/format-date.js';
 	import { formatKeys, isMacPlatform, keymapRegistry } from '#lib/keymap.js';
 	import { createUrgentArrivals } from '#lib/urgent-arrivals.js';
 	import { m } from '#lib/paraglide/messages.js';
@@ -78,12 +84,32 @@
 	const columns = $derived<DataTableColumn<TicketView>[]>([
 		{ key: 'tag', header: m.tickets_column_tag(), cell: tag },
 		{ key: 'subject', header: m.tickets_column_subject(), cell: subject },
-		{ key: 'status', header: m.tickets_column_status(), cell: status },
-		{ key: 'priority', header: m.tickets_column_priority(), cell: priority },
+		{ key: 'status', header: m.tickets_column_status(), cell: status, sortable: true },
+		{ key: 'priority', header: m.tickets_column_priority(), cell: priority, sortable: true },
 		{ key: 'queue', header: m.tickets_column_queue(), cell: queue },
 		{ key: 'requester', header: m.tickets_column_requester(), cell: requester },
-		{ key: 'assignee', header: m.tickets_column_assignee(), cell: assignee }
+		{ key: 'assignee', header: m.tickets_column_assignee(), cell: assignee },
+		{
+			key: 'updatedAt',
+			header: m.tickets_column_updated(),
+			cell: updated,
+			align: 'end',
+			sortable: true
+		}
 	]);
+
+	/**
+	 * Ordering lives in the URL (`?sort=&dir=`): the table announces a sort, the
+	 * server performs it. `replaceState` keeps a sort click out of the history.
+	 */
+	function applySort(next: DataTableSort | undefined) {
+		if (!next) return;
+		const url = new URL(page.url.href);
+		url.searchParams.set('sort', next.key);
+		url.searchParams.set('dir', next.direction);
+		url.searchParams.delete('page');
+		goto(url, { replaceState: true });
+	}
 
 	const queueOptions = $derived([
 		{ value: '', label: m.tickets_filter_all_queues() },
@@ -94,6 +120,7 @@
 		...TICKET_STATUSES.map((value) => ({ value, label: statusLabel(value) }))
 	]);
 
+	const sorted = $derived(page.url.searchParams.has('sort'));
 	const filtering = $derived(Boolean(data.search || data.queueId || data.status));
 
 	function pageHref(target: number): string {
@@ -101,13 +128,14 @@
 			data.search ? `q=${encodeURIComponent(data.search)}` : null,
 			data.queueId ? `queue=${data.queueId}` : null,
 			data.status ? `status=${data.status}` : null,
+			sorted ? `sort=${data.order.key}&dir=${data.order.direction}` : null,
 			target > 1 ? `page=${target}` : null
 		].filter((part) => part !== null);
 		return parts.length > 0 ? `?${parts.join('&')}` : '?';
 	}
 </script>
 
-{#snippet tag(row: TicketView)}<span class="font-mono text-xs">{row.ticketTag}</span>{/snippet}
+{#snippet tag(row: TicketView)}{row.ticketTag}{/snippet}
 {#snippet subject(row: TicketView)}{row.subject}{/snippet}
 {#snippet status(row: TicketView)}<StatusBadge status={row.status} />{/snippet}
 {#snippet priority(row: TicketView)}<StatusBadge
@@ -116,6 +144,23 @@
 	/>{/snippet}
 {#snippet queue(row: TicketView)}{row.queueName}{/snippet}
 {#snippet requester(row: TicketView)}{row.requesterName}{/snippet}
+{#snippet updated(row: TicketView)}
+	<time datetime={row.updatedAt.toISOString()} title={formatDateTime(row.updatedAt)}>
+		{formatRelative(row.updatedAt)}
+	</time>
+{/snippet}
+{#snippet emptyAction()}
+	{#if filtering}
+		<Button href="?" variant="secondary" size="sm">{m.tickets_clear_filters()}</Button>
+	{:else if data.canCreate}
+		<Button href="/service-desk/new" size="sm">{m.tickets_new()}</Button>
+	{/if}
+{/snippet}
+{#snippet emptyKbdHint()}
+	{#if !filtering && data.canCreate}
+		{m.keymap_hint_new()}
+	{/if}
+{/snippet}
 {#snippet assignee(row: TicketView)}
 	{#if row.assigneeName}
 		{row.assigneeName}
@@ -169,11 +214,16 @@
 			`rounded-t-none` on the table below, so one border reads as one panel.
 		-->
 		<ListToolbar>
+			{#if sorted}
+				<input type="hidden" name="sort" value={data.order.key} />
+				<input type="hidden" name="dir" value={data.order.direction} />
+			{/if}
 			<!-- layout-ok: a bounded search field, not a page container -->
 			<Field
 				label={m.tickets_search_label()}
 				name="q"
 				type="search"
+				autocomplete="off"
 				placeholder={m.tickets_search_placeholder()}
 				bind:value={term}
 				class="w-full max-w-md"
@@ -207,8 +257,14 @@
 			rowLabel={(row) => row.subject}
 			href={(row) => `/service-desk/${encodeURIComponent(row.ticketTag)}`}
 			bind:activeKey
+			bind:sort={() => data.order, applySort}
+			compact
 			loading={navigating.to?.route.id === page.route.id}
 			emptyMessage={filtering ? m.tickets_empty_search({ term: data.search }) : m.tickets_empty()}
+			emptyTitle={filtering ? m.tickets_empty_search_title() : m.tickets_empty_title()}
+			emptyIcon={filtering ? SearchX : Inbox}
+			{emptyAction}
+			{emptyKbdHint}
 			class="rounded-t-none"
 		/>
 	</div>

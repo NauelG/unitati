@@ -288,7 +288,13 @@
 					name="description"
 					value={task.description}
 				/>
-				<Field label={m.task_field_due()} name="dueDate" type="date" value={task.dueDate} />
+				<Field
+					label={m.task_field_due()}
+					name="dueDate"
+					type="date"
+					autocomplete="off"
+					value={task.dueDate}
+				/>
 			</div>
 
 			<div
