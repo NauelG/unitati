@@ -41,9 +41,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import * as Dialog from '#lib/components/ui/dialog/index.js';
-	import XIcon from '@lucide/svelte/icons/x';
-	import { m } from '#lib/paraglide/messages.js';
-	import { button } from './Button.svelte';
+	import CloseButton from './CloseButton.svelte';
 
 	interface Props {
 		/** The caller owns this, same as `ConfirmDialog`'s own `open`. */
@@ -74,7 +72,6 @@
 	}: Props = $props();
 
 	const styles = dialog();
-	const closeClass = button({ variant: 'ghost', size: 'sm', iconOnly: true });
 
 	function handleOpenChange(next: boolean) {
 		if (pending && !next) return;
@@ -96,9 +93,7 @@
 			</div>
 
 			<!-- The vendored close button's name is English (ADR 0008); this one is Spanish. -->
-			<Dialog.Close class={closeClass + ' absolute top-2 right-2'} aria-label={m.dialog_close()}>
-				<XIcon class="size-4" aria-hidden="true" />
-			</Dialog.Close>
+			<CloseButton kind="dialog" class="absolute top-2 right-2" />
 		</Dialog.Content>
 	</Dialog.Portal>
 </Dialog.Root>

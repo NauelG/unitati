@@ -40,9 +40,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import * as Sheet from '#lib/components/ui/sheet/index.js';
-	import XIcon from '@lucide/svelte/icons/x';
-	import { m } from '#lib/paraglide/messages.js';
-	import { button } from './Button.svelte';
+	import CloseButton from './CloseButton.svelte';
 
 	interface Props {
 		/** The caller owns this, same as `Dialog`'s own `open`. */
@@ -75,7 +73,6 @@
 	}: Props = $props();
 
 	const styles = sheet();
-	const closeClass = button({ variant: 'ghost', size: 'sm', iconOnly: true });
 
 	function handleOpenChange(next: boolean) {
 		if (pending && !next) return;
@@ -94,8 +91,6 @@
 		<div class={styles.body()}>
 			{@render children()}
 		</div>
-		<Sheet.Close class={closeClass + ' absolute top-3 right-3'} aria-label={m.dialog_close()}>
-			<XIcon class="size-4" aria-hidden="true" />
-		</Sheet.Close>
+		<CloseButton kind="sheet" class="absolute top-3 right-3" />
 	</Sheet.Content>
 </Sheet.Root>

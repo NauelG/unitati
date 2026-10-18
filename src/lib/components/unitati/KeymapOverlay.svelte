@@ -3,8 +3,7 @@
 	import { formatKeys, isMacPlatform, keymapRegistry, type KeymapEntry } from '#lib/keymap.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import { dialog } from './Dialog.svelte';
-	import { button } from './Button.svelte';
-	import XIcon from '@lucide/svelte/icons/x';
+	import CloseButton from './CloseButton.svelte';
 
 	/**
 	 * The `?` overlay (#88): rendered **from the keymap module**, never
@@ -32,7 +31,6 @@
 	});
 
 	const styles = dialog();
-	const closeClass = button({ variant: 'ghost', size: 'sm', iconOnly: true });
 </script>
 
 <Dialog.Root bind:open>
@@ -64,8 +62,6 @@
 			{/each}
 		</div>
 
-		<Dialog.Close class={closeClass + ' absolute top-2 right-2'} aria-label={m.dialog_close()}>
-			<XIcon class="size-4" aria-hidden="true" />
-		</Dialog.Close>
+		<CloseButton kind="dialog" class="absolute top-2 right-2" />
 	</Dialog.Content>
 </Dialog.Root>

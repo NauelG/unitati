@@ -85,7 +85,6 @@
 	import PanelLeftIcon from '@lucide/svelte/icons/panel-left';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
-	import XIcon from '@lucide/svelte/icons/x';
 	import Logo from './Logo.svelte';
 	import AppVersion from '../AppVersion.svelte';
 	import CommandPalette from './CommandPalette.svelte';
@@ -104,7 +103,7 @@
 		type KeymapScope
 	} from '#lib/keymap.js';
 	import * as Sheet from '#lib/components/ui/sheet/index.js';
-	import { button } from './Button.svelte';
+	import CloseButton from './CloseButton.svelte';
 	import * as Popover from '#lib/components/ui/popover/index.js';
 	import {
 		groupContainsPath,
@@ -152,8 +151,6 @@
 		currentPath,
 		children
 	}: Props = $props();
-
-	const closeClass = button({ variant: 'ghost', size: 'sm', iconOnly: true });
 
 	const SIDEBAR_STORAGE_KEY = 'unitati:sidebar';
 	const GROUPS_STORAGE_KEY = 'unitati:nav-groups';
@@ -658,9 +655,7 @@
 				</div>
 			</div>
 		</nav>
-		<Sheet.Close class={closeClass + ' absolute top-3 right-3'} aria-label={m.dialog_close()}>
-			<XIcon class="size-4" aria-hidden="true" />
-		</Sheet.Close>
+		<CloseButton kind="sheet" class="absolute top-3 right-3" />
 	</Sheet.Content>
 </Sheet.Root>
 
