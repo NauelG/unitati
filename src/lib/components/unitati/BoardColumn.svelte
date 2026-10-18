@@ -73,7 +73,6 @@
 				Pointer-only target over the whole strip: the » button stays the one
 				real control for keyboard and screen readers.
 			-->
-			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 			<div
 				class="absolute inset-0 cursor-pointer rounded-[var(--radius-lg)]"
 				aria-hidden="true"
