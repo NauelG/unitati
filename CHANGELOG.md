@@ -5,6 +5,12 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.63.1] - 2026-10-18
+
+### Fixed
+
+- The `/` shortcut chip on the tasks search now sits inside the input, like in projects.
+
 ## [0.63.0] - 2026-10-18
 
 ### Changed
