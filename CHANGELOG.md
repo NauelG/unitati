@@ -19,6 +19,7 @@ minor bumps carry features and patch bumps carry fixes.
 
 ### Changed
 
+- The assets API returns `locationPath` (the full path) where it returned `locationName`.
 - Deleting a location that still has children or assets is refused with a message naming both;
   before, an asset silently lost its location. The `location.changed` entry on an asset's timeline
   now records the path instead of the bare name.

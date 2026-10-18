@@ -52,7 +52,7 @@ const fullAssetSchema = named(
 		categoryName: z.string(),
 		custodian: personRef.nullable(),
 		locationId: z.string().nullable(),
-		locationName: z.string().nullable()
+		locationPath: z.string().nullable()
 	})
 );
 
@@ -63,7 +63,7 @@ const sharedAssetSchema = named(
 		visibility: z.literal('shared'),
 		tag: z.string(),
 		name: z.string(),
-		locationName: z.string().nullable()
+		locationPath: z.string().nullable()
 	})
 );
 
@@ -79,7 +79,7 @@ function toWire(view: AssetView): z.input<typeof assetSchema> {
 			visibility: 'shared',
 			tag: view.assetTag,
 			name: view.name,
-			locationName: view.locationName
+			locationPath: view.locationPath
 		};
 	}
 	return {
@@ -98,7 +98,7 @@ function toWire(view: AssetView): z.input<typeof assetSchema> {
 				? null
 				: { id: view.custodianPersonId, name: view.custodianName ?? '' },
 		locationId: view.locationId,
-		locationName: view.locationName
+		locationPath: view.locationPath
 	};
 }
 
