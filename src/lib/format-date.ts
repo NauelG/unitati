@@ -33,3 +33,23 @@ export function formatDateTime(date: Date, options: { timeZone?: string } = {}):
 		timeZone
 	}).format(date);
 }
+
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
+/**
+ * How long ago an instant was ("hace 5 minutos"), for scan columns where the
+ * time since the last touch matters more than the date. Minute granularity at
+ * best, so a server render and the first client render agree. Past 30 days the
+ * relative form stops being useful and the absolute day takes over.
+ */
+export function formatRelative(date: Date, now: Date = new Date()): string {
+	const elapsed = Math.max(0, now.getTime() - date.getTime());
+	const formatter = new Intl.RelativeTimeFormat(getLocale(), { numeric: 'auto' });
+	if (elapsed < MINUTE) return formatter.format(0, 'minute');
+	if (elapsed < HOUR) return formatter.format(-Math.floor(elapsed / MINUTE), 'minute');
+	if (elapsed < DAY) return formatter.format(-Math.floor(elapsed / HOUR), 'hour');
+	if (elapsed < 30 * DAY) return formatter.format(-Math.floor(elapsed / DAY), 'day');
+	return new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium' }).format(date);
+}

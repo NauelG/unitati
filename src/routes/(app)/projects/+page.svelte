@@ -7,8 +7,10 @@
 	import Search from '@lucide/svelte/icons/search';
 	import SearchX from '@lucide/svelte/icons/search-x';
 	import { goto } from '$app/navigation';
+	import { navigating, page } from '$app/state';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import DataTable, { type DataTableColumn } from '#lib/components/unitati/DataTable.svelte';
+	import ListToolbar from '#lib/components/unitati/ListToolbar.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
@@ -82,7 +84,14 @@
 		{ key: 'due', header: m.projects_column_due(), cell: due },
 		{ key: 'progress', header: m.projects_column_progress(), cell: progress },
 		...(data.canManage
-			? [{ key: 'actions', header: m.projects_column_actions(), cell: actionsCell }]
+			? [
+					{
+						key: 'actions',
+						header: m.projects_column_actions(),
+						cell: actionsCell,
+						kind: 'actions' as const
+					}
+				]
 			: [])
 	]);
 
@@ -104,11 +113,10 @@
 {#snippet tag(row: Row)}{row.projectTag}{/snippet}
 {#snippet name(row: Row)}{row.name}{/snippet}
 {#snippet owner(row: Row)}
-	{#if row.ownerName}{row.ownerName}{:else}<span class="text-[var(--ink-muted)]">—</span>{/if}
+	{#if row.ownerName}{row.ownerName}{:else}—{/if}
 {/snippet}
 {#snippet due(row: Row)}
-	{#if row.dueDate}{formatDay(row.dueDate)}{:else}<span class="text-[var(--ink-muted)]">—</span
-		>{/if}
+	{#if row.dueDate}{formatDay(row.dueDate)}{:else}—{/if}
 {/snippet}
 {#snippet progress(row: Row)}
 	<ProjectProgress counts={row.counts} class="w-44" />
@@ -166,34 +174,34 @@
 		{/snippet}
 	</PageHeader>
 
-	<form
-		method="GET"
-		role="search"
-		class="mt-[var(--space-6)] flex flex-wrap items-end gap-[var(--space-3)]"
-	>
-		<!-- layout-ok: a bounded search field, not a page container -->
-		<Field
-			label={m.projects_search_label()}
-			name="q"
-			type="search"
-			placeholder={m.projects_search_placeholder()}
-			bind:value={term}
-			class="w-full max-w-md"
-		/>
-		<span class="ut-kbd self-center" aria-hidden="true">{formatKeys(['/'], mac)}</span>
-		<SelectField
-			label={m.projects_filter_state()}
-			name="filter"
-			options={filterOptions}
-			value={data.archived ? 'archived' : 'active'}
-		/>
-		<Button type="submit" variant="secondary">
-			<Search class="size-4" aria-hidden="true" />
-			{m.projects_search_submit()}
-		</Button>
-	</form>
+	<div class="mt-[var(--space-6)]">
+		<ListToolbar>
+			<!-- layout-ok: a bounded search field, not a page container -->
+			<Field
+				label={m.projects_search_label()}
+				name="q"
+				type="search"
+				autocomplete="off"
+				placeholder={m.projects_search_placeholder()}
+				bind:value={term}
+				class="w-full max-w-md"
+			>
+				{#snippet trailing()}
+					<span class="ut-kbd" aria-hidden="true">{formatKeys(['/'], mac)}</span>
+				{/snippet}
+			</Field>
+			<SelectField
+				label={m.projects_filter_state()}
+				name="filter"
+				options={filterOptions}
+				value={data.archived ? 'archived' : 'active'}
+			/>
+			<Button type="submit" variant="secondary">
+				<Search class="size-4" aria-hidden="true" />
+				{m.projects_search_submit()}
+			</Button>
+		</ListToolbar>
 
-	<div class="mt-[var(--space-5)]">
 		{#snippet emptyAction()}
 			{#if filtering}
 				<Button href="?" variant="secondary" size="sm">{m.projects_clear_filter()}</Button>
@@ -210,6 +218,8 @@
 			href={(row) => `/projects/${encodeURIComponent(row.projectTag)}`}
 			bind:activeKey
 			compact
+			loading={navigating.to?.route.id === page.route.id}
+			class="rounded-t-none"
 			{emptyMessage}
 			{emptyTitle}
 			emptyIcon={data.search ? SearchX : FolderKanban}

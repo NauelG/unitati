@@ -108,6 +108,17 @@ links, because a page is a URL). `Button` renders an `<a>` when given an `href`.
 `WithoutChild` or `WithoutChildren` will fail to compile with a clear message; add them then,
 not before.
 
+## Absent values
+
+One rule for "no value" in a table or a detail row:
+
+- A column with `emphasis: 'muted'` is already muted, so an absent value is a **bare `—`**. Do not
+  wrap it in a muted `<span>`.
+- A **meaningful** absence (a ticket nobody has picked up) gets the translated label instead
+  ("Sin asignar"), because it says something the dash does not.
+
+`DescriptionList` renders `null` as a bare `—` for the same reason.
+
 ## The gallery and the production build
 
 Each route's `+page.server.ts` checks `isProduction(APP_ENV)` and returns 404 there (ADR 0013);

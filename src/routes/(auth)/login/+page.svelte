@@ -32,14 +32,15 @@
 		<PageLayout variant="form" class="w-full">
 			<!-- layout-ok: the card is its own measure, narrower than the form variant's ceiling -->
 			<div
-				class="mx-auto w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-8"
-				style:box-shadow="var(--shadow-lg)"
+				class="mx-auto w-full max-w-sm rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)] p-8 shadow-[var(--shadow-lg)]"
 			>
 				<Logo size="lg" class="lg:hidden" />
 				<h1 class="mt-[var(--space-5)] font-display text-xl font-semibold text-[var(--ink)]">
 					{m.login_title({ name: productName() })}
 				</h1>
-				<p class="mt-[var(--space-1)] text-sm text-[var(--ink-muted)]">{m.login_lede()}</p>
+				<p class="mt-[var(--space-1)] text-sm text-[var(--ink-muted)] lg:hidden">
+					{m.login_lede()}
+				</p>
 
 				<form method="POST" use:enhance class="mt-[var(--space-6)] space-y-[var(--space-4)]">
 					<Field
@@ -47,6 +48,8 @@
 						name="email"
 						type="email"
 						autocomplete="email"
+						spellcheck={false}
+						autocapitalize="off"
 						placeholder={m.login_email_placeholder()}
 						bind:value={$form.email}
 						error={$errors.email?.[0]}

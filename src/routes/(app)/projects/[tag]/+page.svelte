@@ -16,8 +16,11 @@
 	} from '#lib/board-preference.js';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
+	import Alert from '#lib/components/unitati/Alert.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
 	import Dialog from '#lib/components/unitati/Dialog.svelte';
+	import EmptyState from '#lib/components/unitati/EmptyState.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import FormActions from '#lib/components/unitati/FormActions.svelte';
 	import SegmentedControl from '#lib/components/unitati/SegmentedControl.svelte';
@@ -71,7 +74,30 @@
 	/** The Sheet starts from the record every time it opens, not from a draft that went stale. */
 	function openEdit() {
 		ownerPersonId = project.ownerPersonId;
+		inputsEdited = false;
 		editOpen = true;
+	}
+
+	/**
+	 * Closing the edit Sheet throws the draft away, so a draft with changes asks
+	 * first (`Sheet` leaves that gate to the caller). The owner picker is not a
+	 * native input, so it is compared against the record instead of listened to.
+	 */
+	let inputsEdited = $state(false);
+	let confirmDiscard = $state(false);
+	const dirty = $derived(inputsEdited || ownerPersonId !== project.ownerPersonId);
+
+	function requestEditClose(next: boolean) {
+		if (next) {
+			editOpen = true;
+			return;
+		}
+		if (saving) return;
+		if (dirty) {
+			confirmDiscard = true;
+			return;
+		}
+		editOpen = false;
 	}
 
 	const quickCreateState = $derived(data.states.find((state) => state.id === taskStateId));
@@ -157,6 +183,7 @@
 	-->
 	<PageHeader
 		title={project.name}
+		level="record"
 		code={project.projectTag}
 		codeViewTransitionName={toViewTransitionName('record', project.projectTag)}
 	>
@@ -221,9 +248,7 @@
 	</PageHeader>
 
 	{#if archived}
-		<p class="mt-[var(--space-4)] text-sm text-[var(--ink-muted)]">
-			{m.project_detail_archived_notice()}
-		</p>
+		<Alert tone="info" class="mt-[var(--space-4)]">{m.project_detail_archived_notice()}</Alert>
 	{/if}
 
 	<SegmentedControl
@@ -262,16 +287,20 @@
 							>
 								<a
 									href="/tasks/{encodeURIComponent(task.taskTag)}"
-									class="font-mono text-xs text-[var(--ink-muted)] hover:text-[var(--ink)]"
-									style:view-transition-name={toViewTransitionName('record', task.taskTag)}
+									class="group flex min-w-0 flex-1 items-baseline gap-[var(--space-4)]"
 								>
-									{task.taskTag}
-								</a>
-								<a
-									href="/tasks/{encodeURIComponent(task.taskTag)}"
-									class="min-w-0 flex-1 truncate font-medium text-[var(--ink)] hover:underline"
-								>
-									{task.title}
+									<span
+										class="text-record-id text-[var(--ink-muted)] group-hover:text-[var(--ink)]"
+										translate="no"
+										style:view-transition-name={toViewTransitionName('record', task.taskTag)}
+									>
+										{task.taskTag}
+									</span>
+									<span
+										class="min-w-0 flex-1 truncate font-medium text-[var(--ink)] group-hover:underline"
+									>
+										{task.title}
+									</span>
 								</a>
 								<span class="text-[var(--ink-muted)]">
 									{task.assignees.length > 0
@@ -288,11 +317,12 @@
 				</WorkPanel>
 			{:else}
 				<WorkPanel heading={m.project_detail_tasks()}>
-					<p class="text-sm text-[var(--ink-muted)]">
-						{data.canManage
+					<EmptyState
+						description={data.canManage
 							? m.project_detail_tasks_empty()
 							: m.project_detail_tasks_empty_limited()}
-					</p>
+						class="py-[var(--space-6)]"
+					/>
 				</WorkPanel>
 			{/each}
 		</div>
@@ -310,7 +340,9 @@
 				]}
 			/>
 			{#if project.description}
-				<p class="mt-[var(--space-3)] text-sm whitespace-pre-wrap text-[var(--ink-muted)]">
+				<p
+					class="mt-[var(--space-3)] text-sm break-words whitespace-pre-wrap text-[var(--ink-muted)]"
+				>
 					{project.description}
 				</p>
 			{/if}
@@ -346,7 +378,7 @@
 {#if writable}
 	<Sheet
 		open={editOpen}
-		onOpenChange={(next) => (editOpen = next)}
+		onOpenChange={requestEditClose}
 		pending={saving}
 		title={m.project_edit_title({ tag: project.projectTag })}
 		description={m.project_edit_lede()}
@@ -369,6 +401,7 @@
 					}
 				};
 			}}
+			oninput={() => (inputsEdited = true)}
 			class="flex h-full min-h-0 flex-col"
 		>
 			<div class="min-h-0 flex-1 space-y-[var(--space-5)] overflow-y-auto">
@@ -376,6 +409,7 @@
 					label={m.project_field_name()}
 					name="name"
 					required
+					autocomplete="off"
 					value={project.name}
 					error={form && 'field' in form && form.field === 'name'
 						? failureFor('update')
@@ -393,10 +427,19 @@
 					options={ownerOptions}
 					bind:value={ownerPersonId}
 				/>
-				<Field label={m.project_field_due()} name="dueDate" type="date" value={project.dueDate} />
+				<Field
+					label={m.project_field_due()}
+					name="dueDate"
+					type="date"
+					autocomplete="off"
+					value={project.dueDate}
+				/>
 				<Field
 					label={m.project_field_tag()}
 					name="projectTag"
+					autocomplete="off"
+					spellcheck={false}
+					autocapitalize="off"
 					value={project.projectTag}
 					error={form && 'field' in form && form.field === 'projectTag'
 						? failureFor('update')
@@ -408,7 +451,7 @@
 			</div>
 
 			<FormActions class="mt-[var(--space-4)] shrink-0">
-				<Button type="button" variant="ghost" onclick={() => (editOpen = false)}>
+				<Button type="button" variant="ghost" onclick={() => requestEditClose(false)}>
 					{m.form_cancel()}
 				</Button>
 				<Button type="submit" busy={saving}>
@@ -417,6 +460,29 @@
 			</FormActions>
 		</form>
 	</Sheet>
+
+	<ConfirmDialog
+		open={confirmDiscard}
+		onOpenChange={(next) => {
+			if (!next) confirmDiscard = false;
+		}}
+		title={m.project_discard_changes_title()}
+		description={m.project_discard_changes_ask()}
+		confirmLabel={m.project_discard_changes_confirm()}
+		danger={false}
+	>
+		{#snippet action(confirm)}
+			<form
+				onsubmit={(event) => {
+					event.preventDefault();
+					confirmDiscard = false;
+					editOpen = false;
+				}}
+			>
+				{@render confirm()}
+			</form>
+		{/snippet}
+	</ConfirmDialog>
 
 	<Dialog
 		open={taskOpen}
