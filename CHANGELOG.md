@@ -5,6 +5,26 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.58.0] - 2026-10-18
+
+### Added
+
+- Shared patterns extracted into `unitati/` (#186): `ListToolbar` (the search strip attached to the
+  table panel), `FormError`, `DescriptionList` (the `.ut-dl` `104px 1fr` grid), `FormActions`
+  (secondary first, primary last, right-aligned) and `SegmentedControl` (`.ut-btn-group`), all
+  registered in the gallery. `Field` takes a `trailing` snippet, so the `/` shortcut chip sits
+  inside the search input. `DataTable` gains `loading` (header stays, `DataTableSkeleton` rows
+  replace the body; used on `/service-desk`), `kind: 'actions'` columns that stay clickable above the
+  row link, and a 32 px selection hit area.
+
+### Changed
+
+- The sixteen copies of the form error line, the five detail rows, the project view switcher and
+  both footers on `/projects/[tag]` now compose those components; the link dialog of
+  `RelatedRecords` gets the `FormActions` rule above its buttons. `DataTable` title cells truncate
+  at 48ch with the full text in a tooltip, and code cells carry `translate="no"`. `Breadcrumbs` is a
+  32 px line without its own rule, and `WorkPanel` bodies pad 12/16 px.
+
 ## [0.57.0] - 2026-10-18
 
 ### Added
