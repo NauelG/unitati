@@ -8,12 +8,11 @@ import {
 } from '#lib/board-preference.js';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
-import { listActivity } from '#lib/server/activity/index.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 import { listPeople } from '#lib/server/directory/index.js';
 import {
-	mergeProjectTimeline,
 	openTicketCount,
+	projectTimeline,
 	relatedTo,
 	unlinkProject
 } from '#lib/server/links/index.js';
@@ -106,15 +105,7 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 		// Streamed: nothing above waits for the history. Its live half is the
 		// tickets linked to the project itself; the ones that arrive through a
 		// task are on that task's rail, not here.
-		timeline: listActivity({
-			organisationId: user.organisationId,
-			target: { projectId: project.id }
-		}).then((entries) =>
-			mergeProjectTimeline(
-				entries,
-				related.filter((group) => group.relation === 'handles')
-			)
-		)
+		timeline: projectTimeline(user, project.id, related)
 	};
 };
 

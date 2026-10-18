@@ -19,6 +19,7 @@ import {
 } from './index';
 import { MIN_GAP } from './position';
 import {
+	assignRow,
 	createProjectRow,
 	createTaskRow,
 	createWorkspace,
@@ -353,6 +354,37 @@ describe('listTasks', () => {
 		const [task] = await listTasks(admin);
 
 		expect(task.projectArchived).toBe(true);
+	});
+});
+
+describe('listTasks, paged', () => {
+	it('returns one page in board order with the total of the whole filter', async () => {
+		const { admin } = await createWorkspace();
+		const project = await newProject(admin);
+		for (const title of ['one', 'two', 'three', 'four', 'five']) {
+			await newTask(admin, project.id, title);
+		}
+
+		const all = (await listTasks(admin)).map((t) => t.id);
+		const second = await listTasks(admin, {}, { page: 2, perPage: 2 });
+
+		expect(second.rows.map((t) => t.id)).toEqual(all.slice(2, 4));
+		expect(second.rows[0].assignees).toEqual([]);
+		expect(second).toMatchObject({ page: 2, perPage: 2, total: 5, pageCount: 3 });
+	});
+
+	it('never counts a task outside the viewer’s scope', async () => {
+		const { admin, employee, organisation } = await createWorkspace();
+		const project = await newProject(admin);
+		const mine = await newTask(admin, project.id, 'Mine');
+		await newTask(admin, project.id, 'Theirs');
+		await newTask(admin, project.id, 'Theirs too');
+		await assignRow(organisation.id, mine.id, employee.personId!);
+
+		const page = await listTasks(employee, {}, {});
+
+		expect(page.total).toBe(1);
+		expect(page.rows.map((t) => t.title)).toEqual(['Mine']);
 	});
 });
 

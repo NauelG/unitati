@@ -7,6 +7,7 @@ import { getDb, type Transaction } from '../db';
 import { uniqueConstraintName } from '../db/errors';
 import { people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
+import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
 import { matchesQuery } from './search';
 import { projects, states, tasks } from './schema';
 import { requireManage, requireProjectScope, requireTaskScope } from './scope';
@@ -76,22 +77,45 @@ export interface ProjectListRequest {
 	q?: string;
 }
 
-/** Active by default; the soonest due date first, projects with none last. */
+/**
+ * Active by default; the soonest due date first, projects with none last. Given
+ * a `PageRequest`, answers one `Page` whose total is counted over the same
+ * scoped query, so it never includes a project the viewer cannot see.
+ */
 export async function listProjects(
 	viewer: SessionUser,
-	request: ProjectListRequest = {}
-): Promise<ProjectView[]> {
+	request?: ProjectListRequest
+): Promise<ProjectView[]>;
+export async function listProjects(
+	viewer: SessionUser,
+	request: ProjectListRequest,
+	paging: PageRequest
+): Promise<Page<ProjectView>>;
+export async function listProjects(
+	viewer: SessionUser,
+	request: ProjectListRequest = {},
+	paging?: PageRequest
+): Promise<ProjectView[] | Page<ProjectView>> {
 	const term = request.q?.trim();
-
-	return projectsWithOwner()
-		.where(
-			and(
-				requireProjectScope(viewer),
-				request.archived ? isNotNull(projects.archivedAt) : isNull(projects.archivedAt),
-				term ? matchesQuery(projects.search, term) : undefined
-			)
-		)
+	const where = and(
+		requireProjectScope(viewer),
+		request.archived ? isNotNull(projects.archivedAt) : isNull(projects.archivedAt),
+		term ? matchesQuery(projects.search, term) : undefined
+	);
+	const ordered = projectsWithOwner()
+		.where(where)
 		.orderBy(sql`${projects.dueDate} asc nulls last`, asc(projects.name), asc(projects.id));
+
+	if (!paging) return ordered;
+
+	const window = pageWindow(paging);
+	const rows = await ordered.limit(window.limit).offset(window.offset);
+	const [counted] = await getDb()
+		.select({ total: sql<number>`count(*)::int` })
+		.from(projects)
+		.where(where);
+
+	return page(rows, counted?.total ?? 0, window);
 }
 
 /** How many active projects the viewer can see; the sidebar's count. */

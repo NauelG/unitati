@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { ASSET_STATES } from '#lib/domain/status.js';
-import type { TimelineEntry } from '../../activity';
 import {
 	addNote,
 	assetTimeline,
@@ -18,9 +17,17 @@ import {
 	type FullAssetView
 } from '../../assets';
 import type { ApiPrincipal } from '../keys';
-import { ApiError, created, defineEndpoint, notFound, Reply, type Endpoint } from '../registry';
+import {
+	type ApiError,
+	created,
+	defineEndpoint,
+	notFound,
+	Reply,
+	type Endpoint
+} from '../registry';
 import { named, paginationMetaSchema } from '../shared-schemas';
-import { refusal } from './refusals';
+import { invalidField, refusal } from './refusals';
+import { entryToWire, timelineEntrySchema } from './timeline-wire';
 
 /**
  * The asset use cases (ADR 0022). Assets are addressed by tag (ADR 0010): the
@@ -133,13 +140,6 @@ async function written(actor: ApiPrincipal, tag: string) {
 	return { data: toWire(found.value) };
 }
 
-/** A reference in the body that points at nothing: a field the caller can fix, so a `400` on that field. */
-function invalidField(field: string, message: string): ApiError {
-	return new ApiError(400, 'invalid_input', 'The request is not valid.', [
-		{ path: [field], message }
-	]);
-}
-
 /** Domain failures that name a value in the body, mapped to the field that carried it. */
 const FIELD_FAILURES: Record<string, readonly [string, string]> = {
 	model_not_found: ['assetModelId', 'Asset model not found.'],
@@ -204,42 +204,6 @@ export const getAssetEndpoint = defineEndpoint({
 		return { data: toWire(found.value) };
 	}
 });
-
-const actorRef = z.object({
-	kind: z.enum(['person', 'service_account']),
-	id: z.string(),
-	name: z.string()
-});
-
-const timelineEntrySchema = named(
-	'AssetTimelineEntry',
-	z.object({
-		id: z.string(),
-		verb: z.string(),
-		/** A snapshot of the fact as it was when it happened (ADR 0009). */
-		payload: z.record(z.string(), z.unknown()),
-		actor: actorRef.nullable(),
-		at: z.iso.datetime()
-	})
-);
-
-function entryToWire(entry: TimelineEntry): z.input<typeof timelineEntrySchema> {
-	const name = entry.actorName ?? '';
-	const actor =
-		entry.actorServiceAccountId !== null
-			? { kind: 'service_account' as const, id: entry.actorServiceAccountId, name }
-			: entry.actorPersonId === null
-				? null
-				: { kind: 'person' as const, id: entry.actorPersonId, name };
-
-	return {
-		id: entry.id,
-		verb: entry.verb,
-		payload: entry.payload as Record<string, unknown>,
-		actor,
-		at: entry.occurredAt.toISOString()
-	};
-}
 
 export const assetTimelineEndpoint = defineEndpoint({
 	id: 'assets.timeline',

@@ -5,6 +5,27 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.61.0] - 2026-10-18
+
+### Added
+
+- API slice F (#136): projects, tasks and the state catalogue over `/api/v1`, 17 endpoints listed in
+  `openapi.json`. Projects and tasks are read by tag (list, get, timeline), created
+  (`POST /projects`, `POST /projects/{tag}/tasks`), edited (`PATCH`) and changed by one act per rule:
+  archive and unarchive a project, move a task to a state or to another project, assign and
+  unassign one person. `GET /states` gives the ids a move needs. Reads honour
+  `projects.view.assigned`; a project timeline needs `projects.view`; writes answer with the
+  re-read record and need `projects.manage` alone.
+- `listProjects` and `listTasks` accept a page request and then answer a page whose total is
+  counted over the viewer's scope. Without one they behave as before.
+
+### Changed
+
+- The task and project pages read their timelines through `taskTimeline` / `projectTimeline`, which
+  the API shares.
+- The API's timeline entry is declared once as `TimelineEntry` (it was `AssetTimelineEntry`), and
+  drops the internal task and project ids a payload may carry.
+
 ## [0.60.0] - 2026-10-18
 
 ### Added

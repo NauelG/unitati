@@ -15,7 +15,7 @@ import {
 	updateProject,
 	updateTask
 } from './index';
-import { statesByGroup, createWorkspace } from './testing/fixtures';
+import { assignRow, createTaskRow, statesByGroup, createWorkspace } from './testing/fixtures';
 
 async function historyOf(projectId: string) {
 	const rows = await getDb()
@@ -291,6 +291,40 @@ describe('listProjects', () => {
 		const outsider = await createViewer(other.id, 'admin', 'Other Admin');
 
 		expect(await listProjects(outsider)).toEqual([]);
+	});
+});
+
+describe('listProjects, paged', () => {
+	it('returns one page with totals, in the same order as the unpaged list', async () => {
+		const { admin } = await createWorkspace();
+		for (const name of ['A', 'B', 'C', 'D', 'E']) await newProject(admin, { name });
+
+		const all = (await listProjects(admin)).map((p) => p.id);
+		const first = await listProjects(admin, {}, { page: 1, perPage: 2 });
+		const last = await listProjects(admin, {}, { page: 3, perPage: 2 });
+
+		expect(first.rows.map((p) => p.id)).toEqual(all.slice(0, 2));
+		expect(last.rows.map((p) => p.id)).toEqual(all.slice(4));
+		expect(first).toMatchObject({ page: 1, perPage: 2, total: 5, pageCount: 3 });
+	});
+
+	it('counts only what the filter and the viewer’s scope let through', async () => {
+		const { admin, employee, organisation } = await createWorkspace();
+		const { backlog } = await statesByGroup(organisation.id);
+		const mine = await newProject(admin, { name: 'Mine' });
+		await newProject(admin, { name: 'Hidden one' });
+		await newProject(admin, { name: 'Hidden two' });
+		const old = await newProject(admin, { name: 'Old' });
+		await archiveProject(admin, old.id);
+		const task = await createTaskRow(organisation.id, mine.id, backlog.id);
+		await assignRow(organisation.id, task.id, employee.personId!);
+
+		const seen = await listProjects(employee, {}, { perPage: 10 });
+		const archived = await listProjects(admin, { archived: true }, { perPage: 10 });
+
+		expect(seen.total).toBe(1);
+		expect(seen.rows.map((p) => p.name)).toEqual(['Mine']);
+		expect(archived.total).toBe(1);
 	});
 });
 

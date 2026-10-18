@@ -67,6 +67,7 @@ const TAG_BY_PREFIX: Record<string, string> = {
 	assets: 'Assets',
 	tasks: 'Projects',
 	projects: 'Projects',
+	states: 'Projects',
 	people: 'Directory',
 	locations: 'Directory'
 };

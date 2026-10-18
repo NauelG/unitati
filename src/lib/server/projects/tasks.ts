@@ -7,6 +7,7 @@ import { constraintViolation, uniqueConstraintName } from '../db/errors';
 import { people } from '../directory/schema';
 import { emit, type DomainEvents } from '../shared/events';
 import { failure, success, type Outcome } from '../shared/outcome';
+import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
 import { placeBetween, spread } from './position';
 import { matchesQuery } from './search';
 import { projects, states, taskAssignees, tasks } from './schema';
@@ -127,23 +128,35 @@ export interface TaskListRequest {
 	q?: string;
 }
 
-/** Board order: the state's group and position, then the task's place in its column. */
+/**
+ * Board order: the state's group and position, then the task's place in its
+ * column. Given a `PageRequest`, answers one `Page` whose total is counted over
+ * the same scoped query, so it never includes a task the viewer cannot see.
+ */
 export async function listTasks(
 	viewer: SessionUser,
-	request: TaskListRequest = {}
-): Promise<TaskView[]> {
+	request?: TaskListRequest
+): Promise<TaskView[]>;
+export async function listTasks(
+	viewer: SessionUser,
+	request: TaskListRequest,
+	paging: PageRequest
+): Promise<Page<TaskView>>;
+export async function listTasks(
+	viewer: SessionUser,
+	request: TaskListRequest = {},
+	paging?: PageRequest
+): Promise<TaskView[] | Page<TaskView>> {
 	const term = request.q?.trim();
-
-	const rows = await tasksWithRelations()
-		.where(
-			and(
-				requireTaskScope(viewer),
-				request.projectId ? eq(tasks.projectId, request.projectId) : undefined,
-				request.group ? eq(states.group, request.group) : undefined,
-				request.assignee ? hasAssignee(request.assignee) : undefined,
-				term ? matchesQuery(tasks.search, term) : undefined
-			)
-		)
+	const where = and(
+		requireTaskScope(viewer),
+		request.projectId ? eq(tasks.projectId, request.projectId) : undefined,
+		request.group ? eq(states.group, request.group) : undefined,
+		request.assignee ? hasAssignee(request.assignee) : undefined,
+		term ? matchesQuery(tasks.search, term) : undefined
+	);
+	const ordered = tasksWithRelations()
+		.where(where)
 		.orderBy(
 			asc(states.group),
 			asc(states.position),
@@ -152,7 +165,17 @@ export async function listTasks(
 			asc(tasks.id)
 		);
 
-	return withAssignees(rows);
+	if (!paging) return withAssignees(await ordered);
+
+	const window = pageWindow(paging);
+	const rows = await ordered.limit(window.limit).offset(window.offset);
+	const [counted] = await getDb()
+		.select({ total: sql<number>`count(*)::int` })
+		.from(tasks)
+		.innerJoin(states, eq(tasks.stateId, states.id))
+		.where(where);
+
+	return page(await withAssignees(rows), counted?.total ?? 0, window);
 }
 
 function hasAssignee(personId: string): SQL {
