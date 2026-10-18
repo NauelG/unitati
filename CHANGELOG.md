@@ -5,6 +5,22 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.59.0] - 2026-10-18
+
+### Added
+
+- Locations over the REST API (#180, third slice of #177). `GET /api/v1/locations` lists the whole
+  catalogue ordered by path (not paginated), `GET /locations/{id}` reads one, and `POST`, `PATCH`
+  and `DELETE` create, change and remove one, so an MDM or purchasing integration can keep sites,
+  buildings and rooms in sync. Reading needs `assets.view` (admin and technician; employee keys get
+  no location endpoint, per ADR 0007), writing needs `assets.manage`. `PATCH` is partial: an absent
+  field is unchanged, `null` clears an optional one and `parentId: null` moves the location to the
+  root. A missing or foreign parent, a cycle and bad coordinates are `400` with issues on the
+  field; duplicate names and codes are `409`.
+- Error envelope `details`. A refusal can now carry structured facts in `error.details`, documented
+  in the OpenAPI document; `DELETE /locations/{id}` on a location still in use answers
+  `409 in_use` with `details: { children, assets }`. Existing refusals are unchanged.
+
 ## [0.58.0] - 2026-10-18
 
 ### Added
