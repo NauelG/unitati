@@ -67,7 +67,8 @@ const TAG_BY_PREFIX: Record<string, string> = {
 	assets: 'Assets',
 	tasks: 'Projects',
 	projects: 'Projects',
-	people: 'Directory'
+	people: 'Directory',
+	locations: 'Directory'
 };
 
 export function tagOf(useCaseId: string): string {

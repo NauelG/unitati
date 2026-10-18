@@ -87,11 +87,37 @@ describe('the OpenAPI document built from the real registry', () => {
 		expect(byId['tickets.list'].tags).toEqual(['Service desk']);
 		expect(byId['queues.list'].tags).toEqual(['Service desk']);
 		expect(byId['assets.list'].tags).toEqual(['Assets']);
+		expect(byId['locations.list'].tags).toEqual(['Directory']);
 		expect(document.tags).toEqual([
 			{ name: 'Service desk' },
 			{ name: 'Projects' },
-			{ name: 'Assets' }
+			{ name: 'Assets' },
+			{ name: 'Directory' }
 		]);
+	});
+
+	it('documents the five location operations and the optional details on the error envelope', () => {
+		const ids = operations
+			.map(({ operation }) => operation.operationId)
+			.filter((id) => id.startsWith('locations.'))
+			.sort();
+		expect(ids).toEqual([
+			'locations.create',
+			'locations.delete',
+			'locations.get',
+			'locations.list',
+			'locations.update'
+		]);
+		expect(JSON.stringify(document.paths['/locations'].post.responses['201'])).toContain(
+			'#/components/schemas/LocationResource'
+		);
+		expect(document.components.schemas.LocationResource).toBeDefined();
+
+		const envelope = document.components.schemas.Error as {
+			properties: { error: { properties: Record<string, unknown>; required: string[] } };
+		};
+		expect(envelope.properties.error.properties).toHaveProperty('details');
+		expect(envelope.properties.error.required).not.toContain('details');
 	});
 
 	it('takes path parameters, query and body from the input schema', () => {

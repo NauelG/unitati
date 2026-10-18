@@ -28,7 +28,9 @@ export const errorEnvelopeSchema = named(
 			/** Present on a `400`: one entry per field that failed, as Zod reports them. */
 			issues: z
 				.array(z.object({ path: z.array(z.union([z.string(), z.number()])), message: z.string() }))
-				.optional()
+				.optional(),
+			/** Present on a refusal that has facts to report, such as the counts behind `in_use`. */
+			details: z.record(z.string(), z.unknown()).optional()
 		})
 	})
 );

@@ -18,7 +18,9 @@ export class ApiError extends Error {
 		readonly code: string,
 		message: string,
 		/** Field-level problems, in the shape Zod reports them, for a `400` the handler found itself. */
-		readonly issues?: readonly { path: readonly (string | number)[]; message: string }[]
+		readonly issues?: readonly { path: readonly (string | number)[]; message: string }[],
+		/** Structured facts about the refusal (`in_use` carries its counts), serialised as `error.details`. */
+		readonly details?: Record<string, unknown>
 	) {
 		super(message);
 	}

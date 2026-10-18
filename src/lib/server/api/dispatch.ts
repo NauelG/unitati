@@ -26,11 +26,18 @@ function problem(
 	status: number,
 	code: string,
 	message: string,
-	extra: { issues?: unknown; headers?: Record<string, string> } = {}
+	extra: { issues?: unknown; details?: unknown; headers?: Record<string, string> } = {}
 ): Response {
 	return json(
 		status,
-		{ error: { code, message, ...(extra.issues === undefined ? {} : { issues: extra.issues }) } },
+		{
+			error: {
+				code,
+				message,
+				...(extra.issues === undefined ? {} : { issues: extra.issues }),
+				...(extra.details === undefined ? {} : { details: extra.details })
+			}
+		},
 		extra.headers
 	);
 }
@@ -127,7 +134,10 @@ export async function handleApiRequest(
 		return json(reply.status, body, reply.headers);
 	} catch (error) {
 		if (error instanceof ApiError) {
-			return problem(error.status, error.code, error.message, { issues: error.issues });
+			return problem(error.status, error.code, error.message, {
+				issues: error.issues,
+				details: error.details
+			});
 		}
 		console.error(`API endpoint ${endpoint.id} failed`, error);
 		return problem(500, 'internal_error', 'Something went wrong.');
