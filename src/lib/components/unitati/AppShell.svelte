@@ -33,6 +33,10 @@
 			],
 			navList: 'flex flex-col gap-0.5',
 			navIcon: 'size-[var(--size-icon-sm)] shrink-0',
+			// One fixed box per row: dots and chevrons hang off its corners, so they never move the icon's axis (#215).
+			navIconBox: 'relative grid size-[var(--size-icon-sm)] shrink-0 place-items-center',
+			navDotRail: 'absolute -top-0.5 -right-1 size-1.5 rounded-[var(--radius-full)]',
+			navIndicator: 'absolute -right-1 -bottom-1 size-2 text-[var(--ink-muted)]',
 			navDot: 'size-2 shrink-0 rounded-[var(--radius-full)]',
 			railMenuTitle:
 				'px-[var(--space-2)] py-[var(--space-1)] text-xs font-semibold text-[var(--ink-muted)]',
@@ -47,12 +51,10 @@
 			navLabel: 'ut-nav-label truncate',
 			navCount: 'ut-nav-label ml-auto font-mono text-xs tabular-nums text-[var(--ink-muted)]',
 			kbd: 'ut-kbd ut-nav-label ml-auto',
-			sidebarFooter: 'mt-auto flex shrink-0 flex-col gap-0.5 pt-[var(--space-2)]',
-			collapseButton: [
-				'grid size-8 shrink-0 place-items-center rounded-[var(--radius-md)]',
-				'text-[var(--ink-muted)] transition-colors ut-transition-fast',
-				'hover:bg-[var(--surface-1)] hover:text-[var(--ink)]'
-			],
+			sidebarFooter:
+				'mt-auto flex shrink-0 flex-col gap-1 border-t border-[var(--border)] pt-[var(--space-3)]',
+			footerMeta:
+				'ut-nav-label px-[var(--space-2)] pt-[var(--space-1)] font-mono text-mono text-[var(--ink-muted)]',
 			topbar:
 				'flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center gap-[var(--space-3)] border-b border-[var(--border)] bg-[var(--surface-0)] px-[var(--space-6)] pt-[env(safe-area-inset-top)]',
 			main: 'ut-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain p-[var(--space-6)] pb-[max(var(--space-6),env(safe-area-inset-bottom))]'
@@ -61,7 +63,7 @@
 			active: {
 				true: { navItem: 'bg-[var(--brand-soft)] text-[var(--brand)]' }
 			},
-			group: {
+			button: {
 				true: { navItem: 'w-full cursor-pointer text-left' }
 			},
 			rail: {
@@ -85,6 +87,9 @@
 	import PanelLeftIcon from '@lucide/svelte/icons/panel-left';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import { mergeProps } from 'bits-ui';
+	import Tooltip from './Tooltip.svelte';
 	import Logo from './Logo.svelte';
 	import AppVersion from '../AppVersion.svelte';
 	import GlobalSearch from './GlobalSearch.svelte';
@@ -398,16 +403,23 @@
 	{@const styles = appShell({ rail })}
 	<ul class={styles.navList()}>
 		<li>
-			<button
-				type="button"
-				class={styles.navItem()}
-				title={m.nav_search()}
-				onclick={openCommandPalette}
-			>
-				<SearchIcon class={styles.navIcon()} aria-hidden="true" />
-				<span class={styles.navLabel()}>{m.nav_search()}</span>
-				<span class={styles.kbd()}>{formatKeys(['$mod+k'], mac)}</span>
-			</button>
+			<Tooltip content={m.nav_search()} disabled={!rail}>
+				{#snippet child({ props })}
+					<button
+						{...props}
+						type="button"
+						class={appShell({ rail, button: true }).navItem()}
+						aria-label={rail ? m.nav_search() : undefined}
+						onclick={openCommandPalette}
+					>
+						<span class={styles.navIconBox()}>
+							<SearchIcon class={styles.navIcon()} aria-hidden="true" />
+						</span>
+						<span class={styles.navLabel()}>{m.nav_search()}</span>
+						<span class={styles.kbd()}>{formatKeys(['$mod+k'], mac)}</span>
+					</button>
+				{/snippet}
+			</Tooltip>
 		</li>
 	</ul>
 
@@ -426,6 +438,60 @@
 	{/each}
 {/snippet}
 
+{#snippet navGlyph(
+	item: (typeof items)[number],
+	rail: boolean,
+	styles: ReturnType<typeof appShell>,
+	submenu: boolean
+)}
+	{#if item.accent && !rail}
+		<span class={styles.navDot()} style:background-color={item.accent} aria-hidden="true"></span>
+	{/if}
+	<span class={styles.navIconBox()}>
+		<item.icon class={styles.navIcon()} aria-hidden="true" />
+		{#if item.accent && rail}
+			<span
+				class={styles.navDotRail()}
+				style:background-color={item.accent}
+				aria-hidden="true"
+				data-nav-indicator="accent"
+			></span>
+		{/if}
+		{#if submenu}
+			<ChevronDownIcon
+				class={styles.navIndicator()}
+				aria-hidden="true"
+				data-nav-indicator="submenu"
+			/>
+		{/if}
+	</span>
+{/snippet}
+
+{#snippet collapseControl()}
+	<Tooltip
+		content={collapsed ? m.nav_expand_sidebar() : m.nav_collapse_sidebar()}
+		disabled={!collapsed}
+	>
+		{#snippet child({ props })}
+			<button
+				{...props}
+				type="button"
+				class={appShell({ rail: collapsed, button: true }).navItem()}
+				onclick={toggleCollapsed}
+				aria-expanded={!collapsed}
+			>
+				<span class={appShell().navIconBox()}>
+					<PanelLeftIcon class={appShell().navIcon()} aria-hidden="true" />
+				</span>
+				<span class="ut-nav-label truncate">
+					{collapsed ? m.nav_expand_sidebar() : m.nav_collapse_sidebar()}
+				</span>
+				<span class="sr-only">{collapsed ? m.nav_expand_sidebar() : m.nav_collapse_sidebar()}</span>
+			</button>
+		{/snippet}
+	</Tooltip>
+{/snippet}
+
 {#snippet navEntry(
 	item: (typeof items)[number],
 	rail: boolean,
@@ -434,22 +500,23 @@
 )}
 	{#if item.kind === 'leaf'}
 		{@const active = isActive(item.href)}
-		<a
-			href={item.href}
-			aria-current={active ? 'page' : undefined}
-			class={appShell({ rail, active }).navItem()}
-			title={rail ? item.label : undefined}
-		>
-			{#if item.accent}
-				<span class={styles.navDot()} style:background-color={item.accent} aria-hidden="true"
-				></span>
-			{/if}
-			<item.icon class={styles.navIcon()} aria-hidden="true" />
-			<span class={styles.navLabel()}>{item.label}</span>
-			{#if item.count !== undefined}
-				<span class={styles.navCount()}><RollingNumber value={item.count} /></span>
-			{/if}
-		</a>
+		<Tooltip content={item.label} disabled={!rail}>
+			{#snippet child({ props })}
+				<a
+					{...props}
+					href={item.href}
+					aria-current={active ? 'page' : undefined}
+					aria-label={rail ? item.label : undefined}
+					class={appShell({ rail, active }).navItem()}
+				>
+					{@render navGlyph(item, rail, styles, false)}
+					<span class={styles.navLabel()}>{item.label}</span>
+					{#if item.count !== undefined}
+						<span class={styles.navCount()}><RollingNumber value={item.count} /></span>
+					{/if}
+				</a>
+			{/snippet}
+		</Tooltip>
 	{:else}
 		{@const open = isGroupOpen(item)}
 		{@const containsCurrent = groupContainsPath(item.children, pathname)}
@@ -465,13 +532,20 @@
 					open={railOpenId === item.id}
 					onOpenChange={(next) => (railOpenId = next ? item.id : null)}
 				>
-					<Popover.Trigger
-						class={appShell({ rail, active: containsCurrent }).navItem()}
-						aria-label={item.label}
-						title={item.label}
-					>
-						<item.icon class={styles.navIcon()} aria-hidden="true" />
-					</Popover.Trigger>
+					<Tooltip content={item.label} disabled={railOpenId === item.id}>
+						{#snippet child({ props: tooltipProps })}
+							<Popover.Trigger aria-label={item.label}>
+								{#snippet child({ props: popoverProps })}
+									<button
+										{...mergeProps(tooltipProps, popoverProps)}
+										class={appShell({ rail, button: true, active: containsCurrent }).navItem()}
+									>
+										{@render navGlyph(item, rail, styles, true)}
+									</button>
+								{/snippet}
+							</Popover.Trigger>
+						{/snippet}
+					</Tooltip>
 					<Popover.Content
 						side="right"
 						align="start"
@@ -503,18 +577,14 @@
 			{:else}
 				<button
 					type="button"
-					class={appShell({ rail, group: true }).navItem()}
-					title={rail ? item.label : undefined}
+					class={appShell({ rail, button: true }).navItem()}
+					aria-label={rail ? item.label : undefined}
 					aria-expanded={open}
 					aria-controls={panelId}
 					aria-disabled={containsCurrent ? 'true' : undefined}
 					onclick={() => toggleGroup(item)}
 				>
-					{#if item.accent}
-						<span class={styles.navDot()} style:background-color={item.accent} aria-hidden="true"
-						></span>
-					{/if}
-					<item.icon class={styles.navIcon()} aria-hidden="true" />
+					{@render navGlyph(item, rail, styles, false)}
 					<span class={styles.navLabel()}>{item.label}</span>
 					<ChevronRightIcon class={styles.navChevron()} aria-hidden="true" />
 				</button>
@@ -567,28 +637,17 @@
 					<span class="ut-brand-lockup"><Logo variant="lockup" size="sm" /></span>
 					<span class="ut-brand-mark"><Logo variant="mark" size="sm" /></span>
 				</a>
-				<button
-					type="button"
-					class={appShell().collapseButton()}
-					onclick={toggleCollapsed}
-					aria-expanded={!collapsed}
-					title={collapsed ? m.nav_expand_sidebar() : m.nav_collapse_sidebar()}
-				>
-					<PanelLeftIcon class={appShell().navIcon()} aria-hidden="true" />
-					<span class="sr-only">
-						{collapsed ? m.nav_expand_sidebar() : m.nav_collapse_sidebar()}
-					</span>
-				</button>
 			</div>
 
 			<div class={appShell().navItems()}>
 				{@render navList(collapsed, 'sidebar')}
 			</div>
 
-			<div class={appShell().sidebarFooter()}>
+			<div class={appShell().sidebarFooter()} data-sidebar-footer>
 				{#if settings}{@render settings({ rail: collapsed })}{/if}
-				<div class="ut-nav-label px-[var(--space-2)] font-mono text-mono text-[var(--ink-muted)]">
-					<AppVersion layout="stacked" />
+				{@render collapseControl()}
+				<div class={appShell().footerMeta()}>
+					<AppVersion layout="stacked" size="inherit" />
 				</div>
 			</div>
 		</nav>
@@ -643,10 +702,10 @@
 			<div class={appShell().navItems()}>
 				{@render navList(false, 'drawer')}
 			</div>
-			<div class={appShell().sidebarFooter()}>
+			<div class={appShell().sidebarFooter()} data-sidebar-footer>
 				{#if settings}{@render settings({ rail: false })}{/if}
-				<div class="ut-nav-label px-[var(--space-2)] font-mono text-mono text-[var(--ink-muted)]">
-					<AppVersion layout="stacked" />
+				<div class={appShell().footerMeta()}>
+					<AppVersion layout="stacked" size="inherit" />
 				</div>
 			</div>
 		</nav>

@@ -5,6 +5,22 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.63.0] - 2026-10-18
+
+### Changed
+
+- Sidebar alignment (#215): button entries ("Buscar", group rows) fill the row like links, so the
+  hover covers the full width and the `⌘K` chip sits at the right. In the rail every icon shares one
+  axis; module colours are a 6px dot at the icon's top-right and groups carry a chevron at the
+  bottom-right. Rail icons use a styled `Tooltip` instead of the native `title`, and "Buscar" shows
+  none while its label is visible.
+- The collapse button moves to the sidebar footer in both modes. The footer gets a divider and more
+  spacing, and the version and attribution render at 11px (the login page is unchanged).
+
+### Added
+
+- `unitati/Tooltip` (over the vendored `ui/tooltip`), with a gallery entry.
+
 ## [0.62.1] - 2026-10-18
 
 ### Fixed

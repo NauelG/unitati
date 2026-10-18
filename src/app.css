@@ -390,11 +390,6 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
 	display: inline;
 }
 
-html[data-sidebar-collapsed] .ut-sidebar .ut-brandbar {
-	flex-direction: column;
-	gap: var(--space-1);
-}
-
 @media (prefers-reduced-motion: reduce) {
 	.ut-nav-chevron {
 		transition: none;

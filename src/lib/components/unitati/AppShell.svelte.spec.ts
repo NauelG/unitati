@@ -155,3 +155,72 @@ describe('AppShell settings link', () => {
 		expect(container.querySelector('a[href="/settings"]')).toBeNull();
 	});
 });
+
+describe('AppShell sidebar alignment and footer (#215)', () => {
+	beforeEach(() => {
+		localStorage.clear();
+		document.documentElement.removeAttribute('data-sidebar-collapsed');
+	});
+
+	const searchButton = (container: HTMLElement) =>
+		container.querySelector<HTMLButtonElement>('aside nav ul button')!;
+
+	const fullWidth = (el: Element) => {
+		const classes = [...el.classList];
+		return classes.includes('w-full') && classes.includes('text-left');
+	};
+
+	it('gives every expanded button entry the full row width, left-aligned', () => {
+		const { container } = renderShell();
+
+		expect(fullWidth(searchButton(container))).toBe(true);
+		expect(fullWidth(parentButton(container))).toBe(true);
+	});
+
+	it('shows no native tooltip on the search entry while its label is visible', () => {
+		const { container } = renderShell();
+
+		expect(searchButton(container).hasAttribute('title')).toBe(false);
+	});
+
+	it('keeps the collapse button in the footer, not the brand row', () => {
+		const { container } = renderShell();
+
+		expect(
+			container.querySelector('aside [data-sidebar-footer] button[aria-expanded]')
+		).not.toBeNull();
+		expect(container.querySelector('aside .ut-brandbar button')).toBeNull();
+	});
+
+	describe('in the icon rail', () => {
+		beforeEach(() => document.documentElement.setAttribute('data-sidebar-collapsed', ''));
+
+		it('gives the search and group buttons the full width and an accessible name', async () => {
+			const { container } = renderShell();
+			await tick();
+			const trigger = container.querySelector<HTMLButtonElement>('button[aria-label="Proyectos"]')!;
+
+			expect(fullWidth(searchButton(container))).toBe(true);
+			expect(searchButton(container).getAttribute('aria-label')).toBeTruthy();
+			expect(searchButton(container).hasAttribute('title')).toBe(false);
+			expect(fullWidth(trigger)).toBe(true);
+		});
+
+		it('marks a group trigger with the submenu indicator, and only a group', async () => {
+			const { container } = renderShell();
+			await tick();
+			const trigger = container.querySelector<HTMLButtonElement>('button[aria-label="Proyectos"]')!;
+
+			expect(trigger.querySelector('[data-nav-indicator="submenu"]')).not.toBeNull();
+			expect(searchButton(container).querySelector('[data-nav-indicator]')).toBeNull();
+		});
+
+		it('keeps the collapse button in the footer', () => {
+			const { container } = renderShell();
+
+			expect(
+				container.querySelector('aside [data-sidebar-footer] button[aria-expanded]')
+			).not.toBeNull();
+		});
+	});
+});
