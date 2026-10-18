@@ -68,9 +68,22 @@
 			? 'flex-col'
 			: 'justify-between'}"
 	>
+		{#if collapsed}
+			<!--
+				Pointer-only target over the whole strip: the » button stays the one
+				real control for keyboard and screen readers.
+			-->
+			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+			<div
+				class="absolute inset-0 cursor-pointer rounded-[var(--radius-lg)]"
+				aria-hidden="true"
+				data-collapse-strip
+				onclick={() => ontogglecollapse?.(state.id, 'expanded')}
+			></div>
+		{/if}
 		<h3
 			class="min-w-0 truncate text-small font-semibold text-[var(--ink)] {collapsed
-				? '[writing-mode:vertical-rl]'
+				? 'pointer-events-none relative max-h-48 [writing-mode:vertical-rl]'
 				: ''}"
 			title={collapsed
 				? items.length === 0
@@ -80,11 +93,16 @@
 		>
 			{state.name}
 		</h3>
-		<span class="flex items-center gap-[var(--space-2)]">
+		<span
+			class="relative flex items-center gap-[var(--space-2)] {collapsed
+				? 'order-first flex-col'
+				: ''}"
+			data-column-controls
+		>
 			{#if !collapsed}
 				<span class={badge({ tone, plain: true })}>{items.length}</span>
 			{:else}
-				<span class="text-xs text-[var(--ink-muted)] tabular-nums">{items.length}</span>
+				<span class="order-last text-xs text-[var(--ink-muted)] tabular-nums">{items.length}</span>
 			{/if}
 			<button
 				type="button"
@@ -103,7 +121,7 @@
 					<ChevronsLeft class="size-4" aria-hidden="true" />
 				{/if}
 			</button>
-			{#if editable && onquickcreate}
+			{#if editable && onquickcreate && !collapsed}
 				<button
 					type="button"
 					class="ut-transition-fast grid size-6 place-items-center rounded-[var(--radius-md)] text-[var(--ink-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"

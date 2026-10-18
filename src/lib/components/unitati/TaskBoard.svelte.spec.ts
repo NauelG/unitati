@@ -79,9 +79,9 @@ describe('TaskBoard', () => {
 		const onquickcreate = vi.fn();
 		render(TaskBoard, { states, tasks, editable: true, onquickcreate });
 
-		await fireEvent.click(screen.getByRole('button', { name: 'Nueva tarea en Hecho' }));
+		await fireEvent.click(screen.getByRole('button', { name: 'Nueva tarea en Por hacer' }));
 
-		expect(onquickcreate).toHaveBeenCalledWith('s-done');
+		expect(onquickcreate).toHaveBeenCalledWith('s-todo');
 	});
 
 	it('has no menu, drop zone, move form or quick create when read-only', () => {

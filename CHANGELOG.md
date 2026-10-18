@@ -5,6 +5,14 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.63.2] - 2026-10-18
+
+### Fixed
+
+- Collapsed board columns no longer overflow the 48px strip (#228): the expand button, the counter
+  and the name stack on one axis, a long name ends in an ellipsis, the quick-create `+` is gone, and
+  clicking anywhere on the strip expands the column.
+
 ## [0.63.1] - 2026-10-18
 
 ### Fixed
