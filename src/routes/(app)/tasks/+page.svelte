@@ -182,9 +182,13 @@
 			type="search"
 			placeholder={m.tasks_search_placeholder()}
 			bind:value={term}
+			autocomplete="off"
 			class="w-full max-w-md"
-		/>
-		<span class="ut-kbd self-center" aria-hidden="true">{formatKeys(['/'], mac)}</span>
+		>
+			{#snippet trailing()}
+				<span class="ut-kbd" aria-hidden="true">{formatKeys(['/'], mac)}</span>
+			{/snippet}
+		</Field>
 		{#if data.canSeeAll}
 			<SelectField
 				label={m.tasks_filter_scope()}
