@@ -1,4 +1,4 @@
-# 0027. Global search composes per-domain scoped sub-queries
+# 0028. Global search composes per-domain scoped sub-queries
 
 - **Status:** accepted
 - **Date:** 2026-10-18
