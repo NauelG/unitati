@@ -111,11 +111,13 @@ forbids. There is no low-entropy secret to protect, so there is no stretching to
 
 ### Errors, versioning, limits
 
-- Errors share one envelope, `{ "error": { "code", "message", "issues"? } }`:
+- Errors share one envelope, `{ "error": { "code", "message", "issues"?, "details"? } }`:
   - `400` for invalid input, with `issues` taken from Zod,
   - `401` for authentication,
   - `404` for both "not found" and "not allowed", as in ADR 0007,
-  - `409` for a domain refusal (e.g. an illegal transition),
+  - `409` for a domain refusal (e.g. an illegal transition), optionally with `details`, a free-form
+    object of facts about the refusal (`in_use` on a location reports the `children` and `assets`
+    that block the delete). Locations, having no human-readable tag, are addressed by UUID,
   - `429` with `Retry-After`.
 - The path carries the major version. Additive changes ship in `v1`; a breaking change is
   `v2`, served alongside it.
