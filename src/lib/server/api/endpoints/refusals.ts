@@ -1,5 +1,12 @@
 import { ApiError, conflict, notFound } from '../registry';
 
+/** A reference in the body that points at nothing: a field the caller can fix, so a `400` on that field. */
+export function invalidField(field: string, message: string): ApiError {
+	return new ApiError(400, 'invalid_input', 'The request is not valid.', [
+		{ path: [field], message }
+	]);
+}
+
 /**
  * A domain failure as the envelope's refusal (ADR 0022). A record that is not
  * there and an act the caller may not do are one answer, `404` (ADR 0007):

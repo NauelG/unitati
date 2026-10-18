@@ -48,7 +48,12 @@ describe('the endpoint registry', () => {
 
 	it('serves a PATCH only where a field edit has no transition rule (ADR 0022)', () => {
 		const patched = ENDPOINTS.filter((endpoint) => endpoint.method === 'PATCH');
-		expect(patched.map((endpoint) => endpoint.id)).toEqual(['assets.update', 'locations.update']);
+		expect(patched.map((endpoint) => endpoint.id)).toEqual([
+			'assets.update',
+			'locations.update',
+			'projects.update',
+			'tasks.update'
+		]);
 	});
 
 	it('declares every asset use case, each with a description and an example where it writes', () => {
@@ -113,6 +118,48 @@ describe('the endpoint registry', () => {
 		expect(byId.get('assets.register')?.permissions).toEqual([
 			/requirePermission\([\w.]+(?:\.\w+)*, '([\w.]+)'\)/.exec(register)?.[1]
 		]);
+	});
+
+	it('declares the 17 project, task and state use cases, each with its permission', () => {
+		const byId = new Map(ENDPOINTS.map((endpoint) => [endpoint.id, endpoint]));
+		const reads = ['projects.view', 'projects.view.assigned'];
+		const expected: Record<string, [string, string, readonly string[]]> = {
+			'projects.list': ['GET', '/projects', reads],
+			'projects.get': ['GET', '/projects/{tag}', reads],
+			'projects.timeline': ['GET', '/projects/{tag}/timeline', ['projects.view']],
+			'projects.create': ['POST', '/projects', ['projects.manage']],
+			'projects.update': ['PATCH', '/projects/{tag}', ['projects.manage']],
+			'projects.archive': ['POST', '/projects/{tag}/archive', ['projects.manage']],
+			'projects.unarchive': ['DELETE', '/projects/{tag}/archive', ['projects.manage']],
+			'tasks.list': ['GET', '/tasks', reads],
+			'tasks.get': ['GET', '/tasks/{tag}', reads],
+			'tasks.timeline': ['GET', '/tasks/{tag}/timeline', reads],
+			'tasks.create': ['POST', '/projects/{tag}/tasks', ['projects.manage']],
+			'tasks.update': ['PATCH', '/tasks/{tag}', ['projects.manage']],
+			'tasks.move': ['POST', '/tasks/{tag}/state', ['projects.manage']],
+			'tasks.reparent': ['POST', '/tasks/{tag}/project', ['projects.manage']],
+			'tasks.assign': ['POST', '/tasks/{tag}/assignees', ['projects.manage']],
+			'tasks.unassign': ['DELETE', '/tasks/{tag}/assignees/{personId}', ['projects.manage']],
+			'states.list': ['GET', '/states', reads]
+		};
+
+		for (const [id, [method, path, permissions]] of Object.entries(expected)) {
+			const endpoint = byId.get(id);
+			expect(endpoint, id).toBeDefined();
+			expect([endpoint?.method, endpoint?.path, endpoint?.permissions], id).toEqual([
+				method,
+				path,
+				permissions
+			]);
+			expect(endpoint?.description?.trim(), id).toBeTruthy();
+		}
+	});
+
+	it('serves no method and path twice', () => {
+		const routes = ENDPOINTS.map(
+			(endpoint) => `${endpoint.method} ${endpoint.path.replace(/\{\w+\}/g, '{}')}`
+		);
+		expect(new Set(routes).size).toBe(routes.length);
 	});
 
 	it('keeps the endpoints an adapter: none imports a table or the database (ADR 0022)', () => {

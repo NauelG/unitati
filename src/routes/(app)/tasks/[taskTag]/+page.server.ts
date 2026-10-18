@@ -2,10 +2,9 @@ import { error } from '@sveltejs/kit';
 import { z } from 'zod';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
-import { listActivity } from '#lib/server/activity/index.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 import { listPeople } from '#lib/server/directory/index.js';
-import { mergeTaskTimeline, relatedTo, unlinkTask } from '#lib/server/links/index.js';
+import { relatedTo, taskTimeline, unlinkTask } from '#lib/server/links/index.js';
 import {
 	fieldsOf,
 	firstField,
@@ -62,12 +61,12 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 };
 
 async function timelineRailOf(user: SessionUser, taskId: string) {
-	const [entries, related] = await Promise.all([
-		listActivity({ organisationId: user.organisationId, target: { taskId } }),
+	const [timeline, related] = await Promise.all([
+		taskTimeline(user, taskId),
 		relatedTo(user, { kind: 'task', id: taskId })
 	]);
 
-	return { timeline: mergeTaskTimeline(entries, related), related };
+	return { timeline, related };
 }
 
 /** The task an action targets. Gone, or out of the viewer's scope, reads as missing. */

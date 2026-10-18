@@ -1,7 +1,10 @@
 import type { Endpoint } from '../registry';
 import { ASSET_ENDPOINTS } from './assets';
 import { LOCATION_ENDPOINTS } from './locations';
+import { PROJECT_ENDPOINTS } from './projects';
 import { listQueuesEndpoint } from './queues';
+import { listStatesEndpoint } from './states';
+import { TASK_ENDPOINTS } from './tasks';
 import { TICKET_ACTION_ENDPOINTS } from './ticket-actions';
 import { TICKET_WORK_ENDPOINTS } from './ticket-work';
 import { commentEndpoint, ticketThreadEndpoint } from './ticket-thread';
@@ -20,5 +23,8 @@ export const ENDPOINTS: readonly Endpoint[] = [
 	...TICKET_WORK_ENDPOINTS,
 	listQueuesEndpoint,
 	...ASSET_ENDPOINTS,
-	...LOCATION_ENDPOINTS
+	...LOCATION_ENDPOINTS,
+	...PROJECT_ENDPOINTS,
+	...TASK_ENDPOINTS,
+	listStatesEndpoint
 ];
