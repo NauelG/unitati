@@ -138,6 +138,24 @@ describe('register, assign, return', () => {
 
 		expect(result).toEqual({ ok: false, error: 'person_not_found' });
 	});
+
+	it('refuses to assign an asset that somebody already holds, and writes no second entry', async () => {
+		const { organisation, modelId, technician } = await workspace();
+		const ada = await createPerson(organisation.id, 'Ada Lovelace');
+		const alan = await createPerson(organisation.id, 'Alan Turing');
+		const registered = await registerAsset(technician, { name: 'A laptop', assetModelId: modelId });
+		if (!registered.ok) throw new Error(registered.error);
+		await assignCustody(technician, registered.value.id, ada.id);
+
+		const result = await assignCustody(technician, registered.value.id, alan.id);
+
+		expect(result).toEqual({ ok: false, error: 'already_in_custody' });
+		const timeline = await assetTimeline(technician, registered.value.assetTag);
+		const assigned = timeline.ok
+			? timeline.value.filter((entry) => entry.verb === 'custody.assigned')
+			: [];
+		expect(assigned).toHaveLength(1);
+	});
 });
 
 /**

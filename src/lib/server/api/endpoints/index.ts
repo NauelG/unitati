@@ -1,4 +1,5 @@
 import type { Endpoint } from '../registry';
+import { ASSET_ENDPOINTS } from './assets';
 import { listQueuesEndpoint } from './queues';
 import { TICKET_ACTION_ENDPOINTS } from './ticket-actions';
 import { TICKET_WORK_ENDPOINTS } from './ticket-work';
@@ -16,5 +17,6 @@ export const ENDPOINTS: readonly Endpoint[] = [
 	commentEndpoint,
 	...TICKET_ACTION_ENDPOINTS,
 	...TICKET_WORK_ENDPOINTS,
-	listQueuesEndpoint
+	listQueuesEndpoint,
+	...ASSET_ENDPOINTS
 ];

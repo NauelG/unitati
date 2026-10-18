@@ -569,11 +569,16 @@ async function lockedAsset(tx: Transaction, actor: SessionUser, assetId: string)
 	return row ?? null;
 }
 
-export type AssignCustodyFailure = 'asset_not_found' | 'person_not_found';
+export type AssignCustodyFailure = 'asset_not_found' | 'person_not_found' | 'already_in_custody';
 
 /**
  * Hands an asset to a person. Custody is a technician recording a fact, not a
  * workflow with a signature — the request-and-acceptance flow is #25.
+ *
+ * An asset somebody already holds is refused rather than silently reassigned:
+ * the handover would leave `custody.assigned` with no `custody.returned` before
+ * it, and a timeline that says two people had the same laptop is not an audit
+ * trail. Return it first.
  *
  * The person's name is snapshotted into the payload beside their id (ADR 0009).
  * The id is for linking; the snapshot is the fact, and it is what keeps the
@@ -587,6 +592,7 @@ export async function assignCustody(
 	return getDb().transaction(async (tx) => {
 		const asset = await lockedAsset(tx, actor, assetId);
 		if (!asset) return failure('asset_not_found');
+		if (asset.custodianPersonId !== null) return failure('already_in_custody');
 
 		const [person] = await tx
 			.select({ id: people.id, fullName: people.fullName })

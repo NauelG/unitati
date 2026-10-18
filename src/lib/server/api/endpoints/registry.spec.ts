@@ -42,7 +42,77 @@ describe('the endpoint registry', () => {
 	});
 
 	it('never serves a PATCH on tickets: every change to a ticket is a rule', () => {
-		expect(ENDPOINTS.filter((endpoint) => endpoint.method === 'PATCH')).toEqual([]);
+		const patched = ENDPOINTS.filter((endpoint) => endpoint.method === 'PATCH');
+		expect(patched.filter((endpoint) => endpoint.id.startsWith('tickets.'))).toEqual([]);
+	});
+
+	it('serves a PATCH only where a field edit has no transition rule (ADR 0022)', () => {
+		const patched = ENDPOINTS.filter((endpoint) => endpoint.method === 'PATCH');
+		expect(patched.map((endpoint) => endpoint.id)).toEqual(['assets.update']);
+	});
+
+	it('declares every asset use case, each with a description and an example where it writes', () => {
+		const assets = ENDPOINTS.filter((endpoint) => endpoint.id.startsWith('assets.'));
+
+		expect(assets.map((endpoint) => endpoint.id).sort()).toEqual(
+			[
+				'assets.list',
+				'assets.get',
+				'assets.timeline',
+				'assets.register',
+				'assets.update',
+				'assets.custody.assign',
+				'assets.custody.return',
+				'assets.state',
+				'assets.location',
+				'assets.note'
+			].sort()
+		);
+		for (const endpoint of assets) {
+			expect(endpoint.description?.trim(), endpoint.id).toBeTruthy();
+			if (endpoint.method === 'POST' || endpoint.method === 'PATCH') {
+				expect(endpoint.example, endpoint.id).toBeDefined();
+			}
+		}
+	});
+
+	/** The registry's permissions are the gate the UI route applies: they may not drift apart. */
+	it('gates each asset write with exactly the permission its route action requires', () => {
+		const route = readFileSync(
+			new URL('../../../../routes/(app)/assets/[tag]/+page.server.ts', import.meta.url),
+			'utf8'
+		);
+		const routePermission = (action: string) => {
+			const body = route.slice(route.indexOf(`\t${action}: async`));
+			return /requirePermission\(locals\.user, '([\w.]+)'\)/.exec(body)?.[1];
+		};
+		const byId = new Map(ENDPOINTS.map((endpoint) => [endpoint.id, endpoint]));
+		const pairs = {
+			'assets.custody.assign': 'assignCustody',
+			'assets.custody.return': 'returnCustody',
+			'assets.state': 'changeState',
+			'assets.location': 'changeLocation',
+			'assets.note': 'addNote'
+		} as const;
+
+		for (const [id, action] of Object.entries(pairs)) {
+			expect(byId.get(id)?.permissions, id).toEqual([routePermission(action)]);
+		}
+
+		const edit = readFileSync(
+			new URL('../../../../routes/(app)/assets/[tag]/edit/+page.server.ts', import.meta.url),
+			'utf8'
+		);
+		expect(byId.get('assets.update')?.permissions).toEqual([
+			/requirePermission\([\w.]+, '([\w.]+)'\)/.exec(edit)?.[1]
+		]);
+		const register = readFileSync(
+			new URL('../../../../routes/(app)/assets/new/+page.server.ts', import.meta.url),
+			'utf8'
+		);
+		expect(byId.get('assets.register')?.permissions).toEqual([
+			/requirePermission\([\w.]+(?:\.\w+)*, '([\w.]+)'\)/.exec(register)?.[1]
+		]);
 	});
 
 	it('keeps the endpoints an adapter: none imports a table or the database (ADR 0022)', () => {

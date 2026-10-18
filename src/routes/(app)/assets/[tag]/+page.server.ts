@@ -175,12 +175,12 @@ export const actions: Actions = {
 		const outcome = await assignCustody(user, asset.id, parsed.data.personId);
 
 		if (!outcome.ok) {
-			return rejected(
-				'assignCustody',
-				outcome.error === 'person_not_found'
-					? m.action_error_person_missing()
-					: m.asset_error_gone()
-			);
+			const reasons = {
+				person_not_found: m.action_error_person_missing(),
+				already_in_custody: m.action_error_already_in_custody(),
+				asset_not_found: m.asset_error_gone()
+			};
+			return rejected('assignCustody', reasons[outcome.error]);
 		}
 		return { action: 'assignCustody' as const };
 	},
