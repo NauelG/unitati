@@ -56,3 +56,17 @@ and where a catalogue with this many fields is edited.
 - An asset's location can no longer vanish silently when its place is deleted; whoever deletes it
   must first move the assets.
 - Counts are direct only: an asset on `Floor 1` does not count for `Barcelona office`.
+
+## Addendum (2026-10-18): deleting a location people sit at (#176)
+
+Point 5 left "#176 revisits it". #176 decided: `people.location_id` stays `on delete set null`, on
+purpose.
+
+- A person's location is informative; an asset's is inventory truth. `restrict` would force N
+  manual edits to delete one place, and there is no bulk edit to make that bearable.
+- What replaces the silence: the confirmation says how many people will lose the location, and the
+  delete transaction writes one `person.location.changed` entry per person
+  (`to: null`, `reason: 'location_deleted'`, `from` carrying the id and path at deletion). A
+  refused delete rolls the transaction back, so no person entry survives it.
+- A technician (`assets.manage`) may delete a location people sit at, with the same warning as an
+  admin. Requiring `people.manage` would be a dead end for them.

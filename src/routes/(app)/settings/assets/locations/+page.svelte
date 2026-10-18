@@ -204,7 +204,13 @@
 										if (!next) confirmingId = null;
 									}}
 									title={m.catalogue_delete_title({ name: entry.path })}
-									description={m.catalogue_delete_ask()}
+									description={entry.people === 0
+										? m.catalogue_delete_ask()
+										: `${m.catalogue_delete_ask()} ${
+												entry.people === 1
+													? m.locations_delete_people_one()
+													: m.locations_delete_people_other({ count: entry.people })
+											}`}
 									confirmLabel={m.catalogue_delete()}
 									pending={pendingId === entry.id}
 									error={confirmingId === entry.id && form?.id === entry.id ? form.message : null}

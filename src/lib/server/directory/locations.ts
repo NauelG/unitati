@@ -4,7 +4,7 @@ import { constraintViolation, uniqueConstraintName } from '../db/errors';
 import type { SessionUser } from '../auth/guards';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { actorColumns, recordActivity } from '../activity';
-import { locations, organisations } from './schema';
+import { locations, organisations, people } from './schema';
 import type { LocationInput } from './validation';
 
 /**
@@ -291,7 +291,10 @@ export async function updateLocation(
 
 /**
  * `in_use` is `restrict` speaking: a child location or an asset still points
- * here. A person does not — their `location_id` is cleared instead (#176).
+ * here. A person does not — their `location_id` is cleared by the foreign key's
+ * `set null`, and each person who loses it gets a `person.location.changed`
+ * entry (`reason: 'location_deleted'`) in the same transaction (#176). A refused
+ * delete rolls everything back, so no person entry survives it.
  *
  * `23503` is the foreign-key class; anything else is not "in use" and keeps
  * propagating, as in the assets catalogue.
@@ -313,6 +316,13 @@ export async function deleteLocation(
 			// nothing left to climb, and the entry must carry its own snapshot.
 			const path = (await locationPaths(actor.organisationId, [id], tx)).get(id) ?? current.name;
 
+			// Read before the delete: the foreign key clears these rows' location, and
+			// after that nothing says who sat here.
+			const affected = await tx
+				.select({ id: people.id })
+				.from(people)
+				.where(and(eq(people.locationId, id), eq(people.organisationId, actor.organisationId)));
+
 			await tx.delete(locations).where(eq(locations.id, id));
 			await recordActivity(tx, {
 				organisationId: actor.organisationId,
@@ -321,6 +331,15 @@ export async function deleteLocation(
 				verb: 'catalogue.location.deleted',
 				payload: { name: current.name, path, code: current.code }
 			});
+			for (const person of affected) {
+				await recordActivity(tx, {
+					organisationId: actor.organisationId,
+					...actorColumns(actor),
+					target: { personId: person.id },
+					verb: 'person.location.changed',
+					payload: { from: { id, path }, to: null, reason: 'location_deleted' }
+				});
+			}
 			return success(undefined);
 		});
 	} catch (error) {
@@ -336,4 +355,16 @@ export async function countLocationChildren(organisationId: string, id: string):
 		.from(locations)
 		.where(and(eq(locations.parentId, id), eq(locations.organisationId, organisationId)));
 	return row?.count ?? 0;
+}
+
+/** For the delete confirmation: how many people sit at each location, one query. */
+export async function countPeopleByLocation(organisationId: string): Promise<Map<string, number>> {
+	const rows = await getDb()
+		.select({ locationId: people.locationId, count: sql<number>`count(*)::int` })
+		.from(people)
+		.where(and(eq(people.organisationId, organisationId), sql`${people.locationId} is not null`))
+		.groupBy(people.locationId);
+	return new Map(
+		rows.flatMap((row) => (row.locationId ? [[row.locationId, row.count] as const] : []))
+	);
 }

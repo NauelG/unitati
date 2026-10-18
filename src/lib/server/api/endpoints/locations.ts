@@ -245,7 +245,7 @@ export const deleteLocationEndpoint = defineEndpoint({
 	path: '/locations/{id}',
 	summary: 'Delete a location.',
 	description:
-		'Deletes a location that nothing points at. A location with sub-locations or assets is not deleted: the answer is `409 in_use`, and `error.details` carries the `children` and `assets` that block it. People placed there are not blockers; they lose the location.',
+		'Deletes a location that nothing points at. A location with sub-locations or assets is not deleted: the answer is `409 in_use`, and `error.details` carries the `children` and `assets` that block it. People placed there are not blockers: their location is cleared and the change is recorded on each person.',
 	permissions: MANAGE,
 	input: z.object({ id }),
 	output: z.null(),

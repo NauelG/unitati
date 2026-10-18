@@ -5,6 +5,13 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.68.0] - 2026-10-19
+
+### Changed
+
+- Deleting a location warns about the people who will lose it, and records a
+  `person.location.changed` entry on each of them (#203).
+
 ## [0.67.0] - 2026-10-19
 
 ### Added

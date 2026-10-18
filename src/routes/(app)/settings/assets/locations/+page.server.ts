@@ -3,6 +3,7 @@ import { m } from '#lib/paraglide/messages.js';
 import { countAssetsByLocation } from '#lib/server/assets/index.js';
 import {
 	countLocationChildren,
+	countPeopleByLocation,
 	createLocation,
 	deleteLocation,
 	listLocations,
@@ -76,12 +77,17 @@ function failureOf(error: string): { errors: FieldErrors; message: string | null
 export const load = async ({ locals }: RequestEvent) => {
 	const user = requireSettingsSection(locals.user, SECTION);
 	// Two domains, composed here: neither imports the other's tables.
-	const [entries, counts] = await Promise.all([
+	const [entries, counts, people] = await Promise.all([
 		listLocations(user.organisationId),
-		countAssetsByLocation(user.organisationId)
+		countAssetsByLocation(user.organisationId),
+		countPeopleByLocation(user.organisationId)
 	]);
 	return {
-		locations: entries.map((entry) => ({ ...entry, assets: counts.get(entry.id) ?? 0 }))
+		locations: entries.map((entry) => ({
+			...entry,
+			assets: counts.get(entry.id) ?? 0,
+			people: people.get(entry.id) ?? 0
+		}))
 	};
 };
 
