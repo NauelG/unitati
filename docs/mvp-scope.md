@@ -76,17 +76,30 @@ Realistic seed data is not decoration: developing against three records hides pa
 search ranking, deep hierarchies and the states that only appear at volume. Which is why the
 seed is **not** built here: it starts in slice 2 and every slice extends it. A seed written in
 slice 8 would mean slices 2 to 7 were developed against exactly the three records this paragraph
-condemns. What slice 8 adds is volume, the walkthrough, and the tests that prove it.
-
-The walkthrough is verified twice, because each test answers a different question: an
-**integration test** chains the seven steps through the domain functions and proves the data and
-the relations hold, and **one Playwright spec** walks them through the interface and proves the
-buttons exist and are wired. Playwright arrives here and nowhere earlier — by slice 8 the screens
-are stable, which is the only point at which end-to-end tests cost less than they return.
+condemns.
 
 The seed is **deterministic**, from a fixed random seed: `AST-0142` means the same machine on
-every machine, so a screenshot from last month still compares, a bug report still resolves, and
-the Playwright spec can assert on a named record instead of "the first row".
+every machine, so a screenshot from last month still compares and a bug report still resolves.
+
+### How the criterion was verified
+
+**By hand, on the operator's deployment, not by an automated test.** Slice 8
+([#13](https://github.com/NauelG/unitati/issues/13)) planned to assert the seven steps twice: an
+integration test chaining them through the domain functions, and a Playwright spec walking them
+through the interface. It was closed as not planned:
+
+- the seed at volume and `test:db` in CI already existed, built slice by slice;
+- the staging environment it assumed was removed, and the repository is deployment-agnostic
+  ([ADR 0025](adr/0025-deployment-agnostic.md)) — the MVP runs, with real data, wherever its
+  operator deploys the image;
+- Playwright would add a dependency, browsers in CI and selector maintenance while the screens
+  still change almost every release.
+
+The consequence is accepted and stated plainly: **nothing in CI fails if a later change breaks
+the seven-step walkthrough.** Each slice's own tests still guard its part; the chain across
+slices is guarded by nobody. The cheapest repair, if a regression ever slips through, is the
+seven-step integration test on its own — `test:db` already runs in CI — before any browser
+tooling.
 
 This criterion replaces the earlier one ("a team works for two weeks without opening
 Leantime, OpenSupports or Snipe-IT"). That one is a better test of value, but there is no
