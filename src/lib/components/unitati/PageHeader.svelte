@@ -14,8 +14,8 @@
 			root: 'flex flex-wrap items-start justify-between gap-[var(--space-4)]',
 			heading: 'min-w-0',
 			code: 'font-mono text-xs font-medium text-[var(--ink-muted)]',
-			title: 'font-display text-2xl font-semibold text-[var(--ink)]',
-			summary: 'mt-2 text-[var(--ink-muted)]',
+			title: 'font-display text-2xl font-semibold text-balance break-words text-[var(--ink)]',
+			summary: 'mt-2 text-pretty text-[var(--ink-muted)]',
 			actions: 'flex flex-wrap items-center gap-[var(--space-2)]'
 		}
 	});
@@ -47,10 +47,12 @@
 	const styles = pageHeader();
 </script>
 
-<div class={styles.root({ class: className })}>
+<header class={styles.root({ class: className })}>
 	<div class={styles.heading()}>
 		{#if code}
-			<p class={styles.code()} style:view-transition-name={codeViewTransitionName}>{code}</p>
+			<p class={styles.code()} translate="no" style:view-transition-name={codeViewTransitionName}>
+				{code}
+			</p>
 		{/if}
 		<h1 class={styles.title({ class: code ? 'mt-1' : undefined })}>{title}</h1>
 		{#if summary}
@@ -61,4 +63,4 @@
 	{#if actions}
 		<div class={styles.actions()}>{@render actions()}</div>
 	{/if}
-</div>
+</header>

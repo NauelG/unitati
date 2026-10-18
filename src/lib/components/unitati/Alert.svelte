@@ -23,7 +23,7 @@
 			actions: 'mt-[var(--space-3)] flex flex-wrap items-center gap-[var(--space-2)]',
 			dismiss: [
 				'ml-[var(--space-2)] shrink-0 self-start rounded-[var(--radius-sm)] p-1 text-[var(--ink-muted)]',
-				'hover:bg-[var(--surface-2)] hover:text-[var(--ink)]'
+				'transition-colors ut-transition-fast hover:bg-[var(--surface-2)] hover:text-[var(--ink)]'
 			]
 		},
 		variants: {

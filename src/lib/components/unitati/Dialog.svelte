@@ -30,7 +30,7 @@
 				'bg-[var(--surface-1)] p-[var(--space-5)] shadow-[var(--shadow-lg)] outline-none',
 				// `.ut-scrollbar` (ADR 0015 addendum, #96): same native, thin
 				// scrollbar styling as `Sheet`'s own scroll region.
-				'ut-scrollbar max-h-[calc(100vh-2*var(--space-6))] overflow-y-auto'
+				'ut-scrollbar max-h-[calc(100dvh-2*var(--space-6))] overflow-y-auto overscroll-contain'
 			],
 			title: 'text-base font-semibold text-[var(--ink)]',
 			description: 'mt-[var(--space-2)] text-sm leading-[22px] text-[var(--ink-muted)]'
@@ -41,6 +41,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import XIcon from '@lucide/svelte/icons/x';
+	import { m } from '#lib/paraglide/messages.js';
+	import { button } from './Button.svelte';
 
 	interface Props {
 		/** The caller owns this, same as `ConfirmDialog`'s own `open`. */
@@ -71,6 +74,7 @@
 	}: Props = $props();
 
 	const styles = dialog();
+	const closeClass = button({ variant: 'ghost', size: 'sm', iconOnly: true });
 
 	function handleOpenChange(next: boolean) {
 		if (pending && !next) return;
@@ -81,7 +85,7 @@
 <Dialog.Root {open} onOpenChange={handleOpenChange}>
 	<Dialog.Portal>
 		<Dialog.Overlay class={styles.overlay()} />
-		<Dialog.Content class={styles.content({ class: className })}>
+		<Dialog.Content class={styles.content({ class: className })} showCloseButton={false}>
 			<Dialog.Title class={styles.title()}>{title}</Dialog.Title>
 			{#if description}
 				<Dialog.Description class={styles.description()}>{description}</Dialog.Description>
@@ -90,6 +94,11 @@
 			<div class="mt-[var(--space-4)]">
 				{@render children()}
 			</div>
+
+			<!-- The vendored close button's name is English (ADR 0008); this one is Spanish. -->
+			<Dialog.Close class={closeClass + ' absolute top-2 right-2'} aria-label={m.dialog_close()}>
+				<XIcon class="size-4" aria-hidden="true" />
+			</Dialog.Close>
 		</Dialog.Content>
 	</Dialog.Portal>
 </Dialog.Root>

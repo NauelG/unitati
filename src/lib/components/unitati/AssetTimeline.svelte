@@ -92,7 +92,7 @@
 
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale } from '#lib/paraglide/runtime.js';
+	import { formatDateTime } from '#lib/format-date.js';
 	import type { AssetTimelineItem } from '#lib/server/links/index.js';
 	import { activitySentence, projectChangedParts } from './activity.js';
 	import RecordRef from './RecordRef.svelte';
@@ -125,9 +125,6 @@
 	 * preference read from a cookie, so freezing it at import time would pin
 	 * every later request to whichever language the first one had.
 	 */
-	const formatter = $derived(
-		new Intl.DateTimeFormat(getLocale(), { dateStyle: 'medium', timeStyle: 'short' })
-	);
 </script>
 
 {#if items.length === 0}
@@ -153,7 +150,7 @@
 							{/if}
 						</p>
 						<time class={styles.time()} datetime={item.at.toISOString()}>
-							{formatter.format(item.at)}
+							{formatDateTime(item.at)}
 						</time>
 					</div>
 				</li>
@@ -198,7 +195,7 @@
 						{/if}
 
 						<time class={styles.time()} datetime={entry.occurredAt.toISOString()}>
-							{formatter.format(entry.occurredAt)}
+							{formatDateTime(entry.occurredAt)}
 						</time>
 					</div>
 				</li>

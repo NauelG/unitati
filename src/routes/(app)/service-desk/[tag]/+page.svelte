@@ -24,7 +24,7 @@
 		LINK_ASSET_EVENT,
 		paletteContext
 	} from '#lib/palette-context.svelte.js';
-	import { getLocale } from '#lib/paraglide/runtime.js';
+	import { formatDateTime } from '#lib/format-date.js';
 	import { PRIORITIES } from '#lib/domain/status.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { ThreadItem } from '#lib/server/service-desk/index.js';
@@ -71,10 +71,7 @@
 	const provenance = $derived(
 		m.ticket_detail_opened({
 			name: ticket.requesterName,
-			when: new Intl.DateTimeFormat(getLocale(), {
-				dateStyle: 'medium',
-				timeStyle: 'short'
-			}).format(ticket.createdAt),
+			when: formatDateTime(ticket.createdAt),
 			channel: ticket.channel === 'portal' ? m.ticket_channel_portal() : m.ticket_channel_agent()
 		})
 	);

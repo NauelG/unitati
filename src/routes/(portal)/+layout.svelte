@@ -10,7 +10,7 @@
 </script>
 
 <!-- No sidebar: an employee holding only their own tickets would meet a menu of empty modules. -->
-<div class="min-h-screen bg-[var(--surface-0)]">
+<div class="min-h-dvh bg-[var(--surface-0)]">
 	<header
 		class="flex h-14 items-center justify-between border-b border-[var(--border)] bg-[var(--surface-1)] px-6"
 	>

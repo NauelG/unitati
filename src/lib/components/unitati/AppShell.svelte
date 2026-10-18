@@ -17,9 +17,10 @@
 	 */
 	export const appShell = tv({
 		slots: {
-			sidebar: 'ut-sidebar flex h-full min-h-0 flex-col bg-[var(--surface-2)] p-[var(--space-3)]',
+			sidebar:
+				'ut-sidebar flex h-full min-h-0 flex-col bg-[var(--surface-2)] p-[var(--space-3)] pl-[max(var(--space-3),env(safe-area-inset-left))]',
 			brandbar:
-				'flex shrink-0 items-center justify-between px-[var(--space-2)] py-[var(--space-2)]',
+				'ut-brandbar flex shrink-0 items-center justify-between px-[var(--space-2)] py-[var(--space-2)]',
 			navItems:
 				'ut-scrollbar flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain',
 			navSection:
@@ -27,8 +28,10 @@
 			navItem: [
 				'flex min-h-10 items-center gap-[var(--space-2)] rounded-[var(--radius-md)] px-[var(--space-2)]',
 				'text-sm leading-5 font-medium text-[var(--ink)] no-underline',
-				'transition-colors ut-transition-fast hover:bg-[var(--surface-1)]'
+				// Hover raises contrast with an edge: surface-1 on surface-2 is ~1.1:1 on its own (ADR 0019).
+				'transition-colors ut-transition-fast hover:bg-[var(--surface-1)] hover:text-[var(--ink)] hover:shadow-[inset_0_0_0_1px_var(--border)]'
 			],
+			navList: 'flex flex-col gap-0.5',
 			navIcon: 'size-[var(--size-icon-sm)] shrink-0',
 			navDot: 'size-2 shrink-0 rounded-[var(--radius-full)]',
 			railMenuTitle:
@@ -51,8 +54,8 @@
 				'hover:bg-[var(--surface-1)] hover:text-[var(--ink)]'
 			],
 			topbar:
-				'flex h-14 shrink-0 items-center gap-[var(--space-3)] border-b border-[var(--border)] bg-[var(--surface-1)] px-[var(--space-6)]',
-			main: 'ut-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain p-[var(--space-6)]'
+				'flex h-14 shrink-0 items-center gap-[var(--space-3)] border-b border-[var(--border)] bg-[var(--surface-0)] px-[var(--space-6)] pt-[env(safe-area-inset-top)]',
+			main: 'ut-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain p-[var(--space-6)] pb-[max(var(--space-6),env(safe-area-inset-bottom))]'
 		},
 		variants: {
 			active: {
@@ -64,7 +67,6 @@
 			rail: {
 				true: {
 					sidebar: 'items-center',
-					brandbar: 'flex-col gap-[var(--space-1)]',
 					navItem: 'justify-center px-0'
 				}
 			}
@@ -83,6 +85,7 @@
 	import PanelLeftIcon from '@lucide/svelte/icons/panel-left';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import XIcon from '@lucide/svelte/icons/x';
 	import Logo from './Logo.svelte';
 	import AppVersion from '../AppVersion.svelte';
 	import CommandPalette from './CommandPalette.svelte';
@@ -91,6 +94,8 @@
 	import { MainScrollRestoration } from './main-scroll-restoration.js';
 	import { afterViewTransitionSettles } from '#lib/motion.js';
 	import {
+		formatKeys,
+		isMacPlatform,
 		isOverlayOpen,
 		isTypingTarget,
 		keymapRegistry,
@@ -99,6 +104,7 @@
 		type KeymapScope
 	} from '#lib/keymap.js';
 	import * as Sheet from '#lib/components/ui/sheet/index.js';
+	import { button } from './Button.svelte';
 	import * as Popover from '#lib/components/ui/popover/index.js';
 	import {
 		groupContainsPath,
@@ -147,6 +153,8 @@
 		children
 	}: Props = $props();
 
+	const closeClass = button({ variant: 'ghost', size: 'sm', iconOnly: true });
+
 	const SIDEBAR_STORAGE_KEY = 'unitati:sidebar';
 	const GROUPS_STORAGE_KEY = 'unitati:nav-groups';
 
@@ -167,6 +175,8 @@
 	let openGroupIds = $state<string[]>([]);
 	/** Only after mount may the rail swap a group's row for its popover (same hydration reason). */
 	let mounted = $state(false);
+	/** Only after mount: the server cannot know the platform, so SSR and hydration must agree on "Ctrl". */
+	const mac = $derived(mounted && isMacPlatform());
 	let railOpenId = $state<string | null>(null);
 
 	function readStoredGroups(): string[] {
@@ -296,6 +306,17 @@
 		window.dispatchEvent(new CustomEvent('unitati:command-palette'));
 	}
 
+	/** Consecutive items under the same section heading, so each section renders as one list. */
+	const navSections = $derived.by(() => {
+		const sections: { section: (typeof items)[number]['section']; items: typeof items }[] = [];
+		for (const item of items) {
+			const last = sections.at(-1);
+			if (last && last.section === item.section) last.items.push(item);
+			else sections.push({ section: item.section, items: [item] });
+		}
+		return sections;
+	});
+
 	const SECTION_LABEL = {
 		modules: () => m.nav_modules_section(),
 		directory: () => m.nav_directory_section()
@@ -382,131 +403,155 @@
 {#snippet navList(rail: boolean, scope: string)}
 	{@const styles = appShell({ rail })}
 	{#if showSearch}
-		<button
-			type="button"
-			class={styles.navItem()}
-			title={m.nav_search()}
-			onclick={openCommandPalette}
-		>
-			<SearchIcon class={styles.navIcon()} aria-hidden="true" />
-			<span class={styles.navLabel()}>{m.nav_search()}</span>
-			<span class={styles.kbd()}>⌘K</span>
-		</button>
+		<ul class={styles.navList()}>
+			<li>
+				<button
+					type="button"
+					class={styles.navItem()}
+					title={m.nav_search()}
+					onclick={openCommandPalette}
+				>
+					<SearchIcon class={styles.navIcon()} aria-hidden="true" />
+					<span class={styles.navLabel()}>{m.nav_search()}</span>
+					<span class={styles.kbd()}>{formatKeys(['$mod+k'], mac)}</span>
+				</button>
+			</li>
+		</ul>
 	{/if}
 
-	{#each items as item, index (item.kind === 'group' ? `group:${item.id}` : item.href)}
-		{@const previousSection = items[index - 1]?.section}
-		{#if item.section && item.section !== previousSection}
-			<div class={styles.navSection()}>{SECTION_LABEL[item.section]()}</div>
+	{#each navSections as { section, items: sectionItems }, index (index)}
+		{@const labelId = `${uid}-${scope}-section-${index}`}
+		{#if section}
+			<div id={labelId} class={styles.navSection()}>{SECTION_LABEL[section]()}</div>
 		{/if}
-		{#if item.kind === 'leaf'}
-			{@const active = isActive(item.href)}
-			<a
-				href={item.href}
-				aria-current={active ? 'page' : undefined}
-				class={appShell({ rail, active }).navItem()}
-				title={rail ? item.label : undefined}
-			>
-				{#if item.accent}
-					<span class={styles.navDot()} style:background-color={item.accent} aria-hidden="true"
-					></span>
-				{/if}
-				<item.icon class={styles.navIcon()} aria-hidden="true" />
-				<span class={styles.navLabel()}>{item.label}</span>
-				{#if item.count !== undefined}
-					<span class={styles.navCount()}><RollingNumber value={item.count} /></span>
-				{/if}
-			</a>
-		{:else}
-			{@const open = isGroupOpen(item)}
-			{@const containsCurrent = groupContainsPath(item.children, pathname)}
-			{@const panelId = `${uid}-${scope}-${item.id}`}
-			<div data-nav-group={item.id} data-open={open ? '' : undefined}>
-				{#if rail && mounted}
-					<!--
+		<ul class={styles.navList()} aria-labelledby={section ? labelId : undefined}>
+			{#each sectionItems as item (item.kind === 'group' ? `group:${item.id}` : item.href)}
+				<li>
+					{@render navEntry(item, rail, scope, styles)}
+				</li>
+			{/each}
+		</ul>
+	{/each}
+{/snippet}
+
+{#snippet navEntry(
+	item: (typeof items)[number],
+	rail: boolean,
+	scope: string,
+	styles: ReturnType<typeof appShell>
+)}
+	{#if item.kind === 'leaf'}
+		{@const active = isActive(item.href)}
+		<a
+			href={item.href}
+			aria-current={active ? 'page' : undefined}
+			class={appShell({ rail, active }).navItem()}
+			title={rail ? item.label : undefined}
+		>
+			{#if item.accent}
+				<span class={styles.navDot()} style:background-color={item.accent} aria-hidden="true"
+				></span>
+			{/if}
+			<item.icon class={styles.navIcon()} aria-hidden="true" />
+			<span class={styles.navLabel()}>{item.label}</span>
+			{#if item.count !== undefined}
+				<span class={styles.navCount()}><RollingNumber value={item.count} /></span>
+			{/if}
+		</a>
+	{:else}
+		{@const open = isGroupOpen(item)}
+		{@const containsCurrent = groupContainsPath(item.children, pathname)}
+		{@const panelId = `${uid}-${scope}-${item.id}`}
+		<div data-nav-group={item.id} data-open={open ? '' : undefined}>
+			{#if rail && mounted}
+				<!--
 						Rail: no room for indented children, so the parent icon opens a popover
 						with them. Enter/Space open it, arrows move, Escape closes it and puts
 						focus back on this icon (bits-ui's popover does the last part).
 					-->
-					<Popover.Root
-						open={railOpenId === item.id}
-						onOpenChange={(next) => (railOpenId = next ? item.id : null)}
+				<Popover.Root
+					open={railOpenId === item.id}
+					onOpenChange={(next) => (railOpenId = next ? item.id : null)}
+				>
+					<Popover.Trigger
+						class={appShell({ rail, active: containsCurrent }).navItem()}
+						aria-label={item.label}
+						title={item.label}
 					>
-						<Popover.Trigger
-							class={appShell({ rail, active: containsCurrent }).navItem()}
-							aria-label={item.label}
-							title={item.label}
-						>
-							<item.icon class={styles.navIcon()} aria-hidden="true" />
-						</Popover.Trigger>
-						<Popover.Content
-							side="right"
-							align="start"
-							sideOffset={8}
-							class={styles.railMenuContent()}
-							onkeydown={onRailMenuKeydown}
-						>
-							<div class={styles.railMenuTitle()}>
-								{item.label}
-							</div>
-							<ul class={styles.railMenu()}>
-								{#each item.children as child (child.href)}
-									<li>
-										<a
-											href={child.href}
-											aria-current={isActive(child.href) ? 'page' : undefined}
-											class={appShell({ active: isActive(child.href) }).navItem()}
-										>
-											<span class={styles.navLabel()}>{child.label}</span>
-											{#if child.count !== undefined}
-												<span class={styles.navCount()}><RollingNumber value={child.count} /></span>
-											{/if}
-										</a>
-									</li>
-								{/each}
-							</ul>
-						</Popover.Content>
-					</Popover.Root>
-				{:else}
-					<button
-						type="button"
-						class={appShell({ rail, group: true }).navItem()}
-						title={rail ? item.label : undefined}
-						aria-expanded={open}
-						aria-controls={panelId}
-						aria-disabled={containsCurrent ? 'true' : undefined}
-						onclick={() => toggleGroup(item)}
-					>
-						{#if item.accent}
-							<span class={styles.navDot()} style:background-color={item.accent} aria-hidden="true"
-							></span>
-						{/if}
 						<item.icon class={styles.navIcon()} aria-hidden="true" />
-						<span class={styles.navLabel()}>{item.label}</span>
-						<ChevronRightIcon class={styles.navChevron()} aria-hidden="true" />
-					</button>
-					<div id={panelId} class={styles.navChildren()}>
-						{#each item.children as child (child.href)}
-							{@const active = isActive(child.href)}
-							<a
-								href={child.href}
-								aria-current={active ? 'page' : undefined}
-								class={appShell({ active }).navItem()}
-							>
-								<span class={styles.navLabel()}>{child.label}</span>
-								{#if child.count !== undefined}
-									<span class={styles.navCount()}><RollingNumber value={child.count} /></span>
-								{/if}
-							</a>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		{/if}
-	{/each}
+					</Popover.Trigger>
+					<Popover.Content
+						side="right"
+						align="start"
+						sideOffset={8}
+						class={styles.railMenuContent()}
+						onkeydown={onRailMenuKeydown}
+					>
+						<div class={styles.railMenuTitle()}>
+							{item.label}
+						</div>
+						<ul class={styles.railMenu()}>
+							{#each item.children as child (child.href)}
+								<li>
+									<a
+										href={child.href}
+										aria-current={isActive(child.href) ? 'page' : undefined}
+										class={appShell({ active: isActive(child.href) }).navItem()}
+									>
+										<span class={styles.navLabel()}>{child.label}</span>
+										{#if child.count !== undefined}
+											<span class={styles.navCount()}><RollingNumber value={child.count} /></span>
+										{/if}
+									</a>
+								</li>
+							{/each}
+						</ul>
+					</Popover.Content>
+				</Popover.Root>
+			{:else}
+				<button
+					type="button"
+					class={appShell({ rail, group: true }).navItem()}
+					title={rail ? item.label : undefined}
+					aria-expanded={open}
+					aria-controls={panelId}
+					aria-disabled={containsCurrent ? 'true' : undefined}
+					onclick={() => toggleGroup(item)}
+				>
+					{#if item.accent}
+						<span class={styles.navDot()} style:background-color={item.accent} aria-hidden="true"
+						></span>
+					{/if}
+					<item.icon class={styles.navIcon()} aria-hidden="true" />
+					<span class={styles.navLabel()}>{item.label}</span>
+					<ChevronRightIcon class={styles.navChevron()} aria-hidden="true" />
+				</button>
+				<div id={panelId} class={styles.navChildren()}>
+					{#each item.children as child (child.href)}
+						{@const active = isActive(child.href)}
+						<a
+							href={child.href}
+							aria-current={active ? 'page' : undefined}
+							class={appShell({ active }).navItem()}
+						>
+							<span class={styles.navLabel()}>{child.label}</span>
+							{#if child.count !== undefined}
+								<span class={styles.navCount()}><RollingNumber value={child.count} /></span>
+							{/if}
+						</a>
+					{/each}
+				</div>
+			{/if}
+		</div>
+	{/if}
 {/snippet}
 
 <div class="flex h-dvh overflow-hidden bg-[var(--surface-0)]">
+	<a
+		href="#main"
+		class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-[var(--radius-md)] focus:bg-[var(--surface-1)] focus:px-[var(--space-3)] focus:py-[var(--space-2)] focus:text-[var(--ink)] focus:outline-2 focus:outline-[var(--focus)]"
+		>{m.shell_skip_to_content()}</a
+	>
 	<aside
 		class="hidden h-full shrink-0 border-r border-[var(--border)] md:block"
 		style:width="var(--size-sidebar-current)"
@@ -520,9 +565,15 @@
 			links: breadcrumbs, table rows, `RelatedRecords`) the same way.
 		-->
 		<nav class={appShell().sidebar()} aria-label={m.nav_main()} data-sveltekit-preload-data="hover">
-			<div class={appShell({ rail: collapsed }).brandbar()}>
+			<div class={appShell().brandbar()}>
 				<a href="/" class="rounded-[var(--radius-sm)]" aria-label={productName()}>
-					<Logo variant={collapsed ? 'mark' : 'lockup'} size="sm" />
+					<!--
+						Both are in the markup and `app.css` shows one by `html[data-sidebar-collapsed]`,
+						which `app.html` sets before paint: the server cannot know the stored state, so
+						swapping on `collapsed` would flash the lockup on a collapsed reload.
+					-->
+					<span class="ut-brand-lockup"><Logo variant="lockup" size="sm" /></span>
+					<span class="ut-brand-mark"><Logo variant="mark" size="sm" /></span>
 				</a>
 				<button
 					type="button"
@@ -555,7 +606,7 @@
 		<header class={appShell().topbar()} style:view-transition-name="shell-topbar">
 			<button
 				type="button"
-				class="grid size-8 place-items-center rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] md:hidden"
+				class="ut-transition-fast grid size-8 place-items-center rounded-[var(--radius-md)] transition-colors hover:bg-[var(--surface-2)] md:hidden"
 				onclick={() => (drawerOpen = true)}
 				aria-label={m.nav_open_menu()}
 			>
@@ -571,14 +622,24 @@
 			</div>
 		</header>
 
-		<main bind:this={mainEl} class={appShell().main()} data-sveltekit-preload-data="hover">
+		<main
+			id="main"
+			tabindex="-1"
+			bind:this={mainEl}
+			class={appShell().main()}
+			data-sveltekit-preload-data="hover"
+		>
 			{@render children()}
 		</main>
 	</div>
 </div>
 
 <Sheet.Root bind:open={drawerOpen}>
-	<Sheet.Content side="left" class="w-[85%] max-w-[300px] bg-[var(--surface-2)] p-[var(--space-3)]">
+	<Sheet.Content
+		side="left"
+		class="w-[85%] max-w-[300px] bg-[var(--surface-2)] p-[var(--space-3)]"
+		showCloseButton={false}
+	>
 		<nav
 			class="flex h-full min-h-0 flex-col"
 			aria-label={m.nav_main()}
@@ -597,6 +658,9 @@
 				</div>
 			</div>
 		</nav>
+		<Sheet.Close class={closeClass + ' absolute top-3 right-3'} aria-label={m.dialog_close()}>
+			<XIcon class="size-4" aria-hidden="true" />
+		</Sheet.Close>
 	</Sheet.Content>
 </Sheet.Root>
 

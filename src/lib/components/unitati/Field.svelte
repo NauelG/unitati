@@ -8,7 +8,9 @@
 	 */
 	export const field = tv({
 		slots: {
-			root: 'flex min-w-[220px] flex-col gap-[var(--space-1)]',
+			// `min-w-0` below `sm`: a fixed 220px floor overflows a 320px toolbar. (`basis-[220px]` would set the
+			// *height* in the many column-direction parents, so the floor is a min-width instead.)
+			root: 'flex min-w-0 flex-col sm:min-w-[220px] gap-[var(--space-1)]',
 			label: 'text-[13px] leading-4 font-medium text-[var(--ink)]',
 			input: [
 				'h-[var(--size-control-md)] w-full box-border px-[var(--space-3)]',
@@ -87,6 +89,6 @@
 	{/if}
 
 	{#if error}
-		<p id={errorId} class={styles.help()}>{error}</p>
+		<p id={errorId} class={styles.help()} role="alert">{error}</p>
 	{/if}
 </div>

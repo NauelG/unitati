@@ -360,7 +360,7 @@
 										href={href(row)}
 										tabindex={key === tabbableKey ? 0 : -1}
 										style:view-transition-name={toViewTransitionName('record', key)}
-										class="after:absolute after:inset-0 hover:underline focus-visible:underline"
+										class="scroll-mt-[var(--size-row)] after:absolute after:inset-0 hover:underline focus-visible:underline"
 										{@attach (node) => {
 											focusTargets[key] = node;
 											return () => delete focusTargets[key];

@@ -32,7 +32,7 @@
 			// `.ut-scrollbar` (ADR 0015 addendum, #96): the app's own thin,
 			// native scrollbar styling, the same one `AppShell`'s `main` and
 			// nav regions use — never a JS overlay scrollbar.
-			body: 'ut-scrollbar min-h-0 flex-1 overflow-y-auto p-[var(--space-5)]'
+			body: 'ut-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain p-[var(--space-5)] pb-[max(var(--space-5),env(safe-area-inset-bottom))]'
 		}
 	});
 </script>
@@ -40,6 +40,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import * as Sheet from '#lib/components/ui/sheet/index.js';
+	import XIcon from '@lucide/svelte/icons/x';
+	import { m } from '#lib/paraglide/messages.js';
+	import { button } from './Button.svelte';
 
 	interface Props {
 		/** The caller owns this, same as `Dialog`'s own `open`. */
@@ -72,6 +75,7 @@
 	}: Props = $props();
 
 	const styles = sheet();
+	const closeClass = button({ variant: 'ghost', size: 'sm', iconOnly: true });
 
 	function handleOpenChange(next: boolean) {
 		if (pending && !next) return;
@@ -80,7 +84,7 @@
 </script>
 
 <Sheet.Root {open} onOpenChange={handleOpenChange}>
-	<Sheet.Content side="right" class={styles.content({ class: className })}>
+	<Sheet.Content side="right" class={styles.content({ class: className })} showCloseButton={false}>
 		<div class={styles.header()}>
 			<Sheet.Title class={styles.title()}>{title}</Sheet.Title>
 			{#if description}
@@ -90,5 +94,8 @@
 		<div class={styles.body()}>
 			{@render children()}
 		</div>
+		<Sheet.Close class={closeClass + ' absolute top-3 right-3'} aria-label={m.dialog_close()}>
+			<XIcon class="size-4" aria-hidden="true" />
+		</Sheet.Close>
 	</Sheet.Content>
 </Sheet.Root>

@@ -31,6 +31,7 @@ body { font-family: var(--font-sans); color: var(--ink); background: var(--surfa
 .ut-btn-ghost { background: transparent; color: var(--ink); }
 .ut-btn-ghost:hover { background: var(--surface-2); }
 .ut-btn-danger { background: var(--danger); color: var(--on-danger); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .22); }
+.ut-btn-danger:hover { background: var(--danger-hover); }
 .ut-btn-danger:active { box-shadow: none; }
 .ut-btn-sm { height: var(--size-control-sm); padding: 0 var(--space-3); font-size: 12px; }
 .ut-btn-sm:has(> .ut-btn-dot:first-child) { padding-left: 4px; }

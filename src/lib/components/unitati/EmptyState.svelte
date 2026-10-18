@@ -20,10 +20,10 @@
 			root: 'flex flex-col items-center gap-[var(--space-4)] px-[var(--space-6)] py-[var(--space-12)] text-center',
 			disc: [
 				'grid size-10 place-items-center rounded-[var(--radius-full)]',
-				'bg-[var(--brand-soft)] text-[var(--brand)]'
+				'bg-[var(--surface-2)] text-[var(--ink-muted)]'
 			],
-			title: 'text-sm font-semibold text-[var(--ink)]',
-			description: 'max-w-sm text-sm text-[var(--ink-muted)]',
+			title: 'text-sm font-semibold text-balance text-[var(--ink)]',
+			description: 'max-w-sm text-sm text-pretty text-[var(--ink-muted)]',
 			// The shared chip (#88's `ut-kbd`, `src/app.css`) — this slot used to
 			// hand-roll the same border/mono/muted combination.
 			hint: 'ut-kbd inline-flex items-center gap-[var(--space-1)]'
@@ -36,7 +36,7 @@
 	import type { Snippet } from 'svelte';
 
 	interface Props {
-		/** A Lucide icon component, shown inside a soft brand disc. Omit for text only. */
+		/** A Lucide icon component, shown inside a neutral disc (the brand is repaintable and decorative, ADR 0026). Omit for text only. */
 		icon?: LucideIcon;
 		/** Omit for the plainer shape, e.g. a catalogue with nothing to say beyond the sentence. */
 		title?: string;
