@@ -16,7 +16,7 @@ import {
 } from '../../projects';
 import { page, pageWindow } from '../../shared/pagination';
 import { created, defineEndpoint, notFound, Reply, type Endpoint } from '../registry';
-import { paginationMetaSchema } from '../shared-schemas';
+import { paginationMetaSchema, toMeta } from '../shared-schemas';
 import {
 	bodyRefusal,
 	PROJECT_MANAGE,
@@ -31,7 +31,7 @@ import {
 	writtenTask
 } from './project-wire';
 import { invalidField, refusal } from './refusals';
-import { entryToWire, timelineEntrySchema } from './timeline-wire';
+import { timelineEntrySchema, timelineToWire } from './timeline-wire';
 
 /**
  * The task use cases (ADR 0022). Tasks are addressed by tag (ADR 0010), and so
@@ -68,19 +68,9 @@ export const listTasksEndpoint = defineEndpoint({
 		let projectId: string | undefined;
 		if (input.projectTag !== undefined) {
 			const project = await getProject(principal, input.projectTag);
-			projectId = project.ok ? project.value.id : undefined;
-			if (!project.ok) {
-				const empty = page([], 0, pageWindow(paging));
-				return {
-					data: [],
-					meta: {
-						page: empty.page,
-						perPage: empty.perPage,
-						total: empty.total,
-						pageCount: empty.pageCount
-					}
-				};
-			}
+			// A filter matching nothing is an empty page, not an error.
+			if (!project.ok) return { data: [], meta: toMeta(page([], 0, pageWindow(paging))) };
+			projectId = project.value.id;
 		}
 
 		const result = await listTasks(
@@ -92,12 +82,7 @@ export const listTasksEndpoint = defineEndpoint({
 
 		return {
 			data: result.rows.map((task) => taskToWire(task, positions)),
-			meta: {
-				page: result.page,
-				perPage: result.perPage,
-				total: result.total,
-				pageCount: result.pageCount
-			}
+			meta: toMeta(result)
 		};
 	}
 });
@@ -133,9 +118,7 @@ export const taskTimelineEndpoint = defineEndpoint({
 		const task = await taskOf(principal, input.tag);
 		const items = await taskTimeline(principal, task.id);
 
-		return {
-			data: items.flatMap((item) => (item.kind === 'activity' ? [entryToWire(item.entry)] : []))
-		};
+		return { data: timelineToWire(items) };
 	}
 });
 

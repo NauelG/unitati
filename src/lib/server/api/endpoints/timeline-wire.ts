@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { TimelineEntry } from '../../activity';
+import type { AssetTimelineItem } from '../../links';
 import { named } from '../shared-schemas';
 
 /**
@@ -57,4 +58,9 @@ export function entryToWire(entry: TimelineEntry): z.input<typeof timelineEntryS
 		actor,
 		at: entry.occurredAt.toISOString()
 	};
+}
+
+/** The activity half of a task's or project's merged timeline; its tickets are read from their own endpoints. */
+export function timelineToWire(items: readonly AssetTimelineItem[]) {
+	return items.flatMap((item) => (item.kind === 'activity' ? [entryToWire(item.entry)] : []));
 }

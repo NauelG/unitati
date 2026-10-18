@@ -45,3 +45,18 @@ export const paginationMetaSchema = named(
 		pageCount: z.number()
 	})
 );
+
+/** The `meta` of a page, from the domain's `Page`. */
+export function toMeta(result: {
+	page: number;
+	perPage: number;
+	total: number;
+	pageCount: number;
+}): z.input<typeof paginationMetaSchema> {
+	return {
+		page: result.page,
+		perPage: result.perPage,
+		total: result.total,
+		pageCount: result.pageCount
+	};
+}

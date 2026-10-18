@@ -13,7 +13,7 @@ import {
 	updateProjectInput
 } from '../../projects';
 import { created, defineEndpoint, notFound, Reply, type Endpoint } from '../registry';
-import { paginationMetaSchema } from '../shared-schemas';
+import { paginationMetaSchema, toMeta } from '../shared-schemas';
 import {
 	bodyRefusal,
 	PROJECT_MANAGE,
@@ -26,7 +26,7 @@ import {
 	writtenProject
 } from './project-wire';
 import { refusal } from './refusals';
-import { entryToWire, timelineEntrySchema } from './timeline-wire';
+import { timelineEntrySchema, timelineToWire } from './timeline-wire';
 
 /**
  * The project use cases (ADR 0022). Projects are addressed by tag (ADR 0010).
@@ -71,12 +71,7 @@ export const listProjectsEndpoint = defineEndpoint({
 
 		return {
 			data: result.rows.map((project) => projectToWire(project, counts[project.id])),
-			meta: {
-				page: result.page,
-				perPage: result.perPage,
-				total: result.total,
-				pageCount: result.pageCount
-			}
+			meta: toMeta(result)
 		};
 	}
 });
@@ -115,9 +110,7 @@ export const projectTimelineEndpoint = defineEndpoint({
 		const project = await projectOf(principal, input.tag);
 		const items = await projectTimeline(principal, project.id);
 
-		return {
-			data: items.flatMap((item) => (item.kind === 'activity' ? [entryToWire(item.entry)] : []))
-		};
+		return { data: timelineToWire(items) };
 	}
 });
 
