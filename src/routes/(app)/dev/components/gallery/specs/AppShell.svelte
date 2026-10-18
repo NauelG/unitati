@@ -127,12 +127,6 @@
 				'La ruta que cuenta como actual. Solo la usa la galería, para mostrar un grupo abierto por su hijo activo sin navegar.'
 		},
 		{
-			name: 'showSearch',
-			type: 'boolean',
-			default: 'false',
-			description: 'Oculto en producción, misma puerta que la galería (ADR 0013).'
-		},
-		{
 			name: 'settings',
 			type: 'Snippet',
 			description: 'Reservado para una futura pantalla de ajustes.'
@@ -143,7 +137,7 @@
 			description: 'El lado derecho de la topbar: insignia de entorno, usuario, salir.'
 		}
 	]}
-	usage={`<AppShell {links} showSearch={!isProduction(APP_ENV)}>
+	usage={`<AppShell {links}>
   {#snippet topbarEnd()}
     <EnvironmentBadge environment={APP_ENV} />
   {/snippet}

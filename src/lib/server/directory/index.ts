@@ -130,3 +130,5 @@ export async function countTeams(organisationId: string): Promise<number> {
 		.where(eq(teams.organisationId, organisationId));
 	return row?.count ?? 0;
 }
+
+export { personHits } from './search';

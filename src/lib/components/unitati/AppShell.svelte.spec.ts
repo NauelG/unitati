@@ -9,7 +9,7 @@ const { gotoMock } = vi.hoisted(() => ({ gotoMock: vi.fn() }));
 
 // Not under test, and they reach for SvelteKit's public env, which jsdom has no runtime for.
 vi.mock('../AppVersion.svelte', () => ({ default: () => {} }));
-vi.mock('./CommandPalette.svelte', () => ({ default: () => {} }));
+vi.mock('./GlobalSearch.svelte', () => ({ default: () => {} }));
 vi.mock('./KeymapOverlay.svelte', () => ({ default: () => {} }));
 vi.mock('$app/state', () => ({ page: { url: new URL('http://localhost/') } }));
 vi.mock('$app/env', () => ({ browser: true }));

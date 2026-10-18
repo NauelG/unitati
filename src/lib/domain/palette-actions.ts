@@ -20,10 +20,10 @@ import {
 
 /**
  * The command palette's "Acciones" group (#88): a pure function, not a
- * `$derived` inline inside `CommandPalette.svelte`, so the permission
+ * `$derived` inline inside `GlobalSearch.svelte`, so the permission
  * filtering is unit-testable without mounting a component — this repo's
- * vitest `server` project runs in Node with no DOM/component-testing
- * project configured (see `vite.config.ts`).
+ * pure logic belongs in the fast `server` project, and the component spec
+ * only needs to cover the wiring.
  */
 
 export type PaletteActionTarget =

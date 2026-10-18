@@ -87,7 +87,7 @@
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import Logo from './Logo.svelte';
 	import AppVersion from '../AppVersion.svelte';
-	import CommandPalette from './CommandPalette.svelte';
+	import GlobalSearch from './GlobalSearch.svelte';
 	import KeymapOverlay from './KeymapOverlay.svelte';
 	import RollingNumber from './RollingNumber.svelte';
 	import { MainScrollRestoration } from './main-scroll-restoration.js';
@@ -117,8 +117,6 @@
 
 	interface Props {
 		links: AppShellNavLink[];
-		/** Hidden in production, same gate as the dev gallery link (ADR 0013). */
-		showSearch?: boolean;
 		/**
 		 * The *Configuración* link (#123), rendered above the version in the sidebar
 		 * and the mobile drawer. The caller passes it only when the viewer can see
@@ -143,7 +141,6 @@
 
 	let {
 		links,
-		showSearch = false,
 		settings,
 		topbarEnd,
 		permissions = [],
@@ -399,22 +396,20 @@
 
 {#snippet navList(rail: boolean, scope: string)}
 	{@const styles = appShell({ rail })}
-	{#if showSearch}
-		<ul class={styles.navList()}>
-			<li>
-				<button
-					type="button"
-					class={styles.navItem()}
-					title={m.nav_search()}
-					onclick={openCommandPalette}
-				>
-					<SearchIcon class={styles.navIcon()} aria-hidden="true" />
-					<span class={styles.navLabel()}>{m.nav_search()}</span>
-					<span class={styles.kbd()}>{formatKeys(['$mod+k'], mac)}</span>
-				</button>
-			</li>
-		</ul>
-	{/if}
+	<ul class={styles.navList()}>
+		<li>
+			<button
+				type="button"
+				class={styles.navItem()}
+				title={m.nav_search()}
+				onclick={openCommandPalette}
+			>
+				<SearchIcon class={styles.navIcon()} aria-hidden="true" />
+				<span class={styles.navLabel()}>{m.nav_search()}</span>
+				<span class={styles.kbd()}>{formatKeys(['$mod+k'], mac)}</span>
+			</button>
+		</li>
+	</ul>
 
 	{#each navSections as { section, items: sectionItems }, index (index)}
 		{@const labelId = `${uid}-${scope}-section-${index}`}
@@ -660,5 +655,5 @@
 </Sheet.Root>
 
 <svelte:window onkeydown={onGlobalKeydown} />
-<CommandPalette {permissions} {personId} />
+<GlobalSearch {permissions} {personId} />
 <KeymapOverlay bind:open={keymapOverlayOpen} />

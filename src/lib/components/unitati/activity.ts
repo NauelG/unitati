@@ -154,6 +154,18 @@ export function activitySentence(entry: ActivityEntry): string {
 				to: `${entry.payload.toProjectTag} ${entry.payload.toProjectName}`
 			});
 
+		case 'person.created':
+			return m.activity_person_created();
+
+		case 'person.deactivated':
+			return m.activity_person_deactivated();
+
+		case 'person.department.changed':
+			return m.activity_person_department_changed({
+				from: entry.payload.fromDepartmentName ?? m.activity_department_none(),
+				to: entry.payload.toDepartmentName ?? m.activity_department_none()
+			});
+
 		default: {
 			const unhandled: never = entry;
 			throw new Error(`Unhandled activity verb: ${JSON.stringify(unhandled)}`);

@@ -228,3 +228,36 @@ describe('activitySentence for linked assets', () => {
 		});
 	});
 });
+
+describe('activitySentence for directory events', () => {
+	const DEPARTMENT = '3f1e0c9a-0000-4000-8000-000000000003';
+
+	it('says a person was added to the directory', () => {
+		const sentence = activitySentence({
+			verb: 'person.created',
+			payload: { fullName: 'Ada Lovelace', email: 'ada@example.com' }
+		});
+
+		expect(sentence).toBe('Añadió a la persona al directorio');
+	});
+
+	it('says a person was deactivated', () => {
+		expect(activitySentence({ verb: 'person.deactivated', payload: {} })).toBe(
+			'Desactivó a la persona'
+		);
+	});
+
+	it('names both departments from the snapshot, with a word for none', () => {
+		const sentence = activitySentence({
+			verb: 'person.department.changed',
+			payload: {
+				fromDepartmentId: null,
+				fromDepartmentName: null,
+				toDepartmentId: DEPARTMENT,
+				toDepartmentName: 'Soporte'
+			}
+		});
+
+		expect(sentence).toBe('Cambió el departamento de sin departamento a Soporte');
+	});
+});

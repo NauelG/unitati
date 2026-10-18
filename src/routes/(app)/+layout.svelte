@@ -153,7 +153,6 @@
 
 <AppShell
 	{links}
-	showSearch={!isProduction(APP_ENV)}
 	permissions={data.permissions}
 	personId={data.user.personId}
 	settings={showSettings ? settingsLink : undefined}
