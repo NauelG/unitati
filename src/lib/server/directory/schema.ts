@@ -3,6 +3,7 @@ import {
 	boolean,
 	check,
 	customType,
+	doublePrecision,
 	foreignKey,
 	index,
 	integer,
@@ -11,7 +12,8 @@ import {
 	primaryKey,
 	text,
 	unique,
-	uuid
+	uuid,
+	type AnyPgColumn
 } from 'drizzle-orm/pg-core';
 import { timestamps } from '../shared/columns';
 import { users } from '../auth/schema';
@@ -131,6 +133,14 @@ export const departments = pgTable(
 	(table) => [unique('departments_org_name').on(table.organisationId, table.name)]
 );
 
+/**
+ * A place, nested: a building contains floors, a floor contains rooms. No
+ * "type" column (ADR 0027) — depth is the only structure, and the path
+ * (`Barcelona office › Floor 1`) is what a person reads.
+ *
+ * `parentId` is `restrict`: deleting a node that still has children is refused
+ * rather than silently orphaning or cascading a subtree.
+ */
 export const locations = pgTable(
 	'locations',
 	{
@@ -138,10 +148,34 @@ export const locations = pgTable(
 		organisationId: uuid('organisation_id')
 			.notNull()
 			.references(() => organisations.id, { onDelete: 'cascade' }),
+		parentId: uuid('parent_id').references((): AnyPgColumn => locations.id, {
+			onDelete: 'restrict'
+		}),
 		name: text('name').notNull(),
+		code: text('code'),
+		address: text('address'),
+		notes: text('notes'),
+		latitude: doublePrecision('latitude'),
+		longitude: doublePrecision('longitude'),
 		...timestamps
 	},
-	(table) => [unique('locations_org_name').on(table.organisationId, table.name)]
+	(table) => [
+		// Siblings are unique by name; two roots are siblings, hence NULLS NOT DISTINCT.
+		unique('locations_org_parent_name')
+			.on(table.organisationId, table.parentId, table.name)
+			.nullsNotDistinct(),
+		// Nulls distinct: many locations may have no code at all.
+		unique('locations_org_code').on(table.organisationId, table.code),
+		check(
+			'locations_coordinates',
+			sql`(${table.latitude} IS NULL) = (${table.longitude} IS NULL) AND (${table.latitude} IS NULL OR ${table.latitude} BETWEEN -90 AND 90) AND (${table.longitude} IS NULL OR ${table.longitude} BETWEEN -180 AND 180)`
+		),
+		check(
+			'locations_not_own_parent',
+			sql`${table.parentId} IS NULL OR ${table.parentId} <> ${table.id}`
+		),
+		index('locations_org_parent_idx').on(table.organisationId, table.parentId)
+	]
 );
 
 export const teams = pgTable(

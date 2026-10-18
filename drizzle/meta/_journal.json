@@ -85,6 +85,13 @@
       "when": 1792154388287,
       "tag": "0011_brand_assets",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792163621777,
+      "tag": "0012_locations_hierarchy",
+      "breakpoints": true
     }
   ]
 }

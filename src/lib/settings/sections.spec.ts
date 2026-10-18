@@ -66,7 +66,8 @@ describe('visibleSections', () => {
 		expect(assetsManager).toEqual([
 			'/settings/assets/models',
 			'/settings/assets/categories',
-			'/settings/assets/manufacturers'
+			'/settings/assets/manufacturers',
+			'/settings/assets/locations'
 		]);
 		expect(deskManager).toEqual(['/settings/service-desk/queues']);
 	});

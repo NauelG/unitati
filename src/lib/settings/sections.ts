@@ -58,6 +58,12 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
 		permission: 'assets.manage'
 	},
 	{
+		module: 'assets',
+		href: '/settings/assets/locations',
+		label: m.assets_nav_locations,
+		permission: 'assets.manage'
+	},
+	{
 		module: 'service-desk',
 		href: '/settings/service-desk/queues',
 		label: m.queues_title,

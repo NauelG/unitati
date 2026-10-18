@@ -52,7 +52,7 @@ import {
  * drop `assetTag` here and in `SharedAssetView`, and #9 then needs another way
  * to name a shared asset.
  */
-const SHARED_ROW_KEYS = ['assetTag', 'locationName', 'name', 'visibility'];
+const SHARED_ROW_KEYS = ['assetTag', 'locationPath', 'name', 'visibility'];
 
 describe('listAssets, as an employee', () => {
 	const scenario = async () => {
@@ -131,7 +131,7 @@ describe('listAssets, as an employee', () => {
 			visibility: 'shared',
 			assetTag: 'AST-SHARED',
 			name: 'Floor printer',
-			locationName: 'Planta 2'
+			locationPath: 'Planta 2'
 		});
 	});
 

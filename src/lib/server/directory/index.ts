@@ -2,9 +2,25 @@ import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { users } from '../auth/schema';
 import type { SessionUser } from '../auth/guards';
-import { departments, locations, organisations, people, teams } from './schema';
+import { departments, organisations, people, teams } from './schema';
 
 export { organisations, people, departments, locations, teams } from './schema';
+export {
+	countLocationChildren,
+	createLocation,
+	deleteLocation,
+	listLocations,
+	locationPaths,
+	updateLocation
+} from './locations';
+export type {
+	LocationCreateFailure,
+	LocationDeleteFailure,
+	LocationEntry,
+	LocationUpdateFailure
+} from './locations';
+export { locationInput } from './validation';
+export type { LocationInput } from './validation';
 export type { Organisation, Person, Department, Location, Team } from './schema';
 export {
 	getBrand,
@@ -91,25 +107,6 @@ export async function contactsOf(organisationId: string, ids: string[]): Promise
 		.select({ id: people.id, fullName: people.fullName, email: people.email })
 		.from(people)
 		.where(and(eq(people.organisationId, organisationId), inArray(people.id, ids)));
-}
-
-export interface LocationEntry {
-	id: string;
-	name: string;
-}
-
-/**
- * For a `<select>`: an asset's location is chosen from the organisation's own
- * rows. Takes an `organisationId` rather than a `SessionUser`, like
- * `listPeople`, because a location is not redacted for anyone who can reach the
- * form.
- */
-export async function listLocations(organisationId: string): Promise<LocationEntry[]> {
-	return getDb()
-		.select({ id: locations.id, name: locations.name })
-		.from(locations)
-		.where(eq(locations.organisationId, organisationId))
-		.orderBy(asc(locations.name));
 }
 
 /**

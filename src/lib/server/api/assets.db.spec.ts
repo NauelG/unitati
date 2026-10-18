@@ -250,7 +250,7 @@ describe('visibility', () => {
 			visibility: 'shared',
 			tag: printer.assetTag,
 			name: 'Floor printer',
-			locationName: 'Floor 2'
+			locationPath: 'Floor 2'
 		});
 		for (const field of SHARED_ONLY_FORBIDDEN) expect(body.data).not.toHaveProperty(field);
 		expect(JSON.stringify(body)).not.toContain('SECRET-SERIAL');
@@ -401,7 +401,7 @@ describe('custody, state, location and notes', () => {
 
 		expect(state.response.status).toBe(200);
 		expect(state.body.data.state).toBe('in_repair');
-		expect(location.body.data).toMatchObject({ locationId: room.id, locationName: 'Server room' });
+		expect(location.body.data).toMatchObject({ locationId: room.id, locationPath: 'Server room' });
 		expect(timeline.response.status).toBe(200);
 		expect(timeline.body.data.map((e: { verb: string }) => e.verb)).toEqual([
 			'location.changed',

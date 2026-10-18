@@ -178,7 +178,8 @@ export const assets = pgTable(
 		 */
 		shared: boolean('shared').notNull().default(false),
 		/** The asset's own location, not its custodian's: #24 audits rooms. */
-		locationId: uuid('location_id').references(() => locations.id, { onDelete: 'set null' }),
+		// `restrict`, not `set null` (ADR 0027): an asset silently losing its place is worse than a refused delete.
+		locationId: uuid('location_id').references(() => locations.id, { onDelete: 'restrict' }),
 		/** Tag and serial are in here too: people search for what is on the sticker. */
 		search: tsvector('search')
 			.notNull()

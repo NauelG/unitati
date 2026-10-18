@@ -17,3 +17,14 @@ export function options<T extends { id: string }>(
 export function stateOptions(): SelectOption[] {
 	return ASSET_STATES.map((key) => ({ value: key, label: statusLabel(key) }));
 }
+
+/**
+ * A location select: labelled by path (`Barcelona office › Floor 1`), with the
+ * code as a suffix when there is one. The name alone is ambiguous — every
+ * building has a "Floor 1" (ADR 0027).
+ */
+export function locationOptions(
+	entries: readonly { id: string; path: string; code: string | null }[]
+): SelectOption[] {
+	return options(entries, (entry) => (entry.code ? `${entry.path} (${entry.code})` : entry.path));
+}

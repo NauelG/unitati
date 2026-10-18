@@ -30,7 +30,8 @@ export interface FullAssetView {
 	custodianPersonId: string | null;
 	custodianName: string | null;
 	locationId: string | null;
-	locationName: string | null;
+	/** The full path (`Barcelona office › Floor 1`); see ADR 0027. */
+	locationPath: string | null;
 }
 
 /**
@@ -53,7 +54,8 @@ export interface SharedAssetView {
 	visibility: 'shared';
 	assetTag: string;
 	name: string;
-	locationName: string | null;
+	/** The path and only the path: never code, address, notes or coordinates. */
+	locationPath: string | null;
 }
 
 export type AssetView = FullAssetView | SharedAssetView;
@@ -71,6 +73,6 @@ export function viewAsset(row: FullAssetView, viewer: SessionUser): AssetView {
 		visibility: 'shared',
 		assetTag: row.assetTag,
 		name: row.name,
-		locationName: row.locationName
+		locationPath: row.locationPath
 	};
 }

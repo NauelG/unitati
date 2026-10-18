@@ -5,7 +5,8 @@ import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { uniqueConstraintName } from '../db/errors';
-import { locations, people } from '../directory/schema';
+import { locationPaths } from '../directory';
+import { people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
 import { assetModels, assets, categories, manufacturers } from './schema';
@@ -145,8 +146,7 @@ const fullAssetColumns = {
 	categoryName: categories.name,
 	custodianPersonId: assets.custodianPersonId,
 	custodianName: people.fullName,
-	locationId: assets.locationId,
-	locationName: locations.name
+	locationId: assets.locationId
 };
 
 /**
@@ -169,8 +169,26 @@ function assetsWithCatalogue() {
 		.innerJoin(assetModels, eq(assets.assetModelId, assetModels.id))
 		.innerJoin(manufacturers, eq(assetModels.manufacturerId, manufacturers.id))
 		.innerJoin(categories, eq(assetModels.categoryId, categories.id))
-		.leftJoin(people, eq(assets.custodianPersonId, people.id))
-		.leftJoin(locations, eq(assets.locationId, locations.id));
+		.leftJoin(people, eq(assets.custodianPersonId, people.id));
+}
+
+type AssetRow = Awaited<ReturnType<typeof assetsWithCatalogue>>[number];
+
+/**
+ * The rows with their location's **path**. The path is a recursion over the
+ * `directory` tree (ADR 0027), so it is asked of `directory` for the whole page
+ * at once instead of being joined in: one extra query per page, not per row.
+ */
+async function withLocationPath(
+	organisationId: string,
+	rows: AssetRow[]
+): Promise<(AssetRow & { locationPath: string | null })[]> {
+	const ids = rows.flatMap((row) => (row.locationId ? [row.locationId] : []));
+	const paths = await locationPaths(organisationId, ids);
+	return rows.map((row) => ({
+		...row,
+		locationPath: row.locationId ? (paths.get(row.locationId) ?? null) : null
+	}));
 }
 
 /**
@@ -213,7 +231,9 @@ export async function listAssets(
 		.select({ total: sql<number>`count(*)::int` })
 		.from(matching);
 
-	const visible = rows.map((row) => viewAsset({ visibility: 'full', ...row }, viewer));
+	const visible = (await withLocationPath(viewer.organisationId, rows)).map((row) =>
+		viewAsset({ visibility: 'full', ...row }, viewer)
+	);
 
 	return page(visible, counted?.total ?? 0, window);
 }
@@ -283,6 +303,18 @@ export async function listAssetChoices(
 		.where(and(requireAssetScope(viewer), term ? containsTerm(term, wholeRows) : undefined))
 		.orderBy(asc(assets.assetTag))
 		.limit(CHOICES);
+}
+
+/** Assets per location, direct only: a floor's count does not include its rooms'. */
+export async function countAssetsByLocation(organisationId: string): Promise<Map<string, number>> {
+	const rows = await getDb()
+		.select({ locationId: assets.locationId, count: sql<number>`count(*)::int` })
+		.from(assets)
+		.where(and(eq(assets.organisationId, organisationId), sql`${assets.locationId} is not null`))
+		.groupBy(assets.locationId);
+	return new Map(
+		rows.flatMap((row) => (row.locationId ? [[row.locationId, row.count] as const] : []))
+	);
 }
 
 /**
@@ -371,7 +403,8 @@ export async function getAssetByTag(
 
 	if (!row) return failure('asset_not_found');
 
-	return success(viewAsset({ visibility: 'full', ...row }, viewer));
+	const [withPath] = await withLocationPath(viewer.organisationId, [row]);
+	return success(viewAsset({ visibility: 'full', ...withPath }, viewer));
 }
 
 /**
@@ -461,12 +494,10 @@ async function foreignReference(
 	}
 
 	if (refs.locationId) {
-		const [location] = await getDb()
-			.select({ id: locations.id })
-			.from(locations)
-			.where(and(eq(locations.id, refs.locationId), eq(locations.organisationId, organisationId)))
-			.limit(1);
-		if (!location) return 'location_not_found';
+		// Through `directory`'s own function, not its table: an id from another
+		// organisation has no path here, which is the same as not existing.
+		const paths = await locationPaths(organisationId, [refs.locationId]);
+		if (!paths.has(refs.locationId)) return 'location_not_found';
 	}
 
 	return null;
@@ -702,7 +733,12 @@ export async function changeState(
 	});
 }
 
-/** The asset's own location, not its custodian's: #24 audits rooms. */
+/**
+ * The asset's own location, not its custodian's: #24 audits rooms.
+ *
+ * `location.changed` keeps its `…LocationName` keys so old rows still parse, but
+ * since ADR 0027 the value written is the location's full path.
+ */
 export async function changeLocation(
 	actor: SessionUser,
 	assetId: string,
@@ -713,14 +749,12 @@ export async function changeLocation(
 		if (!asset) return failure('asset_not_found');
 		if (asset.locationId === toLocationId) return success(undefined);
 
+		// The path at the moment of the move: a later rename or re-parenting must not
+		// rewrite what the timeline says happened.
 		const named = async (id: string | null) => {
 			if (id === null) return null;
-			const [row] = await tx
-				.select({ id: locations.id, name: locations.name })
-				.from(locations)
-				.where(and(eq(locations.id, id), eq(locations.organisationId, actor.organisationId)))
-				.limit(1);
-			return row ?? null;
+			const path = (await locationPaths(actor.organisationId, [id], tx)).get(id);
+			return path === undefined ? null : { id, name: path };
 		};
 
 		const to = await named(toLocationId);

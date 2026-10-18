@@ -78,6 +78,9 @@ export const PAYLOAD_SCHEMAS = {
 
 	// Both ends nullable: an asset can arrive from nowhere, and come off a
 	// location without being given another.
+	// The `…LocationName` keys keep their names so old rows still parse, but since
+	// ADR 0027 the value written is the location's full path (`Barcelona office ›
+	// Floor 1`); rows from before hold the bare name.
 	'location.changed': z.object({
 		fromLocationId: z.uuid().nullable(),
 		fromLocationName: presentName.nullable(),
