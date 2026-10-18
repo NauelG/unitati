@@ -593,7 +593,7 @@
 			<div class={appShell().sidebarFooter()}>
 				{#if settings}{@render settings({ rail: collapsed })}{/if}
 				<div class="ut-nav-label px-[var(--space-2)] font-mono text-[11px] text-[var(--ink-muted)]">
-					<AppVersion />
+					<AppVersion layout="stacked" />
 				</div>
 			</div>
 		</nav>
@@ -651,7 +651,7 @@
 			<div class={appShell().sidebarFooter()}>
 				{#if settings}{@render settings({ rail: false })}{/if}
 				<div class="ut-nav-label px-[var(--space-2)] font-mono text-[11px] text-[var(--ink-muted)]">
-					<AppVersion />
+					<AppVersion layout="stacked" />
 				</div>
 			</div>
 		</nav>

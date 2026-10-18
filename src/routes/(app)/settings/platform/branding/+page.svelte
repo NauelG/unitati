@@ -3,10 +3,13 @@
 	import { toast } from 'svelte-sonner';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
+	import { confirmSubmit } from '#lib/components/unitati/confirm-submit.js';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import { parseHex } from '#lib/domain/brand-color.js';
+	import { DEFAULT_PRODUCT_NAME } from '#lib/domain/brand.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import BrandPreview from './BrandPreview.svelte';
 	import LogoSlotRow from './LogoSlotRow.svelte';
@@ -15,6 +18,9 @@
 	let { data, form }: PageProps = $props();
 
 	let busy = $state(false);
+	let confirmingRestore = $state(false);
+	let restoring = $state(false);
+	const restoreError = $derived(form && 'resetError' in form ? form.resetError : null);
 
 	/** What the person typed if the save was refused, so a mistake never costs them the text. */
 	const failed = $derived(form && 'error' in form ? form : null);
@@ -133,4 +139,53 @@
 			/>
 		{/each}
 	</section>
+
+	{#if data.brand.customised}
+		<section
+			class="mt-[var(--space-8)] border-t border-[var(--border)] pt-[var(--space-5)]"
+			aria-labelledby="branding-danger"
+		>
+			<h2 id="branding-danger" class="text-sm font-semibold text-[var(--danger)]">
+				{m.branding_restore_zone()}
+			</h2>
+			<Button
+				class="mt-[var(--space-3)]"
+				type="button"
+				variant="danger"
+				onclick={() => (confirmingRestore = true)}
+			>
+				{m.branding_restore()}
+			</Button>
+		</section>
+
+		<ConfirmDialog
+			open={confirmingRestore}
+			onOpenChange={(next) => (confirmingRestore = next)}
+			title={m.branding_restore_title()}
+			description={m.branding_restore_body()}
+			confirmLabel={m.branding_restore_confirm()}
+			pending={restoring}
+			error={restoreError}
+		>
+			{#snippet action(confirm)}
+				<form
+					method="POST"
+					action="?/reset"
+					use:enhance={confirmSubmit({
+						onPending: (pending) => (restoring = pending),
+						onSettled: (succeeded) => {
+							if (!succeeded) return;
+							confirmingRestore = false;
+							// The editor owns its fields after the first paint, so put Unitati's back by hand.
+							productName = DEFAULT_PRODUCT_NAME;
+							color = '';
+							toast.success(m.branding_restored());
+						}
+					})}
+				>
+					{@render confirm()}
+				</form>
+			{/snippet}
+		</ConfirmDialog>
+	{/if}
 </PageLayout>

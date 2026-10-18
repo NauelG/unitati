@@ -4,6 +4,7 @@ import { m } from '#lib/paraglide/messages.js';
 import {
 	getBrand,
 	removeBrandAsset,
+	resetBranding,
 	setBrandAsset,
 	updateBranding
 } from '#lib/server/directory/index.js';
@@ -77,5 +78,14 @@ export const actions: Actions = {
 		if (!outcome.ok) return fail(403, { assetError: null });
 
 		return { removed: slot };
+	},
+
+	reset: async ({ locals }) => {
+		const user = requireSettingsSection(locals.user, SECTION);
+
+		const outcome = await resetBranding(user);
+		if (!outcome.ok) return fail(403, { resetError: m.branding_restore_error() });
+
+		return { restored: true as const };
 	}
 };

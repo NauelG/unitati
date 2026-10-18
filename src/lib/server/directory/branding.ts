@@ -258,6 +258,22 @@ export async function removeBrandAsset(
 }
 
 /**
+ * "Restaurar marca de Unitati": drops the branding row, and `organisation_brand_assets`
+ * cascades from it, so the name, the colour and every image go in one statement.
+ * Idempotent: no row is still OK.
+ */
+export async function resetBranding(user: SessionUser): Promise<Outcome<BrandView, 'forbidden'>> {
+	if (!can(user, 'organisation.manage')) return failure('forbidden');
+
+	await getDb()
+		.delete(organisationBranding)
+		.where(eq(organisationBranding.organisationId, user.organisationId));
+
+	brands.delete(user.organisationId);
+	return success(DEFAULT_BRAND);
+}
+
+/**
  * The stored bytes of one image, resolved like `getBrand` (`null` is the
  * installation's organisation). Not cached in memory: the HTTP cache does that.
  */

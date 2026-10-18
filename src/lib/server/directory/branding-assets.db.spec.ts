@@ -1,12 +1,14 @@
 import { eq } from 'drizzle-orm';
 import sharp from 'sharp';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { DEFAULT_BRAND } from '#lib/domain/brand.js';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import {
 	getBrand,
 	getBrandAsset,
 	removeBrandAsset,
+	resetBranding,
 	resetBrandCache,
 	setBrandAsset,
 	updateBranding
@@ -205,5 +207,55 @@ describe('the table', () => {
 					sha256: 'a'.repeat(64)
 				})
 		).rejects.toThrow();
+	});
+});
+
+describe('resetBranding', () => {
+	it('wipes the name, the colour and every upload, leaving the default brand', async () => {
+		const acme = await createOrganisation('Acme', 'acme');
+		const admin = userOf(acme.id, 'admin');
+		await updateBranding(admin, { productName: 'Acme Desk', brandColor: '#c81e1e' });
+		await setBrandAsset(admin, 'lockup', await png());
+		await setBrandAsset(admin, 'mark', await png());
+		expect((await getBrand(acme.id)).customised).toBe(true);
+
+		const outcome = await resetBranding(admin);
+
+		expect(outcome).toEqual({ ok: true, value: DEFAULT_BRAND });
+		expect(await getDb().select().from(organisationBranding)).toEqual([]);
+		expect(await slotsOf(acme.id)).toEqual([]);
+		// No cache reset here: `resetBranding` itself must drop the cached customised view.
+		expect(await getBrand(acme.id)).toEqual(DEFAULT_BRAND);
+	});
+
+	it('is idempotent: a second call, with no row left, is still OK', async () => {
+		const acme = await createOrganisation('Acme', 'acme');
+		const admin = userOf(acme.id, 'admin');
+		await updateBranding(admin, { productName: 'Acme Desk' });
+
+		expect((await resetBranding(admin)).ok).toBe(true);
+		expect((await resetBranding(admin)).ok).toBe(true);
+	});
+
+	it('refuses a technician and deletes nothing', async () => {
+		const acme = await createOrganisation('Acme', 'acme');
+		await updateBranding(userOf(acme.id, 'admin'), { productName: 'Acme Desk' });
+		await setBrandAsset(userOf(acme.id, 'admin'), 'lockup', await png());
+
+		const outcome = await resetBranding(userOf(acme.id, 'technician'));
+
+		expect(outcome).toEqual({ ok: false, error: 'forbidden' });
+		expect(await getDb().select().from(organisationBranding)).toHaveLength(1);
+		expect(await slotsOf(acme.id)).toEqual(['lockup']);
+	});
+
+	it("does not touch another organisation's brand", async () => {
+		const acme = await createOrganisation('Acme', 'acme');
+		const globex = await createOrganisation('Globex', 'globex');
+		await updateBranding(userOf(globex.id, 'admin'), { productName: 'Globex Desk' });
+
+		await resetBranding(userOf(acme.id, 'admin'));
+
+		expect((await getBrand(globex.id)).productName).toBe('Globex Desk');
 	});
 });
