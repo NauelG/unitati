@@ -24,7 +24,7 @@
 	]}
 	whenNotToUse={[
 		'Elegir entre cientos de opciones buscables: usa SearchSelectField.',
-		'Seleccionar varios registros existentes del dominio (activos): usa AssetPicker.'
+		'Seleccionar varios registros existentes del dominio (activos): usa SearchSelectField con multiple.'
 	]}
 	propsDoc={[
 		{ name: 'label', type: 'string', description: 'Texto de la etiqueta.' },

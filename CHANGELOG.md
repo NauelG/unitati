@@ -5,6 +5,26 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.59.1] - 2026-10-18
+
+### Fixed
+
+- `SearchSelectField multiple` is now as accessible as the picker it replaces (#170). Chips render
+  as a list outside the trigger, each with a real remove button reachable by Tab; focus moves to the
+  neighbouring chip (else the trigger) after a removal, and no interactive element sits inside the
+  trigger any more. The search text is kept between picks, Enter in the search box never submits the
+  surrounding form, and every string is translated (`field_search_failed`, `field_search_none`,
+  `field_clear`) with a live region that announces the result count in words. Task assignees, the
+  _Vincular_ dialogs and the escalation pickers benefit too.
+
+### Changed
+
+- `AssetPicker` is retired: the staff and portal ticket forms pick assets with
+  `SearchSelectField multiple` (the posted field is still `assetIds`). Both asset search endpoints
+  answer `{ value, label }` through one `toAssetOption` helper, and
+  `/service-desk/new/assets/options` is gone in favour of `/service-desk/new/assets`. The gallery
+  specimen for `SearchSelectField` gains the remote multiple, failed and empty states.
+
 ## [0.59.0] - 2026-10-18
 
 ### Added

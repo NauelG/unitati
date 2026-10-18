@@ -143,11 +143,11 @@
 			]
 		},
 		{
-			title: 'Select vs SearchSelect (AssetPicker)',
-			body: 'SelectField es para un conjunto fijo y pequeño de opciones conocidas de antemano (estados, prioridades). AssetPicker (el "SearchSelect" de este sistema) es para elegir entre un universo que puede ser demasiado grande para cargar entero: pregunta a un endpoint mientras el usuario escribe. Ningún formulario debería usar un SelectField con cientos de <option> como sustituto de AssetPicker.',
+			title: 'Select vs SearchSelect',
+			body: 'SelectField es para un conjunto fijo y pequeño de opciones conocidas de antemano (estados, prioridades). SearchSelectField es para elegir entre un universo que puede ser demasiado grande para cargar entero: pregunta a un endpoint mientras el usuario escribe. Ningún formulario debería usar un SelectField con cientos de <option> como sustituto de SearchSelectField.',
 			links: [
 				{ id: 'select-field', label: 'SelectField' },
-				{ id: 'asset-picker', label: 'AssetPicker' }
+				{ id: 'search-select-field', label: 'SearchSelectField' }
 			]
 		},
 		{

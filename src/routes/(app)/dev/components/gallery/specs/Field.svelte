@@ -21,7 +21,7 @@
 	]}
 	whenNotToUse={[
 		'Para una selección entre opciones fijas: usa SelectField.',
-		'Para elegir uno o varios activos existentes: usa AssetPicker, no un Field libre.'
+		'Para elegir uno o varios activos existentes: usa SearchSelectField con multiple, no un Field libre.'
 	]}
 	propsDoc={[
 		{ name: 'label', type: 'string', description: 'Texto de la etiqueta.' },
