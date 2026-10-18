@@ -5,6 +5,28 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.60.0] - 2026-10-18
+
+### Added
+
+- `/service-desk` gets an "Actualizada" column (relative time, absolute date in the tooltip) and
+  sorting on status, priority and last update: the header writes `?sort=&dir=` and the list query
+  orders by it, newest touch first by default (#187). The table is compact and its empty state
+  carries a title, icon, action and keyboard hint, both filtered and unfiltered.
+- Closing the project edit sheet with unsaved changes asks for confirmation first.
+
+### Changed
+
+- The ticket rail holds one "Propiedades" panel with four selects that save as soon as a value is
+  picked, instead of four panels with an "Aplicar" button each.
+- `/projects` and `/assets` use the attached `ListToolbar`, show skeleton rows while navigating, and
+  keep the archive button clickable above the row link. The assets chart is a `WorkPanel` and its
+  counts are formatted for the locale.
+- A task row in the project list is a single link; the archived notice is an `Alert`; the empty task
+  list is an `EmptyState`; long descriptions wrap.
+- Login shows its lede once, the pitch line uses the `display` type role, and the email fields stop
+  autocorrecting. Search and date fields opt out of autofill, and placeholders end with an ellipsis.
+
 ## [0.59.1] - 2026-10-18
 
 ### Fixed
