@@ -1,6 +1,6 @@
 import { listActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
-import { relatedTo } from './related';
+import { relatedTo, type RelatedGroup } from './related';
 import { mergeProjectTimeline, mergeTaskTimeline, type AssetTimelineItem } from './timeline';
 
 /**
@@ -16,11 +16,13 @@ import { mergeProjectTimeline, mergeTaskTimeline, type AssetTimelineItem } from 
 
 export async function taskTimeline(
 	viewer: SessionUser,
-	taskId: string
+	taskId: string,
+	/** What `relatedTo` already answered for this task, when the caller has it: saves the second read. */
+	known?: readonly RelatedGroup[]
 ): Promise<AssetTimelineItem[]> {
 	const [entries, related] = await Promise.all([
 		listActivity({ organisationId: viewer.organisationId, target: { taskId } }),
-		relatedTo(viewer, { kind: 'task', id: taskId })
+		known ?? relatedTo(viewer, { kind: 'task', id: taskId })
 	]);
 
 	return mergeTaskTimeline(entries, related);
@@ -32,11 +34,13 @@ export async function taskTimeline(
  */
 export async function projectTimeline(
 	viewer: SessionUser,
-	projectId: string
+	projectId: string,
+	/** What `relatedTo` already answered for this project, when the caller has it. */
+	known?: readonly RelatedGroup[]
 ): Promise<AssetTimelineItem[]> {
 	const [entries, related] = await Promise.all([
 		listActivity({ organisationId: viewer.organisationId, target: { projectId } }),
-		relatedTo(viewer, { kind: 'project', id: projectId })
+		known ?? relatedTo(viewer, { kind: 'project', id: projectId })
 	]);
 
 	return mergeProjectTimeline(

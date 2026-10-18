@@ -105,7 +105,7 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 		// Streamed: nothing above waits for the history. Its live half is the
 		// tickets linked to the project itself; the ones that arrive through a
 		// task are on that task's rail, not here.
-		timeline: projectTimeline(user, project.id)
+		timeline: projectTimeline(user, project.id, related)
 	};
 };
 

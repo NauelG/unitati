@@ -61,12 +61,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 };
 
 async function timelineRailOf(user: SessionUser, taskId: string) {
-	const [timeline, related] = await Promise.all([
-		taskTimeline(user, taskId),
-		relatedTo(user, { kind: 'task', id: taskId })
-	]);
+	const related = await relatedTo(user, { kind: 'task', id: taskId });
 
-	return { timeline, related };
+	return { timeline: await taskTimeline(user, taskId, related), related };
 }
 
 /** The task an action targets. Gone, or out of the viewer's scope, reads as missing. */
