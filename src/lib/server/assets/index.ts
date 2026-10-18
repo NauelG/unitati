@@ -826,3 +826,5 @@ export async function advanceAssetTagSequence(upTo: number): Promise<void> {
 		sql`select setval('asset_code_seq', greatest((select last_value from asset_code_seq), ${upTo}))`
 	);
 }
+
+export { assetHits } from './search';

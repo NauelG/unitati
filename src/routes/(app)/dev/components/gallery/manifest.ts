@@ -413,12 +413,13 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/SettingsNav.svelte')
 	},
 	{
-		id: 'command-palette',
-		name: 'CommandPalette',
+		id: 'global-search',
+		name: 'GlobalSearch',
 		category: 'navigation',
-		summary: 'Paleta ⌘K: acciones permitidas y registros, sobre el primitivo Command vendorizado.',
-		sourceFile: 'CommandPalette.svelte',
-		load: () => import('./specs/CommandPalette.svelte')
+		summary:
+			'Búsqueda global ⌘K: una caja sobre todos los registros, con permisos aplicados en la consulta, y las acciones permitidas.',
+		sourceFile: 'GlobalSearch.svelte',
+		load: () => import('./specs/GlobalSearch.svelte')
 	},
 	{
 		id: 'keymap-overlay',

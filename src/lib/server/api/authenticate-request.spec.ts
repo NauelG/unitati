@@ -12,7 +12,7 @@ describe('isApiPath', () => {
 			'/',
 			'/service-desk',
 			'/api/auth/sign-in',
-			'/api/palette',
+			'/api/search',
 			'/api/v10/x',
 			'/api/v1x'
 		]) {

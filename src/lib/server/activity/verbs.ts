@@ -11,7 +11,7 @@
  * in English once #36 lands.
  */
 
-/** Slices 2 to 5's verbs. #11 and #12 append their own. */
+/** Slices 2 to 7's verbs: the directory's three arrive with global search (#12). */
 export const ACTIVITY_VERBS = [
 	'asset.created',
 	'custody.assigned',
@@ -41,7 +41,10 @@ export const ACTIVITY_VERBS = [
 	'task.assigned',
 	'task.unassigned',
 	'task.due.changed',
-	'task.project.changed'
+	'task.project.changed',
+	'person.created',
+	'person.deactivated',
+	'person.department.changed'
 ] as const;
 
 export type ActivityVerb = (typeof ACTIVITY_VERBS)[number];

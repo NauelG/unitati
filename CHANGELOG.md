@@ -5,6 +5,37 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.56.0] - 2026-10-18
+
+### Added
+
+- Global search and the per-record history (#12, MVP slice 7). `⌘K` / `Ctrl+K`, or the sidebar
+  _Buscar_ entry, opens `GlobalSearch`: one box over assets, tickets, projects, tasks and people,
+  grouped in the design system's fixed order (exact code, assets, tickets, projects and tasks,
+  people), five per group, with the match highlighted. Typing an exact code (`AST-0142`, `TCK-0093`)
+  and pressing Enter jumps straight to that record; when the top hit is an asset, its tickets follow
+  as the next group. Matching uses `unaccent` plus the `simple` dictionary for identity fields and
+  the `spanish` one for prose, so _impresoras_ finds _impresora_ and _macbook_ finds _MacBook Pró_,
+  and a half-typed word already matches.
+- **Search obeys permissions inside the query.** The new `search/` module composes one `UNION ALL`
+  of scoped sub-queries, each built by its own domain (`assets`, `service-desk`, `projects`,
+  `directory`) with that domain's scope, and the grouping, ranking, limits and per-group totals are
+  computed in the same statement. An `employee` finds only their own assets, shared assets by name
+  and tag (never by serial or model), and their own tickets; the totals count only what they may see,
+  and the exact code of a record that is not theirs finds nothing.
+- `people.search`, a generated `simple` + `unaccent` vector over name and email with a GIN index
+  (migration `0013`).
+- Three directory verbs in the activity enum — `person.created`, `person.deactivated`,
+  `person.department.changed` — with their payloads, Spanish messages and timeline icons. Nothing
+  emits them yet: the directory has no writes to record.
+- The seed gains more tickets that share words, so ranking is visible rather than theoretical.
+
+### Changed
+
+- `GlobalSearch` replaces `CommandPalette`: the same dialog, now backed by `search()` through
+  `/api/search` (was the interim `/api/palette`), and available in production (the sidebar Search
+  entry is no longer hidden there; the `showSearch` prop is gone).
+
 ## [0.55.0] - 2026-10-18
 
 ### Changed

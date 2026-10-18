@@ -78,3 +78,5 @@ export {
 export type { CreateTicketInput, AddCommentInput, QueueInput, UploadedFile } from './validation';
 
 export { readTicketForm } from './form-data';
+
+export { ticketHits } from './search';

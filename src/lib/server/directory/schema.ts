@@ -1,4 +1,4 @@
-import { relations, sql } from 'drizzle-orm';
+import { relations, sql, type SQL } from 'drizzle-orm';
 import {
 	boolean,
 	check,
@@ -16,6 +16,7 @@ import {
 	type AnyPgColumn
 } from 'drizzle-orm/pg-core';
 import { timestamps } from '../shared/columns';
+import { searchVector, tsvector } from '../shared/search-vector';
 import { users } from '../auth/schema';
 import { BRAND_ASSET_SLOTS } from '#lib/domain/brand.js';
 
@@ -212,11 +213,22 @@ export const people = pgTable(
 		locationId: uuid('location_id').references(() => locations.id, { onDelete: 'set null' }),
 		/** Leavers stay in the directory so their asset and ticket history survives. */
 		active: boolean('active').notNull().default(true),
+		/**
+		 * `simple` and `unaccent`, like the asset vectors: a name and an email are
+		 * not prose, and stemming "Serra" produces rubbish (#12). Declared here, beside
+		 * the table, as every other domain does; global search only reads it.
+		 */
+		search: tsvector('search')
+			.notNull()
+			.generatedAlwaysAs((): SQL =>
+				searchVector('simple', `coalesce("full_name", '') || ' ' || coalesce("email", '')`)
+			),
 		...timestamps
 	},
 	(table) => [
 		unique('people_org_email').on(table.organisationId, table.email),
-		index('people_org_idx').on(table.organisationId)
+		index('people_org_idx').on(table.organisationId),
+		index('people_search_gin').using('gin', table.search)
 	]
 );
 

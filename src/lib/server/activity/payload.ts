@@ -198,6 +198,17 @@ export const PAYLOAD_SCHEMAS = {
 		toProjectId: z.uuid(),
 		toProjectTag: presentName,
 		toProjectName: presentName
+	}),
+
+	// Directory events (#12). Names and email as they read at the time: a person
+	// is renamed and moves, and a history that rewrites itself is not a history.
+	'person.created': z.object({ fullName: presentName, email: presentName }),
+	'person.deactivated': z.object({}),
+	'person.department.changed': z.object({
+		fromDepartmentId: z.uuid().nullable(),
+		fromDepartmentName: presentName.nullable(),
+		toDepartmentId: z.uuid().nullable(),
+		toDepartmentName: presentName.nullable()
 	})
 } satisfies Record<ActivityVerb, z.ZodType>;
 

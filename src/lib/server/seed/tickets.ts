@@ -95,6 +95,70 @@ const PLAN: PlannedTicket[] = [
 		queue: 'Accesos',
 		steps: [],
 		requesterEmail: emailFor('Eva Employee')
+	},
+	// More of the same words, so a search has something to rank (#12): "impresora"
+	// in a subject, in a body only, and "portátil" / "monitor" repeated across queues.
+	// None is Eva's: the escalations seed looks up her one ticket by requester.
+	{
+		subject: 'La impresora de contabilidad atasca el papel',
+		body: 'Cada tres hojas se queda atascada en la bandeja.',
+		queue: 'Hardware',
+		requesterEmail: emailFor('Ada Lovelace'),
+		steps: ['in_progress'],
+		reply: 'Vamos a cambiar los rodillos.'
+	},
+	{
+		subject: 'Instalar el driver de la impresora en el portátil',
+		body: 'No aparece como impresora disponible desde el equipo nuevo.',
+		queue: 'Software',
+		requesterEmail: emailFor('Alan Turing'),
+		steps: ['in_progress', 'resolved']
+	},
+	{
+		subject: 'Cambio de tóner',
+		body: 'La impresora de la recepción avisa de que queda poco tóner.',
+		queue: 'Hardware',
+		requesterEmail: emailFor('Grace Hopper'),
+		steps: [],
+		priority: 'low'
+	},
+	{
+		subject: 'El portátil se apaga solo',
+		body: 'Se apaga cuando pasa un rato sin cargador.',
+		queue: 'Hardware',
+		requesterEmail: emailFor('Tom Technician'),
+		steps: ['in_progress', 'waiting_on_user'],
+		priority: 'high',
+		reply: '¿Puedes traerlo a la oficina para revisar la batería?'
+	},
+	{
+		subject: 'El portátil va muy lento al arrancar',
+		body: 'Tarda más de cinco minutos en llegar al escritorio.',
+		queue: 'Software',
+		requesterEmail: emailFor('Ada Lovelace'),
+		steps: []
+	},
+	{
+		subject: 'Segundo monitor para la mesa de diseño',
+		body: 'Necesito un monitor adicional, a ser posible de 27 pulgadas.',
+		queue: 'Hardware',
+		requesterEmail: emailFor('Alan Turing'),
+		steps: ['in_progress', 'resolved', 'closed'],
+		priority: 'low'
+	},
+	{
+		subject: 'Restablecer la contraseña de la VPN',
+		body: 'Caducó la semana pasada y no puedo entrar.',
+		queue: 'Accesos',
+		requesterEmail: emailFor('Grace Hopper'),
+		steps: ['in_progress', 'resolved']
+	},
+	{
+		subject: 'MacBook sin sonido tras la actualización',
+		body: 'Los altavoces no suenan desde que se actualizó el sistema.',
+		queue: 'Software',
+		requesterEmail: emailFor('Tom Technician'),
+		steps: ['in_progress']
 	}
 ];
 

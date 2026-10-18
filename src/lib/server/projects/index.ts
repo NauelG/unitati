@@ -120,3 +120,5 @@ export type {
 	CreateStateInput,
 	UpdateStateInput
 } from './validation';
+
+export { projectHits, taskHits } from './search';

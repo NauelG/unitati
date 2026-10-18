@@ -16,6 +16,8 @@
 	import Undo2 from '@lucide/svelte/icons/undo-2';
 	import Unlink from '@lucide/svelte/icons/unlink';
 	import UserCheck from '@lucide/svelte/icons/user-check';
+	import UserPlus from '@lucide/svelte/icons/user-plus';
+	import UserRoundX from '@lucide/svelte/icons/user-round-x';
 	import UserMinus from '@lucide/svelte/icons/user-minus';
 	import { tv } from '#lib/tv.js';
 	import type { ActivityVerb } from '#lib/server/activity/index.js';
@@ -86,7 +88,10 @@
 		'task.assigned': UserCheck,
 		'task.unassigned': UserMinus,
 		'task.due.changed': CalendarClock,
-		'task.project.changed': ArrowRightLeft
+		'task.project.changed': ArrowRightLeft,
+		'person.created': UserPlus,
+		'person.deactivated': UserRoundX,
+		'person.department.changed': ArrowRightLeft
 	};
 </script>
 
