@@ -76,3 +76,12 @@ sticker says something else.
   pasteable into a sentence.
 - **Configurable prefixes.** Rejected as catalogue masquerading as configuration, per ADR 0007.
 - **Row count as the next number.** Rejected: incorrect under deletion and under concurrency.
+
+## Amendment 2026-10-18: page codes are not editable
+
+Knowledge-base pages carry a `DOC-####` code from their own sequence, in the URL like every other
+record, but **the code cannot be edited** ([ADR 0031](0031-knowledge-base-spaces-page-tree-and-revisions.md)).
+Editability exists here for two reasons, both physical: the code is printed on a label, and an
+import brings codes the organisation already uses. Neither applies to a page. What does apply is
+that pages link to one another by code, inside their content, so a renamed code would break every
+page that points at it, and no redirect exists to save them.
