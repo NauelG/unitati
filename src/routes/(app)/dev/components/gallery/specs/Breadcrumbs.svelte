@@ -5,8 +5,8 @@
 
 <ComponentDocPage
 	name="Breadcrumbs"
-	summary="El rastro de ruta de una ficha de registro: 56px, como la topbar del shell, pero local al contenido."
-	role="Los segmentos los pasa el caller desde su propio +page.server.ts — nunca se reconstruyen leyendo la URL de vuelta, porque una ruta reservada o una etiqueta a medida lo hacen poco fiable. El último segmento es siempre el registro actual: sin href, aria-current=&quot;page&quot;. Es una segunda barra de 56px, no una copia de la topbar fija del shell: esa sigue siendo la única barra realmente fija."
+	summary="El rastro de ruta de una ficha de registro: una sola línea de 32px, sin barra ni regla propias."
+	role="Los segmentos los pasa el caller desde su propio +page.server.ts — nunca se reconstruyen leyendo la URL de vuelta, porque una ruta reservada o una etiqueta a medida lo hacen poco fiable. El último segmento es siempre el registro actual: sin href, aria-current=&quot;page&quot;. Es una línea de 32px sin borde (.ut-crumbs no tiene alto ni regla): la separación con la cabecera del registro la pone el espaciado, y la topbar fija del shell sigue siendo la única barra."
 	whenToUse={[
 		'La ficha de un registro con un padre claro: activo → Activos, ticket → Soporte → su cola.',
 		'Cuando el servidor ya conoce el nombre real del padre (una cola, una categoría) y no hay que adivinarlo del slug de la URL.'
@@ -29,7 +29,7 @@
   ]}
 />`}
 	referenceHref="https://github.com/NauelG/unitati/blob/main/docs/design/design-system.html"
-	referenceLabel="Design system — topbar de detalle, 56px"
+	referenceLabel="Design system — .ut-crumbs"
 >
 	{#snippet demo()}
 		<div>

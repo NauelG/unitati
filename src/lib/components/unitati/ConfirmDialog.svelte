@@ -23,7 +23,6 @@
 			],
 			title: 'text-title-3 text-[var(--ink)]',
 			description: 'mt-[var(--space-2)] text-sm text-[var(--ink-muted)]',
-			error: 'mt-[var(--space-3)] text-small text-[var(--danger)]',
 			footer: 'mt-[var(--space-5)] flex flex-wrap justify-end gap-[var(--space-2)]'
 		}
 	});
@@ -33,6 +32,7 @@
 	import type { Snippet } from 'svelte';
 	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
 	import { button } from './Button.svelte';
+	import FormError from './FormError.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 
 	interface Props {
@@ -118,9 +118,7 @@
 				{description}
 			</AlertDialog.Description>
 
-			{#if error}
-				<p class={styles.error()} role="alert">{error}</p>
-			{/if}
+			<FormError class="mt-[var(--space-3)]">{error}</FormError>
 
 			<div class={styles.footer()}>
 				<AlertDialog.Cancel

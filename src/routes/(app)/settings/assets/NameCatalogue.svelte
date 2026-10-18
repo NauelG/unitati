@@ -1,4 +1,5 @@
 <script lang="ts">
+	import FormError from '#lib/components/unitati/FormError.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import { enhance } from '$app/forms';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
@@ -188,9 +189,7 @@
 			</label>
 
 			{#if dialogFailure}
-				<p class="text-small text-[var(--danger)]" role="alert">
-					{dialogFailure}
-				</p>
+				<FormError>{dialogFailure}</FormError>
 			{/if}
 
 			<div class="flex justify-end gap-[var(--space-2)]">

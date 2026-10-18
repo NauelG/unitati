@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ComponentDocPage from '../ComponentDocPage.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import FormActions from '#lib/components/unitati/FormActions.svelte';
 	import { field } from '#lib/components/unitati/Field.svelte';
 	import Sheet from '#lib/components/unitati/Sheet.svelte';
 
@@ -94,12 +95,12 @@
 							<input class={input} value="5CG1234ABC" />
 						</label>
 					</div>
-					<div class="mt-4 flex shrink-0 gap-2 border-t border-[var(--border)] pt-4">
-						<Button type="submit" size="sm">Guardar</Button>
-						<Button type="button" variant="ghost" size="sm" onclick={() => (openBasic = false)}
-							>Cancelar</Button
-						>
-					</div>
+					<FormActions class="mt-4 shrink-0">
+						<Button type="button" variant="ghost" onclick={() => (openBasic = false)}>
+							Cancelar
+						</Button>
+						<Button type="submit">Guardar</Button>
+					</FormActions>
 				</form>
 			</Sheet>
 		</div>
@@ -123,10 +124,10 @@
 							<input class={input} disabled value="Guardando…" />
 						</label>
 					</div>
-					<div class="mt-4 flex shrink-0 gap-2 border-t border-[var(--border)] pt-4">
-						<Button type="submit" size="sm" disabled>Guardando…</Button>
-						<Button type="button" variant="ghost" size="sm" disabled>Cancelar</Button>
-					</div>
+					<FormActions class="mt-4 shrink-0">
+						<Button type="button" variant="ghost" disabled>Cancelar</Button>
+						<Button type="submit" disabled>Guardando…</Button>
+					</FormActions>
 				</form>
 			</Sheet>
 		</div>

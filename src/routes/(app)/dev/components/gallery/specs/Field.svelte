@@ -32,6 +32,12 @@
 		},
 		{ name: 'hint', type: 'string', description: 'Pista permanente bajo el campo.' },
 		{
+			name: 'trailing',
+			type: 'Snippet',
+			description:
+				'Decoración dentro del borde derecho del input (una tecla de atajo); no interactiva.'
+		},
+		{
 			name: 'value',
 			type: 'string | null',
 			description: 'null es lo que entrega una columna anulable; se muestra como caja vacía.'
@@ -49,6 +55,9 @@
 			<Field label="Con error" bind:value={withError} error="Este campo es obligatorio." />
 			<Field label="Deshabilitado" value="No editable" disabled />
 			<Field label={longLabel} bind:value={plain} />
+			<Field label="Con kbd al final" type="search" bind:value={plain}>
+				{#snippet trailing()}<span class="ut-kbd" aria-hidden="true">/</span>{/snippet}
+			</Field>
 		</div>
 	{/snippet}
 </ComponentDocPage>

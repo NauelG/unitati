@@ -1,4 +1,5 @@
 <script lang="ts">
+	import FormError from '#lib/components/unitati/FormError.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import { enhance } from '$app/forms';
 	import AssetPicker from '#lib/components/unitati/AssetPicker.svelte';
@@ -71,7 +72,7 @@
 		</label>
 
 		{#if form && 'message' in form}
-			<p class="text-small text-[var(--danger)]" role="alert">{form.message}</p>
+			<FormError>{form.message}</FormError>
 		{/if}
 
 		<div class="flex items-center gap-[var(--space-3)]">

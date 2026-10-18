@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DescriptionList from '#lib/components/unitati/DescriptionList.svelte';
 	import DataTable, { type DataTableColumn } from '#lib/components/unitati/DataTable.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
@@ -510,18 +511,15 @@
 		<h3 class="text-title-3 text-[var(--ink)]">Ficha de activo — valores largos</h3>
 		<div class="mt-[var(--space-3)] grid gap-[var(--space-4)] sm:grid-cols-2">
 			<WorkPanel heading="Detalles">
-				<dl class="divide-y divide-[var(--border)]">
-					<div class="flex justify-between gap-[var(--space-4)] py-[var(--space-2)] text-sm">
-						<dt class="text-[var(--ink-muted)]">Modelo</dt>
-						<dd class="text-right text-[var(--ink)]">{longAssetName}</dd>
-					</div>
-					<div class="flex justify-between gap-[var(--space-4)] py-[var(--space-2)] text-sm">
-						<dt class="text-[var(--ink-muted)]">Ubicación</dt>
-						<dd class="text-right text-[var(--ink)]">
-							Almacén central, planta -1, pasillo de reposición de periféricos
-						</dd>
-					</div>
-				</dl>
+				<DescriptionList
+					items={[
+						{ label: 'Modelo', value: longAssetName },
+						{
+							label: 'Ubicación',
+							value: 'Almacén central, planta -1, pasillo de reposición de periféricos'
+						}
+					]}
+				/>
 			</WorkPanel>
 			<WorkPanel heading="Estado">
 				<p class="text-sm text-[var(--ink-muted)]">

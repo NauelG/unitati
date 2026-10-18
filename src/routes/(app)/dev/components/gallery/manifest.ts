@@ -75,6 +75,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/Button.svelte')
 	},
 	{
+		id: 'segmented-control',
+		name: 'SegmentedControl',
+		category: 'actions',
+		summary: 'Selector de un grupo de opciones en una píldora: enlaces o botones.',
+		sourceFile: 'SegmentedControl.svelte',
+		load: () => import('./specs/SegmentedControl.svelte')
+	},
+	{
 		id: 'theme-toggle',
 		name: 'ThemeToggle',
 		category: 'actions',
@@ -91,6 +99,23 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		summary: 'Campo de texto con etiqueta, ayuda y error.',
 		sourceFile: 'Field.svelte',
 		load: () => import('./specs/Field.svelte')
+	},
+	{
+		id: 'form-error',
+		name: 'FormError',
+		category: 'fields',
+		summary: 'La línea de error de un formulario: lo que dice el servidor al rechazar el envío.',
+		sourceFile: 'FormError.svelte',
+		load: () => import('./specs/FormError.svelte')
+	},
+	{
+		id: 'form-actions',
+		name: 'FormActions',
+		category: 'fields',
+		summary:
+			'La fila de acciones de un formulario en Dialog o Sheet: secundaria primero, primaria última.',
+		sourceFile: 'FormActions.svelte',
+		load: () => import('./specs/FormActions.svelte')
 	},
 	{
 		id: 'select-field',
@@ -282,6 +307,22 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		summary: 'Tabla genérica ordenable y seleccionable, con fila-enlace y estado vacío.',
 		sourceFile: 'DataTable.svelte',
 		load: () => import('./specs/DataTable.svelte')
+	},
+	{
+		id: 'description-list',
+		name: 'DescriptionList',
+		category: 'data',
+		summary: 'Pares etiqueta/valor de una ficha en rejilla de 104 px + 1fr.',
+		sourceFile: 'DescriptionList.svelte',
+		load: () => import('./specs/DescriptionList.svelte')
+	},
+	{
+		id: 'list-toolbar',
+		name: 'ListToolbar',
+		category: 'data',
+		summary: 'La franja de búsqueda y filtros de un índice, pegada al panel de la tabla.',
+		sourceFile: 'ListToolbar.svelte',
+		load: () => import('./specs/ListToolbar.svelte')
 	},
 	{
 		id: 'asset-timeline',

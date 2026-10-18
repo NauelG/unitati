@@ -68,6 +68,22 @@ here because this is the folder they govern.
   `type-roles.guard.spec.ts` fails the build otherwise.
 - **Colour means a domain or a state, never a person.** `Avatar` has no tone variant on purpose.
 
+## Shared patterns
+
+Composed by routes instead of re-spelled; each has a gallery page.
+
+- **`ListToolbar`**: the `GET` search form of an index screen, attached to the table panel (ADR
+  0019). Put it and the `DataTable` in one `<div>` and give the table `class="rounded-t-none"`.
+  Not for record pages, which have no table to attach to.
+- **`FormError`**: the form-level error line (`role="alert"`). Empty children render nothing, so
+  write `<FormError>{message}</FormError>` without an `{#if}`. A single field's error stays on `Field`.
+- **`DescriptionList`**: label/value pairs as a `104px 1fr` grid (`.ut-dl`), values left-aligned and
+  wrapping inside their own column. Never `flex justify-between`. Not for tabular data: use `DataTable`.
+- **`FormActions`**: the action row of a form in a `Dialog` or `Sheet`. **Secondary first, primary
+  last, right-aligned**: `[Cancelar][Guardar]`. The form still owns the row (ADR 0020); this is its layout.
+- **`SegmentedControl`**: `.ut-btn-group`. Options with `href` are links (`aria-current`), the rest
+  buttons (`aria-pressed`). Not for navigating between sections.
+
 ## What is deliberately missing
 
 `GlobalSearch` is specified in the design system and not built: it needs a domain that does not

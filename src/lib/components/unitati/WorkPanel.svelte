@@ -19,7 +19,7 @@
 			head: 'flex items-center justify-between gap-[var(--space-3)] border-b border-[var(--border)] px-[var(--space-4)] py-[var(--space-3)]',
 			title: 'text-title-3 text-[var(--ink)]',
 			actions: 'flex items-center gap-[var(--space-2)]',
-			body: 'p-[var(--space-4)]'
+			body: 'px-[var(--space-4)] py-[var(--space-3)]'
 		}
 	});
 </script>

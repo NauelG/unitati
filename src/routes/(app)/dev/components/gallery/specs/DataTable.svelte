@@ -22,6 +22,15 @@
 		}
 	];
 
+	const longTitle = 'Asunto de 140 caracteres: '.padEnd(
+		140,
+		'el equipo no arranca tras la actualización y pierde la red '
+	);
+	const longRows: Row[] = [
+		{ id: 'l1', tag: 'AST-0100', name: longTitle, state: 'in_use' },
+		...rows.slice(0, 1)
+	];
+
 	let selected: string[] = $state([]);
 
 	const columns = $derived<DataTableColumn<Row>[]>([
@@ -29,8 +38,15 @@
 		{ key: 'name', header: 'Nombre', sortable: true, cell: nameCell },
 		{ key: 'state', header: 'Estado', cell: stateCell }
 	]);
+
+	const actionColumns = $derived<DataTableColumn<Row>[]>([
+		...columns.slice(0, 2),
+		{ key: 'actions', header: 'Acciones', kind: 'actions', cell: archiveCell }
+	]);
 </script>
 
+{#snippet archiveCell(row: Row)}<Button size="sm" variant="secondary">Archivar {row.tag}</Button
+	>{/snippet}
 {#snippet tagCell(row: Row)}{row.tag}{/snippet}
 {#snippet nameCell(row: Row)}{row.name}{/snippet}
 {#snippet stateCell(row: Row)}<StatusBadge status={row.state} />{/snippet}
@@ -52,7 +68,8 @@
 		{
 			name: 'columns',
 			type: 'DataTableColumn<Row>[]',
-			description: 'key, header, align, sortable, cell.'
+			description:
+				'key, header, align, sortable, cell; kind: "actions" para una columna de controles; truncateTitle.'
 		},
 		{
 			name: 'rows',
@@ -85,6 +102,12 @@
 			type: 'boolean',
 			default: 'false',
 			description: 'Filas a --size-row-compact en vez de --size-row.'
+		},
+		{
+			name: 'loading',
+			type: 'boolean',
+			default: 'false',
+			description: 'Cuerpo en esqueleto con la cabecera intacta, para que el layout no salte.'
 		},
 		{
 			name: 'emptyMessage',
@@ -140,6 +163,41 @@
 				{rows}
 				rowKey={(row) => row.id}
 				compact
+				emptyMessage="Todavía no hay activos registrados."
+			/>
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Título de 140 caracteres (recortado, con tooltip)
+			</p>
+			<DataTable
+				{columns}
+				rows={longRows}
+				rowKey={(row) => row.id}
+				emptyMessage="Todavía no hay activos registrados."
+			/>
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Columna de acciones (el botón se pulsa por encima del enlace de fila)
+			</p>
+			<DataTable
+				columns={actionColumns}
+				{rows}
+				rowKey={(row) => row.id}
+				href={(row) => `/dev/components/data-table#${row.tag}`}
+				emptyMessage="Todavía no hay activos registrados."
+			/>
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Cargando (loading)
+			</p>
+			<DataTable
+				{columns}
+				{rows}
+				rowKey={(row) => row.id}
+				loading
 				emptyMessage="Todavía no hay activos registrados."
 			/>
 		</div>

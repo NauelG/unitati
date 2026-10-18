@@ -1,4 +1,6 @@
 <script lang="ts">
+	import DescriptionList from '#lib/components/unitati/DescriptionList.svelte';
+	import FormError from '#lib/components/unitati/FormError.svelte';
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 	import EscalateSheet from '#lib/components/unitati/EscalateSheet.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
@@ -28,7 +30,6 @@
 	import { PRIORITIES } from '#lib/domain/status.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { ThreadItem } from '#lib/server/service-desk/index.js';
-	import type { Snippet } from 'svelte';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -149,15 +150,8 @@
 
 {#snippet failure(action: string)}
 	{#if form && 'action' in form && form.action === action && 'message' in form}
-		<p class="text-small text-[var(--danger)]" role="alert">{form.message}</p>
+		<FormError>{form.message}</FormError>
 	{/if}
-{/snippet}
-
-{#snippet detailRow(label: string, body: Snippet)}
-	<div class="flex justify-between gap-[var(--space-4)] py-[var(--space-2)] text-sm">
-		<dt class="text-[var(--ink-muted)]">{label}</dt>
-		<dd class="text-right text-[var(--ink)]">{@render body()}</dd>
-	</div>
 {/snippet}
 
 <svelte:head>
@@ -223,14 +217,16 @@
 
 	{#snippet side()}
 		<WorkPanel heading={m.ticket_detail_details()}>
-			<dl class="divide-y divide-[var(--border)]">
-				{#snippet requester()}{ticket.requesterName}{/snippet}
-				{#snippet assignee()}{localAssigneeName ?? m.tickets_no_assignee()}{/snippet}
-				{#snippet queue()}{localQueueName}{/snippet}
-				{@render detailRow(m.ticket_detail_requester(), requester)}
-				{@render detailRow(m.ticket_detail_assignee(), assignee)}
-				{@render detailRow(m.ticket_detail_queue(), queue)}
-			</dl>
+			<DescriptionList
+				items={[
+					{ label: m.ticket_detail_requester(), value: ticket.requesterName },
+					{
+						label: m.ticket_detail_assignee(),
+						value: localAssigneeName ?? m.tickets_no_assignee()
+					},
+					{ label: m.ticket_detail_queue(), value: localQueueName }
+				]}
+			/>
 		</WorkPanel>
 
 		<!-- Streamed (#89): `related` is read on the same scoped footing as the

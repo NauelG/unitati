@@ -10,6 +10,17 @@
 		align?: 'start' | 'end';
 		/** Sorting is announced, never performed: see the note on `sort`. */
 		sortable?: boolean;
+		/**
+		 * `actions`: a column of controls (an Archive button) rather than data. Its
+		 * cells sit above the row's stretched link (`relative z-10`), align to the
+		 * end, keep the header as screen-reader text only, and stay out of `rowLabel`.
+		 */
+		kind?: 'actions';
+		/**
+		 * The title cell (second column) truncates at 48ch with the full text in a
+		 * `title` tooltip. `false` for the rare table that wants it to wrap in full.
+		 */
+		truncateTitle?: boolean;
 		/** Renders the cell. Without it the row's own `cell` snippet is used. */
 		cell?: Snippet<[Row]>;
 	}
@@ -78,16 +89,33 @@
 					cell: 'font-mono text-record-id [font-variant-numeric:tabular-nums] text-[var(--ink)]'
 				},
 				title: { cell: 'font-medium text-[var(--ink)]' },
+				// `max-w` only bites on a table cell with `truncate`'s `overflow-hidden`.
+				'title-truncated': { cell: 'max-w-[48ch] truncate font-medium text-[var(--ink)]' },
 				muted: { cell: 'text-[var(--ink-muted)]' }
-			}
+			},
+			/** Above the row's stretched link, like the selection checkbox. */
+			actions: { true: { cell: 'relative z-10' }, false: {} }
 		},
-		defaultVariants: { compact: false, align: 'start', emphasis: 'muted', corner: 'none' }
+		defaultVariants: {
+			compact: false,
+			align: 'start',
+			emphasis: 'muted',
+			corner: 'none',
+			actions: false
+		}
 	});
 
+	/** Rows painted while loading with no previous rows to size the skeleton by. */
+	export const SKELETON_ROWS = 10;
+
 	/** Position decides the emphasis, exactly as the design system assigns it. */
-	export function emphasisFor(index: number): 'code' | 'title' | 'muted' {
+	export function emphasisFor(
+		index: number,
+		truncateTitle = true
+	): 'code' | 'title' | 'title-truncated' | 'muted' {
 		if (index === 0) return 'code';
-		return index === 1 ? 'title' : 'muted';
+		if (index === 1) return truncateTitle ? 'title-truncated' : 'title';
+		return 'muted';
 	}
 </script>
 
@@ -98,6 +126,7 @@
 	import ChevronUp from '@lucide/svelte/icons/chevron-up';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import * as Table from '#lib/components/ui/table/index.js';
+	import DataTableSkeleton from './DataTableSkeleton.svelte';
 	import EmptyState from './EmptyState.svelte';
 	import { MOTION_BASE_MS, toViewTransitionName } from '#lib/motion.js';
 	import { activeScope } from '#lib/keymap.js';
@@ -132,6 +161,11 @@
 		 */
 		sort?: DataTableSort;
 		compact?: boolean;
+		/**
+		 * Swaps the body for skeleton rows and keeps the header, so the layout does
+		 * not jump while a new page loads. Pass `navigating.to` pointing at this route.
+		 */
+		loading?: boolean;
 		/** One sentence. Shown instead of an empty grid, which tells nobody anything. */
 		emptyMessage: string;
 		/** Above the sentence, for the "no data yet" shape — omit for a flatter "no results" shape. */
@@ -155,6 +189,7 @@
 		activeKey = $bindable(null),
 		sort = $bindable(),
 		compact = false,
+		loading = false,
 		emptyMessage,
 		emptyTitle,
 		emptyIcon,
@@ -215,6 +250,17 @@
 		}
 	}
 
+	/** A truncated title keeps its full text one hover away. Read from the DOM: a cell is a snippet. */
+	function fullTextTooltip(node: HTMLElement) {
+		const text = node.textContent?.trim();
+		if (text) node.title = text;
+	}
+
+	/** An actions column is always end-aligned, whatever `align` says. */
+	function alignOf(column: DataTableColumn<Row>): 'start' | 'end' {
+		return column.kind === 'actions' ? 'end' : (column.align ?? 'start');
+	}
+
 	function nextSort(key: string): DataTableSort {
 		const flipped = sort?.key === key && sort.direction === 'asc';
 		return { key, direction: flipped ? 'desc' : 'asc' };
@@ -232,8 +278,8 @@
 	}
 </script>
 
-<div class={styles.panel({ class: className })}>
-	{#if rows.length === 0}
+<div class={styles.panel({ class: className })} aria-busy={loading || undefined}>
+	{#if rows.length === 0 && !loading}
 		<EmptyState
 			title={emptyTitle}
 			description={emptyMessage}
@@ -266,12 +312,14 @@
 						{@const isLast = index === columns.length - 1}
 						<Table.Head
 							class={styles.head({
-								align: column.align ?? 'start',
+								align: alignOf(column),
 								corner: isFirst ? 'top-start' : isLast ? 'top-end' : 'none'
 							})}
 							aria-sort={column.sortable ? ariaSort(column.key) : undefined}
 						>
-							{#if column.sortable}
+							{#if column.kind === 'actions'}
+								<span class="sr-only">{column.header}</span>
+							{:else if column.sortable}
 								{@const SortIcon = sortIcon(column.key)}
 								<button
 									type="button"
@@ -289,12 +337,20 @@
 				</Table.Row>
 			</Table.Header>
 
-			<Table.Body>
-				{#each rows as row, rowIndex (rowKey(row))}
-					{@const key = rowKey(row)}
-					{@const isSelected = selected?.includes(key) ?? false}
-					{@const isLastRow = rowIndex === rows.length - 1}
-					<!--
+			{#if loading}
+				<DataTableSkeleton
+					embedded
+					columns={columns.length + (selectable ? 1 : 0)}
+					rows={rows.length || SKELETON_ROWS}
+					{compact}
+				/>
+			{:else}
+				<Table.Body>
+					{#each rows as row, rowIndex (rowKey(row))}
+						{@const key = rowKey(row)}
+						{@const isSelected = selected?.includes(key) ?? false}
+						{@const isLastRow = rowIndex === rows.length - 1}
+						<!--
 						List physics (#87): `animate:flip` glides a row to its new position
 						when `rows` reorders without adding or removing — a sort toggle, say
 						— instead of teleporting it there. A Svelte directive only attaches
@@ -307,47 +363,54 @@
 						replaces the whole row set, so each new row fades in rather than
 						popping in instantly.
 					-->
-					<tr
-						data-slot="table-row"
-						data-row-key={key}
-						animate:flip={{ duration: MOTION_BASE_MS }}
-						class="relative animate-in border-b border-[var(--border)] transition-colors duration-[var(--motion-base)] fade-in last:border-b-0 hover:bg-[var(--surface-2)] aria-selected:bg-[var(--brand-soft)]"
-						aria-selected={selectable ? isSelected : undefined}
-					>
-						{#if selectable}
-							<Table.Cell
-								class={styles.cell({
-									corner: isLastRow && columns.length === 0 ? 'bottom-start' : 'none'
-								})}
-							>
-								<input
-									type="checkbox"
-									class="relative z-10 size-4 accent-[var(--brand)]"
-									checked={isSelected}
-									onchange={() => toggle(key)}
-									aria-label={rowLabel?.(row) ?? key}
-								/>
-							</Table.Cell>
-						{/if}
+						<tr
+							data-slot="table-row"
+							data-row-key={key}
+							animate:flip={{ duration: MOTION_BASE_MS }}
+							class="relative animate-in border-b border-[var(--border)] transition-colors duration-[var(--motion-base)] fade-in last:border-b-0 hover:bg-[var(--surface-2)] aria-selected:bg-[var(--brand-soft)]"
+							aria-selected={selectable ? isSelected : undefined}
+						>
+							{#if selectable}
+								<Table.Cell
+									class={styles.cell({
+										corner: isLastRow && columns.length === 0 ? 'bottom-start' : 'none'
+									})}
+								>
+									<!-- The label is the hit target (32 × 32); `aria-label` stays the name. -->
+									<label class="relative z-10 grid size-8 place-items-center">
+										<input
+											type="checkbox"
+											class="size-4 accent-[var(--brand)]"
+											checked={isSelected}
+											onchange={() => toggle(key)}
+											aria-label={rowLabel?.(row) ?? key}
+										/>
+									</label>
+								</Table.Cell>
+							{/if}
 
-						{#each columns as column, index (column.key)}
-							{@const isFirst = index === 0 && !selectable}
-							{@const isLast = index === columns.length - 1}
-							<Table.Cell
-								class={styles.cell({
-									align: column.align ?? 'start',
-									emphasis: emphasisFor(index),
-									corner: isLastRow
-										? isFirst
-											? 'bottom-start'
-											: isLast
-												? 'bottom-end'
-												: 'none'
-										: 'none'
-								})}
-							>
-								{#if index === 0 && href}
-									<!-- One real link per row, stretched over the row so a pointer can
+							{#each columns as column, index (column.key)}
+								{@const isFirst = index === 0 && !selectable}
+								{@const isLast = index === columns.length - 1}
+								{@const emphasis = emphasisFor(index, column.truncateTitle ?? true)}
+								<Table.Cell
+									translate={emphasis === 'code' ? 'no' : undefined}
+									{@attach emphasis === 'title-truncated' ? fullTextTooltip : undefined}
+									class={styles.cell({
+										align: alignOf(column),
+										actions: column.kind === 'actions',
+										emphasis,
+										corner: isLastRow
+											? isFirst
+												? 'bottom-start'
+												: isLast
+													? 'bottom-end'
+													: 'none'
+											: 'none'
+									})}
+								>
+									{#if index === 0 && href}
+										<!-- One real link per row, stretched over the row so a pointer can
 									     click anywhere. The checkbox is lifted above it; any other
 									     interactive control in a cell would sit underneath, which is
 									     why a table with a row `href` keeps its cells inert.
@@ -356,26 +419,27 @@
 									     `record-{key}` so the detail page's own code chip — carrying
 									     the identical name — can claim the same view-transition group
 									     and visually travel into place on navigation. -->
-									<a
-										href={href(row)}
-										tabindex={key === tabbableKey ? 0 : -1}
-										style:view-transition-name={toViewTransitionName('record', key)}
-										class="scroll-mt-[var(--size-row)] after:absolute after:inset-0 hover:underline focus-visible:underline"
-										{@attach (node) => {
-											focusTargets[key] = node;
-											return () => delete focusTargets[key];
-										}}
-									>
-										{#if column.cell}{@render column.cell(row)}{/if}
-									</a>
-								{:else if column.cell}
-									{@render column.cell(row)}
-								{/if}
-							</Table.Cell>
-						{/each}
-					</tr>
-				{/each}
-			</Table.Body>
+										<a
+											href={href(row)}
+											tabindex={key === tabbableKey ? 0 : -1}
+											style:view-transition-name={toViewTransitionName('record', key)}
+											class="scroll-mt-[var(--size-row)] after:absolute after:inset-0 hover:underline focus-visible:underline"
+											{@attach (node) => {
+												focusTargets[key] = node;
+												return () => delete focusTargets[key];
+											}}
+										>
+											{#if column.cell}{@render column.cell(row)}{/if}
+										</a>
+									{:else if column.cell}
+										{@render column.cell(row)}
+									{/if}
+								</Table.Cell>
+							{/each}
+						</tr>
+					{/each}
+				</Table.Body>
+			{/if}
 		</Table.Root>
 	{/if}
 </div>
