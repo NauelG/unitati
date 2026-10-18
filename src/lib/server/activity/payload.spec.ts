@@ -16,6 +16,14 @@ describe('the payload contract', () => {
 });
 
 describe('parsePayload', () => {
+	it('accepts a person location change and refuses one without a reason', () => {
+		const ref = { id: LOCATION, path: 'Barcelona office › Floor 1' };
+		expect(
+			parsePayload('person.location.changed', { from: null, to: ref, reason: 'edited' })
+		).toEqual({ from: null, to: ref, reason: 'edited' });
+		expect(() => parsePayload('person.location.changed', { from: null, to: ref })).toThrow();
+	});
+
 	it('accepts a well-formed custody assignment', () => {
 		expect(
 			parsePayload('custody.assigned', { toPersonId: PERSON, toPersonName: 'Ada Lovelace' })

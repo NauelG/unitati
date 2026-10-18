@@ -5,6 +5,18 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.62.0] - 2026-10-18
+
+### Added
+
+- A person's location in `/directory`: admins set or clear where someone usually works from a
+  per-row dialog, the table shows it as a path in a new "Ubicación" column, and every change is
+  recorded in the activity log as `person.location.changed` (#202).
+
+### Changed
+
+- `/directory` renders through the shared `DataTable`.
+
 ## [0.61.0] - 2026-10-18
 
 ### Added

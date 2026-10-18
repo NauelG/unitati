@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { users } from '../auth/schema';
 import type { SessionUser } from '../auth/guards';
+import { locationPaths } from './locations';
 import { departments, organisations, people, teams } from './schema';
 
 export { organisations, people, departments, locations, teams } from './schema';
@@ -19,6 +20,8 @@ export type {
 	LocationEntry,
 	LocationUpdateFailure
 } from './locations';
+export { setPersonLocation } from './person-location';
+export type { SetPersonLocationFailure } from './person-location';
 export { locationInput } from './validation';
 export type { LocationInput } from './validation';
 export type { Organisation, Person, Department, Location, Team } from './schema';
@@ -73,23 +76,36 @@ export interface DirectoryEntry {
 	departmentName: string | null;
 	role: string | null;
 	active: boolean;
+	locationId: string | null;
+	/** The location's path (` › `-joined), resolved once for the whole list. */
+	locationPath: string | null;
 }
 
 export async function listPeople(organisationId: string): Promise<DirectoryEntry[]> {
-	return getDb()
+	const rows = await getDb()
 		.select({
 			id: people.id,
 			fullName: people.fullName,
 			email: people.email,
 			departmentName: departments.name,
 			role: users.role,
-			active: people.active
+			active: people.active,
+			locationId: people.locationId
 		})
 		.from(people)
 		.leftJoin(departments, eq(people.departmentId, departments.id))
 		.leftJoin(users, eq(people.userId, users.id))
 		.where(eq(people.organisationId, organisationId))
 		.orderBy(asc(people.fullName));
+
+	const paths = await locationPaths(
+		organisationId,
+		rows.flatMap((row) => (row.locationId ? [row.locationId] : []))
+	);
+	return rows.map((row) => ({
+		...row,
+		locationPath: row.locationId ? (paths.get(row.locationId) ?? null) : null
+	}));
 }
 
 export interface PersonContact {

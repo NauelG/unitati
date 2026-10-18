@@ -1,0 +1,1 @@
+ALTER TYPE "public"."activity_verb" ADD VALUE 'person.location.changed' BEFORE 'catalogue.location.created';
