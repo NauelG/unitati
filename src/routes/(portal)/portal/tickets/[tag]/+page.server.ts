@@ -6,6 +6,7 @@ import {
 	addComment,
 	addCommentInput,
 	getTicketByTag,
+	MAX_COMMENT_LENGTH,
 	readTicketForm,
 	ticketThread
 } from '#lib/server/service-desk/index.js';
@@ -37,6 +38,9 @@ export const actions: Actions = {
 		const user = requirePermission(locals.user, 'tickets.view.own');
 		const { fields, files } = await readTicketForm(request);
 
+		if ((fields.body ?? '').trim().length > MAX_COMMENT_LENGTH) {
+			return rejected('reply', failureMessage('body_too_long'));
+		}
 		// Always public, whatever the form says: an employee has no internal notes.
 		const input = addCommentInput.safeParse({ body: fields.body ?? '', visibility: 'public' });
 		if (!input.success) return rejected('reply', m.ticket_error_invalid());

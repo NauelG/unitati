@@ -396,6 +396,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/TicketThread.svelte')
 	},
 	{
+		id: 'rich-text-editor',
+		name: 'RichTextEditor',
+		category: 'conversation',
+		summary: 'Editor de texto enriquecido que guarda markdown, con barra de herramientas.',
+		sourceFile: 'RichTextEditor.svelte',
+		load: () => import('./specs/RichTextEditor.svelte')
+	},
+	{
 		id: 'ticket-composer',
 		name: 'TicketComposer',
 		category: 'conversation',

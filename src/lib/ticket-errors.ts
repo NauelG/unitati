@@ -28,6 +28,7 @@ const MESSAGES: Record<Failure, () => string> = {
 	requester_required: m.ticket_error_requester_required,
 	attachments_too_many: m.ticket_error_attachments_too_many,
 	attachments_too_large: m.ticket_error_attachments_too_large,
+	body_too_long: m.ticket_error_body_too_long,
 	asset_not_found: m.ticket_error_asset_not_found,
 	duplicate_ticket_tag: m.ticket_error_duplicate_ticket_tag,
 	ticket_not_found: m.error_generic,

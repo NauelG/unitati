@@ -6,7 +6,7 @@
 <ComponentDocPage
 	name="TicketComposer"
 	summary="Caja de respuesta/nota interna al final de un hilo, con envío por ⌘↵."
-	role="Una caja con el textarea arriba y una barra abajo: el toggle de nota interna, adjuntar y el botón de enviar con su atajo. allowInternal ausente oculta el toggle del todo — el personal nunca ve esa opción ante un requester."
+	role="Una caja con el editor de texto enriquecido (RichTextEditor, markdown) arriba y una barra abajo: el toggle de nota interna, adjuntar y el botón de enviar con su atajo. allowInternal ausente oculta el toggle del todo — el personal nunca ve esa opción ante un requester."
 	whenToUse={['Al final de un TicketThread, para responder o añadir una nota interna.']}
 	whenNotToUse={[
 		'Para cualquier otro formulario de texto libre: este componente es específico de la conversación de un ticket.'

@@ -1,5 +1,6 @@
 <script lang="ts" module>
 	import { tv } from '#lib/tv.js';
+	import { prose } from './prose.js';
 
 	/**
 	 * The `.ut-thread` family: replies, internal notes and system events in one
@@ -37,6 +38,8 @@
 			author: 'font-medium text-[var(--ink)]',
 			time: 'text-xs leading-4 text-[var(--ink-muted)] [font-variant-numeric:tabular-nums]',
 			body: 'mt-[var(--space-1)] text-body-lg whitespace-pre-wrap text-[var(--ink)]',
+			// Sanitised markdown from `renderMarkdown` (ADR 0030).
+			prose: ['mt-[var(--space-1)] min-w-0', ...prose],
 			files: 'mt-[var(--space-2)] m-0 flex list-none flex-wrap gap-[var(--space-2)] p-0',
 			file: [
 				'inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-md)]',
@@ -156,7 +159,8 @@
 							</time>
 						</div>
 
-						<p class={styles.body()}>{item.body}</p>
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitised by renderMarkdown on the server (ADR 0030) -->
+						<div class={styles.prose()}>{@html item.bodyHtml}</div>
 
 						{#if item.attachments.length > 0}
 							<ul class={styles.files()} aria-label={m.thread_attachments()}>

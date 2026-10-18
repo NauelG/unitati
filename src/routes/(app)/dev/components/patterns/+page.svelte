@@ -297,6 +297,7 @@
 			authorPersonId: 'p1',
 			authorName: 'Ada Lovelace',
 			body: 'El equipo no enciende desde esta mañana, ya lo he cargado toda la noche.',
+			bodyHtml: '<p>El equipo no enciende desde esta mañana, ya lo he cargado toda la noche.</p>',
 			visibility: 'public',
 			createdAt: new Date('2026-03-01T09:05:00Z'),
 			attachments: []
@@ -307,6 +308,7 @@
 			authorPersonId: 'p2',
 			authorName: 'Soporte técnico',
 			body: 'Nota interna: comprobar garantía antes de ofrecer sustitución.',
+			bodyHtml: '<p>Nota interna: comprobar garantía antes de ofrecer sustitución.</p>',
 			visibility: 'internal',
 			createdAt: new Date('2026-03-01T10:00:00Z'),
 			attachments: []

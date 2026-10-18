@@ -21,6 +21,7 @@ import {
 import {
 	addComment,
 	addCommentInput,
+	MAX_COMMENT_LENGTH,
 	assignTicket,
 	changeTicketStatus,
 	getTicketByTag,
@@ -126,6 +127,9 @@ export const actions: Actions = {
 		const user = requirePermission(locals.user, 'tickets.view');
 		const { fields, files } = await readTicketForm(request);
 
+		if ((fields.body ?? '').trim().length > MAX_COMMENT_LENGTH) {
+			return rejected('reply', failureMessage('body_too_long'));
+		}
 		const input = addCommentInput.safeParse({
 			body: fields.body ?? '',
 			visibility: fields.visibility === 'internal' ? 'internal' : 'public'
