@@ -32,8 +32,13 @@ const locationChange = z.object({
 export const actions: Actions = {
 	setLocation: async ({ locals, request }) => {
 		const user = requirePermission(locals.user, 'people.manage');
-		const parsed = locationChange.safeParse(await fieldsOf(request));
-		if (!parsed.success) return rejected('setLocation', m.directory_error_invalid());
+		const fields = await fieldsOf(request);
+		const parsed = locationChange.safeParse(fields);
+		if (!parsed.success) {
+			// The dialog only shows a refusal that names its person.
+			const person = z.uuid().safeParse(fields.personId);
+			return rejected('setLocation', m.directory_error_invalid(), person.data);
+		}
 
 		const { personId, locationId } = parsed.data;
 		const outcome = await setPersonLocation(user, personId, locationId);
