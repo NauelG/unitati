@@ -1,4 +1,6 @@
 <script lang="ts">
+	import DescriptionList from '#lib/components/unitati/DescriptionList.svelte';
+	import FormError from '#lib/components/unitati/FormError.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Archive from '@lucide/svelte/icons/archive';
 	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
@@ -17,6 +19,8 @@
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Dialog from '#lib/components/unitati/Dialog.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
+	import FormActions from '#lib/components/unitati/FormActions.svelte';
+	import SegmentedControl from '#lib/components/unitati/SegmentedControl.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import ProjectProgress from '#lib/components/unitati/ProjectProgress.svelte';
@@ -133,15 +137,8 @@
 {#snippet failure(action: string)}
 	{@const message = failureFor(action)}
 	{#if message}
-		<p class="text-small text-[var(--danger)]" role="alert">{message}</p>
+		<FormError>{message}</FormError>
 	{/if}
-{/snippet}
-
-{#snippet detail(label: string, value: string | null)}
-	<div class="flex justify-between gap-[var(--space-4)] py-[var(--space-2)] text-sm">
-		<dt class="text-[var(--ink-muted)]">{label}</dt>
-		<dd class="text-right text-[var(--ink)]">{value ?? '—'}</dd>
-	</div>
 {/snippet}
 
 <svelte:head>
@@ -229,22 +226,13 @@
 		</p>
 	{/if}
 
-	<nav class="mt-[var(--space-6)] flex gap-[var(--space-1)]" aria-label={m.board_views_label()}>
-		{#each views as option (option.id)}
-			<a
-				href={option.href}
-				data-sveltekit-replacestate
-				onclick={() => storeBoardPreference({ view: option.id as 'board' | 'list' })}
-				aria-current={view === option.id ? 'page' : undefined}
-				class="ut-transition-fast rounded-[var(--radius-md)] px-[var(--space-3)] py-[var(--space-1)] text-sm font-medium transition-colors {view ===
-				option.id
-					? 'bg-[var(--surface-2)] text-[var(--ink)]'
-					: 'text-[var(--ink-muted)] hover:text-[var(--ink)]'}"
-			>
-				{option.label}
-			</a>
-		{/each}
-	</nav>
+	<SegmentedControl
+		class="mt-[var(--space-6)]"
+		aria-label={m.board_views_label()}
+		options={views}
+		value={view}
+		onchange={(id) => storeBoardPreference({ view: id as 'board' | 'list' })}
+	/>
 
 	{#if view === 'board'}
 		<div class="mt-[var(--space-4)]" data-view="board">
@@ -312,13 +300,15 @@
 
 	{#snippet side()}
 		<WorkPanel heading={m.project_detail_details()}>
-			<dl class="divide-y divide-[var(--border)]">
-				{@render detail(m.project_detail_owner(), project.ownerName)}
-				{@render detail(
-					m.project_detail_due(),
-					project.dueDate ? formatDay(project.dueDate) : null
-				)}
-			</dl>
+			<DescriptionList
+				items={[
+					{ label: m.project_detail_owner(), value: project.ownerName },
+					{
+						label: m.project_detail_due(),
+						value: project.dueDate ? formatDay(project.dueDate) : null
+					}
+				]}
+			/>
 			{#if project.description}
 				<p class="mt-[var(--space-3)] text-sm whitespace-pre-wrap text-[var(--ink-muted)]">
 					{project.description}
@@ -417,16 +407,14 @@
 				{/if}
 			</div>
 
-			<div
-				class="mt-[var(--space-4)] flex shrink-0 items-center gap-[var(--space-3)] border-t border-[var(--border)] pt-[var(--space-4)]"
-			>
-				<Button type="submit" busy={saving}>
-					{saving ? m.form_saving() : m.project_edit_submit()}
-				</Button>
+			<FormActions class="mt-[var(--space-4)] shrink-0">
 				<Button type="button" variant="ghost" onclick={() => (editOpen = false)}>
 					{m.form_cancel()}
 				</Button>
-			</div>
+				<Button type="submit" busy={saving}>
+					{saving ? m.form_saving() : m.project_edit_submit()}
+				</Button>
+			</FormActions>
 		</form>
 	</Sheet>
 
@@ -460,12 +448,12 @@
 				autofocus
 				error={failureFor('createTask')}
 			/>
-			<div class="flex justify-end gap-[var(--space-2)]">
-				<Button type="button" variant="ghost" size="sm" onclick={() => (taskOpen = false)}>
+			<FormActions>
+				<Button type="button" variant="ghost" onclick={() => (taskOpen = false)}>
 					{m.form_cancel()}
 				</Button>
-				<Button type="submit" size="sm" busy={saving}>{m.project_new_task_submit()}</Button>
-			</div>
+				<Button type="submit" busy={saving}>{m.project_new_task_submit()}</Button>
+			</FormActions>
 		</form>
 	</Dialog>
 {/if}

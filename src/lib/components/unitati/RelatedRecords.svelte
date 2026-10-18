@@ -22,8 +22,7 @@
 			items: 'mt-[var(--space-2)] m-0 flex list-none flex-col gap-[var(--space-2)] p-0',
 			item: 'flex flex-wrap items-center gap-[var(--space-2)]',
 			meta: 'flex basis-full flex-wrap items-center gap-x-[var(--space-2)] text-xs text-[var(--ink-muted)]',
-			empty: 'mt-[var(--space-2)] text-sm text-[var(--ink-muted)]',
-			error: 'mt-[var(--space-2)] text-small text-[var(--danger)]'
+			empty: 'mt-[var(--space-2)] text-sm text-[var(--ink-muted)]'
 		}
 	});
 </script>
@@ -45,6 +44,8 @@
 	import Alert from './Alert.svelte';
 	import Button from './Button.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
+	import FormActions from './FormActions.svelte';
+	import FormError from './FormError.svelte';
 	import { confirmSubmit } from './confirm-submit.js';
 	import ProjectProgress from './ProjectProgress.svelte';
 	import Dialog from './Dialog.svelte';
@@ -378,8 +379,8 @@
 		</div>
 	{/each}
 
-	{#if error && !confirming}
-		<p class={styles.error()} role="alert">{error}</p>
+	{#if !confirming}
+		<FormError class="mt-[var(--space-2)]">{error}</FormError>
 	{/if}
 </section>
 
@@ -433,7 +434,7 @@
 				disabledNote={m.related_link_already()}
 			/>
 
-			<div class="flex justify-end gap-[var(--space-2)]">
+			<FormActions>
 				<Button
 					type="button"
 					variant="ghost"
@@ -446,7 +447,7 @@
 				<Button type="submit" size="sm" busy={linkPending} disabled={picked.length === 0}>
 					{submitLabel(picked.length)}
 				</Button>
-			</div>
+			</FormActions>
 		</form>
 	</Dialog>
 {/if}

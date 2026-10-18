@@ -3,16 +3,16 @@
 
 	/**
 	 * The record-detail toolbar (#86): a data-driven breadcrumb trail,
-	 * 56px tall like the shell's own topbar (`AppShell`'s `.ut-topbar`), but a
-	 * second, local bar — not a second copy of the shell's fixed one. It
-	 * renders real segments the caller already loaded server-side (a parent
+	 * one 32px line (`.ut-crumbs` has neither a height nor a rule: the record
+	 * header's own spacing separates it, and the shell's topbar already carries
+	 * the one bordered bar). It renders real segments the caller already loaded server-side (a parent
 	 * list's name, a record's own tag), never parsed back out of the URL: a
 	 * reserved route segment or a custom tag makes that unreliable (#86's own
 	 * note), and the server already knows the true parent name.
 	 */
 	export const breadcrumbs = tv({
 		slots: {
-			root: 'flex h-14 items-center border-b border-[var(--border)]',
+			root: 'flex min-h-[var(--size-row-compact)] items-center',
 			list: 'flex min-w-0 items-center gap-[var(--space-2)] text-label text-[var(--ink-muted)]',
 			item: 'flex items-center gap-[var(--space-2)] truncate',
 			link: 'truncate hover:text-[var(--ink)] hover:underline',

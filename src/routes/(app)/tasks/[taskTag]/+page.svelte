@@ -1,4 +1,5 @@
 <script lang="ts">
+	import DescriptionList from '#lib/components/unitati/DescriptionList.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import ArrowRightLeft from '@lucide/svelte/icons/arrow-right-left';
 	import Pencil from '@lucide/svelte/icons/pencil';
@@ -84,11 +85,13 @@
 		form && 'field' in form && form.field === field ? failureFor(action) : undefined;
 </script>
 
-{#snippet detail(label: string, value: string | null)}
-	<div class="flex justify-between gap-[var(--space-4)] py-[var(--space-2)] text-sm">
-		<dt class="text-[var(--ink-muted)]">{label}</dt>
-		<dd class="text-right text-[var(--ink)]">{value ?? '—'}</dd>
-	</div>
+{#snippet projectLink()}
+	<a
+		href="/projects/{encodeURIComponent(task.projectTag)}"
+		class="text-[var(--ink)] hover:underline"
+	>
+		{task.projectTag} · {task.projectName}
+	</a>
 {/snippet}
 
 <svelte:head>
@@ -146,27 +149,22 @@
 
 	{#snippet side()}
 		<WorkPanel heading={m.task_detail_details()}>
-			<dl class="divide-y divide-[var(--border)]">
-				<div class="flex justify-between gap-[var(--space-4)] py-[var(--space-2)] text-sm">
-					<dt class="text-[var(--ink-muted)]">{m.task_detail_project()}</dt>
-					<dd class="text-right">
-						<a
-							href="/projects/{encodeURIComponent(task.projectTag)}"
-							class="text-[var(--ink)] hover:underline"
-						>
-							{task.projectTag} · {task.projectName}
-						</a>
-					</dd>
-				</div>
-				{@render detail(m.task_detail_due(), task.dueDate ? formatDay(task.dueDate) : null)}
-				{#if !data.canManage}
-					{@render detail(m.task_detail_state(), current.name)}
-					{@render detail(
-						m.task_detail_assignees(),
-						assigneeNames.length > 0 ? assigneeNames.join(', ') : m.task_detail_unassigned()
-					)}
-				{/if}
-			</dl>
+			<DescriptionList
+				items={[
+					{ label: m.task_detail_project(), value: projectLink },
+					{ label: m.task_detail_due(), value: task.dueDate ? formatDay(task.dueDate) : null },
+					...(data.canManage
+						? []
+						: [
+								{ label: m.task_detail_state(), value: current.name },
+								{
+									label: m.task_detail_assignees(),
+									value:
+										assigneeNames.length > 0 ? assigneeNames.join(', ') : m.task_detail_unassigned()
+								}
+							])
+				]}
+			/>
 		</WorkPanel>
 
 		{#if data.canManage}

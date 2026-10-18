@@ -1,4 +1,5 @@
 <script lang="ts">
+	import FormError from '#lib/components/unitati/FormError.svelte';
 	import { documentTitle, productName } from '#lib/brand.svelte.js';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
@@ -283,12 +284,10 @@
 					required
 					aria-invalid={createFailure?.field === 'name' || undefined}
 				/>
-				{#if createFailure?.field === 'name'}
-					<span class="text-small text-[var(--danger)]" role="alert">
-						{createFailure.message}
-					</span>
-				{/if}
 			</label>
+			{#if createFailure?.field === 'name'}
+				<FormError>{createFailure.message}</FormError>
+			{/if}
 
 			<SelectField
 				label={m.api_keys_expiry()}
@@ -327,9 +326,7 @@
 					</div>
 				{/each}
 				{#if createFailure?.field === 'scopes'}
-					<p class="text-small text-[var(--danger)]" role="alert">
-						{createFailure.message}
-					</p>
+					<FormError>{createFailure.message}</FormError>
 				{/if}
 			</fieldset>
 
@@ -490,12 +487,10 @@
 						required
 						aria-invalid={accountFailure?.field === 'name' || undefined}
 					/>
-					{#if accountFailure?.field === 'name'}
-						<span class="text-small text-[var(--danger)]" role="alert">
-							{accountFailure.message}
-						</span>
-					{/if}
 				</label>
+				{#if accountFailure?.field === 'name'}
+					<FormError>{accountFailure.message}</FormError>
+				{/if}
 
 				<SelectField
 					label={m.service_accounts_role()}

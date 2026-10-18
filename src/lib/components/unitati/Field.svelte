@@ -18,19 +18,24 @@
 				'text-base md:text-sm leading-5 text-[var(--ink)] transition-colors ut-transition-fast',
 				'placeholder:text-[var(--ink-muted)] disabled:opacity-50'
 			],
+			control: 'relative',
+			trailing: 'pointer-events-none absolute top-1/2 right-2 -translate-y-1/2',
 			help: 'text-small'
 		},
 		variants: {
+			// Keeps typed text from running under the trailing chip.
+			hasTrailing: { true: { input: 'pr-[calc(var(--space-2)+2.5rem)]' }, false: {} },
 			invalid: {
 				true: { input: 'border-[var(--danger)]', help: 'text-[var(--danger)]' },
 				false: { input: 'border-[var(--border-strong)]', help: 'text-[var(--ink-muted)]' }
 			}
 		},
-		defaultVariants: { invalid: false }
+		defaultVariants: { invalid: false, hasTrailing: false }
 	});
 </script>
 
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import type { HTMLInputAttributes } from 'svelte/elements';
 
 	interface Props extends Omit<HTMLInputAttributes, 'value' | 'class'> {
@@ -40,6 +45,8 @@
 		hint?: string;
 		/** `null` is what a nullable column hands over; it renders as an empty box. */
 		value?: string | null;
+		/** Decoration inside the input's right edge (a shortcut chip); not interactive. */
+		trailing?: Snippet;
 		/** Narrower than Svelte's `ClassValue`: tailwind-variants merges strings. */
 		class?: string;
 	}
@@ -52,6 +59,7 @@
 		// No fallback: a form library hands over `undefined` for an optional field,
 		// and Svelte refuses `bind:value={undefined}` into a prop that has one.
 		value = $bindable(),
+		trailing,
 		class: className,
 		...rest
 	}: Props = $props();
@@ -69,20 +77,25 @@
 		[error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
 	);
 
-	const styles = $derived(field({ invalid: Boolean(error) }));
+	const styles = $derived(field({ invalid: Boolean(error), hasTrailing: Boolean(trailing) }));
 </script>
 
 <div class={styles.root({ class: className })}>
 	<label for={fieldId} class={styles.label()}>{label}</label>
 
-	<input
-		id={fieldId}
-		bind:value
-		aria-invalid={error ? 'true' : undefined}
-		aria-describedby={describedBy}
-		class={styles.input()}
-		{...rest}
-	/>
+	<div class={styles.control()}>
+		<input
+			id={fieldId}
+			bind:value
+			aria-invalid={error ? 'true' : undefined}
+			aria-describedby={describedBy}
+			class={styles.input()}
+			{...rest}
+		/>
+		{#if trailing}
+			<span class={styles.trailing()}>{@render trailing()}</span>
+		{/if}
+	</div>
 
 	{#if hint}
 		<p id={hintId} class={styles.help()}>{hint}</p>

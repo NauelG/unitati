@@ -1,4 +1,5 @@
 <script lang="ts">
+	import FormError from '#lib/components/unitati/FormError.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import { enhance } from '$app/forms';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
@@ -313,9 +314,7 @@
 			</p>
 
 			{#if sheetFailure?.message}
-				<p class="text-small text-[var(--danger)]" role="alert">
-					{sheetFailure.message}
-				</p>
+				<FormError>{sheetFailure.message}</FormError>
 			{/if}
 
 			<div class="flex justify-end gap-[var(--space-2)]">

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import FormError from '#lib/components/unitati/FormError.svelte';
 	import { documentTitle, productName } from '#lib/brand.svelte.js';
 	import { untrack } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
@@ -82,7 +83,7 @@
 					/>
 
 					{#if $message}
-						<p class="text-sm text-[var(--danger)]" role="alert">{$message}</p>
+						<FormError>{$message}</FormError>
 					{/if}
 
 					<Button type="submit" size="lg" class="w-full" busy={$submitting}>

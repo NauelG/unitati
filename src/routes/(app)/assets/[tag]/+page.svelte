@@ -1,4 +1,6 @@
 <script lang="ts">
+	import DescriptionList from '#lib/components/unitati/DescriptionList.svelte';
+	import FormError from '#lib/components/unitati/FormError.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import { untrack } from 'svelte';
@@ -25,7 +27,6 @@
 	import { LINK_TICKET_EVENT, paletteContext } from '#lib/palette-context.svelte.js';
 	import Skeleton from '#lib/components/unitati/Skeleton.svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import type { Snippet } from 'svelte';
 	import type { PageProps } from './$types';
 	import AssetFields from '../AssetFields.svelte';
 	import { locationOptions, options, stateOptions } from '../options';
@@ -162,15 +163,8 @@
 
 {#snippet failure(action: string)}
 	{#if form && 'action' in form && form.action === action && 'message' in form}
-		<p class="text-small text-[var(--danger)]" role="alert">{form.message}</p>
+		<FormError>{form.message}</FormError>
 	{/if}
-{/snippet}
-
-{#snippet detail(label: string, body: Snippet)}
-	<div class="flex justify-between gap-[var(--space-4)] py-[var(--space-2)] text-sm">
-		<dt class="text-[var(--ink-muted)]">{label}</dt>
-		<dd class="text-right text-[var(--ink)]">{@render body()}</dd>
-	</div>
 {/snippet}
 
 <svelte:head>
@@ -213,32 +207,37 @@
 
 	<div class="mt-[var(--space-6)] space-y-[var(--space-6)]">
 		<WorkPanel heading={m.asset_detail_details()}>
-			<dl class="divide-y divide-[var(--border)]">
-				{#if asset.visibility === 'full'}
-					{#snippet serial()}{asset.serial ?? '—'}{/snippet}
-					{#snippet model()}{asset.modelName}{/snippet}
-					{#snippet manufacturer()}{asset.manufacturerName}{/snippet}
-					{#snippet category()}{asset.categoryName}{/snippet}
-					{#snippet custodian()}
-						{localCustodianName ?? m.assets_no_custodian()}
-					{/snippet}
-					{#snippet location()}{localLocationName ?? m.assets_no_location()}{/snippet}
-					{#snippet shared()}
-						{asset.shared ? m.asset_detail_yes() : m.asset_detail_no()}
-					{/snippet}
-
-					{@render detail(m.asset_detail_serial(), serial)}
-					{@render detail(m.asset_detail_model(), model)}
-					{@render detail(m.asset_detail_manufacturer(), manufacturer)}
-					{@render detail(m.asset_detail_category(), category)}
-					{@render detail(m.asset_detail_custodian(), custodian)}
-					{@render detail(m.asset_detail_location(), location)}
-					{@render detail(m.asset_detail_shared(), shared)}
-				{:else}
-					{#snippet location()}{localLocationName ?? m.assets_no_location()}{/snippet}
-					{@render detail(m.asset_detail_location(), location)}
-				{/if}
-			</dl>
+			{#if asset.visibility === 'full'}
+				<DescriptionList
+					items={[
+						{ label: m.asset_detail_serial(), value: asset.serial },
+						{ label: m.asset_detail_model(), value: asset.modelName },
+						{ label: m.asset_detail_manufacturer(), value: asset.manufacturerName },
+						{ label: m.asset_detail_category(), value: asset.categoryName },
+						{
+							label: m.asset_detail_custodian(),
+							value: localCustodianName ?? m.assets_no_custodian()
+						},
+						{
+							label: m.asset_detail_location(),
+							value: localLocationName ?? m.assets_no_location()
+						},
+						{
+							label: m.asset_detail_shared(),
+							value: asset.shared ? m.asset_detail_yes() : m.asset_detail_no()
+						}
+					]}
+				/>
+			{:else}
+				<DescriptionList
+					items={[
+						{
+							label: m.asset_detail_location(),
+							value: localLocationName ?? m.assets_no_location()
+						}
+					]}
+				/>
+			{/if}
 
 			{#if asset.visibility === 'shared'}
 				<p class="mt-[var(--space-4)] text-small text-[var(--ink-muted)]">

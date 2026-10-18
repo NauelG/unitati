@@ -3,6 +3,8 @@
 	import Plus from '@lucide/svelte/icons/plus';
 	import Search from '@lucide/svelte/icons/search';
 	import { goto } from '$app/navigation';
+	import { navigating, page } from '$app/state';
+	import ListToolbar from '#lib/components/unitati/ListToolbar.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import DataTable, { type DataTableColumn } from '#lib/components/unitati/DataTable.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
@@ -166,11 +168,7 @@
 			drawing a second, separate container: `rounded-t-*`/`border-b-0` here,
 			`rounded-t-none` on the table below, so one border reads as one panel.
 		-->
-		<form
-			method="GET"
-			role="search"
-			class="flex flex-wrap items-end gap-[var(--space-3)] rounded-t-[var(--radius-lg)] border border-b-0 border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-4)]"
-		>
+		<ListToolbar>
 			<!-- layout-ok: a bounded search field, not a page container -->
 			<Field
 				label={m.tickets_search_label()}
@@ -179,8 +177,11 @@
 				placeholder={m.tickets_search_placeholder()}
 				bind:value={term}
 				class="w-full max-w-md"
-			/>
-			<span class="ut-kbd self-center" aria-hidden="true">{formatKeys(['/'], mac)}</span>
+			>
+				{#snippet trailing()}
+					<span class="ut-kbd" aria-hidden="true">{formatKeys(['/'], mac)}</span>
+				{/snippet}
+			</Field>
 			<SelectField
 				label={m.tickets_filter_queue()}
 				name="queue"
@@ -197,7 +198,7 @@
 				<Search class="size-4" aria-hidden="true" />
 				{m.tickets_search_submit()}
 			</Button>
-		</form>
+		</ListToolbar>
 
 		<DataTable
 			{columns}
@@ -206,6 +207,7 @@
 			rowLabel={(row) => row.subject}
 			href={(row) => `/service-desk/${encodeURIComponent(row.ticketTag)}`}
 			bind:activeKey
+			loading={navigating.to?.route.id === page.route.id}
 			emptyMessage={filtering ? m.tickets_empty_search({ term: data.search }) : m.tickets_empty()}
 			class="rounded-t-none"
 		/>
