@@ -5,6 +5,13 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.62.1] - 2026-10-18
+
+### Fixed
+
+- Select triggers are 36px tall and use the input font (16px on mobile) like text inputs, so filter
+  bars and forms line up and iOS no longer zooms when a select is tapped (#219).
+
 ## [0.62.0] - 2026-10-18
 
 ### Added

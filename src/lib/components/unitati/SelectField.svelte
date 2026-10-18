@@ -107,7 +107,11 @@
 			id={selectId}
 			aria-invalid={error ? 'true' : undefined}
 			aria-describedby={describedBy}
-			class={styles.input()}
+			class={styles.input({
+				// The vendored trigger sets `data-[size=default]:h-8` (0,2,0), which beats a plain
+				// `h-*` (0,1,0); repeating the variant is the only way to win without editing `ui/`.
+				class: 'data-[size=default]:h-[var(--size-control-md)]'
+			})}
 		>
 			<Select.Value {placeholder} />
 		</Select.Trigger>
