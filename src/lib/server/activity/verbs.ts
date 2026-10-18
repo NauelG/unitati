@@ -44,7 +44,10 @@ export const ACTIVITY_VERBS = [
 	'task.project.changed',
 	'person.created',
 	'person.deactivated',
-	'person.department.changed'
+	'person.department.changed',
+	'catalogue.location.created',
+	'catalogue.location.updated',
+	'catalogue.location.deleted'
 ] as const;
 
 export type ActivityVerb = (typeof ACTIVITY_VERBS)[number];
@@ -54,7 +57,14 @@ export type ActivityVerb = (typeof ACTIVITY_VERBS)[number];
  * `activity` with a `CHECK` that exactly one is set, so the integrity is the
  * database's and not a convention.
  */
-export const ACTIVITY_TARGETS = ['assetId', 'ticketId', 'taskId', 'projectId', 'personId'] as const;
+export const ACTIVITY_TARGETS = [
+	'assetId',
+	'ticketId',
+	'taskId',
+	'projectId',
+	'personId',
+	'locationId'
+] as const;
 
 export type ActivityTargetColumn = (typeof ACTIVITY_TARGETS)[number];
 
@@ -63,7 +73,7 @@ export type ActivityTargetColumn = (typeof ACTIVITY_TARGETS)[number];
  * objects, so `{ assetId, ticketId }` is rejected by the compiler rather than
  * only by the `CHECK` — the constraint is the backstop, not the first defence.
  *
- * Derived from the list above rather than restating it, so the five names are
+ * Derived from the list above rather than restating it, so the six names are
  * spelled once.
  */
 export type ActivityTarget = {

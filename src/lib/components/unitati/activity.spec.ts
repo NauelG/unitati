@@ -261,3 +261,64 @@ describe('activitySentence for directory events', () => {
 		expect(sentence).toBe('Cambió el departamento de sin departamento a Soporte');
 	});
 });
+
+describe('activitySentence for locations', () => {
+	const PARENT = (path: string) => ({ id: PERSON, path });
+
+	it('renders created and deleted with the recorded path', () => {
+		expect(
+			activitySentence({
+				verb: 'catalogue.location.created',
+				payload: {
+					name: 'Floor 3',
+					path: 'Barcelona office › Floor 3',
+					parentId: PERSON,
+					code: null,
+					address: null,
+					notes: null,
+					latitude: null,
+					longitude: null
+				}
+			})
+		).toBe('Creó la ubicación Barcelona office › Floor 3');
+		expect(
+			activitySentence({
+				verb: 'catalogue.location.deleted',
+				payload: { name: 'Floor 3', path: 'Barcelona office › Floor 3', code: null }
+			})
+		).toBe('Eliminó la ubicación Barcelona office › Floor 3');
+	});
+
+	it('renders a rename, a move and a multi-field edit', () => {
+		expect(
+			activitySentence({
+				verb: 'catalogue.location.updated',
+				payload: { path: 'Floor 4', changes: { name: { from: 'Floor 3', to: 'Floor 4' } } }
+			})
+		).toBe('Renombró la ubicación Floor 3 como Floor 4');
+		expect(
+			activitySentence({
+				verb: 'catalogue.location.updated',
+				payload: {
+					path: 'Girona office › Floor 3',
+					changes: {
+						parent: { from: PARENT('Barcelona office'), to: PARENT('Girona office') }
+					}
+				}
+			})
+		).toBe('Movió la ubicación Floor 3 de Barcelona office a Girona office');
+		expect(
+			activitySentence({
+				verb: 'catalogue.location.updated',
+				payload: {
+					path: 'Floor 3',
+					changes: {
+						code: { from: null, to: 'F3' },
+						latitude: { from: null, to: 1 },
+						longitude: { from: null, to: 2 }
+					}
+				}
+			})
+		).toBe('Editó la ubicación Floor 3: código, coordenadas');
+	});
+});

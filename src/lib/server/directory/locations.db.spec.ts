@@ -328,7 +328,7 @@ describe('assets and the tree', () => {
 		expect(counts.get(bcn)).toBe(1);
 	});
 
-	it('leaves assets and the activity log untouched when a location is moved', async () => {
+	it('leaves assets untouched when a location is moved, writing one entry on the location only', async () => {
 		const { organisation, actor } = await setup();
 		const { modelId } = await createCatalogue(organisation.id);
 		const bcn = await make(actor, { name: 'Barcelona office' });
@@ -338,8 +338,12 @@ describe('assets and the tree', () => {
 
 		await updateLocation(actor, floor1, input({ name: 'Floor 1', parentId: gro }));
 
-		const [after] = await getDb().select().from(activity);
-		expect(after).toBeUndefined();
+		const rows = (await getDb().select().from(activity)).filter(
+			(row) => row.verb !== 'catalogue.location.created'
+		);
+		expect(rows.map((row) => [row.verb, row.assetId])).toEqual([
+			['catalogue.location.updated', null]
+		]);
 		expect((await countAssetsByLocation(organisation.id)).get(floor1)).toBe(1);
 		expect(asset.locationId).toBe(floor1);
 	});
@@ -355,7 +359,7 @@ describe('assets and the tree', () => {
 
 		expect((await changeLocation(actor, asset.id, groFloor)).ok).toBe(true);
 
-		const [row] = await getDb().select().from(activity);
+		const [row] = await getDb().select().from(activity).where(eq(activity.assetId, asset.id));
 		expect(row.verb).toBe('location.changed');
 		expect(row.payload).toMatchObject({
 			fromLocationId: bcnFloor,

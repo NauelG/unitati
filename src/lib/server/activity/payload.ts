@@ -48,6 +48,17 @@ const linkedProject = z.object({
 	projectName: presentName
 });
 
+/** A location as it read when an entry was written: its id for linking, its path as the fact. */
+const locationRef = z.object({ id: z.uuid(), path: presentName });
+
+/** One field of a location edit: both ends, since an edit is a before and an after. */
+function fieldChange<T extends z.ZodType>(value: T) {
+	return z.object({ from: value, to: value });
+}
+
+const nullableText = z.string().nullable();
+const nullableNumber = z.number().nullable();
+
 /**
  * The compile-time gate is the `satisfies` below: a verb added to
  * `ACTIVITY_VERBS` without an entry here is a missing property, reported on
@@ -209,6 +220,40 @@ export const PAYLOAD_SCHEMAS = {
 		fromDepartmentName: presentName.nullable(),
 		toDepartmentId: z.uuid().nullable(),
 		toDepartmentName: presentName.nullable()
+	}),
+
+	// Locations are the one catalogue with history (#177): moving one changes what
+	// every asset in it "is at". The location target has no foreign key, so these
+	// entries carry their own snapshots and outlive the row.
+	'catalogue.location.created': z.object({
+		name: presentName,
+		path: presentName,
+		parentId: z.uuid().nullable(),
+		code: nullableText,
+		address: nullableText,
+		notes: nullableText,
+		latitude: nullableNumber,
+		longitude: nullableNumber
+	}),
+
+	// `path` is the path after the update; `changes` holds only what changed.
+	'catalogue.location.updated': z.object({
+		path: presentName,
+		changes: z.object({
+			name: fieldChange(presentName).optional(),
+			code: fieldChange(nullableText).optional(),
+			address: fieldChange(nullableText).optional(),
+			notes: fieldChange(nullableText).optional(),
+			latitude: fieldChange(nullableNumber).optional(),
+			longitude: fieldChange(nullableNumber).optional(),
+			parent: fieldChange(locationRef.nullable()).optional()
+		})
+	}),
+
+	'catalogue.location.deleted': z.object({
+		name: presentName,
+		path: presentName,
+		code: nullableText
 	})
 } satisfies Record<ActivityVerb, z.ZodType>;
 
