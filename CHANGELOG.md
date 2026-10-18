@@ -5,6 +5,18 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.53.0] - 2026-10-18
+
+### Added
+
+- "Con tecnología de Unitati" and a one-click way back to Unitati's brand (#163, slice 5 of #157).
+  Wherever the version shows, a customised brand now carries the attribution next to it: stacked in
+  the sidebar and drawer footers, inline on login and in the portal header. It is plain text, hidden
+  while the brand is Unitati's own, and has no setting, prop or env var to remove it. The branding
+  editor gains _Restaurar marca de Unitati_ in a danger zone, behind a confirmation: it deletes the
+  name, the colour and every uploaded logo at once (`resetBranding`, `organisation.manage`,
+  idempotent).
+
 ## [0.52.0] - 2026-10-18
 
 ### Fixed
