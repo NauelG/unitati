@@ -235,7 +235,8 @@
 	"asset_error_location_missing": "La ubicación elegida ya no existe.",
 	"asset_error_gone": "Este activo ya no existe.",
 
-	"model_inline_summary": "¿No está el modelo? Créalo aquí",
+	"model_add_link": "¿No encuentras el modelo? Añádelo",
+	"model_dialog_title": "Nuevo modelo",
 	"model_inline_needs_catalogue": "Para crear un modelo hacen falta antes un fabricante y una categoría.",
 	"model_form_name": "Nombre del modelo",
 	"model_form_manufacturer": "Fabricante",

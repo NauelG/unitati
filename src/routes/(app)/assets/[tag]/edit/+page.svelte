@@ -7,12 +7,15 @@
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import AssetFields from '../../AssetFields.svelte';
+	import CreateModelDialog from '../../CreateModelDialog.svelte';
 	import { options } from '../../options';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	const { form, errors, enhance, submitting } = superForm(untrack(() => data.form));
+
+	let modelOpen = $state(false);
 
 	const modelOptions = $derived(
 		options(data.models, (entry) => `${entry.manufacturerName} · ${entry.name}`)
@@ -29,7 +32,13 @@
 	</PageHeader>
 
 	<form method="POST" use:enhance class="mt-[var(--space-6)] space-y-[var(--space-5)]">
-		<AssetFields bind:values={$form} errors={$errors} {modelOptions} tagRequired />
+		<AssetFields
+			bind:values={$form}
+			errors={$errors}
+			{modelOptions}
+			tagRequired
+			onaddmodel={() => (modelOpen = true)}
+		/>
 
 		<div class="flex items-center gap-[var(--space-3)]">
 			<Button type="submit" size="lg" busy={$submitting}>
@@ -41,3 +50,16 @@
 		</div>
 	</form>
 </PageLayout>
+
+<CreateModelDialog
+	open={modelOpen}
+	onOpenChange={(next) => (modelOpen = next)}
+	action="?/createModel"
+	form={data.modelForm}
+	manufacturers={data.manufacturers}
+	categories={data.categories}
+	oncreated={(id) => {
+		$form.assetModelId = id;
+		modelOpen = false;
+	}}
+/>

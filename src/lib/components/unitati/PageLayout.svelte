@@ -23,8 +23,8 @@
 				/**
 				 * The same ceiling, plus a 340px side column above 1100px (falls
 				 * below `main` under it) for genuinely secondary content — a
-				 * record's own panels, or (ADR 0020) a create flow's own subflow,
-				 * like `/assets/new`'s model-creation helper. Not detail-only.
+				 * record's own panels. A create flow's own subflow is a `Dialog`
+				 * instead (ADR 0020), not a panel down here.
 				 */
 				record: {
 					root: [

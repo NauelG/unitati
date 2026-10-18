@@ -1,19 +1,16 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { message, setError, superValidate } from 'sveltekit-superforms';
+import { setError, superValidate } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { m } from '#lib/paraglide/messages.js';
 import {
-	createAssetModel,
 	listAssetModels,
-	listCategories,
-	listManufacturers,
 	registerAsset,
-	type AssetModelFailure,
 	type RegisterAssetFailure
 } from '#lib/server/assets/index.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
 import { listLocations } from '#lib/server/directory/index.js';
-import { localiseInvalid, modelForm, registerAssetForm } from '../forms';
+import { createModelAction, emptyModelForm, modelCatalogues } from '../create-model.server';
+import { localiseInvalid, registerAssetForm } from '../forms';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
@@ -32,23 +29,13 @@ const registerFailures: Record<
 	location_not_found: ['locationId', m.asset_error_location_missing]
 };
 
-const modelFailures: Record<
-	AssetModelFailure,
-	readonly ['name' | 'manufacturerId' | 'categoryId', () => string]
-> = {
-	duplicate_name: ['name', m.catalogue_error_duplicate],
-	manufacturer_not_found: ['manufacturerId', m.catalogue_error_manufacturer_missing],
-	category_not_found: ['categoryId', m.catalogue_error_category_missing]
-};
-
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = requirePermission(locals.user, 'assets.manage');
 
-	const [models, locations, manufacturers, categories] = await Promise.all([
+	const [models, locations, catalogues] = await Promise.all([
 		listAssetModels(user.organisationId),
 		listLocations(user.organisationId),
-		listManufacturers(user.organisationId),
-		listCategories(user.organisationId)
+		modelCatalogues(user)
 	]);
 
 	return {
@@ -61,11 +48,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 			id: 'asset',
 			errors: false
 		}),
-		modelForm: await superValidate(zod4(modelForm), { id: 'model' }),
+		modelForm: await emptyModelForm(),
 		models,
 		locations,
-		manufacturers,
-		categories
+		...catalogues
 	};
 };
 
@@ -87,21 +73,5 @@ export const actions: Actions = {
 		redirect(303, `/assets/${encodeURIComponent(outcome.value.assetTag)}`);
 	},
 
-	createModel: async (event) => {
-		const user = requirePermission(event.locals.user, 'assets.manage');
-
-		const form = await superValidate(event, zod4(modelForm), { id: 'model' });
-		if (!form.valid) return fail(400, { form: localiseInvalid(form) });
-
-		const outcome = await createAssetModel(user, form.data);
-
-		if (!outcome.ok) {
-			const [field, text] = modelFailures[outcome.error];
-			return setError(form, field, text(), { status: 400 });
-		}
-
-		// The id travels in the form's message so the register form can select the
-		// model that was just made, which is the whole point of creating it here.
-		return message(form, { createdModelId: outcome.value.id });
-	}
+	createModel: createModelAction
 };

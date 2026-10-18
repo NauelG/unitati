@@ -9,6 +9,7 @@ import {
 	type UpdateAssetFailure
 } from '#lib/server/assets/index.js';
 import { requirePermission, type SessionUser } from '#lib/server/auth/guards.js';
+import { createModelAction, emptyModelForm, modelCatalogues } from '../../create-model.server';
 import { editAssetForm, localiseInvalid } from '../../forms';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -48,7 +49,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			},
 			zod4(editAssetForm)
 		),
-		models: await listAssetModels(user.organisationId)
+		models: await listAssetModels(user.organisationId),
+		modelForm: await emptyModelForm(),
+		...(await modelCatalogues(user))
 	};
 };
 
@@ -76,5 +79,7 @@ export const actions: Actions = {
 
 		// The tag is the URL (ADR 0010): a rename moves the page.
 		redirect(303, `/assets/${encodeURIComponent(form.data.assetTag ?? asset.assetTag)}`);
-	}
+	},
+
+	createModel: createModelAction
 };
