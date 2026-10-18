@@ -487,12 +487,18 @@
 	"ticket_error_attachments_too_many": "Demasiados adjuntos: el máximo es 5.",
 	"ticket_error_attachments_too_large": "Un adjunto supera los 10 MB.",
 	"ticket_error_asset_not_found": "Uno de los equipos elegidos no está disponible. Revisa la selección e inténtalo de nuevo.",
-	"asset_picker_placeholder": "Busca por etiqueta o nombre",
-	"asset_picker_none": "No hay equipos que coincidan.",
-	"asset_picker_failed": "No se ha podido buscar. Inténtalo de nuevo.",
-	"asset_picker_remove": "Quitar {assetTag}",
-	"asset_picker_selected": "Equipos elegidos",
-	"asset_picker_count": "{count} equipos disponibles",
+	"asset_search_placeholder": "Busca por etiqueta o nombre",
+	"asset_search_none": "No hay equipos que coincidan.",
+	"asset_search_count": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} equipo disponible",
+				"countPlural=other": "{count} equipos disponibles"
+			}
+		}
+	],
 	"ticket_form_assets": "Equipos afectados",
 	"ticket_form_assets_hint": "Opcional. Elige uno o varios equipos sobre los que trata la solicitud.",
 	"ticket_error_duplicate_ticket_tag": "Ya existe una solicitud con ese código.",
@@ -720,6 +726,21 @@
 	"palette_action_go_tasks": "Ir a Tareas",
 	"tasks_empty_search_title": "Sin resultados",
 	"field_remove_item": "Quitar {item} de {label}",
+	"field_selected": "{label}: elegidos",
+	"field_selected_count": "{count} seleccionados",
+	"field_search_failed": "No se ha podido buscar. Inténtalo de nuevo.",
+	"field_search_none": "No hay resultados.",
+	"field_search_count": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} resultado",
+				"countPlural=other": "{count} resultados"
+			}
+		}
+	],
+	"field_clear": "Borrar {label}",
 	"settings_module_platform": "Plataforma",
 	"settings_section_branding": "Marca",
 	"branding_title": "Marca",

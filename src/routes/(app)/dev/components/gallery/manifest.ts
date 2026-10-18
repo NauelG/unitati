@@ -133,14 +133,6 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		sourceFile: 'SearchSelectField.svelte',
 		load: () => import('./specs/SearchSelectField.svelte')
 	},
-	{
-		id: 'asset-picker',
-		name: 'AssetPicker',
-		category: 'fields',
-		summary: 'Selector múltiple de activos con búsqueda en vivo.',
-		sourceFile: 'AssetPicker.svelte',
-		load: () => import('./specs/AssetPicker.svelte')
-	},
 
 	// Feedback
 	{

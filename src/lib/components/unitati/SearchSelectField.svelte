@@ -1,10 +1,11 @@
 <script lang="ts" module>
-	/** Same pause as `AssetPicker`: one request per typed word, not per keystroke. */
+	/** One request per typed word, not per keystroke. */
 	const SEARCH_DELAY_MS = 200;
 </script>
 
 <script lang="ts">
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
+	import { tick } from 'svelte';
 	import XIcon from '@lucide/svelte/icons/x';
 	import * as Command from '#lib/components/ui/command/index.js';
 	import * as Popover from '#lib/components/ui/popover/index.js';
@@ -50,8 +51,8 @@
 		labelHidden?: boolean;
 		/**
 		 * Several selections instead of one. The picked values live in `values`
-		 * (bindable) and post as repeated `name` fields, one hidden input each,
-		 * the way `AssetPicker` does. The popover stays open between picks so a
+		 * (bindable) and post as repeated `name` fields, one hidden input each.
+		 * The chosen items show as removable chips outside the trigger, and the popover stays open between picks so a
 		 * list of assignees is one gesture, not one per person. `value` is unused.
 		 */
 		multiple?: boolean;
@@ -76,6 +77,14 @@
 		 * without reaching into the component.
 		 */
 		pickedLabels?: Record<string, string>;
+		/** Replaces the "no results" sentence, e.g. when the results are a specific noun. */
+		noneText?: string;
+		/** Replaces the "search failed" sentence. */
+		failedText?: string;
+		/** Replaces what the live region announces as the results change. */
+		countText?: (count: number) => string;
+		/** Accessible name of the chip list when `multiple`. Defaults to `"{label}: elegidos"`. */
+		selectedListLabel?: string;
 		class?: string;
 	}
 
@@ -101,6 +110,10 @@
 		disabledValues = [],
 		disabledNote,
 		pickedLabels = $bindable({}),
+		noneText,
+		failedText,
+		countText,
+		selectedListLabel,
 		class: className
 	}: Props = $props();
 
@@ -148,7 +161,7 @@
 			: (localOptions ?? []).find((option) => option.value === value)
 	);
 
-	// Mirrors `AssetPicker`: asks the server once typing pauses, and a reply to a
+	// Asks the server once typing pauses, and a reply to a
 	// stale query can never land after a newer one.
 	$effect(() => {
 		if (!remote || !open) return;
@@ -196,10 +209,24 @@
 		}
 	}
 
-	function remove(event: MouseEvent, removed: string) {
-		event.stopPropagation();
+	let triggerEl = $state<HTMLElement | null>(null);
+	// Plain (non-reactive) map: only read when a chip is removed.
+	const chipButtons: Record<string, HTMLButtonElement | undefined> = {};
+
+	// The button that was pressed leaves the DOM, and focus would fall to the
+	// page. It goes to the next chip, else the previous one, else the trigger.
+	async function remove(removed: string) {
+		const index = chips.findIndex((chip) => chip.value === removed);
+		const rest = chips.filter((chip) => chip.value !== removed);
+		const next = rest[index] ?? rest[index - 1];
 		values = values.filter((v) => v !== removed);
+		await tick();
+		(next ? chipButtons[next.value] : triggerEl)?.focus();
 	}
+
+	const resultsAnnouncement = $derived(
+		countText ? countText(candidates.length) : m.field_search_count({ count: candidates.length })
+	);
 
 	function select(option: SelectOption) {
 		if (multiple) return toggle(option);
@@ -232,9 +259,35 @@
 		<input type="hidden" {name} value={value ?? ''} {required} />
 	{/if}
 
+	{#if multiple && chips.length > 0}
+		<ul
+			aria-label={selectedListLabel ?? m.field_selected({ label })}
+			class="flex flex-wrap gap-[var(--space-1)]"
+		>
+			{#each chips as chip (chip.value)}
+				<li
+					class="inline-flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--surface-2)] py-px pr-px pl-[var(--space-2)] text-xs leading-5"
+				>
+					{chip.label}
+					<button
+						type="button"
+						bind:this={chipButtons[chip.value]}
+						{disabled}
+						class="grid size-5 place-items-center rounded-[var(--radius-full)] hover:bg-[var(--border)]"
+						aria-label={m.field_remove_item({ item: chip.label, label })}
+						onclick={() => remove(chip.value)}
+					>
+						<XIcon class="size-3" aria-hidden="true" />
+					</button>
+				</li>
+			{/each}
+		</ul>
+	{/if}
+
 	<Popover.Root bind:open>
 		<Popover.Trigger
 			id={triggerId}
+			bind:ref={triggerEl}
 			type="button"
 			{disabled}
 			aria-invalid={error ? 'true' : undefined}
@@ -245,28 +298,8 @@
 			].join(' ')}
 		>
 			{#if multiple}
-				<span class="flex min-w-0 flex-wrap gap-[var(--space-1)]">
-					{#each chips as chip (chip.value)}
-						<span
-							class="inline-flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--surface-2)] px-[var(--space-2)] text-xs leading-5"
-						>
-							{chip.label}
-							<span
-								role="button"
-								tabindex="-1"
-								class="grid size-4 place-items-center rounded-[var(--radius-full)] hover:bg-[var(--border)]"
-								aria-label={m.field_remove_item({ item: chip.label, label })}
-								onclick={(event) => remove(event, chip.value)}
-								onkeydown={(event) => {
-									if (event.key === 'Enter') remove(event as unknown as MouseEvent, chip.value);
-								}}
-							>
-								<XIcon class="size-3" aria-hidden="true" />
-							</span>
-						</span>
-					{:else}
-						<span class="text-[var(--ink-muted)]">{placeholder ?? ''}</span>
-					{/each}
+				<span class={chips.length > 0 ? '' : 'text-[var(--ink-muted)]'}>
+					{chips.length > 0 ? m.field_selected_count({ count: chips.length }) : (placeholder ?? '')}
 				</span>
 			{:else}
 				<span class={selectedOption ? '' : 'text-[var(--ink-muted)]'}>
@@ -278,7 +311,7 @@
 					<button
 						type="button"
 						class="grid size-5 place-items-center rounded-[var(--radius-full)] hover:bg-[var(--surface-2)]"
-						aria-label={`${label}: clear`}
+						aria-label={m.field_clear({ label })}
 						onclick={clear}
 					>
 						<XIcon class="size-3.5" aria-hidden="true" />
@@ -290,15 +323,23 @@
 
 		<Popover.Content class="w-(--bits-popover-anchor-width) p-0">
 			<Command.Root shouldFilter={!remote}>
-				<Command.Input bind:value={query} placeholder={placeholder ?? ''} />
+				<Command.Input
+					bind:value={query}
+					placeholder={placeholder ?? ''}
+					onkeydown={(event) => {
+						// Enter inside a search box submits the surrounding form: not what was meant.
+						if (event.key === 'Enter') event.preventDefault();
+					}}
+				/>
+				<!-- Always in the DOM: a live region inserted together with its text is often not announced. -->
 				<p class="sr-only" role="status">
-					{open && !remoteFailed ? `${candidates.length}` : ''}
+					{open && !remoteFailed ? resultsAnnouncement : ''}
 				</p>
 				<Command.List>
 					{#if remote && remoteFailed}
-						<Command.Empty>Couldn't load results.</Command.Empty>
+						<Command.Empty>{failedText ?? m.field_search_failed()}</Command.Empty>
 					{:else}
-						<Command.Empty>No matches.</Command.Empty>
+						<Command.Empty>{noneText ?? m.field_search_none()}</Command.Empty>
 					{/if}
 					{#each candidates as option (option.value)}
 						<Command.Item

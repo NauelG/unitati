@@ -2,18 +2,18 @@
 	import FormError from '#lib/components/unitati/FormError.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import { enhance } from '$app/forms';
-	import AssetPicker from '#lib/components/unitati/AssetPicker.svelte';
-	import type { PickedAsset } from '#lib/components/unitati/asset-choice.js';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
+	import SearchSelectField from '#lib/components/unitati/SearchSelectField.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
 	let { form }: PageProps = $props();
 
-	let affected = $state<PickedAsset[]>([]);
+	let affected = $state<string[]>([]);
+	let affectedLabels = $state<Record<string, string>>({});
 	/** Success navigates away to the new ticket — no local value to flip, so `Button`'s `busy` prop is the whole feedback (#89). */
 	let busy = $state(false);
 
@@ -54,11 +54,17 @@
 			>
 		</label>
 
-		<AssetPicker
+		<SearchSelectField
 			label={m.ticket_form_assets()}
 			hint={m.ticket_form_assets_hint()}
+			name="assetIds"
+			multiple
 			searchUrl="/portal/tickets/new/assets"
-			bind:selected={affected}
+			placeholder={m.asset_search_placeholder()}
+			noneText={m.asset_search_none()}
+			countText={(count) => m.asset_search_count({ count })}
+			bind:values={affected}
+			bind:pickedLabels={affectedLabels}
 		/>
 
 		<label class="flex flex-col gap-[var(--space-1)]">

@@ -261,7 +261,7 @@
 				linkDescription={m.related_link_asset_lede()}
 				linkFieldLabel={m.related_link_asset_field()}
 				linkPlaceholder={m.related_link_asset_placeholder()}
-				linkSearchUrl="/service-desk/new/assets/options"
+				linkSearchUrl="/service-desk/new/assets"
 				linkSubmitLabel={(count) =>
 					count === 0
 						? m.related_link_asset_submit_none()

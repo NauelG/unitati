@@ -305,6 +305,11 @@ export async function listAssetChoices(
 		.limit(CHOICES);
 }
 
+/** An asset choice in the `{ value, label }` shape `SearchSelectField` reads: `AST-0142 · Nombre`. */
+export function toAssetOption(choice: AssetChoice): { value: string; label: string } {
+	return { value: choice.id, label: `${choice.assetTag} · ${choice.name}` };
+}
+
 /** Assets per location, direct only: a floor's count does not include its rooms'. */
 export async function countAssetsByLocation(organisationId: string): Promise<Map<string, number>> {
 	const rows = await getDb()

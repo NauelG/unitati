@@ -267,7 +267,7 @@
 		linkDescription: 'Elige los activos a los que afecta esta solicitud.',
 		linkFieldLabel: 'Activos',
 		linkPlaceholder: 'Busca por código o nombre',
-		linkSearchUrl: '/service-desk/new/assets/options',
+		linkSearchUrl: '/service-desk/new/assets',
 		linkSubmitLabel: (count: number) =>
 			count === 0 ? 'Vincular' : count === 1 ? 'Vincular 1 activo' : `Vincular ${count} activos`
 	};

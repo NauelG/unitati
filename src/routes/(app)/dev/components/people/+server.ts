@@ -5,7 +5,7 @@ import type { RequestHandler } from './$types';
 
 /**
  * The gallery's `SearchSelectField` needs a remote list to ask, the same way
- * `assets/+server.ts` feeds `AssetPicker`. Invented people, filtered server
+ * `assets/+server.ts` feeds the remote `multiple` example. Invented people, filtered server
  * side like a real scoped search endpoint would be. Gated like the gallery
  * page itself.
  */
