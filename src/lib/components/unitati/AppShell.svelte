@@ -54,7 +54,7 @@
 				'hover:bg-[var(--surface-1)] hover:text-[var(--ink)]'
 			],
 			topbar:
-				'flex h-14 shrink-0 items-center gap-[var(--space-3)] border-b border-[var(--border)] bg-[var(--surface-0)] px-[var(--space-6)] pt-[env(safe-area-inset-top)]',
+				'flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center gap-[var(--space-3)] border-b border-[var(--border)] bg-[var(--surface-0)] px-[var(--space-6)] pt-[env(safe-area-inset-top)]',
 			main: 'ut-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain p-[var(--space-6)] pb-[max(var(--space-6),env(safe-area-inset-bottom))]'
 		},
 		variants: {

@@ -79,8 +79,8 @@
 			</p>
 			<p class="mb-2 text-[13px] leading-[18px] text-[var(--ink-muted)]">
 				Cada caja fija su propio ancho solo para simular el viewport de la especimen — nunca el
-				ancho de la página real, que PageLayout decide él mismo. A 375px, record pone la columna
-				lateral primero (max-[1099px]:order-first).
+				ancho de la página real, que PageLayout decide él mismo. Por debajo de 1100px, record deja
+				la columna lateral debajo de la principal.
 			</p>
 			<!-- layout-ok: anchos fijos de la especimen de viewport, no contenedores de página -->
 			<div class="flex gap-[var(--space-4)] overflow-x-auto pb-2">

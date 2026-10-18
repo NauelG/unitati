@@ -105,6 +105,6 @@
 
 {#if resolved}
 	<span class={badge({ tone: resolved.tone, pulsing, class: className })} title={label}
-		>{label ?? resolved.label}</span
+		><span class="min-w-0 truncate">{label ?? resolved.label}</span></span
 	>
 {/if}

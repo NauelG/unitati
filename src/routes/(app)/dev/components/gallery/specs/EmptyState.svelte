@@ -23,7 +23,7 @@
 		{
 			name: 'icon',
 			type: 'LucideIcon',
-			description: 'Se muestra dentro de un disco --brand-soft. Omítelo para solo texto.'
+			description: 'Se muestra dentro de un disco neutro (--surface-2). Omítelo para solo texto.'
 		},
 		{
 			name: 'title',

@@ -94,8 +94,6 @@
 			href: assetHref(entry.payload.assetTag)
 		};
 	}
-
-	// Per render, never at module scope: the locale is a per-request preference.
 </script>
 
 {#if items.length === 0}

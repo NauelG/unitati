@@ -119,12 +119,6 @@
 	// Only the dot changes colour with the domain.
 	const assetDot = $derived(timeline({ domain }).dot());
 	const ticketDot = timeline({ domain: 'ticket' }).dot();
-
-	/**
-	 * Built per render rather than at module scope: the locale is a user
-	 * preference read from a cookie, so freezing it at import time would pin
-	 * every later request to whichever language the first one had.
-	 */
 </script>
 
 {#if items.length === 0}
