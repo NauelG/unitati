@@ -216,6 +216,21 @@ describe('opening a ticket about assets', () => {
 		});
 	});
 
+	it('opens the thread with the request, then the opening message, then the asset links', async () => {
+		const { w, mine, printer } = await withAssets();
+		const outcome = await createTicket(w.technician, input(w, [mine.id, printer.id]), [], w.deps);
+		if (!outcome.ok) throw new Error(outcome.error);
+
+		const thread = await ticketThread(w.technician, outcome.value.ticketTag);
+		const firstThree = thread.ok
+			? thread.value
+					.slice(0, 3)
+					.map((item) => (item.kind === 'comment' ? 'comment' : item.entry.verb))
+			: [];
+
+		expect(firstThree).toEqual(['ticket.created', 'comment', 'link.asset.added']);
+	});
+
 	it('keeps the link event out of the requester’s thread, which is staff business', async () => {
 		const { w, mine } = await withAssets();
 		const outcome = await createTicket(w.employee, input(w, [mine.id]), [], w.deps);
