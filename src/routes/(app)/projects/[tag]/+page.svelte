@@ -133,7 +133,7 @@
 {#snippet failure(action: string)}
 	{@const message = failureFor(action)}
 	{#if message}
-		<p class="text-[13px] leading-[18px] text-[var(--danger)]" role="alert">{message}</p>
+		<p class="text-small text-[var(--danger)]" role="alert">{message}</p>
 	{/if}
 {/snippet}
 

@@ -156,7 +156,7 @@
 		</div>
 	{/snippet}
 	{#snippet notes()}
-		<p class="text-sm leading-[22px] text-[var(--ink)]">
+		<p class="text-sm text-[var(--ink)]">
 			El diálogo es un <code>fixed</code> centrado con <code>max-w-[420px]</code>, por lo que a
 			375px de ancho queda con margen a los lados (<code>w-[calc(100%-2*var(--space-4))]</code>) en
 			vez de recortarse. El foco entra en Cancelar al abrir (no en el contenedor, que es el valor

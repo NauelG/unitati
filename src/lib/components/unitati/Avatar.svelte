@@ -1,5 +1,6 @@
 <script lang="ts" module>
-	import { tv, type VariantProps } from 'tailwind-variants';
+	import type { VariantProps } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The `.ut-avatar` and `.ut-person` families.
@@ -17,11 +18,11 @@
 				'bg-[var(--surface-2)] font-semibold leading-none text-[var(--ink)]'
 			],
 			name: 'font-medium text-[var(--ink)]',
-			meta: 'text-[13px] leading-[18px] text-[var(--ink-muted)]'
+			meta: 'text-small text-[var(--ink-muted)]'
 		},
 		variants: {
 			size: {
-				sm: { disc: 'size-[22px] text-[10px]' },
+				sm: { disc: 'size-[22px] text-caption' },
 				md: { disc: 'size-[28px] text-xs' },
 				lg: { disc: 'size-[40px] text-sm' }
 			}

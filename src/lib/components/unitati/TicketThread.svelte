@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The `.ut-thread` family: replies, internal notes and system events in one
@@ -36,14 +36,14 @@
 			head: 'flex flex-wrap items-center gap-x-[var(--space-2)] gap-y-1 text-sm',
 			author: 'font-medium text-[var(--ink)]',
 			time: 'text-xs leading-4 text-[var(--ink-muted)] [font-variant-numeric:tabular-nums]',
-			body: 'mt-[var(--space-1)] text-[15px] leading-[22px] whitespace-pre-wrap text-[var(--ink)]',
+			body: 'mt-[var(--space-1)] text-body-lg whitespace-pre-wrap text-[var(--ink)]',
 			files: 'mt-[var(--space-2)] m-0 flex list-none flex-wrap gap-[var(--space-2)] p-0',
 			file: [
 				'inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-md)]',
 				'border border-[var(--border)] bg-[var(--surface-1)] px-[var(--space-2)] py-1',
 				'text-xs text-[var(--ink)] hover:bg-[var(--surface-2)]'
 			],
-			event: 'ml-10 text-[13px] leading-[18px] text-[var(--ink-muted)]',
+			event: 'ml-10 text-small text-[var(--ink-muted)]',
 			empty: 'text-sm text-[var(--ink-muted)]'
 		},
 		variants: {

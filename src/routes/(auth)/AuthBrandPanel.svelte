@@ -29,7 +29,7 @@
 
 	<!-- layout-ok: a reading measure for the tagline, not a page container -->
 	<div class="relative max-w-sm">
-		<p class="font-display text-3xl leading-tight font-semibold text-[var(--ink)]">
+		<p class="font-display text-display text-[var(--ink)]">
 			{m.login_lede()}
 		</p>
 

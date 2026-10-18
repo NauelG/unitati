@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The `.ut-panel` family (ADR 0019): a bounded, white secondary/contained
@@ -17,7 +17,7 @@
 		slots: {
 			root: 'rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-1)]',
 			head: 'flex items-center justify-between gap-[var(--space-3)] border-b border-[var(--border)] px-[var(--space-4)] py-[var(--space-3)]',
-			title: 'text-[15px] leading-[22px] font-semibold text-[var(--ink)]',
+			title: 'text-title-3 text-[var(--ink)]',
 			actions: 'flex items-center gap-[var(--space-2)]',
 			body: 'p-[var(--space-4)]'
 		}

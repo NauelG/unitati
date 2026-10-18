@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The contextual-edit shape (issue #100, ADR 0020): editing a record
@@ -27,8 +27,8 @@
 				'bg-[var(--surface-1)] p-0 sm:w-[85%] sm:max-w-[760px]'
 			],
 			header: 'shrink-0 border-b border-[var(--border)] px-[var(--space-5)] py-[var(--space-4)]',
-			title: 'text-base font-semibold text-[var(--ink)]',
-			description: 'mt-[var(--space-1)] text-sm leading-[22px] text-[var(--ink-muted)]',
+			title: 'text-title-3 text-[var(--ink)]',
+			description: 'mt-[var(--space-1)] text-sm text-[var(--ink-muted)]',
 			// `.ut-scrollbar` (ADR 0015 addendum, #96): the app's own thin,
 			// native scrollbar styling, the same one `AppShell`'s `main` and
 			// nav regions use — never a JS overlay scrollbar.

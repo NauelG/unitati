@@ -274,7 +274,7 @@
 				<input type="hidden" name="serviceAccountId" value={creatingFor.id} />
 			{/if}
 			<label class="flex flex-col gap-[var(--space-1)]">
-				<span class="text-[13px] leading-4 font-medium text-[var(--ink)]">{m.api_keys_name()}</span>
+				<span class="text-label text-[var(--ink)]">{m.api_keys_name()}</span>
 				<input
 					name="name"
 					bind:value={draftName}
@@ -284,7 +284,7 @@
 					aria-invalid={createFailure?.field === 'name' || undefined}
 				/>
 				{#if createFailure?.field === 'name'}
-					<span class="text-[13px] leading-[18px] text-[var(--danger)]" role="alert">
+					<span class="text-small text-[var(--danger)]" role="alert">
 						{createFailure.message}
 					</span>
 				{/if}
@@ -300,10 +300,10 @@
 			/>
 
 			<fieldset class="space-y-[var(--space-3)]">
-				<legend class="text-[13px] leading-4 font-medium text-[var(--ink)]">
+				<legend class="text-label text-[var(--ink)]">
 					{m.api_keys_scopes_legend()}
 				</legend>
-				<p class="text-[13px] leading-[18px] text-[var(--ink-muted)]">
+				<p class="text-small text-[var(--ink-muted)]">
 					{creatingFor ? m.service_accounts_scopes_hint() : m.api_keys_scopes_hint()}
 				</p>
 				{#each groups as group (group.label)}
@@ -327,7 +327,7 @@
 					</div>
 				{/each}
 				{#if createFailure?.field === 'scopes'}
-					<p class="text-[13px] leading-[18px] text-[var(--danger)]" role="alert">
+					<p class="text-small text-[var(--danger)]" role="alert">
 						{createFailure.message}
 					</p>
 				{/if}
@@ -479,7 +479,7 @@
 				class="space-y-[var(--space-4)]"
 			>
 				<label class="flex flex-col gap-[var(--space-1)]">
-					<span class="text-[13px] leading-4 font-medium text-[var(--ink)]">
+					<span class="text-label text-[var(--ink)]">
 						{m.api_keys_name()}
 					</span>
 					<input
@@ -491,7 +491,7 @@
 						aria-invalid={accountFailure?.field === 'name' || undefined}
 					/>
 					{#if accountFailure?.field === 'name'}
-						<span class="text-[13px] leading-[18px] text-[var(--danger)]" role="alert">
+						<span class="text-small text-[var(--danger)]" role="alert">
 							{accountFailure.message}
 						</span>
 					{/if}

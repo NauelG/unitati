@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The page header every list, record and form page shares (ADR 0018): an
@@ -13,11 +13,22 @@
 		slots: {
 			root: 'flex flex-wrap items-start justify-between gap-[var(--space-4)]',
 			heading: 'min-w-0',
-			code: 'font-mono text-xs font-medium text-[var(--ink-muted)]',
-			title: 'font-display text-2xl font-semibold text-balance break-words text-[var(--ink)]',
+			code: 'font-mono text-record-id text-[var(--ink-muted)]',
+			title: 'font-display text-balance break-words text-[var(--ink)]',
 			summary: 'mt-2 text-pretty text-[var(--ink-muted)]',
 			actions: 'flex flex-wrap items-center gap-[var(--space-2)]'
-		}
+		},
+		variants: {
+			/**
+			 * `tokens.json` reserves `title-1` for module index pages and `title-2`
+			 * for the title of a record in its detail view.
+			 */
+			level: {
+				index: { title: 'text-title-1' },
+				record: { title: 'text-title-2' }
+			}
+		},
+		defaultVariants: { level: 'index' }
 	});
 </script>
 
@@ -39,12 +50,22 @@
 		summary?: Snippet;
 		/** Right-aligned. */
 		actions?: Snippet;
+		/** `index` (default) titles a module's list page; `record` titles one record in its detail view. */
+		level?: 'index' | 'record';
 		class?: string;
 	}
 
-	let { title, code, codeViewTransitionName, summary, actions, class: className }: Props = $props();
+	let {
+		title,
+		code,
+		codeViewTransitionName,
+		summary,
+		actions,
+		level = 'index',
+		class: className
+	}: Props = $props();
 
-	const styles = pageHeader();
+	const styles = $derived(pageHeader({ level }));
 </script>
 
 <header class={styles.root({ class: className })}>

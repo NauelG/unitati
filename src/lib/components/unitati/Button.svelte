@@ -1,5 +1,6 @@
 <script lang="ts" module>
-	import { tv, type VariantProps } from 'tailwind-variants';
+	import type { VariantProps } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The `.ut-btn` family from the design system. Radius grammar (ADR 0019):
@@ -36,7 +37,7 @@
 			},
 			size: {
 				sm: 'h-[var(--size-control-sm)] px-[var(--space-3)] text-xs leading-4',
-				md: 'h-[var(--size-control-md)] px-[var(--space-4)] text-[13px] leading-4',
+				md: 'h-[var(--size-control-md)] px-[var(--space-4)] text-label',
 				lg: 'h-[var(--size-control-lg)] px-[var(--space-5)] text-sm leading-4'
 			},
 			/** Square, for a button whose whole label is an icon. */

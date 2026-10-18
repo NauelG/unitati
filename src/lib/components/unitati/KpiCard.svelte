@@ -1,5 +1,6 @@
 <script lang="ts" module>
-	import { tv, type VariantProps } from 'tailwind-variants';
+	import type { VariantProps } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The `.ut-kpi` family (#84, built on #97's surfaces): a single count, read

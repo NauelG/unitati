@@ -86,11 +86,11 @@
 				>
 					<div class="min-h-0 flex-1 space-y-3 overflow-y-auto">
 						<label class="flex flex-col gap-1">
-							<span class="text-[13px] font-medium text-[var(--ink)]">Nombre</span>
+							<span class="text-label text-[var(--ink)]">Nombre</span>
 							<input class={input} value="HP EliteBook 840" />
 						</label>
 						<label class="flex flex-col gap-1">
-							<span class="text-[13px] font-medium text-[var(--ink)]">Nº de serie</span>
+							<span class="text-label text-[var(--ink)]">Nº de serie</span>
 							<input class={input} value="5CG1234ABC" />
 						</label>
 					</div>
@@ -119,7 +119,7 @@
 				<form class="flex h-full min-h-0 flex-col">
 					<div class="min-h-0 flex-1 space-y-3 overflow-y-auto">
 						<label class="flex flex-col gap-1">
-							<span class="text-[13px] font-medium text-[var(--ink)]">Nombre</span>
+							<span class="text-label text-[var(--ink)]">Nombre</span>
 							<input class={input} disabled value="Guardando…" />
 						</label>
 					</div>
@@ -132,7 +132,7 @@
 		</div>
 	{/snippet}
 	{#snippet notes()}
-		<p class="text-sm leading-[22px] text-[var(--ink)]">
+		<p class="text-sm text-[var(--ink)]">
 			<code>/assets/[tag]</code> conecta esto con un `ConfirmDialog` de "¿descartar cambios?" cuando
 			`superForm`'s <code>tainted</code> store marca algún campo sucio en el momento de cerrar — Escape,
 			overlay y el botón Cancelar pasan todos por la misma comprobación en vez de cada uno repetirla.

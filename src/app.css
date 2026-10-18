@@ -288,6 +288,54 @@
 	--radius-md: var(--radius-md);
 	--radius-lg: var(--radius-lg);
 	--radius-xl: var(--radius-xl);
+
+	/*
+	 * Type roles: the groups of `docs/design/assets/tokens.json`
+	 * `type.groups`, each one a single `text-<role>` utility that sets size,
+	 * line-height, tracking and weight together (`body-strong` is `text-body
+	 * font-medium`). The family stays separate: `font-display`, `font-sans`,
+	 * `font-mono`. A size never appears as an arbitrary value in `unitati/` or
+	 * `routes/`; if a role is missing, add it here and to `tokens.json` in the
+	 * same PR (enforced by `type-roles.guard.spec.ts`).
+	 */
+	--text-display: 36px;
+	--text-display--line-height: 42px;
+	--text-display--letter-spacing: -0.02em;
+	--text-display--font-weight: 700;
+	--text-title-1: 24px;
+	--text-title-1--line-height: 30px;
+	--text-title-1--letter-spacing: -0.02em;
+	--text-title-1--font-weight: 600;
+	--text-title-2: 18px;
+	--text-title-2--line-height: 26px;
+	--text-title-2--letter-spacing: -0.01em;
+	--text-title-2--font-weight: 600;
+	--text-title-3: 16px;
+	--text-title-3--line-height: 22px;
+	--text-title-3--font-weight: 600;
+	--text-body-lg: 16px;
+	--text-body-lg--line-height: 24px;
+	--text-body-lg--font-weight: 400;
+	--text-body: 14px;
+	--text-body--line-height: 20px;
+	--text-body--font-weight: 400;
+	--text-label: 13px;
+	--text-label--line-height: 16px;
+	--text-label--font-weight: 500;
+	--text-small: 13px;
+	--text-small--line-height: 18px;
+	--text-small--font-weight: 400;
+	--text-caption: 12px;
+	--text-caption--line-height: 16px;
+	--text-caption--letter-spacing: 0.04em;
+	--text-caption--font-weight: 600;
+	--text-record-id: 12px;
+	--text-record-id--line-height: 18px;
+	--text-record-id--letter-spacing: -0.01em;
+	--text-record-id--font-weight: 500;
+	--text-mono: 11px;
+	--text-mono--line-height: 16px;
+	--text-mono--font-weight: 400;
 }
 
 /*
@@ -395,7 +443,7 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brandbar {
 /*
  * The micro-feedback pairing (#87): `--motion-fast` + `--ease-out`, read by
  * every hover/press/toggle transition in the app (Button, Field, Pager,
- * AppShell's nav/collapse button, DataTable's sort button, AssetsNav's
+ * AppShell's nav/collapse button, DataTable's sort button, SettingsNav's
  * tabs, both app/portal sign-out links) instead of each one spelling out
  * `duration-[var(--motion-fast)] ease-[var(--ease-out)]` by hand. Still pairs
  * with `transition-colors`/`transition-[...]` for *which* properties move —

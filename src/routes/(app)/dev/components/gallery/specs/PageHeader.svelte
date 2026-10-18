@@ -17,7 +17,13 @@
 		{ name: 'title', type: 'string', description: 'El título de la página, en Unbounded.' },
 		{ name: 'code', type: 'string', description: 'Código mono opcional sobre el título.' },
 		{ name: 'summary', type: 'Snippet', description: 'Una línea, en ink-muted, bajo el título.' },
-		{ name: 'actions', type: 'Snippet', description: 'Alineadas a la derecha.' }
+		{ name: 'actions', type: 'Snippet', description: 'Alineadas a la derecha.' },
+		{
+			name: 'level',
+			type: "'index' | 'record'",
+			description:
+				"'index' (por defecto) es el título de una página de módulo (title-1, 24/30); 'record' es el título de un registro en su detalle (title-2, 18/26)."
+		}
 	]}
 	usage={`<PageHeader title="Activos" code="AST-0231">
   {#snippet summary()}Una línea, en ink-muted, bajo el título.{/snippet}
@@ -41,6 +47,12 @@
 				Solo título (sin código, sin resumen, sin acciones)
 			</p>
 			<PageHeader title="Directorio" />
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				level="record" (title-2, 18/26)
+			</p>
+			<PageHeader title="MacBook Pro 14" code="AST-0231" level="record" />
 		</div>
 	{/snippet}
 </ComponentDocPage>

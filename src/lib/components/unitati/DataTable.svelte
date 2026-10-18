@@ -1,6 +1,6 @@
 <script lang="ts" module>
 	import type { Snippet } from 'svelte';
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	export interface DataTableColumn<Row> {
 		/** Identifies the column for sorting; not a property path. */
@@ -36,7 +36,7 @@
 			table: 'w-full border-separate border-spacing-0 text-sm',
 			head: [
 				'sticky top-0 z-10 h-8 px-[var(--space-3)] py-0 text-left align-middle',
-				'text-xs leading-4 font-semibold tracking-[0.04em] text-[var(--ink-muted)]',
+				'text-caption text-[var(--ink-muted)]',
 				'bg-[var(--surface-2)] border-b border-[var(--border)]'
 			],
 			// `py-0` undoes the vendored cell's `p-2`, whose vertical padding would
@@ -75,7 +75,7 @@
 			 */
 			emphasis: {
 				code: {
-					cell: 'font-mono text-xs leading-[18px] font-medium tracking-[-0.01em] [font-variant-numeric:tabular-nums] text-[var(--ink)]'
+					cell: 'font-mono text-record-id [font-variant-numeric:tabular-nums] text-[var(--ink)]'
 				},
 				title: { cell: 'font-medium text-[var(--ink)]' },
 				muted: { cell: 'text-[var(--ink-muted)]' }

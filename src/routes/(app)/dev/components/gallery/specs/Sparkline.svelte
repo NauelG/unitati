@@ -66,7 +66,7 @@
 >
 	{#snippet demo()}
 		<div class="flex flex-col gap-[var(--space-3)]">
-			<p class="text-[13px] text-[var(--ink-muted)]">En su sitio real, el pie de un KpiCard:</p>
+			<p class="text-small text-[var(--ink-muted)]">En su sitio real, el pie de un KpiCard:</p>
 			<div class="grid grid-cols-2 gap-[var(--space-3)] sm:grid-cols-4">
 				<KpiCard label="Solicitudes abiertas" value={29} href="#sparkline">
 					{#snippet sparkline()}
@@ -93,7 +93,7 @@
 		</div>
 
 		<div class="flex flex-col gap-[var(--space-3)]">
-			<p class="text-[13px] text-[var(--ink-muted)]">Los cuatro casos, aislados:</p>
+			<p class="text-small text-[var(--ink-muted)]">Los cuatro casos, aislados:</p>
 			<div
 				class="grid gap-[var(--space-4)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-4)] sm:grid-cols-4"
 			>
@@ -122,7 +122,7 @@
 	{/snippet}
 
 	{#snippet notes()}
-		<div class="flex flex-col gap-[var(--space-3)] text-sm leading-[22px] text-[var(--ink)]">
+		<div class="flex flex-col gap-[var(--space-3)] text-sm text-[var(--ink)]">
 			<p>
 				<strong
 					>La regla dura de la fase 9: todo gráfico se entrega con estado vacío o no se entrega.</strong

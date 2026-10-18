@@ -1,5 +1,6 @@
 <script lang="ts" module>
-	import { tv, type VariantProps } from 'tailwind-variants';
+	import type { VariantProps } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * A day-by-day trend line, sized for the footer of a `KpiCard` (#90). No
@@ -16,7 +17,7 @@
 			root: 'relative w-full',
 			empty: 'absolute inset-0 flex flex-col justify-end gap-[var(--space-1)]',
 			baseline: 'h-px w-full bg-[var(--border)]',
-			emptyLabel: 'text-[11px] leading-3 text-[var(--ink-muted)]'
+			emptyLabel: 'text-caption font-normal text-[var(--ink-muted)]'
 		},
 		variants: {
 			tone: {

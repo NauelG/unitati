@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The side panel on a detail view that lists the records linked to this one,
@@ -23,7 +23,7 @@
 			item: 'flex flex-wrap items-center gap-[var(--space-2)]',
 			meta: 'flex basis-full flex-wrap items-center gap-x-[var(--space-2)] text-xs text-[var(--ink-muted)]',
 			empty: 'mt-[var(--space-2)] text-sm text-[var(--ink-muted)]',
-			error: 'mt-[var(--space-2)] text-[13px] leading-[18px] text-[var(--danger)]'
+			error: 'mt-[var(--space-2)] text-small text-[var(--danger)]'
 		}
 	});
 </script>
@@ -288,7 +288,7 @@
 					<li class={styles.item()}>
 						{#if item.ref.href === null}
 							<!-- The requester's reduced view (ADR 0007): the code and the state, nowhere to go. -->
-							<span class="inline-flex min-w-0 items-center gap-[var(--space-1)] text-[13px]">
+							<span class="inline-flex min-w-0 items-center gap-[var(--space-1)] text-small">
 								<span class="shrink-0 font-mono text-xs font-semibold">{item.ref.tag}</span>
 								<span class="min-w-0 truncate text-[var(--ink)]">{item.ref.title}</span>
 							</span>

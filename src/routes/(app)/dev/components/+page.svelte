@@ -35,7 +35,7 @@
 							class="block rounded-[var(--radius-md)] border border-[var(--border)] p-[var(--space-3)] hover:bg-[var(--surface-2)]"
 						>
 							<p class="font-mono text-xs font-semibold text-[var(--ink)]">{entry.name}</p>
-							<p class="mt-1 text-[13px] leading-[18px] text-[var(--ink-muted)]">
+							<p class="mt-1 text-small text-[var(--ink-muted)]">
 								{entry.summary}
 							</p>
 						</a>

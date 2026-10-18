@@ -67,7 +67,7 @@
 	</PageHeader>
 
 	<WorkPanel heading="Qué es">
-		<div class="flex flex-col gap-[var(--space-3)] text-sm leading-[22px] text-[var(--ink)]">
+		<div class="flex flex-col gap-[var(--space-3)] text-sm text-[var(--ink)]">
 			<p>{role}</p>
 			<div class="grid gap-[var(--space-4)] sm:grid-cols-2">
 				<div>
@@ -95,7 +95,7 @@
 					</ul>
 				</div>
 			</div>
-			<p class="text-[13px] text-[var(--ink-muted)]">
+			<p class="text-small text-[var(--ink-muted)]">
 				Referencia:
 				<a
 					href={referenceHref}
@@ -111,7 +111,7 @@
 		{#snippet actions()}
 			<button
 				type="button"
-				class="ut-transition-fast flex items-center gap-[var(--space-2)] rounded-[var(--radius-md)] border border-[var(--border-strong)] px-[var(--space-3)] py-1 text-[13px] text-[var(--ink)] transition-colors hover:bg-[var(--surface-2)]"
+				class="ut-transition-fast flex items-center gap-[var(--space-2)] rounded-[var(--radius-md)] border border-[var(--border-strong)] px-[var(--space-3)] py-1 text-small text-[var(--ink)] transition-colors hover:bg-[var(--surface-2)]"
 				onclick={() => (darkPreview = !darkPreview)}
 				aria-pressed={darkPreview}
 			>
@@ -178,7 +178,7 @@
 
 	<WorkPanel heading="Uso">
 		<pre
-			class="overflow-x-auto rounded-[var(--radius-md)] bg-[var(--surface-2)] p-[var(--space-3)] text-xs leading-[18px]"><code
+			class="overflow-x-auto rounded-[var(--radius-md)] bg-[var(--surface-2)] p-[var(--space-3)] text-xs"><code
 				>{usage}</code
 			></pre>
 	</WorkPanel>

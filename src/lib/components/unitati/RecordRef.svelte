@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	import FolderKanban from '@lucide/svelte/icons/folder-kanban';
 	import Laptop from '@lucide/svelte/icons/laptop';
@@ -26,7 +26,7 @@
 		slots: {
 			root: [
 				'inline-flex max-w-full min-w-0 items-center gap-[var(--space-1)] align-middle',
-				'rounded-[var(--radius-sm)] px-[var(--space-2)] py-[2px] text-[13px] leading-5',
+				'rounded-[var(--radius-sm)] px-[var(--space-2)] py-[2px] text-small',
 				'hover:underline focus-visible:outline-2 focus-visible:outline-offset-2'
 			],
 			icon: 'size-3.5 shrink-0',

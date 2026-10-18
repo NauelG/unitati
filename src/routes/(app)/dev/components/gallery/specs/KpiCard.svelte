@@ -65,7 +65,7 @@
 		</div>
 
 		<div class="flex flex-col gap-[var(--space-3)]">
-			<p class="text-[13px] text-[var(--ink-muted)]">
+			<p class="text-small text-[var(--ink-muted)]">
 				Con destino y sin destino. Pasa el ratón por encima de las dos: solo la primera se eleva.
 			</p>
 			<div class="grid grid-cols-2 gap-[var(--space-3)] sm:grid-cols-4">
@@ -75,7 +75,7 @@
 		</div>
 	{/snippet}
 	{#snippet notes()}
-		<div class="flex flex-col gap-[var(--space-3)] text-sm leading-[22px] text-[var(--ink)]">
+		<div class="flex flex-col gap-[var(--space-3)] text-sm text-[var(--ink)]">
 			<p>
 				La primera tarjeta muestra el caso vacío: "0" es un valor legítimo, no un hueco en blanco.
 				Un <code>tone</code> solo aparece cuando el número en sí espera algo o va mal — una tarjeta de

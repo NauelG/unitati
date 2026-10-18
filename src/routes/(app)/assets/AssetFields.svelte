@@ -82,10 +82,10 @@
 			bind:checked={values.shared}
 		/>
 		<span>
-			<span class="block text-[13px] leading-4 font-medium text-[var(--ink)]">
+			<span class="block text-label text-[var(--ink)]">
 				{m.asset_form_shared()}
 			</span>
-			<span class="block text-[13px] leading-[18px] text-[var(--ink-muted)]">
+			<span class="block text-small text-[var(--ink-muted)]">
 				{m.asset_form_shared_hint()}
 			</span>
 		</span>

@@ -1,5 +1,6 @@
 <script lang="ts" module>
-	import { tv, type VariantProps } from 'tailwind-variants';
+	import type { VariantProps } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The brand, as `docs/design/assets/brand` draws it. Height is the variant and width follows

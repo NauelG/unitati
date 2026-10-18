@@ -133,7 +133,7 @@
 			<EmptyState description={m.locations_empty()} />
 		{:else}
 			<table class="w-full text-left text-sm">
-				<thead class="border-b border-[var(--border)] text-[13px] text-[var(--ink-muted)]">
+				<thead class="border-b border-[var(--border)] text-small text-[var(--ink-muted)]">
 					<tr>
 						<th scope="col" class="p-[var(--space-3)] font-medium">{m.locations_column_name()}</th>
 						<th scope="col" class="p-[var(--space-3)] font-medium">{m.locations_column_code()}</th>
@@ -308,12 +308,12 @@
 					error={errors.longitude}
 				/>
 			</div>
-			<p class="text-[13px] leading-[18px] text-[var(--ink-muted)]">
+			<p class="text-small text-[var(--ink-muted)]">
 				{m.locations_field_coordinates_hint()}
 			</p>
 
 			{#if sheetFailure?.message}
-				<p class="text-[13px] leading-[18px] text-[var(--danger)]" role="alert">
+				<p class="text-small text-[var(--danger)]" role="alert">
 					{sheetFailure.message}
 				</p>
 			{/if}

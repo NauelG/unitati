@@ -41,23 +41,21 @@
 				style:background="var(--surface-0)"
 			>
 				<p class="text-xs font-semibold text-[var(--ink)]">surface-0 · lienzo</p>
-				<p class="mt-1 text-[13px] text-[var(--ink-muted)]">Fondo del shell de la app.</p>
+				<p class="mt-1 text-small text-[var(--ink-muted)]">Fondo del shell de la app.</p>
 			</div>
 			<div
 				class="rounded-[var(--radius-md)] border border-[var(--border)] p-[var(--space-4)]"
 				style:background="var(--surface-1)"
 			>
 				<p class="text-xs font-semibold text-[var(--ink)]">surface-1 · panel</p>
-				<p class="mt-1 text-[13px] text-[var(--ink-muted)]">
-					Área de trabajo primaria y WorkPanel.
-				</p>
+				<p class="mt-1 text-small text-[var(--ink-muted)]">Área de trabajo primaria y WorkPanel.</p>
 			</div>
 			<div
 				class="rounded-[var(--radius-md)] border border-[var(--border)] p-[var(--space-4)]"
 				style:background="var(--surface-2)"
 			>
 				<p class="text-xs font-semibold text-[var(--ink)]">surface-2 · secundaria</p>
-				<p class="mt-1 text-[13px] text-[var(--ink-muted)]">
+				<p class="mt-1 text-small text-[var(--ink-muted)]">
 					Cabecera de tabla, fila activa del sidebar.
 				</p>
 			</div>
@@ -132,7 +130,13 @@
 									{style.sample}
 								</p>
 								<p class="mt-1 text-xs text-[var(--ink-muted)]">
-									<span class="font-mono">{style.name}</span> · {style.fontSize}/{style.lineHeight} ·
+									<span class="font-mono"
+										>{style.name === 'body-strong'
+											? 'text-body font-medium'
+											: `text-${style.name}`}</span
+									>
+									· {style.fontSize}/{style.lineHeight}
+									·
 									{style.usage}
 								</p>
 							</div>
@@ -144,7 +148,7 @@
 				<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
 					body-lg con texto largo (especimen de bajo contraste de datos)
 				</p>
-				<p class="max-w-2xl text-[16px] leading-[24px] text-[var(--ink)]">
+				<p class="max-w-2xl text-body-lg text-[var(--ink)]">
 					<!-- layout-ok: medida de prosa, no un contenedor de página -->
 					{longReport}
 				</p>

@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { tv } from 'tailwind-variants';
+	import { tv } from '#lib/tv.js';
 
 	/**
 	 * The `.ut-composer`: a box at the end of the thread with the textarea above
@@ -11,7 +11,7 @@
 			root: 'rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--surface-1)]',
 			textarea: [
 				'block min-h-[76px] w-full resize-y rounded-t-[var(--radius-lg)] border-0 bg-transparent',
-				'p-[var(--space-3)] text-[15px] leading-[22px] text-[var(--ink)]',
+				'p-[var(--space-3)] text-body-lg text-[var(--ink)]',
 				'placeholder:text-[var(--ink-muted)]'
 			],
 			bar: 'flex flex-wrap items-center gap-[var(--space-2)] border-t border-[var(--border)] p-[var(--space-2)]',
@@ -20,8 +20,7 @@
 				'text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-2)]'
 			],
 			attach: 'text-xs text-[var(--ink-muted)]',
-			error:
-				'px-[var(--space-3)] pb-[var(--space-2)] text-[13px] leading-[18px] text-[var(--danger)]'
+			error: 'px-[var(--space-3)] pb-[var(--space-2)] text-small text-[var(--danger)]'
 		},
 		variants: {
 			internal: {
@@ -143,7 +142,9 @@
 
 		<Button type="submit" size="sm" class="ml-auto">
 			{internal ? m.composer_send_internal() : m.composer_send()}
-			<span class="text-[11px] opacity-80" aria-hidden="true">{m.composer_shortcut()}</span>
+			<span class="text-caption font-normal opacity-80" aria-hidden="true"
+				>{m.composer_shortcut()}</span
+			>
 		</Button>
 	</div>
 </form>
