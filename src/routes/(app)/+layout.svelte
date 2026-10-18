@@ -18,6 +18,7 @@
 		AppShellNavLink
 	} from '#lib/components/unitati/app-shell-nav.js';
 	import EnvironmentBadge from '#lib/components/unitati/EnvironmentBadge.svelte';
+	import Tooltip from '#lib/components/unitati/Tooltip.svelte';
 	import ThemeToggle from '#lib/components/unitati/ThemeToggle.svelte';
 	import { Toaster } from '#lib/components/ui/sonner/index.js';
 	import {
@@ -139,16 +140,22 @@
 
 {#snippet settingsLink({ rail }: { rail: boolean })}
 	{@const active = isPathActive('/settings', page.url.pathname)}
-	<a
-		href="/settings"
-		aria-current={active ? 'page' : undefined}
-		class={appShell({ rail, active }).navItem()}
-		title={rail ? m.nav_settings() : undefined}
-		aria-label={rail ? m.nav_settings() : undefined}
-	>
-		<SettingsIcon class={appShell().navIcon()} aria-hidden="true" />
-		<span class={appShell().navLabel()}>{m.nav_settings()}</span>
-	</a>
+	<Tooltip content={m.nav_settings()} disabled={!rail}>
+		{#snippet child({ props })}
+			<a
+				{...props}
+				href="/settings"
+				aria-current={active ? 'page' : undefined}
+				class={appShell({ rail, active }).navItem()}
+				aria-label={rail ? m.nav_settings() : undefined}
+			>
+				<span class={appShell().navIconBox()}>
+					<SettingsIcon class={appShell().navIcon()} aria-hidden="true" />
+				</span>
+				<span class={appShell().navLabel()}>{m.nav_settings()}</span>
+			</a>
+		{/snippet}
+	</Tooltip>
 {/snippet}
 
 <AppShell

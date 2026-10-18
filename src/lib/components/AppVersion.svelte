@@ -24,25 +24,28 @@
 		 * footers where the inline form does not fit.
 		 */
 		layout?: 'inline' | 'stacked';
+		/** `inherit` takes the size of the container (the sidebar footer's 11px); `default` is `text-xs`. */
+		size?: 'default' | 'inherit';
 	}
 
-	let { class: className = '', layout = 'inline' }: Props = $props();
+	let { class: className = '', layout = 'inline', size: sizeProp = 'default' }: Props = $props();
 
+	const size = $derived(sizeProp === 'inherit' ? '' : 'text-xs');
 	const customised = $derived(currentBrand().customised);
 	const attribution = $derived(m.powered_by({ product: UPSTREAM_PRODUCT_NAME }));
 </script>
 
 {#if !customised}
-	<span class="font-mono text-xs text-[var(--ink-muted)] {className}" title="Unitati version"
+	<span class="font-mono {size} text-[var(--ink-muted)] {className}" title="Unitati version"
 		>v{APP_VERSION}</span
 	>
 {:else if layout === 'stacked'}
-	<span class="flex flex-col text-xs text-[var(--ink-muted)] {className}" title="Unitati version">
+	<span class="flex flex-col {size} text-[var(--ink-muted)] {className}" title="Unitati version">
 		<span data-line class="font-sans">{attribution}</span>
 		<span data-line class="font-mono">v{APP_VERSION}</span>
 	</span>
 {:else}
-	<span class="text-xs text-[var(--ink-muted)] {className}" title="Unitati version"
+	<span class="{size} text-[var(--ink-muted)] {className}" title="Unitati version"
 		><span class="font-sans">{attribution}</span> ·
 		<span class="font-mono">v{APP_VERSION}</span></span
 	>

@@ -153,6 +153,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/Dialog.svelte')
 	},
 	{
+		id: 'tooltip',
+		name: 'Tooltip',
+		category: 'feedback',
+		summary: 'Etiqueta flotante para controles de solo icono, en hover y foco.',
+		sourceFile: 'Tooltip.svelte',
+		load: () => import('./specs/Tooltip.svelte')
+	},
+	{
 		id: 'close-button',
 		name: 'CloseButton',
 		category: 'feedback',

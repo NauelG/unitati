@@ -129,7 +129,7 @@
 		{
 			name: 'settings',
 			type: 'Snippet',
-			description: 'Reservado para una futura pantalla de ajustes.'
+			description: 'La fila de Configuración, encima del botón de colapsar y de la versión.'
 		},
 		{
 			name: 'topbarEnd',
@@ -152,8 +152,10 @@
 				Viewport alto, para ver que el scroll queda en main — y colapsada
 			</p>
 			<p class="mb-2 text-small text-[var(--ink-muted)]">
-				Pulsa el botón de colapsar en la barra de marca, arriba a la izquierda, para ver el estado
-				colapsado. No hay una especimen "colapsada" separada a propósito:
+				Pulsa el botón de colapsar en el pie del sidebar, sobre la versión, para ver el estado
+				colapsado (los iconos llevan tooltip; los módulos con color, un punto arriba a la derecha;
+				los grupos, un chevron abajo a la derecha). No hay una especimen "colapsada" separada a
+				propósito:
 				<code class="font-mono">collapsed</code> no es una prop de este componente, es el atributo
 				global <code class="font-mono">data-sidebar-collapsed</code> en
 				<code class="font-mono">&lt;html&gt;</code> (ADR 0015) — colapsar aquí también colapsa la barra
@@ -227,9 +229,9 @@
 		</div>
 		<div>
 			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
-				Raíl con popover — colapsa el sidebar con el botón de la barra de marca: el icono del grupo
-				abre un popover con sus hijos (Enter/Espacio abre, flechas se mueven, Escape cierra y
-				devuelve el foco al icono)
+				Raíl con popover — colapsa el sidebar con el botón del pie: el icono del grupo abre un
+				popover con sus hijos (Enter/Espacio abre, flechas se mueven, Escape cierra y devuelve el
+				foco al icono)
 			</p>
 			<div
 				class="h-[320px] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)]"
