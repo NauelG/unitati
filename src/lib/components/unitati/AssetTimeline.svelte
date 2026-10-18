@@ -95,6 +95,7 @@
 		'person.created': UserPlus,
 		'person.deactivated': UserRoundX,
 		'person.department.changed': ArrowRightLeft,
+		'person.location.changed': MapPin,
 		'catalogue.location.created': MapPinPlus,
 		'catalogue.location.updated': MapPinPen,
 		'catalogue.location.deleted': MapPinMinus

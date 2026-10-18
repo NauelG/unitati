@@ -166,6 +166,16 @@ export function activitySentence(entry: ActivityEntry): string {
 				to: entry.payload.toDepartmentName ?? m.activity_department_none()
 			});
 
+		case 'person.location.changed':
+			return entry.payload.reason === 'location_deleted'
+				? m.activity_person_location_cleared_by_delete({
+						location: entry.payload.from?.path ?? m.directory_no_location()
+					})
+				: m.activity_person_location_changed({
+						from: entry.payload.from?.path ?? m.directory_no_location(),
+						to: entry.payload.to?.path ?? m.directory_no_location()
+					});
+
 		case 'catalogue.location.created':
 			return m.activity_location_created({ path: entry.payload.path });
 

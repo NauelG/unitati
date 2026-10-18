@@ -321,4 +321,20 @@ describe('activitySentence for locations', () => {
 			})
 		).toBe('Editó la ubicación Floor 3: código, coordenadas');
 	});
+
+	it('renders a person location change with a word for the missing end', () => {
+		const ref = { id: LOCATION, path: 'Barcelona office › Floor 1' };
+		expect(
+			activitySentence({
+				verb: 'person.location.changed',
+				payload: { from: null, to: ref, reason: 'edited' }
+			})
+		).toBe('Cambió la ubicación de Sin ubicación a Barcelona office › Floor 1');
+		expect(
+			activitySentence({
+				verb: 'person.location.changed',
+				payload: { from: ref, to: null, reason: 'location_deleted' }
+			})
+		).toBe('Perdió la ubicación Barcelona office › Floor 1 al eliminarse');
+	});
 });

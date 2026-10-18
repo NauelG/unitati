@@ -221,6 +221,11 @@ export const PAYLOAD_SCHEMAS = {
 		toDepartmentId: z.uuid().nullable(),
 		toDepartmentName: presentName.nullable()
 	}),
+	'person.location.changed': z.object({
+		from: locationRef.nullable(),
+		to: locationRef.nullable(),
+		reason: z.enum(['edited', 'location_deleted'])
+	}),
 
 	// Locations are the one catalogue with history (#177): moving one changes what
 	// every asset in it "is at". The location target has no foreign key, so these
