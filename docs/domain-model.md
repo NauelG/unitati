@@ -10,11 +10,12 @@ Draft. Names here become folder names in `src/lib/server/<domain>/` (see [ADR 00
 | `assets`       | `Asset`, `AssetModel`, `Category`, `Manufacturer`, `Custody`; later `Kit`, `License`             |
 | `service-desk` | `Ticket`, `Queue`, `Comment` (public / internal); later `CannedResponse`, `Sla`                  |
 | `projects`     | `Project`, `Task`, `State` + `StateGroup`; later `Milestone`                                     |
+| `knowledge`    | `Space`, `Page`, `PageRevision`                                                                  |
 | `links`        | the pairwise join tables and the uniform read facade over them                                   |
 | `api`          | `ApiKey`, `ServiceAccount`; the `/api/v1` endpoint registry                                      |
 | cross-cutting  | `ActivityLog`, `Attachment`, global search                                                       |
 
-`directory` is the only domain everyone depends on. The other three domains do not import each other's tables; they relate through `links`.
+`directory` is the only domain everyone depends on. The other domains do not import each other's tables; they relate through `links`.
 
 The **brand** is how an organisation presents the product: its product name, colour and logos ([ADR 0026](adr/0026-per-organisation-branding.md)). A brand is **customised** when it differs from Unitati's default; from then on Unitati's own art never shows, and a text wordmark and a monogram stand in until logos are uploaded. A **brand asset** is one processed image in a slot: the admin uploads the `lockup`, `lockup_dark` and `mark`; the `favicon` and `apple_touch` icons are **derived** from the mark and never uploaded. Only the processed output is stored. **Powered by** is the fixed attribution to Unitati shown beside a customised brand; it cannot be turned off.
 
@@ -27,6 +28,10 @@ A person's location is where they usually work: one per person, any node of the 
 `State` carries a user-chosen name and a system-owned `StateGroup` (`backlog`, `unstarted`, `started`, `completed`, `cancelled`). That split is how a catalogue stays configurable while the structure does not — the shape Plane uses. The group is fixed when a state is created and never changes; code depends on the group, never on the name. A `Task` sits in exactly one `State`, and its board column is ordered by a fractional `position`.
 
 A project is **archived** rather than deleted, and an archived project (with its tasks) is read-only. A task has **assignees** — any number of people — and a project has at most one owner.
+
+The knowledge base is the one place the organisation writes documentation (#17, which absorbed #49). A **space** is a top-level container of pages, and the boundary of who may read them: its **audience** is `staff` (technicians and admins) or `portal` (employees too), and every page in it shares that audience; a page has no audience of its own. A space also carries a name, a description, an icon and a colour, each picked from a fixed set. Admins maintain spaces as a catalogue and may change a space's audience; a space with pages is archived, never deleted. Moving a page to another space moves its subtree, and when the audiences differ that move changes who can read every page in it. A **page** is one node of a space's tree: a page may hold prose, child pages, or both, and its siblings are ordered by hand through a fractional `position`. _Avoid_: article, doc, wiki page, note. A page is identified by its **code** (`DOC-0012`), generated and, unlike other record codes, never editable, because pages link to one another by it. Titles need not be unique, not even among siblings. A page is a **draft**, **published** or **archived**; it is never deleted, archiving a page archives its subtree, and a published page cannot sit under a draft. Draft is only the state of a page that has never been published: every staff member sees drafts, employees never do, and saving a published page publishes the change at once. Every save appends a **page revision**, an immutable copy of the content; restoring one appends a new revision, and a save based on a revision that is no longer the latest is refused rather than overwriting someone else's edit. Only technicians and admins write pages.
+
+A ticket **cites** a page when a reply links it or a technician adds it to the ticket. A public reply cites only published pages of `portal` spaces; an internal note, any published page its author can read. Removing the link from the text keeps the citation. A requester whose cited page is no longer readable to them sees its code and nothing else, not even the title.
 
 A **service account** is an organisation-owned API principal with the technician or employee role and no `Person` ([ADR 0022](adr/0022-api-layer-and-api-keys.md)). It is disabled, never deleted, because the `ActivityLog` entries it wrote name it as their actor (a row has a person, a service account, or neither for the system, never both).
 
@@ -69,12 +74,14 @@ erDiagram
 One join table per pair, each with real foreign keys, all owned by `links`
 ([ADR 0005](adr/0005-single-suite-and-relations.md)):
 
-| Table            | Relation                    | Panel label   | Meaning                                              | Tier    |
-| ---------------- | --------------------------- | ------------- | ---------------------------------------------------- | ------- |
-| `ticket_asset`   | ticket `affects` asset      | _Affects_     | The ticket is about this device                      | MVP     |
-| `ticket_task`    | ticket `resolved-by` task   | _Resolved in_ | A task carries the work that resolves the ticket     | MVP     |
-| `ticket_project` | ticket `handled-in` project | _Handled in_  | The ticket is attended within this programme of work | MVP     |
-| `project_asset`  | project `targets` asset     | _Targets_     | The asset is in the project's scope                  | post-v1 |
+| Table            | Relation                    | Panel label     | Meaning                                              | Tier    |
+| ---------------- | --------------------------- | --------------- | ---------------------------------------------------- | ------- |
+| `ticket_asset`   | ticket `affects` asset      | _Affects_       | The ticket is about this device                      | MVP     |
+| `ticket_task`    | ticket `resolved-by` task   | _Resolved in_   | A task carries the work that resolves the ticket     | MVP     |
+| `ticket_project` | ticket `handled-in` project | _Handled in_    | The ticket is attended within this programme of work | MVP     |
+| `project_asset`  | project `targets` asset     | _Targets_       | The asset is in the project's scope                  | post-v1 |
+| `ticket_page`    | ticket `cites` page         | _Documentation_ | A reply pointed at the page; it may not resolve it   | v1      |
+| `project_page`   | page `documents` project    | _Documentation_ | The page is part of the project's documentation      | v1      |
 
 Each row also carries `createdBy` and `createdAt`, so a relation can be attributed like any
 other record. Every one of these tables carries a **composite unique constraint on its pair**:

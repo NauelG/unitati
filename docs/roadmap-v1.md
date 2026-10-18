@@ -81,10 +81,14 @@ Day-to-day breaks without these, but no MVP relation needs them.
 | SLAs per queue and priority  | Without targets a service desk cannot be run          | Zammad               |
 | Canned responses             | Same answer typed fifty times                         | Zammad, OpenSupports |
 | Tags                         | Cross-cutting classification the queue cannot express | Zammad, OpenSupports |
-| Knowledge base               | Deflects the repeat question                          | Zammad, OpenSupports |
+| Knowledge base               | Deflects the repeat question; holds all documentation | Zammad, OpenSupports |
 | Inbound email to ticket      | Users write email whether we support it or not        | Zammad, OpenSupports |
 | Mail templates and signature | Outbound mail must look like the organisation         | OpenSupports, Zammad |
 | Ticket merge and split       | Duplicates arrive daily                               | Zammad               |
+
+The knowledge base is its own domain, `knowledge`, and absorbed "wiki and project pages": one
+place to write documentation, so that it is trusted
+([ADR 0031](adr/0031-knowledge-base-spaces-page-tree-and-revisions.md)).
 
 ### Assets
 
@@ -135,7 +139,6 @@ Legitimate, unscheduled, with the reason they wait.
 | Gantt and timeline                  | Kanban plus milestones covers the MVP team size                                                                                                                                    |
 | Estimates and story points          | Agile ceremony, not IT operations                                                                                                                                                  |
 | Cycles and sprints                  | Same                                                                                                                                                                               |
-| Wiki and project pages              | The knowledge base already covers the documentation need                                                                                                                           |
 | Project → asset batches             | Needs assets and projects mature; the third relation, after the two that define the product                                                                                        |
 | MCP server for AI assistants        | Requires a stable API first                                                                                                                                                        |
 | Satisfaction surveys                | Needs ticket volume to mean anything                                                                                                                                               |
