@@ -136,6 +136,17 @@ export const PAYLOAD_SCHEMAS = {
 		toQueueName: presentName
 	}),
 
+	'ticket.subject.changed': z.object({
+		from: presentName,
+		to: presentName
+	}),
+
+	// Only the fact of the edit: the previous text is deliberately not stored (#222).
+	'comment.edited': z.object({
+		commentId: z.uuid(),
+		visibility: z.enum(['public', 'internal'])
+	}),
+
 	// Both hang off the **ticket**, never the asset (#9): the thread answers
 	// "when was this attached?", a past event, while the asset's timeline reads
 	// the live relation. Writing it on both would show the ticket twice, once stale.

@@ -22,6 +22,7 @@ import {
 	attachmentProblem,
 	createTicketInput,
 	RESERVED_TICKET_TAGS,
+	subjectInput,
 	type CreateTicketInput,
 	type UploadedFile
 } from './validation';
@@ -567,6 +568,40 @@ export async function changeTicketStatus(
 	}
 
 	return success(undefined);
+}
+
+/** Rewrites the subject. The permission check stays in the route. */
+export async function changeTicketSubject(
+	actor: SessionUser,
+	ticketId: string,
+	subject: string
+): Promise<Outcome<void, 'not_found'>> {
+	const { subject: next } = subjectInput.parse({ subject });
+
+	return getDb().transaction(async (tx) => {
+		const [ticket] = await tx
+			.select({ id: tickets.id, subject: tickets.subject })
+			.from(tickets)
+			.where(and(eq(tickets.organisationId, actor.organisationId), eq(tickets.id, ticketId)))
+			.limit(1);
+		if (!ticket) return failure('not_found');
+		if (ticket.subject === next) return success(undefined);
+
+		await tx
+			.update(tickets)
+			.set({ subject: next, updatedAt: new Date() })
+			.where(eq(tickets.id, ticket.id));
+
+		await recordActivity(tx, {
+			organisationId: actor.organisationId,
+			...actorColumns(actor),
+			target: { ticketId: ticket.id },
+			verb: 'ticket.subject.changed',
+			payload: { from: ticket.subject, to: next }
+		});
+
+		return success(undefined);
+	});
 }
 
 export async function setTicketPriority(

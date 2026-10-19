@@ -13,6 +13,7 @@
 	import MapPinPlus from '@lucide/svelte/icons/map-pin-plus';
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import MessageSquare from '@lucide/svelte/icons/message-square';
+	import Pencil from '@lucide/svelte/icons/pencil';
 	import PackagePlus from '@lucide/svelte/icons/package-plus';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 	import Ticket from '@lucide/svelte/icons/ticket';
@@ -76,6 +77,8 @@
 		'ticket.unassigned': UserMinus,
 		'ticket.priority.changed': Flag,
 		'ticket.queue.changed': Inbox,
+		'ticket.subject.changed': Pencil,
+		'comment.edited': Pencil,
 		'link.asset.added': Link,
 		'link.asset.removed': Unlink,
 		'link.task.added': Link,

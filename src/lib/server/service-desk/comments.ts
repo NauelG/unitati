@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, type SQL } from 'drizzle-orm';
-import { listActivity, type TimelineEntry } from '../activity';
+import { actorColumns, listActivity, recordActivity, type TimelineEntry } from '../activity';
+import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { people } from '../directory/schema';
@@ -13,6 +14,7 @@ import { resolveDeps, storeFiles, type Deps } from './tickets';
 import {
 	addCommentInput,
 	attachmentProblem,
+	editCommentInput,
 	MAX_COMMENT_LENGTH,
 	type AddCommentInput,
 	type UploadedFile
@@ -45,6 +47,10 @@ export type ThreadItem =
 			bodyHtml: string;
 			visibility: 'public' | 'internal';
 			createdAt: Date;
+			/** Null when never edited (#222). */
+			editedAt: Date | null;
+			/** Whether the viewer may edit it: computed here, so the template only reads a flag. */
+			canEdit: boolean;
 			attachments: ThreadAttachment[];
 	  }
 	| { kind: 'event'; at: Date; entry: TimelineEntry };
@@ -54,6 +60,22 @@ const EVENTS_FOR_REQUESTERS: ReadonlySet<TimelineEntry['verb']> = new Set([
 	'ticket.created',
 	'ticket.status.changed'
 ]);
+
+/** The marker on the comment already says it was edited, so the event would say it twice. */
+const EVENTS_NOT_LISTED: ReadonlySet<TimelineEntry['verb']> = new Set(['comment.edited']);
+
+/**
+ * Who may edit a comment: its author, or a technician for the ticket's opening
+ * message (the requester's description). Everyone who can edit it can read it.
+ */
+function mayEditComment(
+	viewer: SessionUser,
+	comment: { authorPersonId: string | null },
+	isFirst: boolean
+): boolean {
+	if (viewer.personId !== null && comment.authorPersonId === viewer.personId) return true;
+	return isFirst && can(viewer, 'tickets.manage');
+}
 
 /** Oldest first: a conversation reads top to bottom. */
 export async function ticketThread(
@@ -75,7 +97,8 @@ export async function ticketThread(
 			authorName: people.fullName,
 			body: ticketComments.body,
 			visibility: ticketComments.visibility,
-			createdAt: ticketComments.createdAt
+			createdAt: ticketComments.createdAt,
+			editedAt: ticketComments.editedAt
 		})
 		.from(ticketComments)
 		.leftJoin(people, eq(ticketComments.authorPersonId, people.id))
@@ -108,12 +131,19 @@ export async function ticketThread(
 
 	const events = (
 		await listActivity({ organisationId: viewer.organisationId, target: { ticketId: ticket.id } })
-	).filter((entry) => staff || EVENTS_FOR_REQUESTERS.has(entry.verb));
+	).filter(
+		(entry) =>
+			!EVENTS_NOT_LISTED.has(entry.verb) && (staff || EVENTS_FOR_REQUESTERS.has(entry.verb))
+	);
 
 	const items: ThreadItem[] = [
-		...rows.map((row): ThreadItem => ({
+		// The opening message is the first comment *including* internal ones the
+		// viewer cannot see, but an internal note is never first, so the visible
+		// list's first row is the same row.
+		...rows.map((row, index): ThreadItem => ({
 			kind: 'comment',
 			...row,
+			canEdit: mayEditComment(viewer, row, index === 0),
 			bodyHtml: renderMarkdown(row.body),
 			attachments: files.filter((file) => file.commentId === row.id)
 		})),
@@ -221,6 +251,75 @@ export async function addComment(
 	}
 
 	return success({ commentId });
+}
+
+export type EditCommentFailure = 'not_found' | 'forbidden' | 'body_too_long';
+
+/**
+ * Edits the text of a comment (#222). The comment is found through the
+ * actor's ticket scope, so one they cannot see is `not_found`, never
+ * `forbidden`, which would confirm it exists. Attachments are untouched, and no
+ * mail goes out. An unchanged body records nothing, and the ticket's
+ * `updated_at` stays put: the list's "recently updated" order is for new
+ * activity, not typo fixes.
+ */
+export async function editComment(
+	actor: SessionUser,
+	commentId: string,
+	body: string
+): Promise<Outcome<void, EditCommentFailure>> {
+	if (body.trim().length > MAX_COMMENT_LENGTH) return failure('body_too_long');
+	const values = editCommentInput.parse({ body });
+
+	return getDb().transaction(async (tx) => {
+		const [comment] = await tx
+			.select({
+				id: ticketComments.id,
+				ticketId: ticketComments.ticketId,
+				authorPersonId: ticketComments.authorPersonId,
+				body: ticketComments.body,
+				visibility: ticketComments.visibility,
+				createdAt: ticketComments.createdAt
+			})
+			.from(ticketComments)
+			.innerJoin(tickets, eq(ticketComments.ticketId, tickets.id))
+			.where(
+				and(
+					eq(ticketComments.id, commentId),
+					eq(ticketComments.organisationId, actor.organisationId),
+					requireTicketScope(actor),
+					seesInternal(actor) ? undefined : eq(ticketComments.visibility, 'public')
+				)
+			)
+			.limit(1);
+		if (!comment) return failure('not_found');
+
+		const [first] = await tx
+			.select({ id: ticketComments.id })
+			.from(ticketComments)
+			.where(eq(ticketComments.ticketId, comment.ticketId))
+			.orderBy(asc(ticketComments.createdAt), asc(ticketComments.id))
+			.limit(1);
+
+		if (!mayEditComment(actor, comment, first?.id === comment.id)) return failure('forbidden');
+		if (comment.body === values.body) return success(undefined);
+
+		const now = new Date();
+		await tx
+			.update(ticketComments)
+			.set({ body: values.body, editedAt: now, updatedAt: now })
+			.where(eq(ticketComments.id, comment.id));
+
+		await recordActivity(tx, {
+			organisationId: actor.organisationId,
+			...actorColumns(actor),
+			target: { ticketId: comment.ticketId },
+			verb: 'comment.edited',
+			payload: { commentId: comment.id, visibility: comment.visibility }
+		});
+
+		return success(undefined);
+	});
 }
 
 /**

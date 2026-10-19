@@ -300,6 +300,8 @@
 			bodyHtml: '<p>El equipo no enciende desde esta mañana, ya lo he cargado toda la noche.</p>',
 			visibility: 'public',
 			createdAt: new Date('2026-03-01T09:05:00Z'),
+			editedAt: null,
+			canEdit: false,
 			attachments: []
 		},
 		{
@@ -311,6 +313,8 @@
 			bodyHtml: '<p>Nota interna: comprobar garantía antes de ofrecer sustitución.</p>',
 			visibility: 'internal',
 			createdAt: new Date('2026-03-01T10:00:00Z'),
+			editedAt: null,
+			canEdit: false,
 			attachments: []
 		}
 	];

@@ -23,12 +23,16 @@ import {
 	addCommentInput,
 	assignTicket,
 	changeTicketStatus,
+	changeTicketSubject,
+	editComment,
+	editCommentInput,
 	getTicketByTag,
 	listQueues,
 	moveTicketToQueue,
 	nextStatuses,
 	readTicketForm,
 	setTicketPriority,
+	subjectInput,
 	ticketThread,
 	type ThreadItem
 } from '#lib/server/service-desk/index.js';
@@ -153,6 +157,47 @@ export const actions: Actions = {
 			return rejected('reply', failureMessage(outcome.error));
 		}
 		return { action: 'reply' as const };
+	},
+
+	editComment: async ({ locals, request, params }) => {
+		const user = requirePermission(locals.user, 'tickets.view');
+		const fields = await fieldsOf(request);
+
+		const parsed = z.object({ commentId: z.uuid(), body: z.string() }).safeParse(fields);
+		const input = parsed.success ? editCommentInput.safeParse({ body: parsed.data.body }) : null;
+		if (!parsed.success || !input?.success) {
+			const tooLong =
+				input && !input.success && input.error.issues.some((i) => i.code === 'too_big');
+			return rejected(
+				'editComment',
+				tooLong ? failureMessage('body_too_long') : m.ticket_error_invalid()
+			);
+		}
+
+		// The comment must belong to the ticket in the URL, or the page it was posted from lies.
+		const found = await getTicketByTag(user, params.tag);
+		if (!found.ok) error(404, 'Not found');
+
+		const outcome = await editComment(user, parsed.data.commentId, input.data.body);
+		if (!outcome.ok) {
+			if (outcome.error === 'not_found') error(404, 'Not found');
+			if (outcome.error === 'forbidden') error(403, 'Forbidden');
+			return rejected('editComment', failureMessage(outcome.error));
+		}
+		return { action: 'editComment' as const };
+	},
+
+	subject: async ({ locals, request, params }) => {
+		const user = requirePermission(locals.user, 'tickets.manage');
+		const parsed = subjectInput.safeParse(await fieldsOf(request));
+		if (!parsed.success) return rejected('subject', m.ticket_error_invalid_subject());
+
+		const found = await getTicketByTag(user, params.tag);
+		if (!found.ok) error(404, 'Not found');
+
+		const outcome = await changeTicketSubject(user, found.value.id, parsed.data.subject);
+		if (!outcome.ok) error(404, 'Not found');
+		return { action: 'subject' as const };
 	},
 
 	status: async ({ locals, request, params }) => {
