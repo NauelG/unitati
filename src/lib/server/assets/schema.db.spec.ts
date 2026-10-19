@@ -91,9 +91,9 @@ describe('assets.asset_tag', () => {
 	/**
 	 * Asserted as a step rather than as `AST-0001`, deliberately.
 	 * `asset_code_seq` is a standalone sequence, not one owned by an identity
-	 * column, so the harness's `TRUNCATE ... RESTART IDENTITY` does **not** reset
-	 * it — the absolute value depends on how many tests ran first, and asserting
-	 * it would make this spec fail on its position in a shuffled run.
+	 * column, so the harness never resets it (ADR 0032): the absolute value
+	 * depends on how many tests ran first, and asserting it would make this spec
+	 * fail on its position in a shuffled run.
 	 */
 	it('takes the next number from the sequence for each asset', async () => {
 		const organisation = await createOrganisation();
