@@ -21,6 +21,7 @@
 	import UserCheck from '@lucide/svelte/icons/user-check';
 	import UserPlus from '@lucide/svelte/icons/user-plus';
 	import UserRoundX from '@lucide/svelte/icons/user-round-x';
+	import UserRoundCheck from '@lucide/svelte/icons/user-round-check';
 	import UserMinus from '@lucide/svelte/icons/user-minus';
 	import { tv } from '#lib/tv.js';
 	import type { ActivityVerb } from '#lib/server/activity/index.js';
@@ -94,6 +95,7 @@
 		'task.project.changed': ArrowRightLeft,
 		'person.created': UserPlus,
 		'person.deactivated': UserRoundX,
+		'person.reactivated': UserRoundCheck,
 		'person.department.changed': ArrowRightLeft,
 		'person.location.changed': MapPin,
 		'catalogue.location.created': MapPinPlus,

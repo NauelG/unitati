@@ -35,8 +35,15 @@ export type {
 } from './departments';
 export { setPersonLocation } from './person-location';
 export type { SetPersonLocationFailure } from './person-location';
-export { departmentInput, locationInput } from './validation';
-export type { DepartmentInput, LocationInput } from './validation';
+export { createPerson, deactivatePerson, reactivatePerson, updatePerson } from './people';
+export type {
+	PersonCreateFailure,
+	PersonDeactivateFailure,
+	PersonReactivateFailure,
+	PersonUpdateFailure
+} from './people';
+export { departmentInput, locationInput, personInput, personUpdateInput } from './validation';
+export type { DepartmentInput, LocationInput, PersonInput, PersonUpdateInput } from './validation';
 export type { Organisation, Person, Department, Location, Team } from './schema';
 export {
 	getBrand,
@@ -86,7 +93,10 @@ export interface DirectoryEntry {
 	id: string;
 	fullName: string;
 	email: string;
+	departmentId: string | null;
 	departmentName: string | null;
+	/** True when a credential belongs to this person (`user_id IS NOT NULL`). */
+	hasAccess: boolean;
 	role: string | null;
 	active: boolean;
 	locationId: string | null;
@@ -94,13 +104,24 @@ export interface DirectoryEntry {
 	locationPath: string | null;
 }
 
-export async function listPeople(organisationId: string): Promise<DirectoryEntry[]> {
+/**
+ * The organisation's people by name. Active people only unless asked otherwise:
+ * most callers feed a picker, and a deactivated person is not offered for new
+ * assignments. Whoever resolves a name that is already stored passes
+ * `includeInactive`.
+ */
+export async function listPeople(
+	organisationId: string,
+	options: { includeInactive?: boolean } = {}
+): Promise<DirectoryEntry[]> {
 	const rows = await getDb()
 		.select({
 			id: people.id,
 			fullName: people.fullName,
 			email: people.email,
+			departmentId: people.departmentId,
 			departmentName: departments.name,
+			hasAccess: sql<boolean>`${people.userId} is not null`,
 			role: users.role,
 			active: people.active,
 			locationId: people.locationId
@@ -108,7 +129,12 @@ export async function listPeople(organisationId: string): Promise<DirectoryEntry
 		.from(people)
 		.leftJoin(departments, eq(people.departmentId, departments.id))
 		.leftJoin(users, eq(people.userId, users.id))
-		.where(eq(people.organisationId, organisationId))
+		.where(
+			and(
+				eq(people.organisationId, organisationId),
+				options.includeInactive ? undefined : eq(people.active, true)
+			)
+		)
 		.orderBy(asc(people.fullName));
 
 	const paths = await locationPaths(

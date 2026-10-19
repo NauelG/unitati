@@ -49,7 +49,12 @@ export type {
 /** Tickets opened per day, for the KPI sparkline (#90). */
 export { ticketOpeningsSparkline } from './sparkline';
 
-export { ticketSummaries, isRequester, assignedOpenTickets } from './summaries';
+export {
+	ticketSummaries,
+	isRequester,
+	assignedOpenTickets,
+	countOpenTicketsAssignedTo
+} from './summaries';
 export type { TicketRow, AssignedOpenTicket } from './summaries';
 
 /** Outbound mail, for the domains that react to events with a message (ADR 0024). */

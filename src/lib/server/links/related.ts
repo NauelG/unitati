@@ -393,7 +393,7 @@ async function ticketItems(viewer: SessionUser, links: TicketLink[]): Promise<Re
 			viewer,
 			links.map((link) => link.ticketId)
 		),
-		listPeople(viewer.organisationId)
+		listPeople(viewer.organisationId, { includeInactive: true })
 	]);
 	const byId = new Map(summaries.map((ticket) => [ticket.id, ticket]));
 	const names = new Map(directory.map((person) => [person.id, person.fullName]));

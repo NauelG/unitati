@@ -5,6 +5,19 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.78.0] - 2026-10-19
+
+### Added
+
+- People directory management at `/directory`, for whoever holds `people.manage`: add a person
+  (name, email, department, location), edit them from a per-row menu, and deactivate or reactivate
+  them. The email is editable only while the person has no access. Deactivating warns of the assets
+  in custody and open tickets still assigned and reassigns nothing; inactive people are hidden behind
+  "Mostrar inactivas" and are not offered in new-assignment pickers. An admin cannot deactivate
+  themselves. New activity verb `person.reactivated`; creating, deactivating and changing the
+  department of a person are now recorded. The dashboard's "Añade una persona" opens the create
+  dialog (#229).
+
 ## [0.77.0] - 2026-10-19
 
 ### Changed

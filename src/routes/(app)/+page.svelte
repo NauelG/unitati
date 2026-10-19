@@ -57,7 +57,7 @@
 			title: m.overview_checklist_add_person_title(),
 			description: m.overview_checklist_add_person_description(),
 			action: m.overview_checklist_add_person_action(),
-			href: '/directory',
+			href: '/directory?new=1',
 			done: data.checklist.addPerson
 		}
 	]);

@@ -63,3 +63,32 @@ export type LocationInput = z.output<typeof locationInput>;
 export const departmentInput = z.object({ name: z.string().trim().min(1).max(80) });
 
 export type DepartmentInput = z.output<typeof departmentInput>;
+
+/** A person's name: trimmed, 1-120 characters. */
+const personName = z.string().trim().min(1).max(120);
+
+/** An address as the directory stores it: trimmed and lowercased, so `people_org_email` is case-blind. */
+const personEmail = z.string().trim().toLowerCase().pipe(z.email().max(254));
+
+/** A nullable reference from a `<select>`: blank is "none". */
+const optionalId = z
+	.preprocess((value) => (value === '' ? null : value), z.uuid().nullish())
+	.transform((value) => value ?? null);
+
+export const personInput = z.object({
+	fullName: personName,
+	email: personEmail,
+	departmentId: optionalId,
+	locationId: optionalId
+});
+
+export type PersonInput = z.output<typeof personInput>;
+
+/** Partial: a key that is absent is left untouched. The location is `setPersonLocation`'s business. */
+export const personUpdateInput = z.object({
+	fullName: personName.optional(),
+	email: personEmail.optional(),
+	departmentId: optionalId.optional()
+});
+
+export type PersonUpdateInput = z.output<typeof personUpdateInput>;

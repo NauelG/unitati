@@ -247,6 +247,12 @@ describe('activitySentence for directory events', () => {
 		);
 	});
 
+	it('says a person was reactivated', () => {
+		expect(activitySentence({ verb: 'person.reactivated', payload: {} })).toBe(
+			'Reactivó a la persona'
+		);
+	});
+
 	it('names both departments from the snapshot, with a word for none', () => {
 		const sentence = activitySentence({
 			verb: 'person.department.changed',
