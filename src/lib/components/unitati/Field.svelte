@@ -13,7 +13,7 @@
 			root: 'flex min-w-0 flex-col sm:min-w-[220px] gap-[var(--space-1)]',
 			label: 'text-label text-[var(--ink)]',
 			input: [
-				'h-[var(--size-control-md)] w-full box-border px-[var(--space-3)]',
+				'ut-field-control h-[var(--size-control-md)] w-full box-border px-[var(--space-3)]',
 				'rounded-[var(--radius-md)] border bg-[var(--surface-1)]',
 				'text-base md:text-sm leading-5 text-[var(--ink)] transition-colors ut-transition-fast',
 				'placeholder:text-[var(--ink-muted)] disabled:opacity-50'
