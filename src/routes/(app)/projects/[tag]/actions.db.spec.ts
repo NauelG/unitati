@@ -124,6 +124,83 @@ describe('writing to a project record', () => {
 		expect(clash.returned?.data).toMatchObject({ field: 'projectTag' });
 	});
 
+	it('leaves every other field alone when an in-place edit posts one field', async () => {
+		const { technician, organisation } = await setup();
+		const owner = technician.personId!;
+		const project = await createProjectRow(organisation.id, {
+			name: 'Keep me',
+			description: 'Some **markdown**',
+			dueDate: '2026-12-01',
+			ownerPersonId: null
+		});
+		const target = { tag: project.projectTag };
+
+		await actions.update(actionEvent(technician, { ownerPersonId: owner }, target));
+		await actions.update(actionEvent(technician, { name: 'Renamed' }, target));
+		await actions.update(actionEvent(technician, { description: 'New text' }, target));
+
+		const found = await getProject(technician, project.projectTag);
+		expect(found.ok && found.value).toMatchObject({
+			name: 'Renamed',
+			description: 'New text',
+			dueDate: '2026-12-01',
+			ownerPersonId: owner
+		});
+	});
+
+	it('clears the due date and the owner only when the field is posted empty', async () => {
+		const { technician, organisation } = await setup();
+		const project = await createProjectRow(organisation.id, {
+			dueDate: '2026-12-01',
+			ownerPersonId: technician.personId!
+		});
+		const target = { tag: project.projectTag };
+
+		await actions.update(actionEvent(technician, { dueDate: '' }, target));
+		const afterDue = await getProject(technician, project.projectTag);
+		expect(afterDue.ok && afterDue.value).toMatchObject({
+			dueDate: null,
+			ownerPersonId: technician.personId
+		});
+
+		await actions.update(actionEvent(technician, { ownerPersonId: '' }, target));
+		const afterOwner = await getProject(technician, project.projectTag);
+		expect(afterOwner.ok && afterOwner.value.ownerPersonId).toBeNull();
+	});
+
+	it('returns the new code so the page can follow it, and refuses a reserved or duplicate one', async () => {
+		const { technician, organisation, params } = await setup();
+		await createProjectRow(organisation.id, { projectTag: 'TAKEN' });
+
+		const moved = await outcomeOf(() =>
+			actions.update(actionEvent(technician, { projectTag: 'MOVED' }, params))
+		);
+		expect(moved.returned).toMatchObject({ action: 'update', projectTag: 'MOVED' });
+		expect((await getProject(technician, 'MOVED')).ok).toBe(true);
+
+		for (const projectTag of ['TAKEN', 'new', '']) {
+			const refused = await outcomeOf(() =>
+				actions.update(actionEvent(technician, { projectTag }, { tag: 'MOVED' }))
+			);
+			expect(refused.returned?.status).toBe(400);
+			expect(refused.returned?.data).toMatchObject({ field: 'projectTag' });
+		}
+	});
+
+	it('refuses a name posted blank and a description over the limit', async () => {
+		const { technician, params } = await setup();
+
+		const blank = await outcomeOf(() =>
+			actions.update(actionEvent(technician, { name: ' ' }, params))
+		);
+		expect(blank.returned?.data).toMatchObject({ field: 'name' });
+
+		const long = await outcomeOf(() =>
+			actions.update(actionEvent(technician, { description: 'x'.repeat(20_001) }, params))
+		);
+		expect(long.returned?.data).toMatchObject({ field: 'description' });
+	});
+
 	it('still refuses writes to an employee who has a task in the project', async () => {
 		const { employee, params, project, organisation } = await setup();
 		const states = await statesByGroup(organisation.id);
@@ -246,6 +323,22 @@ describe('loading the project record for the board', () => {
 			}
 		} as never;
 	};
+
+	it('renders the description as sanitised HTML next to the raw markdown', async () => {
+		const { technician, organisation } = await setup();
+		const project = await createProjectRow(organisation.id, {
+			description: 'Hi **there** <script>x</script>'
+		});
+
+		const data = (await load(event(technician, { tag: project.projectTag }))) as {
+			descriptionHtml: string;
+			project: { description: string };
+		};
+
+		expect(data.project.description).toContain('**there**');
+		expect(data.descriptionHtml).toContain('<strong>there</strong>');
+		expect(data.descriptionHtml).not.toContain('<script');
+	});
 
 	it('shows the board unless the list is asked for', async () => {
 		const { technician, params } = await setup();

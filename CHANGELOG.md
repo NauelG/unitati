@@ -5,6 +5,22 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.77.0] - 2026-10-19
+
+### Changed
+
+- The project record is edited in place. The name and the code are edited in the header
+  (`EditableText`: Enter or blur saves, Escape cancels; changing the code follows the new URL and a
+  duplicate or reserved code shows an inline error), the owner and the due date in "Detalles"
+  (`EditableDetailRow`, saved on pick, with "Borrar" for the date), and the description moves to the
+  main column as rich text with explicit "Guardar" and "Cancelar". The "Editar" button, the edit
+  sheet and its discard dialog are gone. Archived projects, and people without `projects.manage`,
+  see everything read-only.
+- The project `update` action now builds its input from the keys the form actually posts, so an
+  edit of one field can no longer wipe another. The description is capped at 20,000 characters.
+- `PageHeader` accepts `codeContent` and `titleContent` snippets; `optimisticEnhance` accepts an
+  `onsuccess` hook for records whose URL moves.
+
 ## [0.76.0] - 2026-10-19
 
 ### Changed

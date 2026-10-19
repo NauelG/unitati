@@ -8,7 +8,12 @@ import type { ZodError } from 'zod';
  * can sit under it.
  */
 
-export type Fields = { get(key: string): string; all(key: string): string[] };
+export type Fields = {
+	get(key: string): string;
+	all(key: string): string[];
+	/** Whether the form carried the key at all: absent is "leave alone", present-and-empty is "clear". */
+	has(key: string): boolean;
+};
 
 export async function fieldsOf(request: Request): Promise<Fields> {
 	const data = await request.formData();
@@ -17,7 +22,8 @@ export async function fieldsOf(request: Request): Promise<Fields> {
 
 	return {
 		get: (key) => strings(key)[0]?.trim() ?? '',
-		all: (key) => strings(key).map((value) => value.trim())
+		all: (key) => strings(key).map((value) => value.trim()),
+		has: (key) => data.has(key)
 	};
 }
 

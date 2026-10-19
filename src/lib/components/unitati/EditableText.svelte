@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick, untrack } from 'svelte';
-	import { optimisticEnhance } from '#lib/optimistic.js';
+	import { optimisticEnhance, type OptimisticOptions } from '#lib/optimistic.js';
 	import { hashMatches } from './editable/editable.js';
 
 	interface Props {
@@ -10,6 +10,8 @@
 		action: string;
 		name: string;
 		optimistic: (formData: FormData) => () => void;
+		/** Handles a success itself (return `true`), e.g. to follow a record code into its new URL. */
+		onsuccess?: OptimisticOptions['onsuccess'];
 		/** Accessible name of the property, e.g. "Título". */
 		label: string;
 		/** Heading level to render at; omit for inline text (a "Detalles" row). */
@@ -34,6 +36,7 @@
 		action,
 		name,
 		optimistic,
+		onsuccess,
 		label,
 		level,
 		mono = false,
@@ -96,7 +99,13 @@
 		{value || placeholder || ''}
 	</svelte:element>
 {:else}
-	<form method="POST" {action} bind:this={formEl} use:optimisticEnhance={optimistic} class="hidden">
+	<form
+		method="POST"
+		{action}
+		bind:this={formEl}
+		use:optimisticEnhance={{ apply: optimistic, onsuccess }}
+		class="hidden"
+	>
 		<input type="hidden" {name} value={draft} />
 		{#each Object.entries(extraFields ?? {}) as [fieldName, fieldValue] (fieldName)}
 			<input type="hidden" name={fieldName} value={fieldValue} />
