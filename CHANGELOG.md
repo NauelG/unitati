@@ -5,6 +5,14 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.81.1] - 2026-10-19
+
+### Fixed
+
+- The focused row of dropdown menus (table row actions, select items, command items) drew a 2px
+  ring, heavier than every other focus indicator after the border-weight review. It is now 1px,
+  solid `--focus`.
+
 ## [0.81.0] - 2026-10-19
 
 ### Added
