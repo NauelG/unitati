@@ -18,7 +18,7 @@
 		AppShellNavLink
 	} from '#lib/components/unitati/app-shell-nav.js';
 	import Tooltip from '#lib/components/unitati/Tooltip.svelte';
-	import ThemeToggle from '#lib/components/unitati/ThemeToggle.svelte';
+	import UserMenu from '#lib/components/unitati/UserMenu.svelte';
 	import { Toaster } from '#lib/components/ui/sonner/index.js';
 	import {
 		ASSET_READ_PERMISSIONS,
@@ -127,14 +127,6 @@
 
 	/** The *Configuración* link exists only when at least one registry section is visible. */
 	const showSettings = $derived(visibleSections(data.permissions).length > 0);
-
-	const initials = $derived(
-		data.user.name
-			.split(' ')
-			.slice(0, 2)
-			.map((part) => part[0]?.toUpperCase() ?? '')
-			.join('')
-	);
 </script>
 
 {#snippet settingsLink({ rail }: { rail: boolean })}
@@ -164,31 +156,7 @@
 	settings={showSettings ? settingsLink : undefined}
 >
 	{#snippet topbarEnd()}
-		<!--
-			The theme switch sits in the user area (#90), beside the avatar and
-			sign-out rather than in the sidebar: it is a preference of the person
-			signed in, grouped with the other things about them, and the sidebar
-			collapses to a 64px rail where a third icon row would have nowhere to
-			put its label.
-		-->
-		<ThemeToggle />
-		<div class="flex items-center gap-2.5">
-			<span
-				class="grid size-8 place-items-center rounded-[var(--radius-full)] bg-[var(--brand-soft)] text-xs font-semibold text-[var(--brand)]"
-				aria-hidden="true"
-			>
-				{initials}
-			</span>
-			<span class="hidden text-sm text-[var(--ink)] sm:inline">{data.user.name}</span>
-		</div>
-		<form method="POST" action="/sign-out">
-			<button
-				type="submit"
-				class="ut-transition-fast text-sm text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
-			>
-				{m.nav_sign_out()}
-			</button>
-		</form>
+		<UserMenu name={data.user.name} email={data.user.email} />
 	{/snippet}
 
 	{@render children()}
