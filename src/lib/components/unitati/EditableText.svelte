@@ -120,7 +120,7 @@
 				aria-label={label}
 				aria-invalid={error ? 'true' : undefined}
 				aria-describedby={error ? errorId : undefined}
-				class="w-full rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-transparent px-[var(--space-2)] font-[inherit] text-[length:inherit] leading-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
+				class="ut-field-control w-full rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-transparent px-[var(--space-2)] font-[inherit] text-[length:inherit] leading-[inherit] outline-none"
 				onkeydown={(event) => {
 					if (event.key === 'Enter') {
 						event.preventDefault();
@@ -142,7 +142,7 @@
 			<button
 				type="button"
 				aria-label={`${label}: ${value || placeholder || ''}`}
-				class="group w-full cursor-text rounded-[var(--radius-md)] border border-[var(--border)] px-[var(--space-2)] text-left font-[inherit] text-[length:inherit] leading-[inherit] outline-none hover:border-[var(--border-strong)] focus-visible:border-[var(--border-strong)] focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
+				class="ut-field-control group w-full cursor-text rounded-[var(--radius-md)] border border-[var(--border)] px-[var(--space-2)] text-left font-[inherit] text-[length:inherit] leading-[inherit] outline-none hover:border-[var(--border-strong)]"
 				onclick={edit}
 			>
 				{#if value}
