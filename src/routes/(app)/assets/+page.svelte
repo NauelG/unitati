@@ -194,6 +194,7 @@
 		{/snippet}
 		{#snippet actions()}
 			{#if data.canManage}
+				<Button href="/assets/import" variant="secondary">{m.import_open()}</Button>
 				<Button href="/assets/new">
 					<Plus class="size-4" aria-hidden="true" />
 					{m.assets_register()}

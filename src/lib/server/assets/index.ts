@@ -3,11 +3,12 @@ import type { AssetState } from '#lib/domain/status.js';
 import { listActivity, actorColumns, recordActivity, type TimelineEntry } from '../activity';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
-import { getDb, type Transaction } from '../db';
+import { getDb, type Executor, type Transaction } from '../db';
 import { uniqueConstraintName } from '../db/errors';
 import { locationPaths } from '../directory';
 import { people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
+import type { WriteOptions } from '../shared/write-options';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
 import { assetModels, assets, categories, manufacturers } from './schema';
 import { requireAssetScope } from './scope';
@@ -68,6 +69,7 @@ export {
 } from './schema';
 export type { Asset, AssetModel, Category, Manufacturer } from './schema';
 export {
+	RESERVED_ASSET_TAGS,
 	registerAssetInput,
 	updateAssetDetailsInput,
 	assetModelInput,
@@ -497,10 +499,11 @@ export type UpdateAssetFailure =
  */
 async function foreignReference(
 	organisationId: string,
-	refs: { assetModelId?: string; locationId?: string | null }
+	refs: { assetModelId?: string; locationId?: string | null },
+	executor: Executor = getDb()
 ): Promise<'model_not_found' | 'location_not_found' | null> {
 	if (refs.assetModelId !== undefined) {
-		const [model] = await getDb()
+		const [model] = await executor
 			.select({ id: assetModels.id })
 			.from(assetModels)
 			.where(
@@ -513,7 +516,7 @@ async function foreignReference(
 	if (refs.locationId) {
 		// Through `directory`'s own function, not its table: an id from another
 		// organisation has no path here, which is the same as not existing.
-		const paths = await locationPaths(organisationId, [refs.locationId]);
+		const paths = await locationPaths(organisationId, [refs.locationId], executor);
 		if (!paths.has(refs.locationId)) return 'location_not_found';
 	}
 
@@ -532,15 +535,18 @@ async function foreignReference(
  */
 export async function registerAsset(
 	actor: SessionUser,
-	input: RegisterAssetInput
+	input: RegisterAssetInput,
+	options: WriteOptions = {}
 ): Promise<Outcome<{ id: string; assetTag: string }, RegisterAssetFailure>> {
 	const values = registerAssetInput.parse(input);
 
-	const missing = await foreignReference(actor.organisationId, values);
-	if (missing) return failure(missing);
-
 	try {
-		return await getDb().transaction(async (tx) => {
+		// Both the reads and the writes go through the caller's executor, so a
+		// model or location created earlier in an import's transaction is visible.
+		return await (options.executor ?? getDb()).transaction(async (tx) => {
+			const missing = await foreignReference(actor.organisationId, values, tx);
+			if (missing) return failure(missing);
+
 			const [row] = await tx
 				.insert(assets)
 				.values({ ...values, organisationId: actor.organisationId })
@@ -551,7 +557,10 @@ export async function registerAsset(
 				...actorColumns(actor),
 				target: { assetId: row.id },
 				verb: 'asset.created',
-				payload: { assetTag: row.assetTag, name: row.name }
+				payload:
+					options.via === 'import'
+						? { assetTag: row.assetTag, name: row.name, via: 'import' }
+						: { assetTag: row.assetTag, name: row.name }
 			});
 
 			return success({ id: row.id, assetTag: row.assetTag });
@@ -635,9 +644,10 @@ export type AssignCustodyFailure = 'asset_not_found' | 'person_not_found' | 'alr
 export async function assignCustody(
 	actor: SessionUser,
 	assetId: string,
-	toPersonId: string
+	toPersonId: string,
+	options: WriteOptions = {}
 ): Promise<Outcome<void, AssignCustodyFailure>> {
-	return getDb().transaction(async (tx) => {
+	return (options.executor ?? getDb()).transaction(async (tx) => {
 		const asset = await lockedAsset(tx, actor, assetId);
 		if (!asset) return failure('asset_not_found');
 		if (asset.custodianPersonId !== null) return failure('already_in_custody');
@@ -805,12 +815,13 @@ export async function changeLocation(
 export async function addNote(
 	actor: SessionUser,
 	assetId: string,
-	text: string
+	text: string,
+	options: WriteOptions = {}
 ): Promise<Outcome<void, 'asset_not_found' | 'empty_note'>> {
 	const body = text.trim();
 	if (body.length === 0) return failure('empty_note');
 
-	return getDb().transaction(async (tx) => {
+	return (options.executor ?? getDb()).transaction(async (tx) => {
 		const asset = await lockedAsset(tx, actor, assetId);
 		if (!asset) return failure('asset_not_found');
 
@@ -838,10 +849,39 @@ export async function addNote(
  * `GREATEST` keeps it from ever winding the sequence *back* when the real
  * inventory has already outgrown what is being imported.
  */
-export async function advanceAssetTagSequence(upTo: number): Promise<void> {
-	await getDb().execute(
+export async function advanceAssetTagSequence(
+	upTo: number,
+	options: WriteOptions = {}
+): Promise<void> {
+	// `setval` is not transactional: a rolled-back import leaves the sequence
+	// advanced, which only leaves a gap in generated tags.
+	await (options.executor ?? getDb()).execute(
 		sql`select setval('asset_code_seq', greatest((select last_value from asset_code_seq), ${upTo}))`
 	);
+}
+
+/**
+ * Every tag and serial the organisation already uses, for an import to tell a
+ * row it has seen from one it has not. Serials are compared case-blind.
+ */
+export async function existingAssetKeys(
+	organisationId: string,
+	executor: Executor = getDb()
+): Promise<{
+	tags: Map<string, { id: string }>;
+	serials: Map<string, { id: string; assetTag: string }>;
+}> {
+	const rows = await executor
+		.select({ id: assets.id, assetTag: assets.assetTag, serial: assets.serial })
+		.from(assets)
+		.where(eq(assets.organisationId, organisationId));
+	const tags = new Map<string, { id: string }>();
+	const serials = new Map<string, { id: string; assetTag: string }>();
+	for (const row of rows) {
+		tags.set(row.assetTag.toLowerCase(), { id: row.id });
+		if (row.serial !== null) serials.set(row.serial.toLowerCase(), row);
+	}
+	return { tags, serials };
 }
 
 export { assetHits } from './search';

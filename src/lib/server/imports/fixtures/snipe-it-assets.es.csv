@@ -1,0 +1,2 @@
+Compañía,Activo Nombre,Placa del activo,Modelo,Número de modelo,Categoría,Fabricante,Número de serie,Fecha de compra,Costo de compra,Número de orden,Proveedor,Ubicación,Ubicación predeterminada,Asignado a,Tipo,Username,Email,Employee No.,Departamento,Estado,Fecha de salida,Notas
+Acme,Portátil de Ada,AST-0900,ThinkPad T14,T14G3,Portátiles,Lenovo,SN-100,2024-01-10,1200,PO-1,Dell,Barcelona office,Barcelona office,Ada Lovelace,user,ada,ada@example.com,E1,Ingeniería,Listo para implementar (deployable),2024-02-01,Comprado en enero

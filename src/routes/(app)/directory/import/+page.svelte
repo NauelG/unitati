@@ -6,6 +6,8 @@
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import FormError from '#lib/components/unitati/FormError.svelte';
+	import ImportErrors from '#lib/components/unitati/import/ImportErrors.svelte';
+	import ImportSteps from '#lib/components/unitati/import/ImportSteps.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField, { type SelectOption } from '#lib/components/unitati/SelectField.svelte';
@@ -40,13 +42,7 @@
 	let message = $state<string | null>(null);
 	let busy = $state(false);
 
-	const STEPS: { id: Step; label: () => string }[] = [
-		{ id: 'file', label: () => m.import_step_file() },
-		{ id: 'columns', label: () => m.import_step_columns() },
-		{ id: 'preview', label: () => m.import_step_preview() },
-		{ id: 'done', label: () => m.import_step_result() }
-	];
-	const stepIndex = $derived(STEPS.findIndex((entry) => entry.id === step));
+	const stepIndex = $derived(['file', 'columns', 'preview', 'done'].indexOf(step));
 
 	const options = $derived<SelectOption[]>([
 		...headers.map((header, index) => ({
@@ -173,19 +169,7 @@
 		{#snippet summary()}{m.import_lede()}{/snippet}
 	</PageHeader>
 
-	<ol
-		class="mt-[var(--space-5)] flex flex-wrap gap-[var(--space-4)] text-sm"
-		aria-label={m.import_steps_label()}
-	>
-		{#each STEPS as entry, index (entry.id)}
-			<li
-				class={index === stepIndex ? 'font-semibold text-[var(--ink)]' : 'text-[var(--ink-muted)]'}
-				aria-current={index === stepIndex ? 'step' : undefined}
-			>
-				{index + 1}. {entry.label()}
-			</li>
-		{/each}
-	</ol>
+	<ImportSteps current={stepIndex} />
 
 	<div class="mt-[var(--space-6)] space-y-[var(--space-5)]">
 		{#if step === 'file'}
@@ -254,43 +238,12 @@
 			</section>
 
 			{#if summary.errorCount > 0}
-				<Alert tone="danger" title={m.import_nothing_imported()}>
-					<ul class="mt-[var(--space-2)] list-disc pl-5">
-						{#each summary.groups as group (group.kind)}
-							<li>
-								{errorKinds[group.kind]} ({group.count}){#if group.rows.length > 0}
-									— {m.import_error_rows({ rows: group.rows.join(', ') })}{/if}
-							</li>
-						{/each}
-					</ul>
-				</Alert>
-				<div class="overflow-x-auto">
-					<table class="w-full text-sm">
-						<thead>
-							<tr class="text-left">
-								<th class="py-1 pr-3">{m.import_table_row()}</th>
-								<th class="py-1 pr-3">{m.import_table_column()}</th>
-								<th class="py-1 pr-3">{m.import_table_value()}</th>
-								<th class="py-1">{m.import_table_reason()}</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each summary.errors as error, index (index)}
-								<tr class="border-t border-[var(--border)]">
-									<td class="py-1 pr-3">{error.row ?? ''}</td>
-									<td class="py-1 pr-3">{error.column ?? ''}</td>
-									<td class="py-1 pr-3">{error.value ?? ''}</td>
-									<td class="py-1">{errorKinds[error.kind]}</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-				{#if summary.errorCount > summary.errors.length}
-					<p class="text-small text-[var(--ink-muted)]">
-						{m.import_errors_truncated({ shown: summary.errors.length, total: summary.errorCount })}
-					</p>
-				{/if}
+				<ImportErrors
+					groups={summary.groups}
+					errors={summary.errors}
+					errorCount={summary.errorCount}
+					kinds={errorKinds}
+				/>
 			{/if}
 
 			<form method="POST" action="?/commit" use:enhance={submit} class="space-y-[var(--space-3)]">

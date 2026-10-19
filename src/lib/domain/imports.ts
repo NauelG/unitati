@@ -10,3 +10,15 @@ export type FieldSource = { column: string } | { fixed: string } | null;
 
 /** Keyed by target field key. */
 export type Mapping = Record<string, FieldSource>;
+
+/**
+ * What the assets import maps beyond the columns: each distinct raw value of the
+ * state column onto one of the four asset states (keyed by the trimmed cell).
+ */
+export type AssetsMapping = {
+	fields: Mapping;
+	stateValues: Record<string, 'in_use' | 'in_repair' | 'in_stock' | 'retired'>;
+};
+
+/** More distinct values than this in the state column and it is probably not a state. */
+export const IMPORT_MAX_STATE_VALUES = 50;

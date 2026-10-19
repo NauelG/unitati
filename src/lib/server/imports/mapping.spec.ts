@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parseCsv } from './csv';
 import { matchKey, normaliseHeader, resolveValue, suggestMapping } from './mapping';
+import { ASSET_FIELDS } from './assets';
 import { PEOPLE_FIELDS } from './people';
 
 const fixture = (name: string) => {
@@ -80,5 +81,80 @@ describe('resolveValue', () => {
 		expect(resolveValue({ column: 'A' }, [], index)).toBe('');
 		expect(resolveValue({ fixed: ' IT ' }, [], index)).toBe('IT');
 		expect(resolveValue(null, ['x'], index)).toBe('');
+	});
+});
+
+describe('suggestMapping for assets', () => {
+	it('maps the Unitati template without a manual change', () => {
+		const { headers } = fixture('unitati-assets.csv');
+		expect(suggestMapping(ASSET_FIELDS, headers)).toEqual({
+			assetTag: { column: 'Etiqueta' },
+			name: { column: 'Nombre' },
+			serial: { column: 'Número de serie' },
+			model: { column: 'Modelo' },
+			manufacturer: { column: 'Fabricante' },
+			category: { column: 'Categoría' },
+			state: { column: 'Estado' },
+			custodianEmail: { column: 'Correo del custodio' },
+			custodianName: null,
+			location: { column: 'Ubicación' },
+			shared: { column: 'Compartido' },
+			notes: { column: 'Notas' }
+		});
+	});
+
+	it('maps a Snipe-IT custom asset report with English headers', () => {
+		const { headers } = fixture('snipe-it-assets.csv');
+		expect(suggestMapping(ASSET_FIELDS, headers)).toEqual({
+			assetTag: { column: 'Asset Tag' },
+			name: { column: 'Asset Name' },
+			serial: { column: 'Serial Number' },
+			model: { column: 'Asset Model' },
+			manufacturer: { column: 'Manufacturer' },
+			category: { column: 'Category' },
+			state: { column: 'Status' },
+			custodianEmail: { column: 'Email' },
+			custodianName: { column: 'Checked Out To' },
+			// "Default Location" stays unassigned.
+			location: { column: 'Location' },
+			shared: null,
+			notes: { column: 'Notes' }
+		});
+	});
+
+	it('maps the same report with Spanish headers', () => {
+		const { headers } = fixture('snipe-it-assets.es.csv');
+		expect(suggestMapping(ASSET_FIELDS, headers)).toEqual({
+			assetTag: { column: 'Placa del activo' },
+			name: { column: 'Activo Nombre' },
+			serial: { column: 'Número de serie' },
+			model: { column: 'Modelo' },
+			manufacturer: { column: 'Fabricante' },
+			category: { column: 'Categoría' },
+			state: { column: 'Estado' },
+			custodianEmail: { column: 'Email' },
+			custodianName: { column: 'Asignado a' },
+			location: { column: 'Ubicación' },
+			shared: null,
+			notes: { column: 'Notas' }
+		});
+	});
+
+	it('maps a Shelf import-ready export; manufacturer and model are left to fixed values', () => {
+		const { headers } = fixture('shelf-assets.csv');
+		expect(suggestMapping(ASSET_FIELDS, headers)).toEqual({
+			assetTag: null,
+			name: { column: 'title' },
+			serial: null,
+			model: null,
+			manufacturer: null,
+			category: { column: 'category' },
+			state: null,
+			custodianEmail: null,
+			custodianName: { column: 'custodian' },
+			location: { column: 'location' },
+			shared: null,
+			notes: null
+		});
 	});
 });

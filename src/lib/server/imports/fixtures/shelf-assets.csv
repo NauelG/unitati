@@ -1,0 +1,3 @@
+id,title,description,category,kit,tags,location,custodian,bookable,valuation,type,quantity,minQuantity,unitOfMeasure,consumptionType
+cl1,Ada laptop,Main laptop,Laptops,,,Barcelona office,Ada Lovelace,Yes,1200,INDIVIDUAL,,,,
+cl2,Spare monitor,,Monitors,,,GRO,,No,,INDIVIDUAL,,,,
