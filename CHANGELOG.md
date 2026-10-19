@@ -20,6 +20,7 @@ minor bumps carry features and patch bumps carry fixes.
   edit of one field can no longer wipe another. The description is capped at 20,000 characters.
 - `PageHeader` accepts `codeContent` and `titleContent` snippets; `optimisticEnhance` accepts an
   `onsuccess` hook for records whose URL moves.
+
 ## [0.76.0] - 2026-10-19
 
 ### Changed
