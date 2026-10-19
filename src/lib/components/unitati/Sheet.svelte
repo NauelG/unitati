@@ -13,12 +13,16 @@
 	 * mobile" — wider than shadcn's own `sm:max-w-sm` default, which
 	 * `Sheet.Content`'s `class` override replaces rather than extends.
 	 *
-	 * Unlike `Dialog`, this owns no footer of its own: `children` is the
-	 * whole `<form>`, the same reasoning as `Dialog` — a form already knows
-	 * its own submit label, its own sticky-footer layout if it needs one (a
-	 * `flex h-full min-h-0 flex-col` form with a `flex-1 overflow-y-auto`
-	 * fields wrapper and a `shrink-0` button row achieves that inside the
-	 * area this component gives it), and its own `use:enhance` shape.
+	 * Unlike `Dialog`, the caller decides whether this owns the layout:
+	 *
+	 * - `fields` + `footer` (+ `form`): this renders the `<form>`, the
+	 *   scrolling fields region and the fixed action row. The region is padded
+	 *   (and pulled back with an equal negative margin, so fields stay aligned
+	 *   with the header) because the focus ring is drawn outside a control and
+	 *   `overflow-y: auto` clips the x axis too (#218). Forms never build their
+	 *   own scroll wrapper.
+	 * - `children`: the whole `<form>` is the caller's, with no scroll region or
+	 *   ring room from here. Kept for compatibility.
 	 */
 	export const sheet = tv({
 		slots: {
@@ -32,6 +36,13 @@
 			// `.ut-scrollbar` (ADR 0015 addendum, #96): the app's own thin,
 			// native scrollbar styling, the same one `AppShell`'s `main` and
 			// nav regions use — never a JS overlay scrollbar.
+			// The ring is 4px outside a control (2px offset + 2px width,
+			// `app.css`); `p-1.5` (6px) leaves room for it and `-m-1.5` cancels
+			// the shift. Not on `body`, whose own padding must not double up.
+			fields: [
+				'ut-scrollbar -m-1.5 min-h-0 flex-1 space-y-[var(--space-5)] overflow-y-auto overscroll-contain p-1.5'
+			],
+			footer: 'mt-[var(--space-4)] shrink-0',
 			body: 'ut-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain p-[var(--space-5)] pb-[max(var(--space-5),env(safe-area-inset-bottom))]'
 		}
 	});
@@ -39,8 +50,19 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import type { HTMLFormAttributes } from 'svelte/elements';
 	import * as Sheet from '#lib/components/ui/sheet/index.js';
 	import CloseButton from './CloseButton.svelte';
+
+	/** What `Sheet` needs to render the `<form>` that wraps `fields` and `footer`. */
+	export interface SheetForm {
+		action: string;
+		method?: 'POST';
+		enctype?: HTMLFormAttributes['enctype'];
+		/** A form action, e.g. `(node) => enhance(node, submit)`; runs on the rendered `<form>`. */
+		use?: (node: HTMLFormElement) => void | { destroy?: () => void };
+		oninput?: HTMLFormAttributes['oninput'];
+	}
 
 	interface Props {
 		/** The caller owns this, same as `Dialog`'s own `open`. */
@@ -57,8 +79,14 @@
 		description?: string;
 		/** Blocks Escape, the overlay and the close button, same as `Dialog`'s `pending`. */
 		pending?: boolean;
-		/** The whole form: its own scroll region and its own action row. */
-		children: Snippet;
+		/** Wraps `fields` and `footer`; only used with them. */
+		form?: SheetForm;
+		/** The scrolling fields, padded so the focus ring is not clipped. */
+		fields?: Snippet;
+		/** The fixed action row under the fields. */
+		footer?: Snippet;
+		/** Instead of `fields`/`footer`: the whole form, with its own layout. */
+		children?: Snippet;
 		class?: string;
 	}
 
@@ -68,11 +96,18 @@
 		title,
 		description,
 		pending = false,
+		form,
+		fields,
+		footer,
 		children,
 		class: className
 	}: Props = $props();
 
 	const styles = sheet();
+
+	function useForm(node: HTMLFormElement) {
+		return form?.use?.(node);
+	}
 
 	function handleOpenChange(next: boolean) {
 		if (pending && !next) return;
@@ -89,7 +124,23 @@
 			{/if}
 		</div>
 		<div class={styles.body()}>
-			{@render children()}
+			{#if fields}
+				<form
+					method={form?.method}
+					action={form?.action}
+					enctype={form?.enctype}
+					oninput={form?.oninput}
+					use:useForm
+					class="flex h-full min-h-0 flex-col"
+				>
+					<div class={styles.fields()}>{@render fields()}</div>
+					{#if footer}
+						<div class={styles.footer()}>{@render footer()}</div>
+					{/if}
+				</form>
+			{:else}
+				{@render children?.()}
+			{/if}
 		</div>
 		<CloseButton kind="sheet" class="absolute top-3 right-3" />
 	</Sheet.Content>

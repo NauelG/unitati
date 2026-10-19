@@ -492,25 +492,24 @@
 		pending={$editSubmitting}
 		title={m.asset_edit_title({ tag: asset.assetTag })}
 		description={m.asset_edit_lede()}
+		form={{
+			action: `/assets/${encodeURIComponent(asset.assetTag)}/edit`,
+			method: 'POST',
+			use: editEnhance
+		}}
 	>
-		<form
-			method="POST"
-			action="/assets/{encodeURIComponent(asset.assetTag)}/edit"
-			use:editEnhance
-			class="flex h-full min-h-0 flex-col"
-		>
-			<div class="min-h-0 flex-1 space-y-[var(--space-5)] overflow-y-auto">
-				<AssetFields
-					bind:values={$editValues}
-					errors={$editErrors}
-					modelOptions={editModelOptions}
-					tagRequired
-					onaddmodel={() => (modelOpen = true)}
-				/>
-			</div>
-
+		{#snippet fields()}
+			<AssetFields
+				bind:values={$editValues}
+				errors={$editErrors}
+				modelOptions={editModelOptions}
+				tagRequired
+				onaddmodel={() => (modelOpen = true)}
+			/>
+		{/snippet}
+		{#snippet footer()}
 			<div
-				class="mt-[var(--space-4)] flex shrink-0 items-center gap-[var(--space-3)] border-t border-[var(--border)] pt-[var(--space-4)]"
+				class="flex items-center gap-[var(--space-3)] border-t border-[var(--border)] pt-[var(--space-4)]"
 			>
 				<Button type="submit" disabled={$editSubmitting}>
 					{$editSubmitting ? m.form_saving() : m.asset_form_submit_edit()}
@@ -519,7 +518,7 @@
 					{m.form_cancel()}
 				</Button>
 			</div>
-		</form>
+		{/snippet}
 	</Sheet>
 
 	<CreateModelDialog
