@@ -17,6 +17,10 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+      # Probed every second while it boots, so `--wait` returns as soon as it is
+      # ready rather than on the next 5 s tick.
+      start_period: 30s
+      start_interval: 1s
   # Catches outbound mail in development: SMTP on 1025, inbox at :8025.
   mailpit:
     image: axllent/mailpit
