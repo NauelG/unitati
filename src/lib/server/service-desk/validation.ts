@@ -54,6 +54,11 @@ export const addCommentInput = z.object({
 	visibility: z.enum(['public', 'internal'])
 });
 
+/** An edit holds the same text rule as a new comment; visibility and attachments never change. */
+export const editCommentInput = addCommentInput.pick({ body: true });
+
+export const subjectInput = createTicketInput.pick({ subject: true });
+
 export const queueInput = z.object({
 	name: nonEmpty,
 	color: z.enum(QUEUE_COLORS).default(DEFAULT_QUEUE_COLOR)

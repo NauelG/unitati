@@ -201,6 +201,26 @@ describe('activitySentence for tickets', () => {
 		expect(activitySentence(entry)).toContain('Normal');
 	});
 
+	it('quotes both ends of a subject change', () => {
+		const entry: ActivityEntry = {
+			verb: 'ticket.subject.changed',
+			payload: { from: 'Impresora rota', to: 'Impresora de planta 2 rota' }
+		};
+
+		expect(activitySentence(entry)).toBe(
+			'Cambió el asunto de «Impresora rota» a «Impresora de planta 2 rota»'
+		);
+	});
+
+	it('says a comment was edited without saying what changed', () => {
+		const entry: ActivityEntry = {
+			verb: 'comment.edited',
+			payload: { commentId: PERSON, visibility: 'public' }
+		};
+
+		expect(activitySentence(entry)).toBe('Editó un comentario');
+	});
+
 	it('names the status ends through their labels', () => {
 		const entry: ActivityEntry = {
 			verb: 'ticket.status.changed',

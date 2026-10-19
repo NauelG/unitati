@@ -41,6 +41,8 @@
 		 */
 		statusChip?: Snippet;
 		priorityChip?: Snippet;
+		/** Replaces the static `<h1>`, e.g. with an `EditableText` level 1 for staff. */
+		subjectEditor?: Snippet<[string]>;
 		/** "Opened by X · time · via portal" — one small line, already formatted. */
 		provenance: string;
 		/** Secondary actions first, the primary one last. */
@@ -57,6 +59,7 @@
 		provenance,
 		statusChip,
 		priorityChip,
+		subjectEditor,
 		actions,
 		class: className
 	}: Props = $props();
@@ -75,7 +78,9 @@
 			{#if statusChip}{@render statusChip()}{:else}<StatusBadge {status} />{/if}
 			{#if priorityChip}{@render priorityChip()}{:else}<StatusBadge status={priority} />{/if}
 		</div>
-		<h1 class={styles.title()}>{subject}</h1>
+		{#if subjectEditor}{@render subjectEditor(styles.title())}{:else}<h1 class={styles.title()}>
+				{subject}
+			</h1>{/if}
 		<p class={styles.provenance()}>{provenance}</p>
 	</div>
 

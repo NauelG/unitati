@@ -10,6 +10,7 @@
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
 	import Skeleton from '#lib/components/unitati/Skeleton.svelte';
+	import EditableText from '#lib/components/unitati/EditableText.svelte';
 	import EditableChip from '#lib/components/unitati/EditableChip.svelte';
 	import EditableDetailRow from '#lib/components/unitati/EditableDetailRow.svelte';
 	import { statusBadge, statusLabel } from '#lib/components/unitati/status.js';
@@ -43,6 +44,7 @@
 	 * `#lib/optimistic.ts`). `localThread` additionally carries the composer's
 	 * own pending reply until it reconciles or fails.
 	 */
+	let localSubject = $state(ticket.subject);
 	let localStatus = $state(ticket.status);
 	let localPriority = $state(ticket.priority);
 	let localAssigneePersonId = $state(ticket.assigneePersonId);
@@ -56,6 +58,7 @@
 	let localThread = $derived<(ThreadItem | PendingThreadItem)[]>(data.thread);
 
 	$effect(() => {
+		localSubject = ticket.subject;
 		localStatus = ticket.status;
 		localPriority = ticket.priority;
 		localAssigneePersonId = ticket.assigneePersonId;
@@ -99,6 +102,15 @@
 	const peopleOptions = $derived(
 		data.people.map((person) => ({ value: person.id, label: person.fullName }))
 	);
+
+	function optimisticSubject(formData: FormData) {
+		const next = formData.get('subject');
+		const previous = localSubject;
+		if (typeof next === 'string') localSubject = next;
+		return () => {
+			localSubject = previous;
+		};
+	}
 
 	function optimisticStatus(formData: FormData) {
 		const next = formData.get('status');
@@ -204,6 +216,12 @@
 			? form.message
 			: undefined
 	);
+	const formMessage = (action: string) =>
+		form && 'action' in form && form.action === action && 'message' in form
+			? form.message
+			: undefined;
+	const editError = $derived(formMessage('editComment'));
+	const subjectError = $derived(formMessage('subject'));
 </script>
 
 <svelte:head>
@@ -258,11 +276,24 @@
 		<TicketDetailLayout
 			ticketTag={ticket.ticketTag}
 			ticketTagViewTransitionName={toViewTransitionName('record', ticket.ticketTag)}
-			subject={ticket.subject}
+			subject={localSubject}
 			status={localStatus}
 			priority={localPriority}
 			{provenance}
 		>
+			{#snippet subjectEditor(className)}
+				<EditableText
+					value={localSubject}
+					editable={data.canManage}
+					action="?/subject"
+					name="subject"
+					optimistic={optimisticSubject}
+					label={m.ticket_detail_subject()}
+					level={1}
+					class={className}
+					error={subjectError}
+				/>
+			{/snippet}
 			{#snippet statusChip()}
 				<EditableChip
 					value={localStatus}
@@ -297,7 +328,12 @@
 		</TicketDetailLayout>
 
 		<div class="mt-[var(--space-5)]">
-			<TicketThread items={localThread} attachmentHref={(id) => `/attachments/${id}`} />
+			<TicketThread
+				items={localThread}
+				attachmentHref={(id) => `/attachments/${id}`}
+				editAction="?/editComment"
+				{editError}
+			/>
 		</div>
 	</WorkPanel>
 

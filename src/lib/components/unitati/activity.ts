@@ -77,6 +77,15 @@ export function activitySentence(entry: ActivityEntry): string {
 				to: entry.payload.toQueueName
 			});
 
+		case 'ticket.subject.changed':
+			return m.activity_ticket_subject_changed({
+				from: entry.payload.from,
+				to: entry.payload.to
+			});
+
+		case 'comment.edited':
+			return m.activity_comment_edited();
+
 		case 'link.asset.added':
 			return m.activity_link_asset_added();
 

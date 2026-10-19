@@ -1,16 +1,19 @@
 import { error } from '@sveltejs/kit';
+import { z } from 'zod';
 import { m } from '#lib/paraglide/messages.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
 import { relatedTo } from '#lib/server/links/index.js';
 import {
 	addComment,
 	addCommentInput,
+	editComment,
+	editCommentInput,
 	getTicketByTag,
 	readTicketForm,
 	ticketThread
 } from '#lib/server/service-desk/index.js';
 import { failureMessage } from '#lib/ticket-errors.js';
-import { rejected } from '../../../../(app)/assets/form-data';
+import { fieldsOf, rejected } from '../../../../(app)/assets/form-data';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
@@ -54,5 +57,33 @@ export const actions: Actions = {
 			return rejected('reply', failureMessage(outcome.error));
 		}
 		return { action: 'reply' as const };
+	},
+
+	editComment: async ({ locals, request, params }) => {
+		const user = requirePermission(locals.user, 'tickets.view.own');
+		const fields = await fieldsOf(request);
+
+		const parsed = z.object({ commentId: z.uuid(), body: z.string() }).safeParse(fields);
+		const input = parsed.success ? editCommentInput.safeParse({ body: parsed.data.body }) : null;
+		if (!parsed.success || !input?.success) {
+			const tooLong =
+				input && !input.success && input.error.issues.some((i) => i.code === 'too_big');
+			return rejected(
+				'editComment',
+				tooLong ? failureMessage('body_too_long') : m.ticket_error_invalid()
+			);
+		}
+
+		// The comment must belong to the ticket in the URL, or the page it was posted from lies.
+		const found = await getTicketByTag(user, params.tag);
+		if (!found.ok) error(404, 'Not found');
+
+		const outcome = await editComment(user, parsed.data.commentId, input.data.body);
+		if (!outcome.ok) {
+			if (outcome.error === 'not_found') error(404, 'Not found');
+			if (outcome.error === 'forbidden') error(403, 'Forbidden');
+			return rejected('editComment', failureMessage(outcome.error));
+		}
+		return { action: 'editComment' as const };
 	}
 };

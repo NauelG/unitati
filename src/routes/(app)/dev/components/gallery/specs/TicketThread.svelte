@@ -28,6 +28,8 @@
 			bodyHtml: '<p>Lo intenté cargar toda la noche y sigue sin encender.</p>',
 			visibility: 'public',
 			createdAt: new Date('2026-03-01T09:05:00Z'),
+			editedAt: null,
+			canEdit: false,
 			attachments: []
 		},
 		{
@@ -39,6 +41,8 @@
 			bodyHtml: '<p>Nota interna: revisar si está en garantía antes de ofrecer sustitución.</p>',
 			visibility: 'internal',
 			createdAt: new Date('2026-03-01T10:00:00Z'),
+			editedAt: null,
+			canEdit: false,
 			attachments: []
 		},
 		{
@@ -50,6 +54,8 @@
 			bodyHtml: '<p>Hemos abierto una incidencia con el proveedor. Adjunto el diagnóstico.</p>',
 			visibility: 'public',
 			createdAt: new Date('2026-03-01T10:30:00Z'),
+			editedAt: null,
+			canEdit: false,
 			attachments: [
 				{ id: 'f1', filename: 'diagnostico.pdf', contentType: 'application/pdf', byteSize: 2048 }
 			]

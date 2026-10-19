@@ -32,6 +32,7 @@ export {
 	setTicketPriority,
 	assignTicket,
 	moveTicketToQueue,
+	changeTicketSubject,
 	countOpen,
 	ticketSummary,
 	hasPortalActivity,
@@ -62,8 +63,13 @@ export { sendQuietly, taskCompletedMail } from './mail';
 export type { Mailer, MailMessage } from './mail';
 export { runtimeMailer } from './runtime';
 
-export { ticketThread, addComment, getAttachment } from './comments';
-export type { ThreadItem, ThreadAttachment, AddCommentFailure } from './comments';
+export { ticketThread, addComment, editComment, getAttachment } from './comments';
+export type {
+	ThreadItem,
+	ThreadAttachment,
+	AddCommentFailure,
+	EditCommentFailure
+} from './comments';
 
 export { listQueues, defaultQueue, createQueue, renameQueue, deleteQueue } from './queues';
 export type { QueueFailure, QueueEditFailure, QueueDeleteFailure } from './queues';
@@ -73,6 +79,8 @@ export { canTransition, nextStatuses, TRANSITIONS } from './transitions';
 export {
 	createTicketInput,
 	addCommentInput,
+	editCommentInput,
+	subjectInput,
 	queueInput,
 	attachmentProblem,
 	MAX_AFFECTED_ASSETS,

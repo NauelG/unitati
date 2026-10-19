@@ -6,6 +6,7 @@ import {
 	pgSequence,
 	pgTable,
 	text,
+	timestamp,
 	unique,
 	uuid
 } from 'drizzle-orm/pg-core';
@@ -116,6 +117,8 @@ export const ticketComments = pgTable(
 		}),
 		body: text('body').notNull(),
 		visibility: commentVisibility('visibility').notNull(),
+		/** Null means never edited; set on every effective edit (#222). */
+		editedAt: timestamp('edited_at', { withTimezone: true }),
 		search: tsvector('search')
 			.notNull()
 			.generatedAlwaysAs((): SQL => searchVector('spanish', `coalesce("body", '')`)),

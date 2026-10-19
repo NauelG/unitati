@@ -16,6 +16,11 @@
 			? form.message
 			: undefined
 	);
+	const editError = $derived(
+		form && 'action' in form && form.action === 'editComment' && 'message' in form
+			? form.message
+			: undefined
+	);
 </script>
 
 <svelte:head>
@@ -41,7 +46,12 @@
 	{/if}
 
 	<div class="mt-[var(--space-6)]">
-		<TicketThread items={data.thread} attachmentHref={(id) => `/attachments/${id}`} />
+		<TicketThread
+			items={data.thread}
+			attachmentHref={(id) => `/attachments/${id}`}
+			editAction="?/editComment"
+			{editError}
+		/>
 	</div>
 
 	<section class="mt-[var(--space-5)]">
