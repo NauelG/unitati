@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.66.0] - 2026-10-19
+
+### Added
+
+- Queues have a colour, chosen from a fixed palette of eight in `/settings/service-desk/queues`
+  (grey by default, so existing queues keep working). The colour shows as a dot beside the queue
+  name in the ticket list, the ticket detail and the queue settings, so tickets from different
+  queues can be told apart at a glance.
+
 ## [0.65.0] - 2026-10-19
 
 ### Changed
