@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.76.0] - 2026-10-19
+
+### Changed
+
+- The asset record edits in place (#221): the state is a chip in the header, the custodian and the
+  location are editable rows in "Detalles", and the note box sits at the top of the history. The
+  four action panels (Custodia, Estado, Ubicación, Nota) are gone. Picking "Nadie" on the custodian
+  row returns custody. Each change saves on pick and rolls back with a toast if the server refuses;
+  the `#action-custody`, `#action-state` and `#action-location` links and the list shortcuts still
+  open the matching editor.
+
 ## [0.75.1] - 2026-10-19
 
 ### Fixed
