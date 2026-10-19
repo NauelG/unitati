@@ -79,6 +79,16 @@ describe('ticket record header', () => {
 		expect(submitted[0].data.get('status')).toBe('in_progress');
 	});
 
+	it('survives the optimistic status while nextStatuses is still the old one', async () => {
+		renderPage(true);
+		await fireEvent.click(screen.getByRole('button', { name: /^Estado/ }));
+		await fireEvent.click(await screen.findByRole('option', { name: 'En curso', hidden: true }));
+		await waitFor(() => expect(submitted).toHaveLength(1));
+		expect(screen.getByRole('button', { name: 'Estado: En curso' })).toBeTruthy();
+		await fireEvent.click(screen.getByRole('button', { name: /^Estado/ }));
+		expect(await screen.findAllByRole('option', { hidden: true })).toHaveLength(2);
+	});
+
 	it('has no Propiedades panel', () => {
 		renderPage(true);
 		expect(screen.queryByText('Propiedades')).toBeNull();
