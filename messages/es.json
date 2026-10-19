@@ -1092,5 +1092,7 @@
 	"locations_in_use_children_other": "{count} ubicaciones hijas",
 	"locations_in_use_assets_one": "1 activo",
 	"locations_in_use_assets_other": "{count} activos",
-	"locations_in_use_and": " y "
+	"locations_in_use_and": " y ",
+	"locations_delete_people_one": "1 persona perderá su ubicación.",
+	"locations_delete_people_other": "{count} personas perderán su ubicación."
 }

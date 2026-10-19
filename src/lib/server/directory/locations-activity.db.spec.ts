@@ -7,9 +7,11 @@ import {
 	createAsset,
 	createCatalogue,
 	createOrganisation,
+	createPerson,
 	createViewer
 } from '../assets/testing/fixtures';
-import { createLocation, deleteLocation, updateLocation } from '.';
+import { countPeopleByLocation, createLocation, deleteLocation, updateLocation } from '.';
+import { people } from './schema';
 import type { LocationInput } from './validation';
 
 const input = (overrides: Partial<LocationInput> = {}): LocationInput => ({
@@ -160,6 +162,102 @@ describe('location activity', () => {
 		});
 
 		expect(await entries()).toHaveLength(before);
+	});
+
+	describe('deleting a location people sit at', () => {
+		const seat = (personId: string, locationId: string) =>
+			getDb().update(people).set({ locationId }).where(eq(people.id, personId));
+		const locationOf = async (personId: string) =>
+			(await getDb().select().from(people).where(eq(people.id, personId)))[0].locationId;
+		const personEntries = async () =>
+			(await entries()).filter((row) => row.verb === 'person.location.changed');
+
+		it('records each person who loses it and clears their location', async () => {
+			const { organisation, actor } = await setup();
+			const bcn = await make(actor, { name: 'Barcelona office' });
+			const room = await make(actor, { name: 'Room', parentId: bcn });
+			const ada = await createPerson(organisation.id, 'Grace Hopper');
+			const alan = await createPerson(organisation.id, 'Alan Turing');
+			await seat(ada.id, room);
+			await seat(alan.id, room);
+
+			expect(await deleteLocation(actor, room)).toEqual({ ok: true, value: undefined });
+
+			const written = await personEntries();
+			expect(written).toHaveLength(2);
+			expect(written.map((row) => row.personId).sort()).toEqual([ada.id, alan.id].sort());
+			for (const row of written) {
+				expect(row).toMatchObject({
+					actorPersonId: actor.personId,
+					payload: {
+						from: { id: room, path: 'Barcelona office › Room' },
+						to: null,
+						reason: 'location_deleted'
+					}
+				});
+			}
+			expect(await locationOf(ada.id)).toBeNull();
+			expect(await locationOf(alan.id)).toBeNull();
+			expect((await entries()).filter((r) => r.verb === 'catalogue.location.deleted')).toHaveLength(
+				1
+			);
+		});
+
+		it('writes no person entry when nobody sits there', async () => {
+			const { actor } = await setup();
+			const room = await make(actor, { name: 'Empty' });
+
+			await deleteLocation(actor, room);
+
+			expect(await personEntries()).toHaveLength(0);
+		});
+
+		it('leaves people and activity untouched when the delete is refused', async () => {
+			const { organisation, actor } = await setup();
+			const { modelId } = await createCatalogue(organisation.id);
+			const held = await make(actor, { name: 'Held' });
+			await createAsset(organisation.id, modelId, { locationId: held });
+			const person = await createPerson(organisation.id, 'Grace Hopper');
+			await seat(person.id, held);
+			const before = (await entries()).length;
+
+			expect(await deleteLocation(actor, held)).toEqual({ ok: false, error: 'in_use' });
+
+			expect(await entries()).toHaveLength(before);
+			expect(await locationOf(person.id)).toBe(held);
+		});
+
+		it('never counts or records people of another organisation', async () => {
+			const { organisation, actor } = await setup();
+			const other = await createOrganisation('Other', 'other');
+			const room = await make(actor, { name: 'Room' });
+			const stranger = await createPerson(other.id, 'Grace Hopper');
+			await seat(stranger.id, room);
+			const mine = await createPerson(organisation.id, 'Alan Turing');
+			await seat(mine.id, room);
+
+			expect((await countPeopleByLocation(organisation.id)).get(room)).toBe(1);
+
+			await deleteLocation(actor, room);
+
+			expect((await personEntries()).map((row) => row.personId)).toEqual([mine.id]);
+		});
+
+		it('counts people per location in one grouped query', async () => {
+			const { organisation, actor } = await setup();
+			const a = await make(actor, { name: 'A' });
+			const b = await make(actor, { name: 'B' });
+			await make(actor, { name: 'C' });
+			await seat((await createPerson(organisation.id, 'P One')).id, a);
+			await seat((await createPerson(organisation.id, 'P Two')).id, a);
+			await seat((await createPerson(organisation.id, 'P Three')).id, b);
+
+			const counts = await countPeopleByLocation(organisation.id);
+
+			expect(counts.get(a)).toBe(2);
+			expect(counts.get(b)).toBe(1);
+			expect(counts.size).toBe(2);
+		});
 	});
 
 	it('lists location entries in the organisation feed without a record', async () => {

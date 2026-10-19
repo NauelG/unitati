@@ -8,6 +8,7 @@ import { departments, organisations, people, teams } from './schema';
 export { organisations, people, departments, locations, teams } from './schema';
 export {
 	countLocationChildren,
+	countPeopleByLocation,
 	createLocation,
 	deleteLocation,
 	listLocations,
