@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { groupByModule, visibleSections, type SettingsSection } from './sections.js';
+import {
+	MODULE_LABELS,
+	MODULE_ORDER,
+	groupByModule,
+	visibleSections,
+	type SettingsSection
+} from './sections.js';
 
 const sections: readonly SettingsSection[] = [
 	{
@@ -70,6 +76,29 @@ describe('visibleSections', () => {
 			'/settings/assets/locations'
 		]);
 		expect(deskManager).toEqual(['/settings/service-desk/queues']);
+	});
+});
+
+describe('the directory module', () => {
+	it('lists departments under "Directorio" for whoever may manage people', () => {
+		expect(MODULE_ORDER).toContain('directory');
+		expect(MODULE_LABELS.directory()).toBe('Directorio');
+
+		const sections = visibleSections(['people.manage']);
+		expect(sections.map((section) => [section.module, section.href])).toEqual([
+			['directory', '/settings/directory/departments']
+		]);
+	});
+
+	it('hides departments from a technician and an employee', () => {
+		const technician = ['projects.view', 'projects.manage', 'api.keys.manage'];
+		const employee = ['projects.view.assigned', 'tickets.create'];
+
+		for (const permissions of [technician, employee]) {
+			expect(
+				visibleSections(permissions).some((s) => s.href === '/settings/directory/departments')
+			).toBe(false);
+		}
 	});
 });
 

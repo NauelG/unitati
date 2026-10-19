@@ -20,7 +20,13 @@ export interface SettingsSection {
 }
 
 /** Display order of the modules in the navigation and the index; the one list `SettingsModule` derives from. */
-export const MODULE_ORDER = ['projects', 'assets', 'service-desk', 'platform'] as const;
+export const MODULE_ORDER = [
+	'projects',
+	'assets',
+	'service-desk',
+	'directory',
+	'platform'
+] as const;
 
 export type SettingsModule = (typeof MODULE_ORDER)[number];
 
@@ -28,6 +34,7 @@ export const MODULE_LABELS: Record<SettingsModule, () => string> = {
 	projects: m.settings_module_projects,
 	assets: m.settings_module_assets,
 	'service-desk': m.settings_module_service_desk,
+	directory: m.settings_module_directory,
 	/** What belongs to the installation rather than to one module: API keys, and later its siblings. */
 	platform: m.settings_module_platform
 };
@@ -68,6 +75,12 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
 		href: '/settings/service-desk/queues',
 		label: m.queues_title,
 		permission: 'tickets.manage'
+	},
+	{
+		module: 'directory',
+		href: '/settings/directory/departments',
+		label: m.settings_section_departments,
+		permission: 'people.manage'
 	},
 	{
 		module: 'platform',
