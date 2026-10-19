@@ -121,6 +121,32 @@ export async function listPeople(organisationId: string): Promise<DirectoryEntry
 	}));
 }
 
+export interface PersonLocation {
+	locationId: string;
+	/** The location's path (` › `-joined). */
+	path: string;
+}
+
+/**
+ * Where a person usually works, for whoever shows it beside something else
+ * (the ticket record, #176). Null when the person has no location or is not in
+ * the organisation. Callers decide who may see it: nothing is redacted here.
+ */
+export async function personLocation(
+	organisationId: string,
+	personId: string
+): Promise<PersonLocation | null> {
+	const [row] = await getDb()
+		.select({ locationId: people.locationId })
+		.from(people)
+		.where(and(eq(people.id, personId), eq(people.organisationId, organisationId)))
+		.limit(1);
+	if (!row?.locationId) return null;
+
+	const path = (await locationPaths(organisationId, [row.locationId])).get(row.locationId);
+	return path ? { locationId: row.locationId, path } : null;
+}
+
 export interface PersonContact {
 	id: string;
 	fullName: string;

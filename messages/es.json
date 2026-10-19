@@ -527,6 +527,7 @@
 	"ticket_error_no_queue": "Todavía no hay ninguna cola. Avisa a un administrador.",
 	"ticket_error_invalid": "Revisa el asunto y el mensaje: no pueden estar vacíos.",
 	"ticket_detail_requester": "Solicitante",
+	"ticket_detail_requester_location": "Ubicación del solicitante",
 	"ticket_detail_assignee": "Asignada a",
 	"ticket_detail_queue": "Cola",
 	"ticket_detail_priority": "Prioridad",

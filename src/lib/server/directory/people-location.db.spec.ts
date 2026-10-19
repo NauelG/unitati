@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { getDb } from '../db';
 import { activity } from '../activity/schema';
 import { createOrganisation, createPerson, createViewer } from '../assets/testing/fixtures';
-import { createLocation, listPeople, people, setPersonLocation } from '.';
+import { createLocation, listPeople, people, personLocation, setPersonLocation } from '.';
 import type { SessionUser } from '../auth/guards';
 
 async function setup() {
@@ -131,5 +131,29 @@ describe('listPeople location', () => {
 			locationId: null,
 			locationPath: null
 		});
+	});
+});
+
+describe('personLocation', () => {
+	it('returns the location id and path, or null when the person has none', async () => {
+		const { actor, organisation, person } = await setup();
+		const bcn = await place(actor, 'Barcelona office');
+		const floor = await place(actor, 'Floor 1', bcn);
+
+		expect(await personLocation(organisation.id, person.id)).toBeNull();
+
+		await setPersonLocation(actor, person.id, floor);
+		expect(await personLocation(organisation.id, person.id)).toEqual({
+			locationId: floor,
+			path: 'Barcelona office › Floor 1'
+		});
+	});
+
+	it('returns null for a person of another organisation', async () => {
+		const { actor, person } = await setup();
+		const other = await createOrganisation('Other', 'other');
+		await setPersonLocation(actor, person.id, await place(actor, 'Barcelona office'));
+
+		expect(await personLocation(other.id, person.id)).toBeNull();
 	});
 });

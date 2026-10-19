@@ -6,7 +6,7 @@ import { escalateFailureMessage } from '#lib/escalation-errors.js';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import { requireAnyPermission, requirePermission } from '#lib/server/auth/guards.js';
-import { listPeople } from '#lib/server/directory/index.js';
+import { listPeople, personLocation } from '#lib/server/directory/index.js';
 import {
 	escalateTicket,
 	escalationDraft,
@@ -55,6 +55,11 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		? await Promise.all([listQueues(user), listPeople(user.organisationId)])
 		: [[], []];
 
+	// Staff only (#176, ADR 0007): for anyone else the value is never read.
+	const requesterLocation = can(user, 'people.view')
+		? await personLocation(user.organisationId, found.value.requesterPersonId)
+		: undefined;
+
 	return {
 		ticket: found.value,
 		// Thread stays awaited — it's the page's point (#89's streaming note).
@@ -66,6 +71,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		// The whole of it: the constellation draws every relation, the panel lists them.
 		related: relatedTo(user, { kind: 'ticket', id: found.value.id }),
 		canManage,
+		...(requesterLocation === undefined
+			? {}
+			: { requesterLocation: requesterLocation && { path: requesterLocation.path } }),
 		// What the escalation Sheet needs: only for someone who may escalate.
 		escalation: canManage
 			? {
