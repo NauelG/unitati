@@ -241,6 +241,14 @@
 			<DescriptionList
 				items={[
 					{ label: m.ticket_detail_requester(), value: ticket.requesterName },
+					...('requesterLocation' in data
+						? [
+								{
+									label: m.ticket_detail_requester_location(),
+									value: data.requesterLocation?.path ?? m.directory_no_location()
+								}
+							]
+						: []),
 					{
 						label: m.ticket_detail_assignee(),
 						value: localAssigneeName ?? m.tickets_no_assignee()

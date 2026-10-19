@@ -5,6 +5,13 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.73.0] - 2026-10-19
+
+### Added
+
+- The ticket record shows the requester's location ("Ubicación del solicitante") in the Details
+  panel, for staff with `people.view`. Employees never receive it (#204).
+
 ## [0.72.0] - 2026-10-19
 
 ### Added
