@@ -125,7 +125,7 @@ describe('writing to a project record', () => {
 	});
 
 	it('leaves every other field alone when an in-place edit posts one field', async () => {
-		const { technician, organisation, params } = await setup();
+		const { technician, organisation } = await setup();
 		const owner = technician.personId!;
 		const project = await createProjectRow(organisation.id, {
 			name: 'Keep me',
@@ -169,7 +169,7 @@ describe('writing to a project record', () => {
 	});
 
 	it('returns the new code so the page can follow it, and refuses a reserved or duplicate one', async () => {
-		const { technician, organisation, project, params } = await setup();
+		const { technician, organisation, params } = await setup();
 		await createProjectRow(organisation.id, { projectTag: 'TAKEN' });
 
 		const moved = await outcomeOf(() =>
