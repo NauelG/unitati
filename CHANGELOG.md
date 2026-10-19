@@ -44,6 +44,12 @@ minor bumps carry features and patch bumps carry fixes.
 
 ## [0.68.2] - 2026-10-19
 
+### Fixed
+
+- Pages no longer fail to hydrate. The sidebar counts and the KPI cards used a number component
+  whose server-rendered markup Svelte could not hydrate, which threw the page into the error state;
+  both now print the plain number until the app has hydrated and roll it from then on.
+
 ### Changed
 
 - The focus ring on text fields (inputs, textareas, selects, search selects, input groups) is now
