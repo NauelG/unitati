@@ -65,6 +65,7 @@
 	import NumberFlow from '@number-flow/svelte';
 	import { NUMBER_FLOW_TIMING } from '#lib/motion.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
+	import { isHydrated } from '#lib/hydration.svelte.js';
 
 	interface Props {
 		/** Short, plain text: names what is being counted, not what the number means. */
@@ -120,7 +121,11 @@
 				document — cannot reach them. This is the one place in the app where
 				that layer is not the backstop.
 			-->
-			<NumberFlow {value} locales={getLocale()} {...NUMBER_FLOW_TIMING} />
+			{#if isHydrated()}
+				<NumberFlow {value} locales={getLocale()} {...NUMBER_FLOW_TIMING} />
+			{:else}
+				{new Intl.NumberFormat(getLocale()).format(value)}
+			{/if}
 		{:else}
 			{value}
 		{/if}
