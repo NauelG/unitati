@@ -48,7 +48,7 @@ minor bumps carry features and patch bumps carry fixes.
   gone; readers see the same page without outlines. "Mover a proyecto" stays a header button.
 - The task `update` action takes one field per post: keys that are absent stay untouched, it accepts
   `taskTag`, and a description over 20,000 characters is refused.
-||||||| parent of 2bf096e (feat(auth): grant access with a temporary password and a role (#230))
+  ||||||| parent of 2bf096e (feat(auth): grant access with a temporary password and a role (#230))
 
 ## [0.78.1] - 2026-10-19
 
