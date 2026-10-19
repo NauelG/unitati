@@ -261,44 +261,44 @@
 		pending={saving}
 		title={m.task_edit_title({ tag: task.taskTag })}
 		description={m.task_edit_lede()}
+		form={{
+			action: '?/update',
+			method: 'POST',
+			use: (node) =>
+				enhance(node, () => {
+					saving = true;
+					return async ({ result, update }) => {
+						await update({ reset: false });
+						saving = false;
+						if (result.type === 'success') editOpen = false;
+					};
+				})
+		}}
 	>
-		<form
-			method="POST"
-			action="?/update"
-			use:enhance={() => {
-				saving = true;
-				return async ({ result, update }) => {
-					await update({ reset: false });
-					saving = false;
-					if (result.type === 'success') editOpen = false;
-				};
-			}}
-			class="flex h-full min-h-0 flex-col"
-		>
-			<div class="min-h-0 flex-1 space-y-[var(--space-5)] overflow-y-auto">
-				<Field
-					label={m.task_field_title()}
-					name="title"
-					required
-					value={task.title}
-					error={fieldError('update', 'title')}
-				/>
-				<TextAreaField
-					label={m.task_field_description()}
-					name="description"
-					value={task.description}
-				/>
-				<Field
-					label={m.task_field_due()}
-					name="dueDate"
-					type="date"
-					autocomplete="off"
-					value={task.dueDate}
-				/>
-			</div>
-
+		{#snippet fields()}
+			<Field
+				label={m.task_field_title()}
+				name="title"
+				required
+				value={task.title}
+				error={fieldError('update', 'title')}
+			/>
+			<TextAreaField
+				label={m.task_field_description()}
+				name="description"
+				value={task.description}
+			/>
+			<Field
+				label={m.task_field_due()}
+				name="dueDate"
+				type="date"
+				autocomplete="off"
+				value={task.dueDate}
+			/>
+		{/snippet}
+		{#snippet footer()}
 			<div
-				class="mt-[var(--space-4)] flex shrink-0 items-center gap-[var(--space-3)] border-t border-[var(--border)] pt-[var(--space-4)]"
+				class="flex items-center gap-[var(--space-3)] border-t border-[var(--border)] pt-[var(--space-4)]"
 			>
 				<Button type="submit" busy={saving}>
 					{saving ? m.form_saving() : m.task_edit_submit()}
@@ -307,6 +307,6 @@
 					{m.form_cancel()}
 				</Button>
 			</div>
-		</form>
+		{/snippet}
 	</Sheet>
 {/if}

@@ -382,75 +382,73 @@
 		pending={saving}
 		title={m.project_edit_title({ tag: project.projectTag })}
 		description={m.project_edit_lede()}
-	>
-		<form
-			method="POST"
-			action="?/update"
-			use:enhance={() => {
-				saving = true;
-				return async ({ result, update }) => {
-					await update({ reset: false });
-					saving = false;
-					if (result.type === 'success') {
-						editOpen = false;
-						const next = (result.data as { projectTag?: string } | undefined)?.projectTag;
-						// The tag is the URL: follow it if it moved.
-						if (next && next !== project.projectTag) {
-							await goto(`/projects/${encodeURIComponent(next)}`, { replaceState: true });
+		form={{
+			action: '?/update',
+			method: 'POST',
+			use: (node) =>
+				enhance(node, () => {
+					saving = true;
+					return async ({ result, update }) => {
+						await update({ reset: false });
+						saving = false;
+						if (result.type === 'success') {
+							editOpen = false;
+							const next = (result.data as { projectTag?: string } | undefined)?.projectTag;
+							// The tag is the URL: follow it if it moved.
+							if (next && next !== project.projectTag) {
+								await goto(`/projects/${encodeURIComponent(next)}`, { replaceState: true });
+							}
 						}
-					}
-				};
-			}}
-			oninput={() => (inputsEdited = true)}
-			class="flex h-full min-h-0 flex-col"
-		>
-			<div class="min-h-0 flex-1 space-y-[var(--space-5)] overflow-y-auto">
-				<Field
-					label={m.project_field_name()}
-					name="name"
-					required
-					autocomplete="off"
-					value={project.name}
-					error={form && 'field' in form && form.field === 'name'
-						? failureFor('update')
-						: undefined}
-				/>
-				<TextAreaField
-					label={m.project_field_description()}
-					name="description"
-					value={project.description}
-				/>
-				<SearchSelectField
-					label={m.project_field_owner()}
-					name="ownerPersonId"
-					placeholder={m.project_field_owner_none()}
-					options={ownerOptions}
-					bind:value={ownerPersonId}
-				/>
-				<Field
-					label={m.project_field_due()}
-					name="dueDate"
-					type="date"
-					autocomplete="off"
-					value={project.dueDate}
-				/>
-				<Field
-					label={m.project_field_tag()}
-					name="projectTag"
-					autocomplete="off"
-					spellcheck={false}
-					autocapitalize="off"
-					value={project.projectTag}
-					error={form && 'field' in form && form.field === 'projectTag'
-						? failureFor('update')
-						: undefined}
-				/>
-				{#if form && 'action' in form && form.action === 'update' && !('field' in form && form.field)}
-					{@render failure('update')}
-				{/if}
-			</div>
-
-			<FormActions class="mt-[var(--space-4)] shrink-0">
+					};
+				}),
+			oninput: () => (inputsEdited = true)
+		}}
+	>
+		{#snippet fields()}
+			<Field
+				label={m.project_field_name()}
+				name="name"
+				required
+				autocomplete="off"
+				value={project.name}
+				error={form && 'field' in form && form.field === 'name' ? failureFor('update') : undefined}
+			/>
+			<TextAreaField
+				label={m.project_field_description()}
+				name="description"
+				value={project.description}
+			/>
+			<SearchSelectField
+				label={m.project_field_owner()}
+				name="ownerPersonId"
+				placeholder={m.project_field_owner_none()}
+				options={ownerOptions}
+				bind:value={ownerPersonId}
+			/>
+			<Field
+				label={m.project_field_due()}
+				name="dueDate"
+				type="date"
+				autocomplete="off"
+				value={project.dueDate}
+			/>
+			<Field
+				label={m.project_field_tag()}
+				name="projectTag"
+				autocomplete="off"
+				spellcheck={false}
+				autocapitalize="off"
+				value={project.projectTag}
+				error={form && 'field' in form && form.field === 'projectTag'
+					? failureFor('update')
+					: undefined}
+			/>
+			{#if form && 'action' in form && form.action === 'update' && !('field' in form && form.field)}
+				{@render failure('update')}
+			{/if}
+		{/snippet}
+		{#snippet footer()}
+			<FormActions>
 				<Button type="button" variant="ghost" onclick={() => requestEditClose(false)}>
 					{m.form_cancel()}
 				</Button>
@@ -458,7 +456,7 @@
 					{saving ? m.form_saving() : m.project_edit_submit()}
 				</Button>
 			</FormActions>
-		</form>
+		{/snippet}
 	</Sheet>
 
 	<ConfirmDialog

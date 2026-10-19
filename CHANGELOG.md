@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.68.1] - 2026-10-19
+
+### Fixed
+
+- The focus ring is no longer clipped inside Sheets. `Sheet` now offers `fields` and `footer`
+  snippets plus a `form` prop: it renders the form, the scrolling fields region (padded so the ring
+  fits) and the action row itself. The asset, project, task and escalation Sheets and the gallery
+  use them.
+
 ## [0.68.0] - 2026-10-19
 
 ### Changed

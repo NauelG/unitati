@@ -259,135 +259,136 @@
 	{pending}
 	title={m.escalate_title({ tag: ticket.tag })}
 	description={m.escalate_lede()}
+	class={className}
+	form={{
+		action: formAction,
+		method: 'POST',
+		use: (node) =>
+			enhance(node, () => {
+				pending = true;
+				error = null;
+				errorField = null;
+				return async ({ result, update }) => {
+					pending = false;
+					if (result.type === 'success') {
+						const done = result.data?.escalated as { tag: string } | undefined;
+						if (done) toast.success(successText(kind, done.tag));
+						onOpenChange(false);
+						// Reloads the ticket, so the relation panel shows what was just linked.
+						await update({ reset: false });
+						return;
+					}
+					error =
+						result.type === 'failure' && typeof result.data?.message === 'string'
+							? result.data.message
+							: m.error_generic();
+					errorField =
+						result.type === 'failure' && typeof result.data?.field === 'string'
+							? result.data.field
+							: null;
+				};
+			})
+	}}
 >
-	<form
-		method="POST"
-		action={formAction}
-		class={['flex h-full min-h-0 flex-col', className]}
-		use:enhance={() => {
-			pending = true;
-			error = null;
-			errorField = null;
-			return async ({ result, update }) => {
-				pending = false;
-				if (result.type === 'success') {
-					const done = result.data?.escalated as { tag: string } | undefined;
-					if (done) toast.success(successText(kind, done.tag));
-					onOpenChange(false);
-					// Reloads the ticket, so the relation panel shows what was just linked.
-					await update({ reset: false });
-					return;
-				}
-				error =
-					result.type === 'failure' && typeof result.data?.message === 'string'
-						? result.data.message
-						: m.error_generic();
-				errorField =
-					result.type === 'failure' && typeof result.data?.field === 'string'
-						? result.data.field
-						: null;
-			};
-		}}
-	>
+	{#snippet fields()}
 		<input type="hidden" name="kind" value={kind} />
 
-		<div class="min-h-0 flex-1 space-y-[var(--space-5)] overflow-y-auto">
+		{@render choice(
+			m.escalate_target_label(),
+			'escalate-target',
+			targets,
+			TARGET_LABELS,
+			target,
+			(value) => (target = value as EscalateTarget)
+		)}
+
+		{#if target === 'project' && projectModes.length > 1}
 			{@render choice(
-				m.escalate_target_label(),
-				'escalate-target',
-				targets,
-				TARGET_LABELS,
-				target,
-				(value) => (target = value as EscalateTarget)
+				m.escalate_project_mode_label(),
+				'escalate-project-mode',
+				projectModes,
+				MODE_LABELS,
+				projectMode,
+				(value) => (projectMode = value as ProjectMode)
 			)}
+		{/if}
 
-			{#if target === 'project' && projectModes.length > 1}
-				{@render choice(
-					m.escalate_project_mode_label(),
-					'escalate-project-mode',
-					projectModes,
-					MODE_LABELS,
-					projectMode,
-					(value) => (projectMode = value as ProjectMode)
-				)}
-			{/if}
+		{#if kind === 'new_task'}
+			<SearchSelectField
+				label={m.escalate_field_project()}
+				name="projectId"
+				required
+				error={errorFor('projectId')}
+				placeholder={m.escalate_pick_project()}
+				searchUrl="{searchBase}/projects"
+				bind:value={projectId}
+				onpick={(option) => (pickedProject = option ? pickedFrom(option) : null)}
+			/>
+			<Field
+				label={m.escalate_field_title()}
+				name="title"
+				required
+				error={errorFor('title')}
+				bind:value={title}
+			/>
+			<TextAreaField
+				label={m.escalate_field_description()}
+				name="description"
+				rows={6}
+				bind:value={description}
+			/>
+		{:else if kind === 'existing_task'}
+			<SearchSelectField
+				label={m.escalate_field_task()}
+				name="taskId"
+				required
+				error={errorFor('taskId')}
+				placeholder={m.escalate_pick_task()}
+				searchUrl="{searchBase}/tasks"
+				bind:value={taskId}
+				onpick={(option) => (pickedTask = option ? pickedFrom(option) : null)}
+			/>
+		{:else if kind === 'existing_project'}
+			<SearchSelectField
+				label={m.escalate_field_project()}
+				name="projectId"
+				required
+				error={errorFor('projectId')}
+				placeholder={m.escalate_pick_project()}
+				searchUrl="{searchBase}/linkable-projects"
+				bind:value={existingProjectId}
+				onpick={(option) => (pickedExistingProject = option ? pickedFrom(option) : null)}
+			/>
+		{:else}
+			<Field
+				label={m.escalate_field_name()}
+				name="name"
+				required
+				error={errorFor('name')}
+				bind:value={name}
+			/>
+			<SearchSelectField
+				label={m.escalate_field_owner()}
+				name="ownerPersonId"
+				placeholder={m.escalate_pick_person()}
+				options={people}
+				bind:value={ownerId}
+			/>
+		{/if}
 
-			{#if kind === 'new_task'}
-				<SearchSelectField
-					label={m.escalate_field_project()}
-					name="projectId"
-					required
-					error={errorFor('projectId')}
-					placeholder={m.escalate_pick_project()}
-					searchUrl="{searchBase}/projects"
-					bind:value={projectId}
-					onpick={(option) => (pickedProject = option ? pickedFrom(option) : null)}
-				/>
-				<Field
-					label={m.escalate_field_title()}
-					name="title"
-					required
-					error={errorFor('title')}
-					bind:value={title}
-				/>
-				<TextAreaField
-					label={m.escalate_field_description()}
-					name="description"
-					rows={6}
-					bind:value={description}
-				/>
-			{:else if kind === 'existing_task'}
-				<SearchSelectField
-					label={m.escalate_field_task()}
-					name="taskId"
-					required
-					error={errorFor('taskId')}
-					placeholder={m.escalate_pick_task()}
-					searchUrl="{searchBase}/tasks"
-					bind:value={taskId}
-					onpick={(option) => (pickedTask = option ? pickedFrom(option) : null)}
-				/>
-			{:else if kind === 'existing_project'}
-				<SearchSelectField
-					label={m.escalate_field_project()}
-					name="projectId"
-					required
-					error={errorFor('projectId')}
-					placeholder={m.escalate_pick_project()}
-					searchUrl="{searchBase}/linkable-projects"
-					bind:value={existingProjectId}
-					onpick={(option) => (pickedExistingProject = option ? pickedFrom(option) : null)}
-				/>
-			{:else}
-				<Field
-					label={m.escalate_field_name()}
-					name="name"
-					required
-					error={errorFor('name')}
-					bind:value={name}
-				/>
-				<SearchSelectField
-					label={m.escalate_field_owner()}
-					name="ownerPersonId"
-					placeholder={m.escalate_pick_person()}
-					options={people}
-					bind:value={ownerId}
-				/>
-			{/if}
+		<Alert tone="info">
+			{#each lines as line (line)}
+				<p>{line}</p>
+			{/each}
+		</Alert>
 
-			<Alert tone="info">
-				{#each lines as line (line)}
-					<p>{line}</p>
-				{/each}
-			</Alert>
-
-			{#if error && !errorField}
-				<Alert tone="danger">{error}</Alert>
-			{/if}
-		</div>
-
+		{#if error && !errorField}
+			<Alert tone="danger">{error}</Alert>
+		{/if}
+	{/snippet}
+	{#snippet footer()}
 		<div
-			class="mt-[var(--space-4)] flex shrink-0 items-center gap-[var(--space-3)] border-t border-[var(--border)] pt-[var(--space-4)]"
+			class="flex items-center gap-[var(--space-3)] border-t border-[var(--border)] pt-[var(--space-4)]"
 		>
 			<Button type="submit" busy={pending} disabled={!ready || pending}>
 				{pending ? m.form_saving() : submitLabel(kind, picked)}
@@ -396,7 +397,7 @@
 				{m.form_cancel()}
 			</Button>
 		</div>
-	</form>
+	{/snippet}
 </Sheet>
 
 <ConfirmDialog
