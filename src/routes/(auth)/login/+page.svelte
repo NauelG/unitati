@@ -2,11 +2,9 @@
 	import FormError from '#lib/components/unitati/FormError.svelte';
 	import { documentTitle, productName } from '#lib/brand.svelte.js';
 	import { untrack } from 'svelte';
-	import { APP_ENV } from '$app/env/public';
 	import { superForm } from 'sveltekit-superforms';
 	import AppVersion from '#lib/components/AppVersion.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
-	import EnvironmentBadge from '#lib/components/unitati/EnvironmentBadge.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import Logo from '#lib/components/unitati/Logo.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
@@ -76,7 +74,6 @@
 				</form>
 
 				<footer class="mt-[var(--space-8)] flex items-center justify-center gap-[var(--space-3)]">
-					<EnvironmentBadge environment={APP_ENV} />
 					<AppVersion />
 				</footer>
 			</div>

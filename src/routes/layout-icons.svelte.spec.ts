@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_BRAND, type BrandView } from '#lib/domain/brand.js';
 
 vi.mock('$app/navigation', () => ({ onNavigate: vi.fn() }));
+vi.mock('$app/env/public', () => ({ APP_ENV: 'production' }));
 
 const { default: Layout } = await import('./+layout.svelte');
 

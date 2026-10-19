@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.69.0] - 2026-10-19
+
+### Changed
+
+- The environment badge ("Preproducción", "Desarrollo") floats fixed in the bottom-right corner
+  above everything, dialogs and toasts included, and never blocks a click. It is mounted once in
+  the root layout, so it also shows on `/login`, `/setup` and the portal. It leaves the topbar and
+  the login card. Toasts move to bottom-center. New `--z-dialog` and `--z-env-badge` tokens.
+
 ## [0.68.2] - 2026-10-19
 
 ### Changed

@@ -23,7 +23,15 @@
  * Values are copied verbatim; the shadcn-svelte mapping below points at these
  * and never redefines a colour, so there is exactly one place to change one.
  */
+/*
+ * Layering. Components use literal `z-10` for in-flow stacking and `--z-dialog` (50) for
+ * dialogs, sheets, popovers and toasts. The environment badge marks the whole window as
+ * non-production, so it sits above all of them.
+ */
 :root {
+	--z-dialog: 50;
+	--z-env-badge: 100;
+
 	/* Surfaces and ink */
 	--surface-0: #f5f6f8;
 	--surface-1: #ffffff;

@@ -9,7 +9,6 @@
 	import ComponentDocPage from '../ComponentDocPage.svelte';
 	import AppShell from '#lib/components/unitati/AppShell.svelte';
 	import type { AppShellNavLink } from '#lib/components/unitati/app-shell-nav.js';
-	import EnvironmentBadge from '#lib/components/unitati/EnvironmentBadge.svelte';
 
 	const tallLinks: AppShellNavLink[] = [
 		{ href: '/', label: 'Inicio', icon: HouseIcon },
@@ -134,12 +133,12 @@
 		{
 			name: 'topbarEnd',
 			type: 'Snippet',
-			description: 'El lado derecho de la topbar: insignia de entorno, usuario, salir.'
+			description: 'El lado derecho de la topbar: tema, usuario, salir.'
 		}
 	]}
 	usage={`<AppShell {links}>
   {#snippet topbarEnd()}
-    <EnvironmentBadge environment={APP_ENV} />
+    <!-- user area -->
   {/snippet}
   {children}
 </AppShell>`}
@@ -165,9 +164,6 @@
 				class="h-[420px] overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-strong)]"
 			>
 				<AppShell links={tallLinks}>
-					{#snippet topbarEnd()}
-						<EnvironmentBadge environment="development" />
-					{/snippet}
 					<div class="flex flex-col gap-4 p-4">
 						{#each Array.from({ length: 20 }), index (index)}
 							<div class="h-10 rounded-[var(--radius-md)] bg-[var(--surface-2)]"></div>
