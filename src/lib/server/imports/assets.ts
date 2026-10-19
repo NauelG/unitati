@@ -792,6 +792,13 @@ export async function commitAssetsImport(
 
 			/* 5. The assets, in file order */
 			for (const asset of plan.toCreate) {
+				const abortRow = (): never =>
+					abort({
+						row: asset.row,
+						column: null,
+						value: asset.assetTag ?? asset.serial ?? asset.name,
+						kind: 'asset_conflict'
+					});
 				const registered = await registerAsset(
 					actor,
 					{
@@ -805,36 +812,16 @@ export async function commitAssetsImport(
 					},
 					{ executor: tx, via: 'import' }
 				);
-				if (!registered.ok) {
-					return abort({
-						row: asset.row,
-						column: null,
-						value: asset.assetTag ?? asset.serial ?? asset.name,
-						kind: 'asset_conflict'
-					});
-				}
-				const assetId = registered.value.id;
-
-				if (asset.custodian !== null) {
-					const assigned = await assignCustody(actor, assetId, resolve(asset.custodian), options);
-					if (!assigned.ok) {
-						return abort({
-							row: asset.row,
-							column: null,
-							value: asset.assetTag ?? asset.name,
-							kind: 'asset_conflict'
-						});
+				if (!registered.ok) abortRow();
+				else {
+					const assetId = registered.value.id;
+					if (asset.custodian !== null) {
+						const assigned = await assignCustody(actor, assetId, resolve(asset.custodian), options);
+						if (!assigned.ok) abortRow();
 					}
-				}
-				if (asset.note !== null) {
-					const added = await addNote(actor, assetId, asset.note, options);
-					if (!added.ok) {
-						return abort({
-							row: asset.row,
-							column: null,
-							value: asset.assetTag ?? asset.name,
-							kind: 'asset_conflict'
-						});
+					if (asset.note !== null) {
+						const added = await addNote(actor, assetId, asset.note, options);
+						if (!added.ok) abortRow();
 					}
 				}
 			}

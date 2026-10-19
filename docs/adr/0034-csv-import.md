@@ -80,6 +80,10 @@ decisions above.
   holds `people.manage` and the row gives a name. By name alone: exactly one active person, never
   created. Custody is assigned after the asset is inserted, so the activity reads `asset.created`
   (`via: 'import'`), `custody.assigned`, `note.added`; no `state.changed` or `location.changed`.
+- **Who may create what.** The assets import is gated by `assets.manage`, and so are the
+  manufacturers, categories, models and locations it creates, as in `/settings/assets`. Only the
+  people it creates need `people.manage` (decision 6 applies to them alone); without it a custodian
+  that does not exist is an error, not a creation.
 - **Reads go through the executor too.** The catalogue and asset writes check their model,
   manufacturer, category and location inside the executor they are given, so what the import
   created earlier in its transaction is visible to them.

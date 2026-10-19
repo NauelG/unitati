@@ -1,4 +1,4 @@
 ﻿Etiqueta,Nombre,Número de serie,Modelo,Fabricante,Categoría,Estado,Correo del custodio,Ubicación,Compartido,Notas
 IMP-0001,Portátil de Ada,IMP-SN-0001,ThinkPad T14,Lenovo,Portátiles,En uso,ada.lovelace@acme.test,,No,
-,Monitor de la sala,IMP-SN-0002,UltraSharp U2723QE,Dell,Monitores,En stock,,Barcelona office › Floor 1,No,
-,Impresora de planta,,LaserJet Pro M404,HP,Impresoras,En stock,,GRO,Sí,Cambiar el tóner cada tres meses
+,Monitor de la sala,IMP-SN-0002,UltraSharp U2723QE,Dell,Monitores,En stock,,BCN-1,No,
+,Impresora de planta,,LaserJet Pro M404,HP,Impresoras,En stock,,Warehouse,Sí,Cambiar el tóner cada tres meses
