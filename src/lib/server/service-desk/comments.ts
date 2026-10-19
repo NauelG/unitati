@@ -7,6 +7,7 @@ import { failure, success, type Outcome } from '../shared/outcome';
 import { newReplyMail, sendQuietly } from './mail';
 import { attachments, ticketComments, tickets } from './schema';
 import { requireTicketScope, seesInternal } from './scope';
+import { compareThreadItems } from './thread-order';
 import { resolveDeps, storeFiles, type Deps } from './tickets';
 import {
 	addCommentInput,
@@ -114,8 +115,7 @@ export async function ticketThread(
 		...events.map((entry): ThreadItem => ({ kind: 'event', at: entry.occurredAt, entry }))
 	];
 
-	const at = (item: ThreadItem) => (item.kind === 'comment' ? item.createdAt : item.at).getTime();
-	return success(items.sort((a, b) => at(a) - at(b)));
+	return success(items.sort(compareThreadItems));
 }
 
 export type AddCommentFailure =

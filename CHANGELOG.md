@@ -5,6 +5,13 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.63.3] - 2026-10-19
+
+### Fixed
+
+- The ticket thread no longer shows "Vinculó el activo" before "Abrió la solicitud": items that share
+  a timestamp now read the request first, then the opening message, then every other event (#224).
+
 ## [0.63.2] - 2026-10-18
 
 ### Fixed
