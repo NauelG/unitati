@@ -5,6 +5,18 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.80.0] - 2026-10-19
+
+### Added
+
+- Ticket comments, the opening message and the subject can be corrected (#222). The author of a
+  comment edits it in the app and in the portal; a technician with `tickets.manage` also edits the
+  opening message (the requester's description) and the subject, in place in the header. An edited
+  comment shows "editado" next to its date, with the edit date on hover. Internal notes follow the
+  same rules. Nothing is mailed on an edit, attachments stay as they were, and the previous text is
+  not kept: the history records only that a comment was edited and, for the subject, both ends.
+  An edit does not move the ticket up the "recently updated" order.
+
 ## [0.79.0] - 2026-10-19
 
 ### Changed
