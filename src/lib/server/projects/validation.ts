@@ -68,7 +68,13 @@ export const createTaskInput = z.object({
 
 export const updateTaskInput = z.object({
 	title: nonEmpty.optional(),
-	description: optionalText.optional(),
+	description: z
+		.string()
+		.trim()
+		.max(RICH_TEXT_MAX_LENGTH)
+		.nullish()
+		.transform((value) => (value ? value : null))
+		.optional(),
 	dueDate: dueDate.optional(),
 	taskTag: tagOf(RESERVED_TASK_TAGS).optional()
 });
