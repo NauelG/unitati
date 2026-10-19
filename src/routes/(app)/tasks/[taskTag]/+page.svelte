@@ -1,30 +1,31 @@
 <script lang="ts">
-	import DescriptionList from '#lib/components/unitati/DescriptionList.svelte';
-	import { documentTitle } from '#lib/brand.svelte.js';
+	import { getLocalTimeZone, today } from '@internationalized/date';
 	import ArrowRightLeft from '@lucide/svelte/icons/arrow-right-left';
 	import Pencil from '@lucide/svelte/icons/pencil';
-	import { tick } from 'svelte';
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import DescriptionList from '#lib/components/unitati/DescriptionList.svelte';
+	import EditableChip from '#lib/components/unitati/EditableChip.svelte';
+	import EditableDetailRow from '#lib/components/unitati/EditableDetailRow.svelte';
+	import EditableText from '#lib/components/unitati/EditableText.svelte';
 	import MoveTaskDialog from '#lib/components/unitati/MoveTaskDialog.svelte';
-	import Field from '#lib/components/unitati/Field.svelte';
-	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
+	import { pageHeader } from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
+	import { prose } from '#lib/components/unitati/prose.js';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
-	import SearchSelectField from '#lib/components/unitati/SearchSelectField.svelte';
-	import SelectField from '#lib/components/unitati/SelectField.svelte';
-	import Sheet from '#lib/components/unitati/Sheet.svelte';
-	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
-	import TextAreaField from '#lib/components/unitati/TextAreaField.svelte';
-	import DateField from '#lib/components/unitati/DateField.svelte';
+	import RichTextEditor from '#lib/components/unitati/RichTextEditor.svelte';
+	import { stateGroupBadge } from '#lib/components/unitati/status.js';
 	import TimelineSkeleton from '#lib/components/unitati/TimelineSkeleton.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
+	import { Calendar } from '#lib/components/ui/calendar/index.js';
+	import { parseIsoDate, toIsoDate } from '#lib/domain/calendar-date.js';
+	import { documentTitle } from '#lib/brand.svelte.js';
 	import { formatDay } from '#lib/format-date.js';
 	import { toViewTransitionName } from '#lib/motion.js';
-	import { optimisticEnhance } from '#lib/optimistic.js';
 	import { MOVE_TASK_EVENT, paletteContext } from '#lib/palette-context.svelte.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
@@ -35,26 +36,15 @@
 
 	/**
 	 * Optimistic mirrors (#89), resynced from the authoritative task whenever it
-	 * changes. The state flips on submit and rolls back on a refusal; so do the
-	 * assignees' names.
+	 * changes. Each in-place field writes its mirror on submit and restores it on
+	 * a refusal (ADR 0029).
 	 */
-	let current = $derived({ name: data.task.stateName, group: data.task.stateGroup });
-	let assigneeNames = $derived(data.task.assignees.map((assignee) => assignee.fullName));
+	let title = $derived(data.task.title);
+	let taskTag = $derived(data.task.taskTag);
+	let stateId = $derived<string>(data.task.stateId);
+	let dueDate = $derived<string | null>(data.task.dueDate);
 	let assigneeIds = $derived(data.task.assignees.map((assignee) => assignee.personId));
 
-	/**
-	 * The state select submits as soon as a state is picked: choosing it *is* the
-	 * act. The effect only fires on a difference between the pick and the stored
-	 * state, so neither the settled save nor a rollback (which restores the pick)
-	 * submits again.
-	 */
-	let stateForm = $state<HTMLFormElement>();
-	let chosenStateId = $derived<string | null>(data.task.stateId);
-	$effect(() => {
-		if (chosenStateId !== data.task.stateId) void tick().then(() => stateForm?.requestSubmit());
-	});
-
-	let editOpen = $state(false);
 	let moveOpen = $state(false);
 
 	// The palette offers "mover tarea" only while this record can be moved, and
@@ -69,14 +59,60 @@
 			paletteContext.movableTaskTag = null;
 		};
 	});
-	let saving = $state(false);
 
+	// Readers get no catalogue from the server: the chip shows the current state alone.
 	const stateOptions = $derived(
-		data.states.map((entry) => ({ value: entry.id, label: entry.name }))
+		(data.states.length > 0
+			? data.states
+			: [{ id: task.stateId, name: task.stateName, group: task.stateGroup }]
+		).map((entry) => ({
+			value: entry.id,
+			label: entry.name,
+			tone: stateGroupBadge(entry.group).tone
+		}))
 	);
 	const personOptions = $derived(
 		data.people.map((person) => ({ value: person.id, label: person.fullName }))
 	);
+	// Names come from the catalogue when the viewer has it, else from the task itself.
+	const nameOf = (id: string) =>
+		data.people.find((person) => person.id === id)?.fullName ??
+		task.assignees.find((assignee) => assignee.personId === id)?.fullName ??
+		id;
+	const assigneeNames = $derived(assigneeIds.map(nameOf));
+
+	const styles = pageHeader({ level: 'record' });
+
+	/** A rename leaves the URL pointing at nothing: go to the new one instead of reloading the old. */
+	async function followNewTag(result: Record<string, unknown>) {
+		const next = result.taskTag;
+		if (typeof next !== 'string' || next === data.task.taskTag) return false;
+		await goto(`/tasks/${encodeURIComponent(next)}`, { replaceState: true, invalidateAll: true });
+		return true;
+	}
+
+	/** Mirror writer for a single-valued field: set it, hand back the way to undo. */
+	function mirror<T>(get: () => T, set: (value: T) => void, read: (formData: FormData) => T) {
+		return (formData: FormData) => {
+			const before = get();
+			set(read(formData));
+			return () => set(before);
+		};
+	}
+
+	let editingDescription = $state(false);
+	let descriptionDraft = $state('');
+	let savingDescription = $state(false);
+
+	function editDescription() {
+		descriptionDraft = task.description ?? '';
+		editingDescription = true;
+	}
+
+	// A click on a link inside the rendered text follows the link; anywhere else opens the editor.
+	function openFromProse(event: MouseEvent) {
+		if (!(event.target as HTMLElement).closest('a')) editDescription();
+	}
 
 	const failureFor = (action: string) =>
 		form && 'action' in form && form.action === action && 'message' in form
@@ -95,6 +131,71 @@
 	</a>
 {/snippet}
 
+{#snippet dueRow()}
+	<EditableDetailRow
+		kind="custom"
+		label={m.task_detail_due()}
+		value={dueDate}
+		display={dueDate ? formatDay(dueDate) : ''}
+		placeholder={m.task_detail_no_date()}
+		action="?/update"
+		name="dueDate"
+		editable={data.canManage}
+		openOnHash="#action-due"
+		optimistic={mirror(
+			() => dueDate,
+			(value) => (dueDate = value),
+			(formData) => String(formData.get('dueDate')) || null
+		)}
+	>
+		{#snippet editor({ value, commit })}
+			<Calendar
+				type="single"
+				locale="es-ES"
+				weekStartsOn={1}
+				value={parseIsoDate(value)}
+				onValueChange={(next) => next && commit(toIsoDate(next))}
+			/>
+			<div class="flex justify-between border-t border-[var(--border)] p-2">
+				<button
+					type="button"
+					class="rounded-sm px-2 py-1 text-small text-[var(--brand)] hover:underline"
+					onclick={() => commit(toIsoDate(today(getLocalTimeZone())))}
+				>
+					{m.date_field_today()}
+				</button>
+				<button
+					type="button"
+					class="rounded-sm px-2 py-1 text-small text-[var(--ink-muted)] hover:underline"
+					onclick={() => commit('')}
+				>
+					{m.date_field_clear()}
+				</button>
+			</div>
+		{/snippet}
+	</EditableDetailRow>
+{/snippet}
+
+{#snippet assigneesRow()}
+	<EditableDetailRow
+		kind="multiselect"
+		label={m.task_detail_assignees()}
+		values={assigneeIds}
+		display={assigneeNames.join(', ')}
+		placeholder={m.task_detail_unassigned()}
+		options={personOptions}
+		action="?/setAssignees"
+		name="personIds"
+		editable={data.canManage}
+		openOnHash="#action-assignees"
+		optimistic={mirror(
+			() => assigneeIds,
+			(value) => (assigneeIds = value),
+			(formData) => formData.getAll('personIds').map(String)
+		)}
+	/>
+{/snippet}
+
 <svelte:head>
 	<title>{documentTitle(task.taskTag, task.title)}</title>
 </svelte:head>
@@ -109,28 +210,71 @@
 		]}
 	/>
 
-	<PageHeader
-		title={task.title}
-		code={task.taskTag}
-		codeViewTransitionName={toViewTransitionName('record', task.taskTag)}
-	>
-		{#snippet actions()}
-			{#if data.canManage}
-				<Button variant="secondary" onclick={() => (editOpen = true)}>
-					<Pencil class="size-4" aria-hidden="true" />
-					{m.task_detail_edit()}
-				</Button>
+	<header class={styles.root()}>
+		<div class={[styles.heading(), 'min-w-0 flex-1']}>
+			<p
+				class={styles.code()}
+				translate="no"
+				style:view-transition-name={toViewTransitionName('record', task.taskTag)}
+			>
+				<EditableText
+					value={taskTag}
+					editable={data.canManage}
+					action="?/update"
+					name="taskTag"
+					label={m.task_detail_code()}
+					mono
+					error={fieldError('update', 'taskTag')}
+					optimistic={mirror(
+						() => taskTag,
+						(value) => (taskTag = value),
+						(formData) => String(formData.get('taskTag'))
+					)}
+					onsuccess={followNewTag}
+				/>
+			</p>
+			<EditableText
+				level={1}
+				class={styles.title({ class: 'mt-1' })}
+				value={title}
+				editable={data.canManage}
+				action="?/update"
+				name="title"
+				label={m.task_field_title()}
+				error={fieldError('update', 'title')}
+				optimistic={mirror(
+					() => title,
+					(value) => (title = value),
+					(formData) => String(formData.get('title'))
+				)}
+			/>
+			<div class="mt-[var(--space-2)]">
+				<EditableChip
+					value={stateId}
+					options={stateOptions}
+					action="?/changeState"
+					name="stateId"
+					label={m.task_detail_state()}
+					editable={data.canManage}
+					openOnHash="#action-state"
+					optimistic={mirror(
+						() => stateId,
+						(value) => (stateId = value),
+						(formData) => String(formData.get('stateId'))
+					)}
+				/>
+			</div>
+		</div>
+
+		{#if data.canManage}
+			<div class={styles.actions()}>
 				<Button variant="secondary" onclick={() => (moveOpen = true)}>
 					<ArrowRightLeft class="size-4" aria-hidden="true" />
 					{m.task_move_action()}
 				</Button>
-			{/if}
-		{/snippet}
-	</PageHeader>
-
-	<div class="mt-[var(--space-2)]">
-		<StatusBadge status={current.group} label={current.name} />
-	</div>
+			</div>
+		{/if}
+	</header>
 
 	{#if task.projectArchived}
 		<p class="mt-[var(--space-4)] text-sm text-[var(--ink-muted)]">
@@ -140,8 +284,75 @@
 
 	<div class="mt-[var(--space-6)]">
 		<WorkPanel heading={m.task_field_description()}>
-			{#if task.description}
-				<p class="text-sm whitespace-pre-wrap text-[var(--ink)]">{task.description}</p>
+			{#if editingDescription}
+				<form
+					method="POST"
+					action="?/update"
+					class="space-y-[var(--space-3)]"
+					use:enhance={() => {
+						savingDescription = true;
+						return async ({ result, update }) => {
+							await update({ reset: false });
+							savingDescription = false;
+							if (result.type === 'success') editingDescription = false;
+						};
+					}}
+				>
+					<RichTextEditor
+						name="description"
+						label={m.task_field_description()}
+						bind:value={descriptionDraft}
+					/>
+					{#if fieldError('update', 'description')}
+						<p role="alert" class="text-small text-[var(--danger)]">
+							{fieldError('update', 'description')}
+						</p>
+					{/if}
+					<div class="flex items-center gap-[var(--space-2)]">
+						<Button type="submit" size="sm" busy={savingDescription}>
+							{savingDescription ? m.form_saving() : m.task_detail_description_save()}
+						</Button>
+						<Button
+							type="button"
+							size="sm"
+							variant="ghost"
+							onclick={() => (editingDescription = false)}
+						>
+							{m.form_cancel()}
+						</Button>
+					</div>
+				</form>
+			{:else if task.description}
+				{#if data.canManage}
+					<!-- The click is a pointer convenience; the button beside it is the keyboard path. -->
+					<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+					<div class="group relative cursor-text" onclick={openFromProse}>
+						<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitised by renderMarkdown on the server (ADR 0030) -->
+						<div class={prose}>{@html data.descriptionHtml}</div>
+						<button
+							type="button"
+							aria-label={m.task_field_description()}
+							class="absolute top-0 right-0 rounded-[var(--radius-sm)] p-1 text-[var(--ink-muted)] opacity-0 group-hover:opacity-100 hover:text-[var(--ink)] focus-visible:opacity-100"
+							onclick={(event) => {
+								event.stopPropagation();
+								editDescription();
+							}}
+						>
+							<Pencil class="size-4" aria-hidden="true" />
+						</button>
+					</div>
+				{:else}
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitised by renderMarkdown on the server (ADR 0030) -->
+					<div class={prose}>{@html data.descriptionHtml}</div>
+				{/if}
+			{:else if data.canManage}
+				<button
+					type="button"
+					class="text-sm text-[var(--brand)] hover:underline"
+					onclick={editDescription}
+				>
+					{m.task_detail_description_add()}
+				</button>
 			{:else}
 				<p class="text-sm text-[var(--ink-muted)]">{m.task_detail_description_none()}</p>
 			{/if}
@@ -153,80 +364,11 @@
 			<DescriptionList
 				items={[
 					{ label: m.task_detail_project(), value: projectLink },
-					{ label: m.task_detail_due(), value: task.dueDate ? formatDay(task.dueDate) : null },
-					...(data.canManage
-						? []
-						: [
-								{ label: m.task_detail_state(), value: current.name },
-								{
-									label: m.task_detail_assignees(),
-									value:
-										assigneeNames.length > 0 ? assigneeNames.join(', ') : m.task_detail_unassigned()
-								}
-							])
+					{ label: m.task_detail_due(), value: dueRow },
+					{ label: m.task_detail_assignees(), value: assigneesRow }
 				]}
 			/>
 		</WorkPanel>
-
-		{#if data.canManage}
-			<WorkPanel heading={m.task_detail_state()}>
-				<form
-					method="POST"
-					action="?/changeState"
-					bind:this={stateForm}
-					class="space-y-[var(--space-3)]"
-					use:optimisticEnhance={(formData) => {
-						const next = data.states.find((entry) => entry.id === formData.get('stateId'));
-						const previous = current;
-						if (next) current = { name: next.name, group: next.group };
-						return () => {
-							current = previous;
-							chosenStateId = data.task.stateId;
-						};
-					}}
-				>
-					<SelectField
-						label={m.task_detail_state()}
-						name="stateId"
-						options={stateOptions}
-						bind:value={chosenStateId}
-						error={failureFor('changeState')}
-					/>
-				</form>
-			</WorkPanel>
-
-			<WorkPanel heading={m.task_detail_assignees()}>
-				<form
-					method="POST"
-					action="?/setAssignees"
-					class="space-y-[var(--space-3)]"
-					use:optimisticEnhance={(formData) => {
-						const ids = formData.getAll('personIds').map(String);
-						const previousIds = assigneeIds;
-						const previousNames = assigneeNames;
-						assigneeIds = ids;
-						assigneeNames = ids.map(
-							(id) => data.people.find((person) => person.id === id)?.fullName ?? id
-						);
-						return () => {
-							assigneeIds = previousIds;
-							assigneeNames = previousNames;
-						};
-					}}
-				>
-					<SearchSelectField
-						label={m.task_detail_assignees()}
-						name="personIds"
-						placeholder={m.task_assignees_placeholder()}
-						options={personOptions}
-						multiple
-						bind:values={assigneeIds}
-						error={failureFor('setAssignees')}
-					/>
-					<Button type="submit" variant="secondary" size="sm">{m.task_assignees_save()}</Button>
-				</form>
-			</WorkPanel>
-		{/if}
 
 		<!-- Streamed (#89): the history and the tickets linked to this task are read
 		     together, because the timeline merges both. -->
@@ -255,53 +397,4 @@
 		task={{ taskTag: task.taskTag, projectId: task.projectId }}
 		projects={data.projects}
 	/>
-
-	<Sheet
-		open={editOpen}
-		onOpenChange={(next) => (editOpen = next)}
-		pending={saving}
-		title={m.task_edit_title({ tag: task.taskTag })}
-		description={m.task_edit_lede()}
-		form={{
-			action: '?/update',
-			method: 'POST',
-			use: (node) =>
-				enhance(node, () => {
-					saving = true;
-					return async ({ result, update }) => {
-						await update({ reset: false });
-						saving = false;
-						if (result.type === 'success') editOpen = false;
-					};
-				})
-		}}
-	>
-		{#snippet fields()}
-			<Field
-				label={m.task_field_title()}
-				name="title"
-				required
-				value={task.title}
-				error={fieldError('update', 'title')}
-			/>
-			<TextAreaField
-				label={m.task_field_description()}
-				name="description"
-				value={task.description}
-			/>
-			<DateField label={m.task_field_due()} name="dueDate" value={task.dueDate} />
-		{/snippet}
-		{#snippet footer()}
-			<div
-				class="flex items-center gap-[var(--space-3)] border-t border-[var(--border)] pt-[var(--space-4)]"
-			>
-				<Button type="submit" busy={saving}>
-					{saving ? m.form_saving() : m.task_edit_submit()}
-				</Button>
-				<Button type="button" variant="ghost" onclick={() => (editOpen = false)}>
-					{m.form_cancel()}
-				</Button>
-			</div>
-		{/snippet}
-	</Sheet>
 {/if}

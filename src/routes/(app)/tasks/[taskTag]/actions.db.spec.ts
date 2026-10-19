@@ -117,6 +117,71 @@ describe('writing to a task record', () => {
 		expect(blank.returned?.status).toBe(400);
 	});
 
+	it('leaves the other fields alone when a post carries a single one', async () => {
+		const { technician, params } = await setup();
+		await outcomeOf(() =>
+			actions.update(
+				actionEvent(technician, { title: 'Keep me', description: 'Keep this too' }, params)
+			)
+		);
+
+		const { returned } = await outcomeOf(() =>
+			actions.update(actionEvent(technician, { dueDate: '2026-12-24' }, params))
+		);
+
+		const task = await getTask(technician, params.taskTag);
+		expect(returned).toMatchObject({ action: 'update', taskTag: params.taskTag });
+		expect(task.ok && task.value).toMatchObject({
+			title: 'Keep me',
+			description: 'Keep this too',
+			dueDate: '2026-12-24'
+		});
+
+		await outcomeOf(() => actions.update(actionEvent(technician, { dueDate: '' }, params)));
+		const cleared = await getTask(technician, params.taskTag);
+		expect(cleared.ok && cleared.value).toMatchObject({ title: 'Keep me', dueDate: null });
+	});
+
+	it('renames the code and answers with the new one', async () => {
+		const { technician, params } = await setup();
+
+		const { returned } = await outcomeOf(() =>
+			actions.update(actionEvent(technician, { taskTag: 'TSK-RENAMED' }, params))
+		);
+
+		expect(returned).toMatchObject({ action: 'update', taskTag: 'TSK-RENAMED' });
+		const renamed = await getTask(technician, 'TSK-RENAMED');
+		expect(renamed.ok).toBe(true);
+	});
+
+	it('refuses a duplicate or reserved code with an error on the code field', async () => {
+		const { technician, organisation, project, states, params } = await setup();
+		const other = await createTaskRow(organisation.id, project.id, states.unstarted.id);
+
+		const duplicate = await outcomeOf(() =>
+			actions.update(actionEvent(technician, { taskTag: other.taskTag }, params))
+		);
+		const reserved = await outcomeOf(() =>
+			actions.update(actionEvent(technician, { taskTag: 'new' }, params))
+		);
+
+		for (const { returned } of [duplicate, reserved]) {
+			expect(returned?.status).toBe(400);
+			expect(returned?.data).toMatchObject({ action: 'update', field: 'taskTag' });
+		}
+	});
+
+	it('refuses a description over the rich text limit', async () => {
+		const { technician, params } = await setup();
+
+		const { returned } = await outcomeOf(() =>
+			actions.update(actionEvent(technician, { description: 'x'.repeat(20_001) }, params))
+		);
+
+		expect(returned?.status).toBe(400);
+		expect(returned?.data).toMatchObject({ field: 'description' });
+	});
+
 	it('refuses writes on a task whose project is archived', async () => {
 		const { technician, project, states, params } = await setup();
 		const { archiveProject } = await import('#lib/server/projects/index.js');

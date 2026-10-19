@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
+import { renderMarkdown } from '#lib/server/shared/markdown.js';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
@@ -43,6 +44,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 
 	return {
 		task,
+		descriptionHtml: renderMarkdown(task.description ?? ''),
 		canManage,
 		states: states.map(({ id, name, group }) => ({ id, name, group })),
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
@@ -78,7 +80,17 @@ const updateFailures: Record<
 	readonly [string | null, () => string]
 > = {
 	project_archived: [null, m.project_error_archived],
-	duplicate_task_tag: [null, m.action_error_invalid]
+	duplicate_task_tag: ['taskTag', m.task_error_tag_duplicate]
+};
+
+/** The keys an in-place edit may post. One field per post: absent ones stay untouched. */
+const UPDATE_KEYS = ['title', 'description', 'dueDate', 'taskTag'] as const;
+
+const updateInvalid: Record<(typeof UPDATE_KEYS)[number], () => string> = {
+	title: m.task_error_title_required,
+	description: m.action_error_invalid,
+	dueDate: m.action_error_invalid,
+	taskTag: m.task_error_tag_invalid
 };
 
 const moveFailures: Record<Exclude<MoveTaskFailure, 'task_not_found'>, () => string> = {
@@ -106,18 +118,17 @@ export const actions: Actions = {
 		const user = requireProjectWrite(locals.user);
 		const fields = await fieldsOf(request);
 
-		const parsed = updateTaskInput.safeParse({
-			title: fields.get('title'),
-			description: orNull(fields.get('description')),
-			dueDate: orNull(fields.get('dueDate'))
-		});
+		const posted = Object.fromEntries(
+			UPDATE_KEYS.filter((key) => fields.has(key)).map((key) => [
+				key,
+				key === 'description' || key === 'dueDate' ? orNull(fields.get(key)) : fields.get(key)
+			])
+		);
+		const parsed = updateTaskInput.safeParse(posted);
 		if (!parsed.success) {
 			const field = firstField(parsed.error);
-			return rejected(
-				'update',
-				field === 'title' ? m.task_error_title_required() : m.action_error_invalid(),
-				field
-			);
+			const key = UPDATE_KEYS.find((candidate) => candidate === field);
+			return rejected('update', (key ? updateInvalid[key] : m.action_error_invalid)(), field);
 		}
 
 		const task = await targetOf(user, params.taskTag);
@@ -128,7 +139,7 @@ export const actions: Actions = {
 			return rejected('update', message(), field);
 		}
 
-		return { action: 'update' as const };
+		return { action: 'update' as const, taskTag: parsed.data.taskTag ?? params.taskTag };
 	},
 
 	// Always the end of the column: placing a card between two others is the
