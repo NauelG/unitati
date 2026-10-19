@@ -49,7 +49,9 @@ minor bumps carry features and patch bumps carry fixes.
 - The focus ring on text fields (inputs, textareas, selects, search selects, input groups) is now
   subtler: the field's own border turns the focus colour, with a faint halo, instead of drawing a
   second frame two pixels outside it. Contrast stays above 3:1 in both themes; buttons, tabs, checkboxes and
-  switches keep the separated ring, thinned to 1px.
+  switches keep the separated ring, thinned to 1px. The search box of the combobox and the command palette follows the same field
+  treatment, and the highlighted option shows a soft background with a bar on its left edge
+  instead of a ring.
 
 ## [0.68.1] - 2026-10-19
 
