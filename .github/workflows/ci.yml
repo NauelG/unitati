@@ -9,27 +9,76 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Four jobs in parallel rather than one in sequence: a run lasts as long as its
+# slowest job, not the sum of them. Each job repeats the checkout and `npm ci`,
+# which costs far less than it saves.
 jobs:
-  verify:
+  check:
+    name: Types and version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          # The version gate diffs against the base branch.
           fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
+      - uses: ./.github/actions/setup
       - name: Version bump, changelog and README badge
         if: github.event_name == 'pull_request'
         run: BASE_REF="origin/${{ github.base_ref }}" npm run check:version-bump
       - run: npm run check
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        id: setup
+      # Type-aware ESLint rules make a full run take well over a minute. A pull
+      # request starts from the latest caches, so only the files whose content
+      # changed are linted again. The catch: a type change in one file does not
+      # relint another file that depends on it. `main` never restores a cache, so
+      # every merge gets a full lint, and that run seeds the next pull requests.
+      - name: Restore the lint caches
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            node_modules/.cache/eslint
+            node_modules/.cache/prettier
+          key: lint-${{ runner.os }}-${{ steps.setup.outputs.dependencies-hash }}-${{ github.sha }}
+          restore-keys: lint-${{ runner.os }}-${{ steps.setup.outputs.dependencies-hash }}-
       - run: npm run lint
+      # Saved even when lint fails: the files that passed need no relint on the next push.
+      - name: Save the lint caches
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            node_modules/.cache/eslint
+            node_modules/.cache/prettier
+          key: lint-${{ runner.os }}-${{ steps.setup.outputs.dependencies-hash }}-${{ github.sha }}
+
+  unit:
+    name: Unit tests and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
       - run: npm test
+      - run: npm run build
+
+  db:
+    name: Database tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       # The same Postgres developers run, from the same compose.yaml: a `services:`
       # block would repeat the image and the credentials and then drift from it.
+      # Started before `npm ci` so that it boots while the dependencies install.
       - name: Start Postgres
-        run: npm run db:start
+        run: docker compose up --detach db
+      - uses: ./.github/actions/setup
+      - name: Wait for Postgres
+        run: docker compose up --detach --wait db
       - run: npm run test:db
-      - run: npm run build
