@@ -753,6 +753,8 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
  * Menu rows draw the ring *inside* themselves (negative offset). A menu's
  * content box is 4px of padding (`p-1`), so a +2px offset would push the ring
  * under the popover's own rounded edge and clip it; inset, it traces the row.
+ * 1px like every other focus indicator (visual review): solid `--focus`, so
+ * the 3:1 floor holds.
  *
  * `:focus` and not `:focus-visible`: bits-ui moves real DOM focus onto the row
  * as the user arrows through, and that focus arrives from a key press — the
@@ -767,8 +769,8 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
 [data-slot='dropdown-menu-sub-trigger']:focus,
 [data-slot='select-item']:focus,
 [data-slot='command-item']:focus {
-	outline: 2px solid var(--focus);
-	outline-offset: -2px;
+	outline: 1px solid var(--focus);
+	outline-offset: -1px;
 }
 
 /*
