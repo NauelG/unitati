@@ -133,6 +133,30 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		sourceFile: 'SearchSelectField.svelte',
 		load: () => import('./specs/SearchSelectField.svelte')
 	},
+	{
+		id: 'editable-chip',
+		name: 'EditableChip',
+		category: 'fields',
+		summary: 'Insignia de la cabecera que se edita en el sitio (estado, prioridad).',
+		sourceFile: 'EditableChip.svelte',
+		load: () => import('./specs/EditableChip.svelte')
+	},
+	{
+		id: 'editable-detail-row',
+		name: 'EditableDetailRow',
+		category: 'fields',
+		summary: 'Valor editable en el sitio dentro de «Detalles»: elección, múltiple, propio o texto.',
+		sourceFile: 'EditableDetailRow.svelte',
+		load: () => import('./specs/EditableDetailRow.svelte')
+	},
+	{
+		id: 'editable-text',
+		name: 'EditableText',
+		category: 'fields',
+		summary: 'Título o código que se edita en el sitio: Enter o salir guarda, Escape cancela.',
+		sourceFile: 'EditableText.svelte',
+		load: () => import('./specs/EditableText.svelte')
+	},
 
 	// Feedback
 	{

@@ -597,6 +597,7 @@
 	"loading_generic": "Cargando…",
 	"loading_timeline": "Cargando historial…",
 	"loading_thread": "Cargando conversación…",
+	"editable_filter": "Filtrar…",
 	"toast_rollback_generic": "No se ha podido guardar el cambio. Se ha revertido.",
 	"composer_pending": "Enviando…",
 	"richtext_toolbar": "Formato del texto",

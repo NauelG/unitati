@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.72.0] - 2026-10-19
+
+### Added
+
+- In-place editing components for record pages (ADR 0029, #211): `EditableChip` for header
+  properties such as status and priority, `EditableDetailRow` for the "Detalles" list (single
+  choice, multiple choice, custom editor and short text) and `EditableText` for titles and codes.
+  They save on pick (or on close for multiple choice, Enter or blur for text), roll back with a toast
+  when the server refuses, open from a deep-link hash, and render as plain text without permission.
+  The record pages adopt them in follow-up changes. All three are in the gallery.
+
 ## [0.71.0] - 2026-10-19
 
 ### Added

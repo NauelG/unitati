@@ -1,7 +1,10 @@
 # 0020. Form workflow shapes: dialog, sheet, full page
 
-- **Status:** accepted
+- **Status:** accepted; superseded in part by [ADR 0029](0029-in-place-editing-on-record-pages.md)
 - **Date:** 2026-10-10
+
+> Superseded in part by 0029: changing a single property of an open record happens in place
+> (chip or row), not in a `Sheet`. The `Sheet` stays for multi-field contextual edits.
 
 ## Context
 
