@@ -53,6 +53,16 @@
 	--project: #0b7653;
 	--project-soft: #e2f6ee;
 
+	/* Queue colours (`domain/queue-color.ts`): a dot beside a queue name */
+	--queue-gray: #5b6675;
+	--queue-blue: #1d5cf0;
+	--queue-violet: #6544e8;
+	--queue-pink: #b8237a;
+	--queue-red: #c2261c;
+	--queue-amber: #995700;
+	--queue-green: #12733f;
+	--queue-teal: #0b7a84;
+
 	/* States */
 	--focus: #1d5cf0;
 	--success: #12733f;
@@ -203,6 +213,15 @@
 	--desk-soft: #251d4a;
 	--project: #4fd3a2;
 	--project-soft: #10302a;
+
+	--queue-gray: #98a3b3;
+	--queue-blue: #78a2ff;
+	--queue-violet: #a890ff;
+	--queue-pink: #f28cc4;
+	--queue-red: #ff8173;
+	--queue-amber: #f2b54a;
+	--queue-green: #5ccf8c;
+	--queue-teal: #4fd0da;
 
 	/* States */
 	--focus: #78a2ff;

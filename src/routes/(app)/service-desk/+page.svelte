@@ -19,6 +19,7 @@
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
+	import QueueLabel from '#lib/components/unitati/QueueLabel.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import { TICKET_STATUSES } from '#lib/domain/status.js';
 	import { statusLabel } from '#lib/components/unitati/status.js';
@@ -142,7 +143,10 @@
 		status={row.priority}
 		arrived={arrivedTags.has(row.ticketTag)}
 	/>{/snippet}
-{#snippet queue(row: TicketView)}{row.queueName}{/snippet}
+{#snippet queue(row: TicketView)}<QueueLabel
+		name={row.queueName}
+		color={row.queueColor}
+	/>{/snippet}
 {#snippet requester(row: TicketView)}{row.requesterName}{/snippet}
 {#snippet updated(row: TicketView)}
 	<time datetime={row.updatedAt.toISOString()} title={formatDateTime(row.updatedAt)}>

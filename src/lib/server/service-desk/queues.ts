@@ -59,7 +59,7 @@ export async function renameQueue(
 	try {
 		const updated = await getDb()
 			.update(queues)
-			.set({ name: values.name, updatedAt: new Date() })
+			.set({ name: values.name, color: values.color, updatedAt: new Date() })
 			.where(and(eq(queues.id, queueId), eq(queues.organisationId, actor.organisationId)))
 			.returning({ id: queues.id });
 		return updated.length === 0 ? failure('queue_not_found') : success(undefined);

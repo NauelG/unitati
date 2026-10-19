@@ -78,7 +78,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			: null,
 		canInternal: can(user, 'tickets.comment.internal'),
 		nextStatuses: nextStatuses(found.value.status),
-		queues: queues.map(({ id, name }) => ({ id, name })),
+		queues: queues.map(({ id, name, color }) => ({ id, name, color })),
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName }))
 	};
 };

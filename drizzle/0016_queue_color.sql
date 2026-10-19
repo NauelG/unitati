@@ -1,0 +1,1 @@
+ALTER TABLE "queues" ADD COLUMN "color" text DEFAULT 'gray' NOT NULL;

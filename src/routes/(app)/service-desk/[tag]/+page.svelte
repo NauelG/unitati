@@ -8,6 +8,7 @@
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
+	import QueueLabel from '#lib/components/unitati/QueueLabel.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
 	import Skeleton from '#lib/components/unitati/Skeleton.svelte';
@@ -56,6 +57,7 @@
 	let localAssigneeName = $state(ticket.assigneeName);
 	let localQueueId = $state(ticket.queueId);
 	let localQueueName = $state(ticket.queueName);
+	let localQueueColor = $state(ticket.queueColor);
 	// A writable `$derived` (Svelte 5: a direct assignment overrides it until
 	// `data.thread` itself changes again) rather than `$state` + `$effect` —
 	// the lone assignment here has nothing else to coordinate with.
@@ -68,6 +70,7 @@
 		localAssigneeName = ticket.assigneeName;
 		localQueueId = ticket.queueId;
 		localQueueName = ticket.queueName;
+		localQueueColor = ticket.queueColor;
 	});
 
 	const provenance = $derived(
@@ -172,6 +175,10 @@
 	<title>{documentTitle(ticket.ticketTag, ticket.subject)}</title>
 </svelte:head>
 
+{#snippet queueValue()}
+	<QueueLabel name={localQueueName} color={localQueueColor} />
+{/snippet}
+
 <PageLayout variant="record">
 	<Breadcrumbs
 		class="mb-[var(--space-5)]"
@@ -238,7 +245,7 @@
 						label: m.ticket_detail_assignee(),
 						value: localAssigneeName ?? m.tickets_no_assignee()
 					},
-					{ label: m.ticket_detail_queue(), value: localQueueName }
+					{ label: m.ticket_detail_queue(), value: queueValue }
 				]}
 			/>
 		</WorkPanel>
@@ -385,14 +392,17 @@
 							const queueId = formData.get('queueId');
 							const previousId = localQueueId;
 							const previousName = localQueueName;
+							const previousColor = localQueueColor;
 							if (typeof queueId === 'string') {
+								const next = data.queues.find((candidate) => candidate.id === queueId);
 								localQueueId = queueId;
-								localQueueName =
-									data.queues.find((candidate) => candidate.id === queueId)?.name ?? previousName;
+								localQueueName = next?.name ?? previousName;
+								localQueueColor = next?.color ?? previousColor;
 							}
 							return () => {
 								localQueueId = previousId;
 								localQueueName = previousName;
+								localQueueColor = previousColor;
 							};
 						}}
 					>

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_QUEUE_COLOR, QUEUE_COLORS } from '#lib/domain/queue-color.js';
 import { m } from '#lib/paraglide/messages.js';
 import {
 	createQueue,
@@ -16,10 +17,13 @@ const SECTION = '/settings/service-desk/queues';
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = requireSettingsSection(locals.user, SECTION);
 	const queues = await listQueues(user);
-	return { queues: queues.map(({ id, name }) => ({ id, name })) };
+	return { queues: queues.map(({ id, name, color }) => ({ id, name, color })) };
 };
 
-const named = z.object({ name: z.string().trim().min(1) });
+const named = z.object({
+	name: z.string().trim().min(1),
+	color: z.enum(QUEUE_COLORS).default(DEFAULT_QUEUE_COLOR)
+});
 const withId = z.object({ id: z.uuid() });
 
 export const actions: Actions = {

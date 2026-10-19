@@ -210,6 +210,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/MethodBadge.svelte')
 	},
 	{
+		id: 'queue-label',
+		name: 'QueueLabel',
+		category: 'feedback',
+		summary: 'El nombre de una cola con un punto del color asignado.',
+		sourceFile: 'QueueLabel.svelte',
+		load: () => import('./specs/QueueLabel.svelte')
+	},
+	{
 		id: 'environment-badge',
 		name: 'EnvironmentBadge',
 		category: 'feedback',

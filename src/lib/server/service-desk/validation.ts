@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_QUEUE_COLOR, QUEUE_COLORS } from '#lib/domain/queue-color.js';
 import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 import { PRIORITIES } from '#lib/domain/status.js';
 
@@ -53,7 +54,10 @@ export const addCommentInput = z.object({
 	visibility: z.enum(['public', 'internal'])
 });
 
-export const queueInput = z.object({ name: nonEmpty });
+export const queueInput = z.object({
+	name: nonEmpty,
+	color: z.enum(QUEUE_COLORS).default(DEFAULT_QUEUE_COLOR)
+});
 
 export type CreateTicketInput = z.input<typeof createTicketInput>;
 export type AddCommentInput = z.input<typeof addCommentInput>;
