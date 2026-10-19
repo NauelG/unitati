@@ -695,7 +695,7 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
  * around the field instead of the field changing state, and a 2px ring on the
  * border was still too heavy next to the rest of the UI. On fields the focus
  * state is now the field's own 1px border turning `--focus`, plus a faint
- * `--focus` halo (18% alpha, 3px) that only helps the eye find it. Buttons,
+ * `--focus` halo (12% alpha, 2px) that only helps the eye find it. Buttons,
  * tabs, checkboxes, switches and close buttons keep the separated 2px ring
  * above.
  *
@@ -720,7 +720,7 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
 	outline: 1px solid transparent;
 	outline-offset: 0;
 	border-color: var(--focus);
-	box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 12%, transparent);
 }
 
 [data-slot='input-group-control']:focus-visible {
