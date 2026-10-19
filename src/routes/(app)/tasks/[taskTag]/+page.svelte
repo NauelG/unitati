@@ -19,6 +19,7 @@
 	import Sheet from '#lib/components/unitati/Sheet.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import TextAreaField from '#lib/components/unitati/TextAreaField.svelte';
+	import DateField from '#lib/components/unitati/DateField.svelte';
 	import TimelineSkeleton from '#lib/components/unitati/TimelineSkeleton.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { formatDay } from '#lib/format-date.js';
@@ -288,13 +289,7 @@
 				name="description"
 				value={task.description}
 			/>
-			<Field
-				label={m.task_field_due()}
-				name="dueDate"
-				type="date"
-				autocomplete="off"
-				value={task.dueDate}
-			/>
+			<DateField label={m.task_field_due()} name="dueDate" value={task.dueDate} />
 		{/snippet}
 		{#snippet footer()}
 			<div

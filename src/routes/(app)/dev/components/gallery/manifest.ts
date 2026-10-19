@@ -537,6 +537,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/TextAreaField.svelte')
 	},
 	{
+		id: 'date-field',
+		name: 'DateField',
+		category: 'fields',
+		summary: 'Campo de fecha con segmentos editables y calendario, en lugar del selector nativo.',
+		sourceFile: 'DateField.svelte',
+		load: () => import('./specs/DateField.svelte')
+	},
+	{
 		id: 'project-progress',
 		name: 'ProjectProgress',
 		category: 'data',
