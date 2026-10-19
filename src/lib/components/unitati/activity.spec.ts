@@ -261,6 +261,25 @@ describe('activitySentence for directory events', () => {
 		expect(sentence).toBe('Añadió a la persona al directorio');
 	});
 
+	it('says a person was added by an import, and where the import placed them', () => {
+		expect(
+			activitySentence({
+				verb: 'person.created',
+				payload: { fullName: 'Ada Lovelace', email: 'ada@example.com', via: 'import' }
+			})
+		).toBe('Añadió a la persona al directorio mediante una importación');
+		expect(
+			activitySentence({
+				verb: 'person.location.changed',
+				payload: {
+					from: null,
+					to: { id: '3f1e0c9a-0000-4000-8000-000000000003', path: 'Barcelona office › Floor 1' },
+					reason: 'imported'
+				}
+			})
+		).toBe('Se le asignó la ubicación Barcelona office › Floor 1 al importarla');
+	});
+
 	it('says a person was deactivated', () => {
 		expect(activitySentence({ verb: 'person.deactivated', payload: {} })).toBe(
 			'Desactivó a la persona'

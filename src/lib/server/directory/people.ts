@@ -3,7 +3,9 @@ import { getDb } from '../db';
 import { uniqueConstraintName } from '../db/errors';
 import type { SessionUser } from '../auth/guards';
 import { failure, success, type Outcome } from '../shared/outcome';
+import type { WriteOptions } from '../shared/write-options';
 import { actorColumns, recordActivity } from '../activity';
+import { locationPaths } from './locations';
 import { departments, locations, people } from './schema';
 import type { PersonInput, PersonUpdateInput } from './validation';
 
@@ -23,12 +25,14 @@ export type PersonReactivateFailure = 'not_found' | 'already_active';
 
 export async function createPerson(
 	actor: SessionUser,
-	input: PersonInput
+	input: PersonInput,
+	options: WriteOptions = {}
 ): Promise<Outcome<{ id: string }, PersonCreateFailure>> {
 	const { organisationId } = actor;
+	const imported = options.via === 'import';
 
 	try {
-		return await getDb().transaction(async (tx) => {
+		return await (options.executor ?? getDb()).transaction(async (tx) => {
 			if (input.departmentId !== null) {
 				const [found] = await tx
 					.select({ id: departments.id })
@@ -69,8 +73,30 @@ export async function createPerson(
 				...actorColumns(actor),
 				target: { personId: row.id },
 				verb: 'person.created',
-				payload: { fullName: input.fullName, email: input.email }
+				payload: {
+					fullName: input.fullName,
+					email: input.email,
+					...(imported ? { via: 'import' as const } : {})
+				}
 			});
+			// An import places the person as it creates them, so the location's history
+			// starts here; a manual create records only the creation, as it always did.
+			if (imported && input.locationId !== null) {
+				const path = (await locationPaths(organisationId, [input.locationId], tx)).get(
+					input.locationId
+				);
+				await recordActivity(tx, {
+					organisationId,
+					...actorColumns(actor),
+					target: { personId: row.id },
+					verb: 'person.location.changed',
+					payload: {
+						from: null,
+						to: { id: input.locationId, path: path ?? '' },
+						reason: 'imported'
+					}
+				});
+			}
 			return success({ id: row.id });
 		});
 	} catch (error) {

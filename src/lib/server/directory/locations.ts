@@ -1,8 +1,9 @@
 import { and, eq, sql } from 'drizzle-orm';
-import { getDb, type Database, type Transaction } from '../db';
+import { getDb, type Executor, type Transaction } from '../db';
 import { constraintViolation, uniqueConstraintName } from '../db/errors';
 import type { SessionUser } from '../auth/guards';
 import { failure, success, type Outcome } from '../shared/outcome';
+import type { WriteOptions } from '../shared/write-options';
 import { actorColumns, recordActivity } from '../activity';
 import { locations, organisations, people } from './schema';
 import type { LocationInput } from './validation';
@@ -33,16 +34,17 @@ export type LocationEntry = {
 	longitude: number | null;
 };
 
-type Executor = Database | Transaction;
-
 /**
  * Every location of the organisation, tree-ordered: a node is followed by its
  * subtree, siblings alphabetically. Ordered on the array of ancestor names
  * rather than on the joined string, because a separator character takes part in
  * collation and could interleave `Barcelona` › `Floor 1` with `Barcelona 2`.
  */
-export async function listLocations(organisationId: string): Promise<LocationEntry[]> {
-	const rows = await getDb().execute<LocationEntry>(sql`
+export async function listLocations(
+	organisationId: string,
+	executor: Executor = getDb()
+): Promise<LocationEntry[]> {
+	const rows = await executor.execute<LocationEntry>(sql`
 		WITH RECURSIVE tree AS (
 			SELECT l.id, ARRAY[l.name] AS names
 			FROM locations l
@@ -133,16 +135,18 @@ async function parentExists(
 
 export async function createLocation(
 	actor: SessionUser,
-	input: LocationInput
+	input: LocationInput,
+	options: WriteOptions = {}
 ): Promise<Outcome<{ id: string }, LocationCreateFailure>> {
-	if (input.parentId && !(await parentExists(getDb(), actor.organisationId, input.parentId))) {
+	const executor = options.executor ?? getDb();
+	if (input.parentId && !(await parentExists(executor, actor.organisationId, input.parentId))) {
 		return failure('parent_not_found');
 	}
 
 	try {
 		// The entry commits with the row (ADR 0009): a catalogue change an audit
 		// depends on is never anonymous, and never half-recorded.
-		return await getDb().transaction(async (tx) => {
+		return await executor.transaction(async (tx) => {
 			const [row] = await tx
 				.insert(locations)
 				.values({ ...input, organisationId: actor.organisationId })

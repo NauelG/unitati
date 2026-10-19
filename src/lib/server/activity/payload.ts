@@ -224,7 +224,12 @@ export const PAYLOAD_SCHEMAS = {
 
 	// Directory events (#12). Names and email as they read at the time: a person
 	// is renamed and moves, and a history that rewrites itself is not a history.
-	'person.created': z.object({ fullName: presentName, email: presentName }),
+	'person.created': z.object({
+		fullName: presentName,
+		email: presentName,
+		// Present when a CSV import made the person (ADR 0034); older rows lack it.
+		via: z.literal('import').optional()
+	}),
 	'person.deactivated': z.object({}),
 	'person.reactivated': z.object({}),
 	'person.department.changed': z.object({
@@ -236,7 +241,7 @@ export const PAYLOAD_SCHEMAS = {
 	'person.location.changed': z.object({
 		from: locationRef.nullable(),
 		to: locationRef.nullable(),
-		reason: z.enum(['edited', 'location_deleted'])
+		reason: z.enum(['edited', 'location_deleted', 'imported'])
 	}),
 
 	// Locations are the one catalogue with history (#177): moving one changes what

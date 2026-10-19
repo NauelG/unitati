@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
-import { getDb } from '../db';
+import { getDb, type Executor } from '../db';
 import { users } from '../auth/schema';
 import type { SessionUser } from '../auth/guards';
 import { locationPaths } from './locations';
@@ -124,9 +124,10 @@ export interface DirectoryEntry {
  */
 export async function listPeople(
 	organisationId: string,
-	options: { includeInactive?: boolean } = {}
+	options: { includeInactive?: boolean; executor?: Executor } = {}
 ): Promise<DirectoryEntry[]> {
-	const rows = await getDb()
+	const executor = options.executor ?? getDb();
+	const rows = await executor
 		.select({
 			id: people.id,
 			fullName: people.fullName,
@@ -151,7 +152,8 @@ export async function listPeople(
 
 	const paths = await locationPaths(
 		organisationId,
-		rows.flatMap((row) => (row.locationId ? [row.locationId] : []))
+		rows.flatMap((row) => (row.locationId ? [row.locationId] : [])),
+		executor
 	);
 	return rows.map((row) => ({
 		...row,

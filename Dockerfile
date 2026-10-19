@@ -49,7 +49,8 @@ RUN npm ci --omit=dev --ignore-scripts
 FROM node:${NODE_VERSION}-slim AS runtime
 ENV NODE_ENV=production \
     PORT=3000 \
-    UPLOADS_DIR=/data/uploads
+    UPLOADS_DIR=/data/uploads \
+    BODY_SIZE_LIMIT=6M
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules

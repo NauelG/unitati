@@ -22,6 +22,19 @@ describe('parsePayload', () => {
 			parsePayload('person.location.changed', { from: null, to: ref, reason: 'edited' })
 		).toEqual({ from: null, to: ref, reason: 'edited' });
 		expect(() => parsePayload('person.location.changed', { from: null, to: ref })).toThrow();
+		expect(
+			parsePayload('person.location.changed', { from: null, to: ref, reason: 'imported' }).reason
+		).toBe('imported');
+	});
+
+	it('parses person.created with or without via, and refuses another via', () => {
+		const base = { fullName: 'Ada', email: 'ada@example.com' };
+		expect(parsePayload('person.created', base)).toEqual(base);
+		expect(parsePayload('person.created', { ...base, via: 'import' })).toEqual({
+			...base,
+			via: 'import'
+		});
+		expect(() => parsePayload('person.created', { ...base, via: 'api' })).toThrow();
 	});
 
 	it('accepts a well-formed custody assignment', () => {

@@ -55,6 +55,26 @@ export default defineConfig(
 		}
 	},
 	{
+		// `imports` is orchestration, not a domain, and owns no tables (ADR 0002,
+		// ADR 0034): it calls the exported functions of the domains and never reads
+		// their tables.
+		files: ['src/lib/server/imports/**/*.ts'],
+		ignores: ['**/*.spec.ts', '**/testing/**'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					patterns: [
+						{
+							regex: '(^|/)(assets|directory|service-desk|projects|links|activity)/schema',
+							message: "imports must not read another module's tables (ADR 0002, ADR 0034)."
+						}
+					]
+				}
+			]
+		}
+	},
+	{
 		// Override or add rule settings here, such as:
 		// 'svelte/button-has-type': 'error'
 		rules: {}
