@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.75.0] - 2026-10-19
+
+### Changed
+
+- Ticket record (#225): status and priority are editable chips in the header, and assignee and
+  queue are editable rows in "Detalles". The status chip offers only the allowed transitions and
+  opens from `#action-status`, so the list shortcut still lands on it. The "Propiedades" panel is
+  gone. Without `tickets.manage` the chips and rows stay plain.
+
 ## [0.74.0] - 2026-10-19
 
 ### Added
