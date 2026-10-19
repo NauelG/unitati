@@ -7,26 +7,33 @@ import {
 	listDepartments,
 	renameDepartment
 } from '#lib/server/directory/index.js';
-import { requireSettingsSection } from '#lib/server/settings/guard.js';
+import { requirePermission } from '#lib/server/auth/guards.js';
 import { fieldsOf, rejected, withId } from '../../../assets/form-data';
 
 /**
  * Departments are a one-field catalogue: create and rename in a `Dialog`, delete
- * behind a confirmation (ADR 0020). Page and actions guard on the same registry
- * entry, so `people.manage` is enforced in each of them.
+ * behind a confirmation (ADR 0020). `people.manage` is enforced in the page and
+ * in each action; a denial is a 404, as the issue asks, rather than the 403 the
+ * other registry sections answer.
  */
-const SECTION = '/settings/directory/departments';
+
+/** Blank and too long are different mistakes and deserve different sentences. */
+const nameIssue = (name: string | undefined) =>
+	(name ?? '').trim().length > 80
+		? m.validation_name_too_long({ max: 80 })
+		: m.validation_name_required();
 
 export const load = async ({ locals }: RequestEvent) => {
-	const user = requireSettingsSection(locals.user, SECTION);
+	const user = requirePermission(locals.user, 'people.manage');
 	return { departments: await listDepartments(user.organisationId) };
 };
 
 export const actions = {
 	create: async ({ request, locals }: RequestEvent) => {
-		const user = requireSettingsSection(locals.user, SECTION);
-		const parsed = departmentInput.safeParse(await fieldsOf(request));
-		if (!parsed.success) return rejected('create', m.validation_name_required());
+		const user = requirePermission(locals.user, 'people.manage');
+		const fields = await fieldsOf(request);
+		const parsed = departmentInput.safeParse(fields);
+		if (!parsed.success) return rejected('create', nameIssue(fields.name));
 
 		const outcome = await createDepartment(user, parsed.data);
 		if (!outcome.ok) return rejected('create', m.departments_error_duplicate());
@@ -34,13 +41,15 @@ export const actions = {
 	},
 
 	rename: async ({ request, locals }: RequestEvent) => {
-		const user = requireSettingsSection(locals.user, SECTION);
+		const user = requirePermission(locals.user, 'people.manage');
 		const fields = await fieldsOf(request);
 		const target = withId.safeParse(fields);
 		if (!target.success) return rejected('rename', m.departments_error_not_found());
 
 		const parsed = departmentInput.safeParse(fields);
-		if (!parsed.success) return rejected('rename', m.validation_name_required(), target.data.id);
+		if (!parsed.success) {
+			return rejected('rename', nameIssue(fields.name), target.data.id);
+		}
 
 		const outcome = await renameDepartment(user, target.data.id, parsed.data);
 		if (!outcome.ok) {
@@ -56,7 +65,7 @@ export const actions = {
 	},
 
 	delete: async ({ request, locals }: RequestEvent) => {
-		const user = requireSettingsSection(locals.user, SECTION);
+		const user = requirePermission(locals.user, 'people.manage');
 		const target = withId.safeParse(await fieldsOf(request));
 		if (!target.success) return rejected('delete', m.departments_error_not_found());
 

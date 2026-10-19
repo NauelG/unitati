@@ -108,6 +108,7 @@
 	"validation_email": "Escribe un correo electrónico válido.",
 	"validation_password_short": "La contraseña debe tener al menos {min} caracteres.",
 	"validation_name_required": "Escribe un nombre.",
+	"validation_name_too_long": "El nombre no puede pasar de {max} caracteres.",
 
 	"directory_title": "Personas",
 	"directory_lede": "Quién trabaja aquí, dónde, en qué departamento y con qué permisos.",

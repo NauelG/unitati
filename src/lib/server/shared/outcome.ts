@@ -1,12 +1,13 @@
 /**
- * Result of a domain operation. Expected business failures are typed values,
- * not exceptions; routes map them to HTTP (see ADR 0002). A failure is usually a
- * string code; one that carries data the caller must show (`{ kind: 'in_use', people }`)
- * is an object.
+ * A string code, or an object with a `kind` when the caller needs data to
+ * explain the failure (`{ kind: 'in_use', people }`).
  */
-/** A string code, or an object with a `kind` when the caller needs data to explain the failure. */
 export type Failure = string | { kind: string };
 
+/**
+ * Result of a domain operation. Expected business failures are typed values,
+ * not exceptions; routes map them to HTTP (see ADR 0002).
+ */
 export type Outcome<T, E extends Failure = string> =
 	{ ok: true; value: T } | { ok: false; error: E };
 
