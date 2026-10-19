@@ -37,6 +37,7 @@
 	import TaskBoard from '#lib/components/unitati/TaskBoard.svelte';
 	import TaskBoardSkeleton from '#lib/components/unitati/TaskBoardSkeleton.svelte';
 	import TextAreaField from '#lib/components/unitati/TextAreaField.svelte';
+	import DateField from '#lib/components/unitati/DateField.svelte';
 	import TimelineSkeleton from '#lib/components/unitati/TimelineSkeleton.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { STATE_GROUPS, type StateGroup } from '#lib/domain/status.js';
@@ -425,13 +426,7 @@
 				options={ownerOptions}
 				bind:value={ownerPersonId}
 			/>
-			<Field
-				label={m.project_field_due()}
-				name="dueDate"
-				type="date"
-				autocomplete="off"
-				value={project.dueDate}
-			/>
+			<DateField label={m.project_field_due()} name="dueDate" value={project.dueDate} />
 			<Field
 				label={m.project_field_tag()}
 				name="projectTag"

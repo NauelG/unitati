@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.74.0] - 2026-10-19
+
+### Added
+
+- `DateField`, built on the bits-ui date field and calendar, replaces the three native
+  `<input type="date">` fields (project create, project edit, task edit). Day, month and year can
+  be typed; a calendar popover (es-ES, Monday first) offers "Hoy" and "Borrar". It follows the app's
+  typography, dark theme and brand colour, is as tall as `Field`, and posts the same
+  `YYYY-MM-DD` (or an empty string) under the same `name`. Vendored `calendar` component and
+  `parseIsoDate`/`toIsoDate` helpers. Gallery entry added.
+
 ## [0.73.1] - 2026-10-19
 
 ### Changed

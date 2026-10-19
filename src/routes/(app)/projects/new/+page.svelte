@@ -8,6 +8,7 @@
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SearchSelectField from '#lib/components/unitati/SearchSelectField.svelte';
 	import TextAreaField from '#lib/components/unitati/TextAreaField.svelte';
+	import DateField from '#lib/components/unitati/DateField.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
@@ -75,7 +76,7 @@
 				bind:value={ownerPersonId}
 				error={errorFor('ownerPersonId')}
 			/>
-			<Field label={m.project_field_due()} name="dueDate" type="date" error={errorFor('dueDate')} />
+			<DateField label={m.project_field_due()} name="dueDate" error={errorFor('dueDate')} />
 		</div>
 
 		<div class="flex items-center gap-[var(--space-3)]">

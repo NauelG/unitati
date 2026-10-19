@@ -796,6 +796,9 @@
 		}
 	],
 	"field_clear": "Borrar {label}",
+	"date_field_open": "Abrir calendario de {label}",
+	"date_field_today": "Hoy",
+	"date_field_clear": "Borrar",
 	"settings_module_platform": "Plataforma",
 	"settings_section_branding": "Marca",
 	"branding_title": "Marca",
