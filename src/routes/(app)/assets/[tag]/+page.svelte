@@ -29,6 +29,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 	import AssetFields from '../AssetFields.svelte';
+	import CreateModelDialog from '../CreateModelDialog.svelte';
 	import { locationOptions, options, stateOptions } from '../options';
 
 	let { data, form }: PageProps = $props();
@@ -114,6 +115,7 @@
 	 */
 	let editOpen = $state(false);
 	let confirmDiscard = $state(false);
+	let modelOpen = $state(false);
 
 	// Called unconditionally, same rule `$state`/`$derived` already follow: a
 	// store Svelte must auto-subscribe to (`$editValues` etc. below) has to
@@ -503,6 +505,7 @@
 					errors={$editErrors}
 					modelOptions={editModelOptions}
 					tagRequired
+					onaddmodel={() => (modelOpen = true)}
 				/>
 			</div>
 
@@ -518,6 +521,19 @@
 			</div>
 		</form>
 	</Sheet>
+
+	<CreateModelDialog
+		open={modelOpen}
+		onOpenChange={(next) => (modelOpen = next)}
+		action="/assets/{encodeURIComponent(asset.assetTag)}/edit?/createModel"
+		form={data.modelForm}
+		manufacturers={data.manufacturers}
+		categories={data.categories}
+		oncreated={(id) => {
+			$editValues.assetModelId = id;
+			modelOpen = false;
+		}}
+	/>
 
 	<ConfirmDialog
 		open={confirmDiscard}

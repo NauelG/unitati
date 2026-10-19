@@ -24,6 +24,8 @@
 		tagRequired?: boolean;
 		/** A model can only be chosen from the catalogue, and an edit has one already. */
 		modelPlaceholder?: string;
+		/** When present, a link under "Modelo" asks the page to open its create-model dialog. */
+		onaddmodel?: () => void;
 	}
 
 	let {
@@ -33,7 +35,8 @@
 		tagHint,
 		extra,
 		tagRequired = false,
-		modelPlaceholder
+		modelPlaceholder,
+		onaddmodel
 	}: Props = $props();
 </script>
 
@@ -71,6 +74,15 @@
 		error={errors.assetModelId?.[0]}
 		required
 	/>
+	{#if onaddmodel}
+		<button
+			type="button"
+			class="-mt-[var(--space-3)] block rounded-sm text-small text-[var(--brand)] hover:underline focus-visible:underline"
+			onclick={onaddmodel}
+		>
+			{m.model_add_link()}
+		</button>
+	{/if}
 
 	{@render extra?.()}
 

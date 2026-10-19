@@ -76,16 +76,17 @@ runs when something tries to close, not on every keystroke) and routes a dirty c
 `ConfirmDialog` ("¿descartar cambios?", non-destructive tone) instead of closing immediately. A
 clean close — nothing typed, or already saved — closes straight away.
 
-### Full page: `record`'s side column is not detail-only
+### Full page with a subflow: the subflow is a `Dialog`
 
-`/assets/new` keeps `PageLayout`'s `form` main measure for the asset fields themselves — the task
-is still "fill in one asset", not a list — but the inline `<details>` subflow becomes a
-`WorkPanel` (ADR 0019) in `record`'s 340px side column instead of a collapsed block fighting the
-same 672px column for space. `record`'s grid shape (`main` + `side` above 1100px, side falls below
-it under) was written for record _detail_ pages, but nothing in its shape is detail-specific: a
-create flow with a genuine secondary task (here, "the model doesn't exist yet") is exactly the
-case the side column exists for. `/assets/new` is the first non-detail page to use it; a future
-route with no secondary content keeps the plain `form` variant, no side slot.
+`/assets/new` composes `PageLayout`'s `form` variant for the asset fields, and "the model doesn't
+exist yet" is a 3-field `Dialog` (name, manufacturer, category) opened from a link under the
+"Modelo" field, not a `WorkPanel` in `record`'s side column. The side column was tried first
+(#100): on a narrow screen it fell below the form as a second, disconnected form, far from the
+field it belongs to. A dialog sits at the point of need at every width, and it fits the rule above
+(one to three fields, one primary action). On success it closes and the new model is selected in
+the asset form without a navigation. The same dialog (`CreateModelDialog`) serves the edit page and
+the edit `Sheet` on the record, each posting to its route's `createModel` action, which is one
+shared server helper. `record`'s side column stays for a record's own panels.
 
 ### The gallery's composition-patterns page is the decision table
 

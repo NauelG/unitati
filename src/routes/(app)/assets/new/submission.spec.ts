@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { actions as newActions } from './+page.server';
+import { actions as editActions } from '../[tag]/edit/+page.server';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 
 /**
@@ -83,5 +84,27 @@ describe('submitting the inline "create a model" form blank', () => {
 		const wire = JSON.stringify(result);
 		expect(wire).not.toContain('Too small');
 		expect(wire).not.toContain('Required');
+	});
+});
+
+describe('the edit route offers the same createModel action (#220)', () => {
+	it('answers a blank model form in Spanish', async () => {
+		const result = (await editActions.createModel(event({ name: '' }))) as unknown as {
+			status: number;
+			data: { form: { errors: Record<string, string[]> } };
+		};
+
+		expect(result.status).toBe(400);
+		expect(result.data.form.errors.name).toEqual(['Escribe un nombre.']);
+	});
+
+	it('refuses a user without assets.manage', async () => {
+		const requester = { ...technician, role: 'employee' } as SessionUser;
+		const refused = event({ name: 'X' }) as unknown as { locals: { user: SessionUser } };
+		refused.locals.user = requester;
+
+		await expect(
+			Promise.resolve().then(() => editActions.createModel(refused as never))
+		).rejects.toMatchObject({ status: 404 });
 	});
 });

@@ -34,6 +34,7 @@ import {
 	type AssetTimelineItem,
 	type AssetRelatedGroup
 } from '#lib/server/links/index.js';
+import { emptyModelForm, modelCatalogues } from '../create-model.server';
 import { editAssetForm } from '../forms';
 import { fieldsOf, rejected } from '../form-data';
 import type { Actions, PageServerLoad } from './$types';
@@ -120,9 +121,11 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 					assetModelId: '',
 					shared: false
 				};
-	const [editForm, editModels] = await Promise.all([
+	const [editForm, editModels, modelForm, catalogues] = await Promise.all([
 		superValidate(editSeed, zod4(editAssetForm)),
-		editable ? listAssetModels(user.organisationId) : Promise.resolve([])
+		editable ? listAssetModels(user.organisationId) : Promise.resolve([]),
+		emptyModelForm(),
+		editable ? modelCatalogues(user) : Promise.resolve({ manufacturers: [], categories: [] })
 	]);
 
 	return {
@@ -141,7 +144,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
 		locations,
 		editForm,
-		editModels
+		editModels,
+		modelForm,
+		...catalogues
 	};
 };
 
