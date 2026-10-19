@@ -9,6 +9,7 @@ import {
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
+import { renderMarkdown } from '#lib/server/shared/markdown.js';
 import { listPeople } from '#lib/server/directory/index.js';
 import {
 	openTicketCount,
@@ -84,6 +85,7 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 
 	return {
 		project,
+		descriptionHtml: renderMarkdown(project.description ?? ''),
 		tasks,
 		// Every column of the board, including the empty ones.
 		states: states.map(({ id, name, group, position }) => ({ id, name, group, position })),
@@ -153,18 +155,27 @@ export const actions: Actions = {
 		const user = requireProjectWrite(locals.user);
 		const fields = await fieldsOf(request);
 
-		const parsed = updateProjectInput.safeParse({
-			name: fields.get('name'),
-			description: orNull(fields.get('description')),
-			ownerPersonId: orNull(fields.get('ownerPersonId')),
-			dueDate: orNull(fields.get('dueDate')),
-			projectTag: orNull(fields.get('projectTag')) ?? undefined
-		});
+		// Every in-place edit posts only its own field (#226): a key that is absent
+		// is left untouched, one that is present and empty clears (where nullable).
+		const input: Record<string, unknown> = {};
+		if (fields.has('name')) input.name = fields.get('name');
+		if (fields.has('description')) input.description = orNull(fields.get('description'));
+		if (fields.has('ownerPersonId')) input.ownerPersonId = orNull(fields.get('ownerPersonId'));
+		if (fields.has('dueDate')) input.dueDate = orNull(fields.get('dueDate'));
+		if (fields.has('projectTag')) input.projectTag = fields.get('projectTag');
+
+		const parsed = updateProjectInput.safeParse(input);
 		if (!parsed.success) {
 			const field = firstField(parsed.error);
 			return rejected(
 				'update',
-				field === 'name' ? m.project_error_name_required() : m.action_error_invalid(),
+				field === 'name'
+					? m.project_error_name_required()
+					: field === 'projectTag'
+						? m.project_error_tag_invalid()
+						: field === 'description'
+							? m.project_error_description_too_long()
+							: m.action_error_invalid(),
 				field
 			);
 		}

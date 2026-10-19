@@ -1,10 +1,8 @@
 <script lang="ts">
-	import DescriptionList from '#lib/components/unitati/DescriptionList.svelte';
 	import FormError from '#lib/components/unitati/FormError.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Archive from '@lucide/svelte/icons/archive';
 	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
-	import Pencil from '@lucide/svelte/icons/pencil';
 	import Plus from '@lucide/svelte/icons/plus';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
@@ -16,9 +14,13 @@
 	} from '#lib/board-preference.js';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
+	import DescriptionList from '#lib/components/unitati/DescriptionList.svelte';
+	import EditableDetailRow from '#lib/components/unitati/EditableDetailRow.svelte';
+	import EditableText from '#lib/components/unitati/EditableText.svelte';
+	import RichTextEditor from '#lib/components/unitati/RichTextEditor.svelte';
+	import { prose } from '#lib/components/unitati/prose.js';
 	import Alert from '#lib/components/unitati/Alert.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
-	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
 	import Dialog from '#lib/components/unitati/Dialog.svelte';
 	import EmptyState from '#lib/components/unitati/EmptyState.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
@@ -30,13 +32,10 @@
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
 	import RollingNumber from '#lib/components/unitati/RollingNumber.svelte';
-	import SearchSelectField from '#lib/components/unitati/SearchSelectField.svelte';
-	import Sheet from '#lib/components/unitati/Sheet.svelte';
 	import StatusBadge, { badge } from '#lib/components/unitati/StatusBadge.svelte';
 	import { stateGroupLabel } from '#lib/components/unitati/status.js';
 	import TaskBoard from '#lib/components/unitati/TaskBoard.svelte';
 	import TaskBoardSkeleton from '#lib/components/unitati/TaskBoardSkeleton.svelte';
-	import TextAreaField from '#lib/components/unitati/TextAreaField.svelte';
 	import DateField from '#lib/components/unitati/DateField.svelte';
 	import TimelineSkeleton from '#lib/components/unitati/TimelineSkeleton.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
@@ -61,44 +60,59 @@
 	let archived = $derived(data.project.archivedAt !== null);
 	const writable = $derived(data.canManage && !archived);
 
-	let editOpen = $state(false);
 	let taskOpen = $state(false);
 	/** The column a quick create was opened from; `null` is the domain's default state. */
 	let taskStateId = $state<string | null>(null);
 	let saving = $state(false);
-	let ownerPersonId = $state<string | null>(null);
+
+	/**
+	 * In-place edits (#226) are optimistic: each field has a mirror that follows
+	 * the record until the next load and is assigned on submit. Every edit posts
+	 * only its own field to `?/update`, so no other field can be touched.
+	 */
+	let name = $derived(project.name);
+	let projectTag = $derived(project.projectTag);
+	let ownerPersonId = $derived(project.ownerPersonId);
+	let dueDate = $derived(project.dueDate);
 
 	const ownerOptions = $derived(
 		data.people.map((person) => ({ value: person.id, label: person.fullName }))
 	);
+	const ownerName = $derived(
+		ownerPersonId === project.ownerPersonId
+			? (project.ownerName ?? '')
+			: (ownerOptions.find((option) => option.value === ownerPersonId)?.label ?? '')
+	);
 
-	/** The Sheet starts from the record every time it opens, not from a draft that went stale. */
-	function openEdit() {
-		ownerPersonId = project.ownerPersonId;
-		inputsEdited = false;
-		editOpen = true;
+	/** A mirror write that remembers what it replaced: the rollback `optimisticEnhance` wants. */
+	function mirror(read: () => string | null, write: (value: string | null) => void, field: string) {
+		return (formData: FormData) => {
+			const before = read();
+			write(String(formData.get(field) ?? '') || null);
+			return () => write(before);
+		};
 	}
 
-	/**
-	 * Closing the edit Sheet throws the draft away, so a draft with changes asks
-	 * first (`Sheet` leaves that gate to the caller). The owner picker is not a
-	 * native input, so it is compared against the record instead of listened to.
-	 */
-	let inputsEdited = $state(false);
-	let confirmDiscard = $state(false);
-	const dirty = $derived(inputsEdited || ownerPersonId !== project.ownerPersonId);
+	/** The code is the URL: a changed one is followed instead of reloading the old address. */
+	async function followTag(result: Record<string, unknown> | undefined) {
+		const next = result?.projectTag;
+		if (typeof next !== 'string' || next === project.projectTag) return false;
+		await goto(`/projects/${encodeURIComponent(next)}`, { replaceState: true });
+		return true;
+	}
 
-	function requestEditClose(next: boolean) {
-		if (next) {
-			editOpen = true;
-			return;
-		}
-		if (saving) return;
-		if (dirty) {
-			confirmDiscard = true;
-			return;
-		}
-		editOpen = false;
+	/** A field-keyed validation message from the last `update`, for the editor that owns that field. */
+	const fieldError = (field: string) =>
+		form && 'action' in form && form.action === 'update' && 'field' in form && form.field === field
+			? failureFor('update')
+			: undefined;
+
+	let describing = $state(false);
+	let descriptionDraft = $state('');
+
+	function editDescription() {
+		descriptionDraft = project.description ?? '';
+		describing = true;
 	}
 
 	const quickCreateState = $derived(data.states.find((state) => state.id === taskStateId));
@@ -161,16 +175,52 @@
 	]);
 </script>
 
-{#snippet failure(action: string)}
-	{@const message = failureFor(action)}
-	{#if message}
-		<FormError>{message}</FormError>
-	{/if}
-{/snippet}
-
 <svelte:head>
 	<title>{documentTitle(project.projectTag, project.name)}</title>
 </svelte:head>
+
+{#snippet ownerRow()}
+	<EditableDetailRow
+		kind="select"
+		label={m.project_detail_owner()}
+		value={ownerPersonId}
+		display={ownerName}
+		options={ownerOptions}
+		noneLabel={m.project_field_owner_none()}
+		placeholder={m.project_field_owner_none()}
+		action="?/update"
+		name="ownerPersonId"
+		editable={writable}
+		optimistic={mirror(
+			() => ownerPersonId,
+			(value) => (ownerPersonId = value),
+			'ownerPersonId'
+		)}
+	/>
+{/snippet}
+{#snippet dueRow()}
+	<EditableDetailRow
+		kind="custom"
+		label={m.project_detail_due()}
+		value={dueDate}
+		display={dueDate ? formatDay(dueDate) : ''}
+		placeholder="—"
+		action="?/update"
+		name="dueDate"
+		editable={writable}
+		optimistic={mirror(
+			() => dueDate,
+			(value) => (dueDate = value),
+			'dueDate'
+		)}
+	>
+		{#snippet editor({ value, commit })}
+			<div class="p-[var(--space-3)]">
+				<DateField label={m.project_field_due()} {value} onchange={(next) => commit(next ?? '')} />
+			</div>
+		{/snippet}
+	</EditableDetailRow>
+{/snippet}
 
 <PageLayout variant="record">
 	<Breadcrumbs
@@ -183,11 +233,43 @@
 		from the tasks rendered below — how many tasks sit in each group.
 	-->
 	<PageHeader
-		title={project.name}
+		title={name}
 		level="record"
-		code={project.projectTag}
+		code={projectTag}
 		codeViewTransitionName={toViewTransitionName('record', project.projectTag)}
 	>
+		{#snippet codeContent()}
+			<EditableText
+				value={projectTag}
+				editable={writable}
+				mono
+				action="?/update"
+				name="projectTag"
+				label={m.project_field_tag()}
+				optimistic={mirror(
+					() => projectTag,
+					(value) => (projectTag = value ?? projectTag),
+					'projectTag'
+				)}
+				onsuccess={followTag}
+				error={fieldError('projectTag')}
+			/>
+		{/snippet}
+		{#snippet titleContent()}
+			<EditableText
+				value={name}
+				editable={writable}
+				action="?/update"
+				name="name"
+				label={m.project_field_name()}
+				optimistic={mirror(
+					() => name,
+					(value) => (name = value ?? name),
+					'name'
+				)}
+				error={fieldError('name')}
+			/>
+		{/snippet}
 		{#snippet summary()}
 			<span
 				class="inline-flex flex-wrap items-center gap-x-[var(--space-3)] gap-y-[var(--space-1)]"
@@ -213,10 +295,6 @@
 		{/snippet}
 		{#snippet actions()}
 			{#if writable}
-				<Button variant="secondary" onclick={openEdit}>
-					<Pencil class="size-4" aria-hidden="true" />
-					{m.project_detail_edit()}
-				</Button>
 				<Button onclick={() => openTask(null)}>
 					<Plus class="size-4" aria-hidden="true" />
 					{m.project_new_task()}
@@ -250,6 +328,49 @@
 
 	{#if archived}
 		<Alert tone="info" class="mt-[var(--space-4)]">{m.project_detail_archived_notice()}</Alert>
+	{/if}
+
+	{#if writable || project.description}
+		<WorkPanel heading={m.project_field_description()} class="mt-[var(--space-6)]">
+			{#snippet actions()}
+				{#if writable && !describing && project.description}
+					<Button variant="ghost" onclick={editDescription}>{m.project_description_edit()}</Button>
+				{/if}
+			{/snippet}
+			{#if describing}
+				<form
+					method="POST"
+					action="?/update"
+					class="space-y-[var(--space-3)]"
+					use:enhance={() => {
+						saving = true;
+						return async ({ result, update }) => {
+							await update({ reset: false });
+							saving = false;
+							if (result.type === 'success') describing = false;
+						};
+					}}
+				>
+					<RichTextEditor
+						name="description"
+						label={m.project_field_description()}
+						bind:value={descriptionDraft}
+					/>
+					{#if fieldError('description')}<FormError>{fieldError('description')}</FormError>{/if}
+					<FormActions>
+						<Button type="button" variant="ghost" onclick={() => (describing = false)}>
+							{m.form_cancel()}
+						</Button>
+						<Button type="submit" busy={saving}>{m.project_description_save()}</Button>
+					</FormActions>
+				</form>
+			{:else if project.description}
+				<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitised by renderMarkdown on the server (ADR 0030) -->
+				<div class={prose}>{@html data.descriptionHtml}</div>
+			{:else}
+				<Button variant="ghost" onclick={editDescription}>{m.project_description_add()}</Button>
+			{/if}
+		</WorkPanel>
 	{/if}
 
 	<SegmentedControl
@@ -333,20 +454,10 @@
 		<WorkPanel heading={m.project_detail_details()}>
 			<DescriptionList
 				items={[
-					{ label: m.project_detail_owner(), value: project.ownerName },
-					{
-						label: m.project_detail_due(),
-						value: project.dueDate ? formatDay(project.dueDate) : null
-					}
+					{ label: m.project_detail_owner(), value: ownerRow },
+					{ label: m.project_detail_due(), value: dueRow }
 				]}
 			/>
-			{#if project.description}
-				<p
-					class="mt-[var(--space-3)] text-sm break-words whitespace-pre-wrap text-[var(--ink-muted)]"
-				>
-					{project.description}
-				</p>
-			{/if}
 		</WorkPanel>
 
 		<WorkPanel heading={m.project_detail_progress()}>
@@ -377,106 +488,6 @@
 </PageLayout>
 
 {#if writable}
-	<Sheet
-		open={editOpen}
-		onOpenChange={requestEditClose}
-		pending={saving}
-		title={m.project_edit_title({ tag: project.projectTag })}
-		description={m.project_edit_lede()}
-		form={{
-			action: '?/update',
-			method: 'POST',
-			use: (node) =>
-				enhance(node, () => {
-					saving = true;
-					return async ({ result, update }) => {
-						await update({ reset: false });
-						saving = false;
-						if (result.type === 'success') {
-							editOpen = false;
-							const next = (result.data as { projectTag?: string } | undefined)?.projectTag;
-							// The tag is the URL: follow it if it moved.
-							if (next && next !== project.projectTag) {
-								await goto(`/projects/${encodeURIComponent(next)}`, { replaceState: true });
-							}
-						}
-					};
-				}),
-			oninput: () => (inputsEdited = true)
-		}}
-	>
-		{#snippet fields()}
-			<Field
-				label={m.project_field_name()}
-				name="name"
-				required
-				autocomplete="off"
-				value={project.name}
-				error={form && 'field' in form && form.field === 'name' ? failureFor('update') : undefined}
-			/>
-			<TextAreaField
-				label={m.project_field_description()}
-				name="description"
-				value={project.description}
-			/>
-			<SearchSelectField
-				label={m.project_field_owner()}
-				name="ownerPersonId"
-				placeholder={m.project_field_owner_none()}
-				options={ownerOptions}
-				bind:value={ownerPersonId}
-			/>
-			<DateField label={m.project_field_due()} name="dueDate" value={project.dueDate} />
-			<Field
-				label={m.project_field_tag()}
-				name="projectTag"
-				autocomplete="off"
-				spellcheck={false}
-				autocapitalize="off"
-				value={project.projectTag}
-				error={form && 'field' in form && form.field === 'projectTag'
-					? failureFor('update')
-					: undefined}
-			/>
-			{#if form && 'action' in form && form.action === 'update' && !('field' in form && form.field)}
-				{@render failure('update')}
-			{/if}
-		{/snippet}
-		{#snippet footer()}
-			<FormActions>
-				<Button type="button" variant="ghost" onclick={() => requestEditClose(false)}>
-					{m.form_cancel()}
-				</Button>
-				<Button type="submit" busy={saving}>
-					{saving ? m.form_saving() : m.project_edit_submit()}
-				</Button>
-			</FormActions>
-		{/snippet}
-	</Sheet>
-
-	<ConfirmDialog
-		open={confirmDiscard}
-		onOpenChange={(next) => {
-			if (!next) confirmDiscard = false;
-		}}
-		title={m.project_discard_changes_title()}
-		description={m.project_discard_changes_ask()}
-		confirmLabel={m.project_discard_changes_confirm()}
-		danger={false}
-	>
-		{#snippet action(confirm)}
-			<form
-				onsubmit={(event) => {
-					event.preventDefault();
-					confirmDiscard = false;
-					editOpen = false;
-				}}
-			>
-				{@render confirm()}
-			</form>
-		{/snippet}
-	</ConfirmDialog>
-
 	<Dialog
 		open={taskOpen}
 		onOpenChange={(next) => (taskOpen = next)}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 import { STATE_GROUPS } from '#lib/domain/status.js';
 
 /**
@@ -50,7 +51,7 @@ export const createProjectInput = z.object({
 
 export const updateProjectInput = z.object({
 	name: nonEmpty.optional(),
-	description: optionalText.optional(),
+	description: optionalText.pipe(z.string().max(RICH_TEXT_MAX_LENGTH).nullable()).optional(),
 	ownerPersonId: z.uuid().nullable().optional(),
 	dueDate: dueDate.optional(),
 	projectTag: tagOf(RESERVED_PROJECT_TAGS).optional()

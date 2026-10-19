@@ -46,6 +46,10 @@
 		 * Meaningless without `code`.
 		 */
 		codeViewTransitionName?: string;
+		/** Replaces the plain code with live content, e.g. an in-place editor. `code` still gates the line. */
+		codeContent?: Snippet;
+		/** Replaces the plain title with live content, e.g. an in-place editor. */
+		titleContent?: Snippet;
 		/** One line, `ink-muted`. Until phase 3 feeds it live data, the existing lede strings pass through. */
 		summary?: Snippet;
 		/** Right-aligned. */
@@ -59,6 +63,8 @@
 		title,
 		code,
 		codeViewTransitionName,
+		codeContent,
+		titleContent,
 		summary,
 		actions,
 		level = 'index',
@@ -72,10 +78,12 @@
 	<div class={styles.heading()}>
 		{#if code}
 			<p class={styles.code()} translate="no" style:view-transition-name={codeViewTransitionName}>
-				{code}
+				{#if codeContent}{@render codeContent()}{:else}{code}{/if}
 			</p>
 		{/if}
-		<h1 class={styles.title({ class: code ? 'mt-1' : undefined })}>{title}</h1>
+		<h1 class={styles.title({ class: code ? 'mt-1' : undefined })}>
+			{#if titleContent}{@render titleContent()}{:else}{title}{/if}
+		</h1>
 		{#if summary}
 			<p class={styles.summary()}>{@render summary()}</p>
 		{/if}

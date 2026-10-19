@@ -25,13 +25,23 @@ import { m } from '#lib/paraglide/messages.js';
  * create ticket, sign-in): there is no local value to flip in the first
  * place. Those forms get `Button`'s `busy` prop instead.
  */
+export interface OptimisticOptions {
+	apply: (formData: FormData) => () => void;
+	/** Runs on success with the action's data; return `true` to skip the default reconcile. */
+	onsuccess?: (data: Record<string, unknown> | undefined) => boolean | Promise<boolean>;
+}
+
 export function optimisticEnhance(
 	formElement: HTMLFormElement,
-	apply: (formData: FormData) => () => void
+	param: ((formData: FormData) => () => void) | OptimisticOptions
 ) {
+	const { apply, onsuccess } = typeof param === 'function' ? { apply: param } : param;
 	return enhance(formElement, ({ formData }) => {
 		const rollback = apply(formData);
 		return async ({ result, update }) => {
+			// A success the caller handles itself (a record whose URL moved): the
+			// default `update()` would invalidate the old URL and 404.
+			if (result.type === 'success' && onsuccess && (await onsuccess(result.data))) return;
 			if (result.type === 'failure' || result.type === 'error') {
 				rollback();
 				toast.error(failureMessage(result.type === 'failure' ? result.data : undefined));
