@@ -142,7 +142,7 @@
 		<div
 			class="flex flex-col gap-[var(--space-2)] p-[var(--space-2)] {collapsed
 				? 'absolute inset-0 rounded-[var(--radius-lg)]'
-				: 'min-h-16 flex-1'}"
+				: 'min-h-16 flex-1 rounded-[var(--radius-md)]'}"
 			id={bodyId}
 			aria-label={state.name}
 			data-board-dropzone={state.id}
@@ -150,7 +150,7 @@
 				items,
 				flipDurationMs,
 				dropTargetStyle: {},
-				dropTargetClasses: ['ring-2', 'ring-[var(--brand)]']
+				dropTargetClasses: ['bg-[var(--brand-soft)]', 'ring-1', 'ring-inset', 'ring-[var(--brand)]']
 			}}
 			onconsider={(event) => onconsider?.(event.detail.items, event.detail.info)}
 			onfinalize={(event) => onfinalize?.(event.detail.items, event.detail.info)}
