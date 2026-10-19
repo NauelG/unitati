@@ -13,8 +13,19 @@
 		editable?: boolean;
 		openOnHash?: string;
 		error?: string;
+		/** `row` only: routes the empty choice to another action. */
+		routed?: boolean;
+		noneLabel?: string;
 	}
-	let { component, initial, editable = true, openOnHash, error }: Props = $props();
+	let {
+		component,
+		initial,
+		editable = true,
+		openOnHash,
+		error,
+		routed = false,
+		noneLabel
+	}: Props = $props();
 
 	// svelte-ignore state_referenced_locally
 	let current = $state(initial);
@@ -54,7 +65,9 @@
 		value={current}
 		display={label(current)}
 		{options}
+		{noneLabel}
 		action="?/save"
+		actionFor={routed ? (v) => (v === '' ? '?/clear' : '?/save') : undefined}
 		name="field"
 		{editable}
 		{optimistic}

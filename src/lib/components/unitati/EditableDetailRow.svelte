@@ -38,6 +38,11 @@
 		/** The value formatted for read mode: a person's name, a formatted date. */
 		display: string;
 		action: string;
+		/**
+		 * Picks the action URL from the submitted value, for a row whose choices post to different
+		 * actions (a custodian row: a person assigns, "nobody" returns). `''` is the empty choice.
+		 */
+		actionFor?: (value: string) => string;
 		name: string;
 		editable: boolean;
 		optimistic: (formData: FormData) => () => void;
@@ -62,6 +67,7 @@
 		values = [],
 		display,
 		action,
+		actionFor,
 		name,
 		editable,
 		optimistic,
@@ -161,7 +167,13 @@
 		class={className}
 	/>
 {:else}
-	<form method="POST" {action} bind:this={formEl} use:optimisticEnhance={optimistic} class="hidden">
+	<form
+		method="POST"
+		action={actionFor ? actionFor(submitted[0] ?? '') : action}
+		bind:this={formEl}
+		use:optimisticEnhance={optimistic}
+		class="hidden"
+	>
 		{#each submitted as v (v)}
 			<input type="hidden" {name} value={v} />
 		{/each}
