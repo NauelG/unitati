@@ -5,6 +5,14 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.78.1] - 2026-10-19
+
+### Fixed
+
+- The in-place text editor (`EditableText`, used for the project name and code) drew a 2px brand
+  ring around the field on focus, heavier than every other field. It now uses the shared field
+  focus treatment: a 1px `--focus` border with a faint halo.
+
 ## [0.78.0] - 2026-10-19
 
 ### Added
