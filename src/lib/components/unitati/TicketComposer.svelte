@@ -2,18 +2,15 @@
 	import { tv } from '#lib/tv.js';
 
 	/**
-	 * The `.ut-composer`: a box at the end of the thread with the textarea above
+	 * The `.ut-composer`: a box at the end of the thread with the rich text editor above
 	 * and a bar below it — the internal-note toggle, the attach control, and the
 	 * send button with its shortcut.
 	 */
 	export const composer = tv({
 		slots: {
 			root: 'rounded-[var(--radius-lg)] border border-[var(--border-strong)] bg-[var(--surface-1)]',
-			textarea: [
-				'block min-h-[76px] w-full resize-y rounded-t-[var(--radius-lg)] border-0 bg-transparent',
-				'p-[var(--space-3)] text-body-lg text-[var(--ink)]',
-				'placeholder:text-[var(--ink-muted)]'
-			],
+			// The editor sits flush inside the box: the box owns the border.
+			editor: 'rounded-b-none rounded-t-[var(--radius-lg)] border-0 bg-transparent',
 			bar: 'flex flex-wrap items-center gap-[var(--space-2)] border-t border-[var(--border)] p-[var(--space-2)]',
 			toggle: [
 				'inline-flex h-[var(--size-control-sm)] items-center rounded-[var(--radius-full)] px-[var(--space-3)]',
@@ -38,7 +35,9 @@
 	import Paperclip from '@lucide/svelte/icons/paperclip';
 	import { optimisticEnhance } from '#lib/optimistic.js';
 	import { m } from '#lib/paraglide/messages.js';
+	import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 	import Button from './Button.svelte';
+	import RichTextEditor from './RichTextEditor.svelte';
 
 	interface Props {
 		/** The form action, e.g. `?/reply`. */
@@ -74,12 +73,12 @@
 
 	const styles = $derived(composer({ internal }));
 
+	/** Nothing to send, or too much: the server refuses both, so the box does not offer them. */
+	const sendable = $derived(body.trim().length > 0 && body.length <= RICH_TEXT_MAX_LENGTH);
+
 	/** ⌘↵ or Ctrl+↵ sends, as the design system's composer promises. */
-	function sendWithKeyboard(event: KeyboardEvent) {
-		if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-			event.preventDefault();
-			form?.requestSubmit();
-		}
+	function send() {
+		if (sendable) form?.requestSubmit();
 	}
 </script>
 
@@ -106,15 +105,15 @@
 		};
 	}}
 >
-	<textarea
+	<RichTextEditor
 		name="body"
-		class={styles.textarea()}
-		aria-label={m.composer_label()}
+		class={styles.editor()}
+		label={m.composer_label()}
 		placeholder={placeholder ??
 			(internal ? m.composer_placeholder_internal() : m.composer_placeholder_portal())}
-		required
 		bind:value={body}
-		onkeydown={sendWithKeyboard}></textarea>
+		onsubmitshortcut={send}
+	/>
 
 	<input type="hidden" name="visibility" value={internal ? 'internal' : 'public'} />
 
@@ -140,7 +139,7 @@
 			<input type="file" name="files" multiple />
 		</label>
 
-		<Button type="submit" size="sm" class="ml-auto">
+		<Button type="submit" size="sm" class="ml-auto" disabled={!sendable}>
 			{internal ? m.composer_send_internal() : m.composer_send()}
 			<span class="text-caption font-normal opacity-80" aria-hidden="true"
 				>{m.composer_shortcut()}</span

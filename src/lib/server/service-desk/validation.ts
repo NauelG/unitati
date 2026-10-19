@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 import { PRIORITIES } from '#lib/domain/status.js';
 
 /**
@@ -44,8 +45,11 @@ export const createTicketInput = z.object({
 	assetIds: z.array(z.uuid()).max(MAX_AFFECTED_ASSETS).optional()
 });
 
+/** Characters of markdown a comment may hold (ADR 0030); the editor enforces the same bound. */
+export const MAX_COMMENT_LENGTH = RICH_TEXT_MAX_LENGTH;
+
 export const addCommentInput = z.object({
-	body: nonEmpty,
+	body: nonEmpty.max(MAX_COMMENT_LENGTH),
 	visibility: z.enum(['public', 'internal'])
 });
 

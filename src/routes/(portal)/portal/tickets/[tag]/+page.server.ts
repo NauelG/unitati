@@ -39,7 +39,14 @@ export const actions: Actions = {
 
 		// Always public, whatever the form says: an employee has no internal notes.
 		const input = addCommentInput.safeParse({ body: fields.body ?? '', visibility: 'public' });
-		if (!input.success) return rejected('reply', m.ticket_error_invalid());
+		if (!input.success) {
+			// The schema's own bound, not a second copy of the number.
+			const tooLong = input.error.issues.some((issue) => issue.code === 'too_big');
+			return rejected(
+				'reply',
+				tooLong ? failureMessage('body_too_long') : m.ticket_error_invalid()
+			);
+		}
 
 		const outcome = await addComment(user, params.tag, input.data, files);
 		if (!outcome.ok) {

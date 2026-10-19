@@ -3,6 +3,7 @@ import { listActivity, type TimelineEntry } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { people } from '../directory/schema';
+import { renderMarkdown } from '../shared/markdown';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { newReplyMail, sendQuietly } from './mail';
 import { attachments, ticketComments, tickets } from './schema';
@@ -12,6 +13,7 @@ import { resolveDeps, storeFiles, type Deps } from './tickets';
 import {
 	addCommentInput,
 	attachmentProblem,
+	MAX_COMMENT_LENGTH,
 	type AddCommentInput,
 	type UploadedFile
 } from './validation';
@@ -39,6 +41,8 @@ export type ThreadItem =
 			authorPersonId: string | null;
 			authorName: string | null;
 			body: string;
+			/** `body` rendered as sanitised HTML (ADR 0030): the only thing a template may `{@html}`. */
+			bodyHtml: string;
 			visibility: 'public' | 'internal';
 			createdAt: Date;
 			attachments: ThreadAttachment[];
@@ -110,6 +114,7 @@ export async function ticketThread(
 		...rows.map((row): ThreadItem => ({
 			kind: 'comment',
 			...row,
+			bodyHtml: renderMarkdown(row.body),
 			attachments: files.filter((file) => file.commentId === row.id)
 		})),
 		...events.map((entry): ThreadItem => ({ kind: 'event', at: entry.occurredAt, entry }))
@@ -119,7 +124,11 @@ export async function ticketThread(
 }
 
 export type AddCommentFailure =
-	'ticket_not_found' | 'internal_not_allowed' | 'attachments_too_many' | 'attachments_too_large';
+	| 'ticket_not_found'
+	| 'internal_not_allowed'
+	| 'attachments_too_many'
+	| 'attachments_too_large'
+	| 'body_too_long';
 
 /**
  * Adds a reply or an internal note. The ticket is looked up through the
@@ -137,6 +146,10 @@ export async function addComment(
 	files: UploadedFile[] = [],
 	deps: Deps = {}
 ): Promise<Outcome<{ commentId: string }, AddCommentFailure>> {
+	// Checked before the schema so the caller gets a typed failure to show
+	// inline rather than a thrown validation error.
+	if (input.body.trim().length > MAX_COMMENT_LENGTH) return failure('body_too_long');
+
 	const values = addCommentInput.parse(input);
 	const { storage, mailer, linkTo } = resolveDeps(deps);
 

@@ -427,6 +427,67 @@ describe('comments and the internal-note boundary', () => {
 		expect(outcome).toEqual({ ok: false, error: 'ticket_not_found' });
 	});
 
+	it('renders a comment as sanitised HTML for the employee reading it in the portal', async () => {
+		const w = await workspace();
+		const { ticketTag } = await open(w);
+		await addComment(
+			w.employee,
+			ticketTag,
+			{
+				body: '**negreta**, [enllaç](https://example.com) <img src=x onerror=alert(1)>',
+				visibility: 'public'
+			},
+			[],
+			w.deps
+		);
+
+		const thread = await ticketThread(w.employee, ticketTag);
+		const html = thread.ok
+			? thread.value.flatMap((item) => (item.kind === 'comment' ? [item.bodyHtml] : []))[1]
+			: '';
+
+		expect(html).toContain('<strong>negreta</strong>');
+		expect(html).toContain('rel="noopener noreferrer" target="_blank"');
+		expect(html).not.toMatch(/<img|onerror=/);
+	});
+
+	it('renders a legacy body that starts with # as a paragraph, not a heading', async () => {
+		const w = await workspace();
+		const { ticketTag } = await open(w);
+		await addComment(
+			w.employee,
+			ticketTag,
+			{ body: '# Urgent\nNo imprimeix', visibility: 'public' },
+			[],
+			w.deps
+		);
+
+		const thread = await ticketThread(w.employee, ticketTag);
+		const html = thread.ok
+			? thread.value.flatMap((item) => (item.kind === 'comment' ? [item.bodyHtml] : []))[1]
+			: '';
+
+		expect(html).not.toMatch(/<h\d/);
+		expect(html).toContain('Urgent');
+	});
+
+	it('refuses a body over 20,000 characters and stores nothing', async () => {
+		const w = await workspace();
+		const { ticketTag } = await open(w);
+
+		const outcome = await addComment(
+			w.employee,
+			ticketTag,
+			{ body: 'x'.repeat(20_001), visibility: 'public' },
+			[],
+			w.deps
+		);
+		const thread = await ticketThread(w.employee, ticketTag);
+
+		expect(outcome).toEqual({ ok: false, error: 'body_too_long' });
+		expect(thread.ok && thread.value.filter((item) => item.kind === 'comment')).toHaveLength(1);
+	});
+
 	it('mails the requester on a public technician answer, and not on an internal note', async () => {
 		const w = await workspace();
 		const { ticketTag } = await open(w);

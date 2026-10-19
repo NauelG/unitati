@@ -5,6 +5,22 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.64.0] - 2026-10-19
+
+### Added
+
+- Rich text for ticket comments (#209): the composer is a Tiptap editor with a toolbar (bold,
+  italic, lists, link, inline code, code block, quote) and markdown input rules, in the app and the
+  portal. Comments are stored as markdown and shown as sanitised HTML; headings, tables, strikethrough
+  and images are not allowed. Cmd/Ctrl+Enter still sends.
+- `renderMarkdown`, the one server function that turns user markdown into sanitised HTML
+  (ADR 0030), and `RichTextEditor`, the reusable editor with a gallery entry.
+
+### Changed
+
+- A comment may hold at most 20,000 characters: the editor stops the send and the domain answers
+  with an inline error.
+
 ## [0.63.3] - 2026-10-19
 
 ### Fixed

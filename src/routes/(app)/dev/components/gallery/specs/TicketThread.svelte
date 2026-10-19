@@ -25,6 +25,7 @@
 			authorPersonId: 'p1',
 			authorName: 'Ada Lovelace',
 			body: 'Lo intenté cargar toda la noche y sigue sin encender.',
+			bodyHtml: '<p>Lo intenté cargar toda la noche y sigue sin encender.</p>',
 			visibility: 'public',
 			createdAt: new Date('2026-03-01T09:05:00Z'),
 			attachments: []
@@ -35,6 +36,7 @@
 			authorPersonId: 'p2',
 			authorName: 'Soporte técnico',
 			body: 'Nota interna: revisar si está en garantía antes de ofrecer sustitución.',
+			bodyHtml: '<p>Nota interna: revisar si está en garantía antes de ofrecer sustitución.</p>',
 			visibility: 'internal',
 			createdAt: new Date('2026-03-01T10:00:00Z'),
 			attachments: []
@@ -45,6 +47,7 @@
 			authorPersonId: 'p2',
 			authorName: 'Soporte técnico',
 			body: 'Hemos abierto una incidencia con el proveedor. Adjunto el diagnóstico.',
+			bodyHtml: '<p>Hemos abierto una incidencia con el proveedor. Adjunto el diagnóstico.</p>',
 			visibility: 'public',
 			createdAt: new Date('2026-03-01T10:30:00Z'),
 			attachments: [
