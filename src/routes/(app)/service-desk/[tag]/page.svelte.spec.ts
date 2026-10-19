@@ -1,0 +1,93 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import Page from './+page.svelte';
+
+const submitted = vi.hoisted(() => [] as { action: string; data: FormData }[]);
+
+// Same contract as SvelteKit's `enhance`; the real one needs its runtime.
+vi.mock('$app/forms', () => ({
+	enhance: (
+		form: HTMLFormElement,
+		submit: (input: {
+			formData: FormData;
+		}) => (opts: { result: unknown; update: () => Promise<void> }) => Promise<void>
+	) => {
+		const onSubmit = async (event: Event) => {
+			event.preventDefault();
+			const formData = new FormData(form);
+			submitted.push({ action: form.getAttribute('action') ?? '', data: formData });
+			await submit({ formData })({ result: { type: 'success' }, update: async () => {} });
+		};
+		form.addEventListener('submit', onSubmit);
+		return { destroy: () => form.removeEventListener('submit', onSubmit) };
+	}
+}));
+vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
+vi.mock('$app/state', () => ({ page: { url: new URL('http://localhost/') } }));
+vi.mock('$app/navigation', () => ({ goto: vi.fn(), invalidateAll: vi.fn() }));
+
+beforeAll(() => {
+	Element.prototype.scrollIntoView = () => {};
+});
+beforeEach(() => {
+	submitted.length = 0;
+	location.hash = '';
+});
+
+function pageData(canManage: boolean) {
+	return {
+		user: { name: 'Tech', personId: 'p1' },
+		ticket: {
+			id: 't1',
+			ticketTag: 'TCK-0001',
+			subject: 'Broken laptop',
+			status: 'new',
+			priority: 'normal',
+			channel: 'portal',
+			requesterName: 'Ada',
+			createdAt: new Date('2026-01-01T10:00:00Z'),
+			assigneePersonId: null,
+			assigneeName: null,
+			queueId: 'q1',
+			queueName: 'Hardware',
+			queueColor: null
+		},
+		thread: [],
+		related: Promise.resolve([]),
+		canManage,
+		escalation: null,
+		canInternal: false,
+		nextStatuses: ['in_progress', 'closed'],
+		queues: canManage ? [{ id: 'q1', name: 'Hardware', color: null }] : [],
+		people: canManage ? [{ id: 'p1', fullName: 'Tech' }] : []
+	};
+}
+
+const renderPage = (canManage: boolean) =>
+	render(Page, { data: pageData(canManage), form: null } as never);
+
+describe('ticket record header', () => {
+	it('posts the picked status to ?/status', async () => {
+		renderPage(true);
+		await fireEvent.click(screen.getByRole('button', { name: /^Estado/ }));
+		const options = await screen.findAllByRole('option', { hidden: true });
+		// The current status plus only the allowed transitions.
+		expect(options).toHaveLength(3);
+		await fireEvent.click(await screen.findByRole('option', { name: 'En curso', hidden: true }));
+		await waitFor(() => expect(submitted).toHaveLength(1));
+		expect(submitted[0].action).toBe('?/status');
+		expect(submitted[0].data.get('status')).toBe('in_progress');
+	});
+
+	it('has no Propiedades panel', () => {
+		renderPage(true);
+		expect(screen.queryByText('Propiedades')).toBeNull();
+	});
+
+	it('shows plain chips and rows without tickets.manage', () => {
+		renderPage(false);
+		expect(
+			screen.queryByRole('button', { name: /^(Estado|Prioridad|Asignada a|Cola)/ })
+		).toBeNull();
+	});
+});

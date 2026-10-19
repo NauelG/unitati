@@ -35,6 +35,12 @@
 		subject: string;
 		status: TicketStatus;
 		priority: Priority;
+		/**
+		 * Replaces the static status / priority badge, e.g. with an `EditableChip`. Without
+		 * them (the portal, a viewer who cannot manage) the header renders plain badges.
+		 */
+		statusChip?: Snippet;
+		priorityChip?: Snippet;
 		/** "Opened by X · time · via portal" — one small line, already formatted. */
 		provenance: string;
 		/** Secondary actions first, the primary one last. */
@@ -49,6 +55,8 @@
 		status,
 		priority,
 		provenance,
+		statusChip,
+		priorityChip,
 		actions,
 		class: className
 	}: Props = $props();
@@ -64,8 +72,8 @@
 				translate="no"
 				style:view-transition-name={ticketTagViewTransitionName}>{ticketTag}</span
 			>
-			<StatusBadge {status} />
-			<StatusBadge status={priority} />
+			{#if statusChip}{@render statusChip()}{:else}<StatusBadge {status} />{/if}
+			{#if priorityChip}{@render priorityChip()}{:else}<StatusBadge status={priority} />{/if}
 		</div>
 		<h1 class={styles.title()}>{subject}</h1>
 		<p class={styles.provenance()}>{provenance}</p>
