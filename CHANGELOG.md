@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.68.2] - 2026-10-19
+
+### Changed
+
+- The focus ring on text fields (inputs, textareas, selects, search selects, input groups) now sits
+  on the field's own border, which turns the focus colour, instead of drawing a second frame two
+  pixels outside it. Contrast stays above 3:1 in both themes; buttons, tabs, checkboxes and
+  switches keep the separated ring.
+
 ## [0.68.1] - 2026-10-19
 
 ### Fixed

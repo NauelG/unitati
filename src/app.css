@@ -671,14 +671,9 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
  * now sit *under* a ring that carries the actual message.
  */
 [data-slot='button']:focus-visible,
-[data-slot='input']:focus-visible,
-[data-slot='textarea']:focus-visible,
 [data-slot='checkbox']:focus-visible,
 [data-slot='switch']:focus-visible,
 [data-slot='tabs-trigger']:focus-visible,
-[data-slot='command-input']:focus-visible,
-[data-slot='select-trigger']:focus-visible,
-[data-slot='input-group']:has([data-slot='input-group-control']:focus-visible),
 [data-slot='dialog-close']:focus-visible,
 [data-slot='sheet-close']:focus-visible,
 [data-slot='popover-close']:focus-visible {
@@ -686,12 +681,43 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
 	outline-offset: 2px;
 }
 
-/* The vendored `ring-ring/50` halo would double the solid ring on fields. */
+/*
+ * Addendum to #90 (visual review): text-like fields. A field keeps its grey
+ * `--border-strong` border, so a ring 2px outside it read as a second frame
+ * around the field instead of the field changing state. On fields the ring now
+ * sits *on* the border: a 2px outline at `-1px` offset covers the 1px border
+ * exactly (1px of it over the border, 1px inside) and the border itself turns
+ * `--focus`, so no grey edge shows through. Visually the field's own border
+ * becomes a 2px focus-coloured one. Buttons, tabs, checkboxes, switches and
+ * close buttons keep the separated ring above.
+ *
+ * Still the solid `--focus`, never the translucent halo, so the 3:1 floor holds
+ * (default brand, measured): light 5.47:1 on `--surface-1` and 5.06:1 on
+ * `--surface-0`; dark 7.08:1 on `--surface-1` and 7.65:1 on `--surface-0`.
+ * `--focus` keeps following the brand colour; `brand-color.ts` guards its
+ * contrast.
+ *
+ * The input group draws the treatment on its wrapper; its inner control must
+ * not draw a ring of its own.
+ */
 [data-slot='input']:focus-visible,
 [data-slot='textarea']:focus-visible,
+[data-slot='command-input']:focus-visible,
+[data-slot='select-trigger']:focus-visible,
+[data-slot='input-group']:has([data-slot='input-group-control']:focus-visible) {
+	outline: 2px solid var(--focus);
+	outline-offset: -1px;
+	border-color: var(--focus);
+	box-shadow: none;
+}
+
+[data-slot='input-group-control']:focus-visible {
+	outline: none;
+}
+
+/* The vendored `ring-ring/50` halo would double the solid ring on controls. */
 [data-slot='checkbox']:focus-visible,
-[data-slot='switch']:focus-visible,
-[data-slot='command-input']:focus-visible {
+[data-slot='switch']:focus-visible {
 	box-shadow: none;
 }
 
