@@ -1,28 +1,40 @@
 import { sql } from 'drizzle-orm';
 import { beforeEach } from 'vitest';
 import { DATABASE_URL } from '$app/env/private';
+import { resetBrandCache } from '../../directory';
+import { resetSubscriptions, setDispatchMode } from '../../shared/events';
 import { getDb } from '..';
 import { assertTestDatabase } from './database-url';
-import { truncateAllTablesStatement } from './tables';
+import { emptyAllTablesStatement } from './tables';
 
 /**
- * Empties the database before every test in every `*.db.spec.ts` file, so a
- * spec starts from nothing it did not insert itself.
+ * Before every test in every `*.db.spec.ts` file, puts the database and the
+ * process back where a fresh server would find them, so a spec starts from
+ * nothing it did not create itself (ADR 0032).
  *
- * Truncation, not a rolled-back transaction: rollback is faster and it never
- * commits, so it exercises neither deferred constraints nor the `CHECK` that
- * ADR 0009 puts at the centre of the activity table. A harness that hides the
- * behaviour these tests exist to prove is a harness that lies.
+ * Committed deletes, not a rolled-back transaction: rollback is faster and it
+ * never commits, so it exercises neither deferred constraints nor the `CHECK`
+ * that ADR 0009 puts at the centre of the activity table. A harness that hides
+ * the behaviour these tests exist to prove is a harness that lies.
  *
  * `beforeEach` rather than `afterEach` so a run that crashed halfway, or a
  * database left dirty by hand, cannot colour the next one.
  */
 
-// Before the first truncation, not after it: the guard is only useful early.
+// Before the first delete, not after it: the guard is only useful early.
 assertTestDatabase(DATABASE_URL);
 
-const statement = truncateAllTablesStatement();
+const statement = emptyAllTablesStatement();
 
 beforeEach(async () => {
-	await getDb().execute(sql.raw(statement));
+	await getDb().transaction(async (tx) => {
+		await tx.execute(sql.raw(statement));
+	});
+
+	// The db project shares one module graph across files (`isolate: false`), so
+	// state a module keeps for the life of the process outlives the file that
+	// set it. Every such piece of state is reset here; a new one belongs here too.
+	resetBrandCache();
+	resetSubscriptions();
+	setDispatchMode('async');
 });

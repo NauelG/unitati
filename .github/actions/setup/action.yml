@@ -1,0 +1,41 @@
+name: Set up Node and dependencies
+description: Node from .nvmrc and `npm ci`, from an npm cache that survives version bumps.
+
+outputs:
+  dependencies-hash:
+    description: Hash of package-lock.json without the project's own version.
+    value: ${{ steps.hash.outputs.value }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+
+    # setup-node's own cache keys on the whole lockfile, and every release bumps
+    # the version written inside it: the cache missed on every bump and left a new
+    # 135 MB entry behind each time. Hashing the lockfile without the project's
+    # own version changes the key only when a dependency does.
+    - name: Hash the dependencies
+      id: hash
+      shell: bash
+      run: |
+        value="$(node -e "
+          const lock = require('./package-lock.json');
+          delete lock.version;
+          delete lock.packages[''].version;
+          const hash = require('node:crypto').createHash('sha256');
+          process.stdout.write(hash.update(JSON.stringify(lock)).digest('hex'));
+        ")"
+        echo "value=$value" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: npm-${{ runner.os }}-${{ steps.hash.outputs.value }}
+        restore-keys: npm-${{ runner.os }}-
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci --prefer-offline --no-audit --no-fund

@@ -5,6 +5,28 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.64.1] - 2026-10-19
+
+### Changed
+
+- CI runs as four parallel jobs (types and version, lint, unit tests and build, database tests)
+  instead of one sequential job. The npm cache is keyed on the dependencies without the project's
+  own version, so a release no longer misses it.
+- `npm run lint` caches Prettier and ESLint results by file content. Pull requests restore the
+  cache from `main`, and `main` always lints in full.
+- The database test harness empties tables with `DELETE` instead of `TRUNCATE`, shares one module
+  graph across spec files (`isolate: false`) and turns off `synchronous_commit` on the test
+  database (ADR 0032). Locally the suite drops from about 150 s to about 30 s.
+- The image build keys its `npm ci` layers on the dependencies only, so publishing a release reuses
+  them from the cache. The buildx builder is no longer torn down at the end of the job.
+- The compose Postgres is probed every second while it boots, so `npm run db:start` returns sooner.
+
+### Fixed
+
+- A service-desk spec read the last status change without ordering the rows, and failed whenever
+  Postgres returned them in a different physical order.
+- The 200-asset seed spec gets a 20 s timeout. It exceeded the default 5 s on a loaded machine.
+
 ## [0.64.0] - 2026-10-19
 
 ### Added

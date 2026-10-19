@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.64.0-1d5cf0" alt="Version 0.64.0" />
+  <img src="https://img.shields.io/badge/version-0.64.1-1d5cf0" alt="Version 0.64.1" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
 </p>
@@ -183,7 +183,7 @@ None of them is needed to `build`: building analyses the app without opening a c
 
 `npm run test:db` reads its own `DATABASE_URL` from the committed `.env.test`, which points at
 `unitati_test`. A `DATABASE_URL` exported in your shell overrides that file, so the harness
-refuses any database whose name does not end in `_test` — it truncates every table between
+refuses any database whose name does not end in `_test` — it empties every table between
 tests and will not do that to yours.
 
 ### Environments

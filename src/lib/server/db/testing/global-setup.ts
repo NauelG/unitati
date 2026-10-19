@@ -45,6 +45,13 @@ function createDatabaseIfMissing(url: string): Promise<void> {
 		// Identifiers cannot be bound as parameters. The name came through
 		// assertTestDatabase, which is what makes interpolating it here safe.
 		if (existing.length === 0) await client.unsafe(`create database "${name}"`);
+
+		// Every test commits several times, and with the cleanup down to a few
+		// milliseconds the WAL flush of each commit became the cost (ADR 0032).
+		// Off, a crash can lose the last commits but never corrupts anything:
+		// worthless data, so the trade is free. Set on the database, it reaches
+		// the workers' connections, which open after this.
+		await client.unsafe(`alter database "${name}" set synchronous_commit = off`);
 	});
 }
 

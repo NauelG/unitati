@@ -1,10 +1,10 @@
 /**
- * The guard that makes a truncating test harness safe to run.
+ * The guard that makes a test harness that empties every table safe to run.
  *
  * Vite's `loadEnv` lets a `DATABASE_URL` exported in the shell override the one
  * in `.env.test`, so the harness cannot assume the file it ships is the file it
  * gets. A developer with the development connection string in their shell would
- * otherwise watch `TRUNCATE` empty their own database. Refusing every database
+ * otherwise watch the harness empty their own database. Refusing every database
  * whose name does not end in `_test` turns that into an error message.
  */
 
@@ -41,7 +41,7 @@ export function assertTestDatabase(url: string): string {
 	const name = databaseName(url);
 	if (!name.endsWith(TEST_SUFFIX)) {
 		throw new Error(
-			`Refusing to run the database tests against "${name}": they truncate every ` +
+			`Refusing to run the database tests against "${name}": they empty every ` +
 				`table, so the database name must end in "${TEST_SUFFIX}". Unset DATABASE_URL ` +
 				'in your shell to fall back to .env.test.'
 		);

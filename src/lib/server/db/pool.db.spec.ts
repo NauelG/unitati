@@ -13,7 +13,7 @@ import { closeDb, getDb } from '.';
  */
 describe('closeDb', () => {
 	it('ends the pool it opened, and lets the next caller open a fresh one', async () => {
-		// The harness truncates through `getDb()` before every test, so a pool
+		// The harness empties the tables through `getDb()` before every test, so a pool
 		// already exists; this takes the same handle it would have taken.
 		const client = getDb().$client;
 		await expect(client`select 1`).resolves.toBeDefined();

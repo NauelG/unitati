@@ -37,7 +37,9 @@ async function activityRows() {
 	return row.total;
 }
 
-describe('applyPlan, locations', () => {
+// The full 200-asset plan, applied twice: the only spec that needs the real size,
+// and it outlives the default 5 s on a loaded machine.
+describe('applyPlan, locations', { timeout: 20_000 }, () => {
 	it('seeds the location tree, once, and puts assets at leaves and at inner nodes', async () => {
 		const organisation = await createOrganisation();
 		const admin = await createViewer(organisation.id, 'admin', 'Ada Admin');

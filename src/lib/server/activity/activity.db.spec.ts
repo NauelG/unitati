@@ -20,7 +20,7 @@ import { ACTIVITY_TARGETS, ACTIVITY_VERBS } from './verbs';
 /**
  * The integrity ADR 0009 calls non-negotiable, proved rather than asserted.
  *
- * The harness truncates instead of rolling back precisely so these tests mean
+ * The harness commits its cleanup instead of rolling back precisely so these tests mean
  * something: a `CHECK` is evaluated on write and a rolled-back transaction
  * would exercise it, but a deferred constraint or a cascade would not, and a
  * harness that hides what a spec exists to prove is a harness that lies.

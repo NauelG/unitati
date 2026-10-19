@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 import { getDb } from '../db';
 import { activity } from '../activity';
@@ -338,7 +338,13 @@ describe('the status workflow', () => {
 			});
 		}
 
-		const verbs = await getDb().select().from(activity).where(eq(activity.ticketId, id));
+		// Ordered explicitly: without `order by` Postgres returns rows in whatever
+		// order the heap holds them, which is not the order they were written.
+		const verbs = await getDb()
+			.select()
+			.from(activity)
+			.where(eq(activity.ticketId, id))
+			.orderBy(asc(activity.occurredAt));
 		const changes = verbs.filter((row) => row.verb === 'ticket.status.changed');
 
 		expect(changes).toHaveLength(4);

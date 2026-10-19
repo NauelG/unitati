@@ -69,7 +69,7 @@ describe('listPeople', () => {
 
 /**
  * Both tests insert the same globally unique `organisations.slug` and the same
- * person. Without truncation between them the second would fail on the unique
+ * person. Without the cleanup between them the second would fail on the unique
  * constraint, whichever order they run in — which is the point: this is the
  * harness testing itself, not the directory.
  */
