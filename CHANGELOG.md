@@ -5,6 +5,14 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.71.0] - 2026-10-19
+
+### Added
+
+- Departments catalogue at `/settings/directory/departments` (new "Directorio" settings module), for
+  whoever holds `people.manage`: create, rename and delete departments. Deleting one that still has
+  people is refused with their count (#212).
+
 ## [0.70.0] - 2026-10-19
 
 ### Changed
