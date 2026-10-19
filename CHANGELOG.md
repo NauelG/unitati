@@ -5,6 +5,13 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.75.1] - 2026-10-19
+
+### Fixed
+
+- Changing a ticket's status from the header chip no longer lands on the error page: right after
+  a pick the chip listed the new status twice, which Svelte rejects as a duplicate key (#225).
+
 ## [0.75.0] - 2026-10-19
 
 ### Changed

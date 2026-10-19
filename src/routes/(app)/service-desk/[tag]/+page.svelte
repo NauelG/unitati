@@ -78,7 +78,9 @@
 	// The chip shows where the ticket is; only the legal next states are offered besides it.
 	// `nextStatuses` comes from `load`, so it follows the status once the action reconciles.
 	const statusOptions = $derived(
-		[localStatus, ...data.nextStatuses].map((value) => ({
+		// Deduplicated: right after a pick `localStatus` is already the new status while
+		// `nextStatuses` still lists it, and a repeated value is a duplicate key in the list.
+		[...new Set([localStatus, ...data.nextStatuses])].map((value) => ({
 			value,
 			label: statusLabel(value),
 			tone: toneOf(value)
