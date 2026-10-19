@@ -87,14 +87,8 @@ export function createBoardMover(submit: (request: MoveRequest) => void): BoardM
 export function resolveCollapsed(
 	stateId: string,
 	taskCount: number,
-	preference: Readonly<Record<string, 'collapsed' | 'expanded'>>,
-	dragging = false
+	preference: Readonly<Record<string, 'collapsed' | 'expanded'>>
 ): boolean {
 	const stored = preference[stateId];
-	// Mid-drag the layout must not depend on where the card hovers: an empty
-	// column that widens under the pointer loses the hover, folds again, and
-	// flickers. So while a card is held, a column with no stored choice is open
-	// — a real target — whatever it holds; a stored choice is still respected.
-	if (stored === undefined) return dragging ? false : taskCount === 0;
-	return stored === 'collapsed';
+	return stored === undefined ? taskCount === 0 : stored === 'collapsed';
 }

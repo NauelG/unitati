@@ -59,8 +59,8 @@ minor bumps carry features and patch bumps carry fixes.
   switches keep the separated ring, thinned to 1px. The search box of the combobox and the command palette follows the same field
   treatment, and the highlighted option shows a soft background with a bar on its left edge
   instead of a ring. The column a task is dragged over is marked with a soft background and a 1px
-  inset outline instead of a 2px ring, and an empty column that folds by itself stays open for the
-  whole drag, so the highlight no longer disappears and the column no longer flickers under the card.
+  inset outline instead of a 2px ring, and the columns keep their fold state for the whole drag, so
+  the highlight no longer disappears and a column no longer widens, folds and flickers under the card.
 
 ## [0.68.1] - 2026-10-19
 
