@@ -328,6 +328,18 @@ export async function countAssetsByLocation(organisationId: string): Promise<Map
  * sidebar link is already hidden from anyone without an asset-read permission,
  * so nothing here needs redacting per viewer, as with `listManufacturers`.
  */
+/** How many assets, in any state, the person holds as custodian: what deactivating them leaves behind. */
+export async function countAssetsInCustodyOf(
+	organisationId: string,
+	personId: string
+): Promise<number> {
+	const [row] = await getDb()
+		.select({ count: sql<number>`count(*)::int` })
+		.from(assets)
+		.where(and(eq(assets.organisationId, organisationId), eq(assets.custodianPersonId, personId)));
+	return row?.count ?? 0;
+}
+
 export async function countActive(organisationId: string): Promise<number> {
 	const [row] = await getDb()
 		.select({ count: sql<number>`count(*)::int` })

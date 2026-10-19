@@ -44,6 +44,7 @@ export const ACTIVITY_VERBS = [
 	'task.project.changed',
 	'person.created',
 	'person.deactivated',
+	'person.reactivated',
 	'person.department.changed',
 	'person.location.changed',
 	'catalogue.location.created',

@@ -160,6 +160,9 @@ export function activitySentence(entry: ActivityEntry): string {
 		case 'person.deactivated':
 			return m.activity_person_deactivated();
 
+		case 'person.reactivated':
+			return m.activity_person_reactivated();
+
 		case 'person.department.changed':
 			return m.activity_person_department_changed({
 				from: entry.payload.fromDepartmentName ?? m.activity_department_none(),

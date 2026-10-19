@@ -1,4 +1,4 @@
-import { and, eq, inArray, notInArray } from 'drizzle-orm';
+import { and, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import type { Priority, TicketStatus } from '#lib/domain/status.js';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
@@ -97,4 +97,22 @@ export async function assignedOpenTickets(
 	return rows.flatMap(({ assigneePersonId, ...row }) =>
 		assigneePersonId === null ? [] : [{ ...row, assigneePersonId }]
 	);
+}
+
+/** How many unresolved tickets are assigned to the person: what deactivating them leaves behind. */
+export async function countOpenTicketsAssignedTo(
+	organisationId: string,
+	personId: string
+): Promise<number> {
+	const [row] = await getDb()
+		.select({ count: sql<number>`count(*)::int` })
+		.from(tickets)
+		.where(
+			and(
+				eq(tickets.organisationId, organisationId),
+				eq(tickets.assigneePersonId, personId),
+				notInArray(tickets.status, ['resolved', 'closed'])
+			)
+		);
+	return row?.count ?? 0;
 }

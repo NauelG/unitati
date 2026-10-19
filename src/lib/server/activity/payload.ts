@@ -215,6 +215,7 @@ export const PAYLOAD_SCHEMAS = {
 	// is renamed and moves, and a history that rewrites itself is not a history.
 	'person.created': z.object({ fullName: presentName, email: presentName }),
 	'person.deactivated': z.object({}),
+	'person.reactivated': z.object({}),
 	'person.department.changed': z.object({
 		fromDepartmentId: z.uuid().nullable(),
 		fromDepartmentName: presentName.nullable(),
