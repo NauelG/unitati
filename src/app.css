@@ -685,7 +685,7 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
 [data-slot='dialog-close']:focus-visible,
 [data-slot='sheet-close']:focus-visible,
 [data-slot='popover-close']:focus-visible {
-	outline: 2px solid var(--focus);
+	outline: 1px solid var(--focus);
 	outline-offset: 2px;
 }
 
@@ -696,8 +696,8 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
  * border was still too heavy next to the rest of the UI. On fields the focus
  * state is now the field's own 1px border turning `--focus`, plus a faint
  * `--focus` halo (12% alpha, 2px) that only helps the eye find it. Buttons,
- * tabs, checkboxes, switches and close buttons keep the separated 2px ring
- * above.
+ * tabs, checkboxes, switches and close buttons keep the separated ring above,
+ * thinned to 1px (visual review): solid `--focus`, so the same 3:1 holds.
  *
  * The 1px border is the indicator, and it is solid, so the 3:1 floor of #90
  * holds without the halo (default brand, measured): light 5.47:1 on
@@ -878,7 +878,7 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
 	}
 
 	:focus-visible {
-		outline: 2px solid var(--focus);
+		outline: 1px solid var(--focus);
 		outline-offset: 2px;
 	}
 }
