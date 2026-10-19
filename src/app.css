@@ -685,42 +685,62 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
 [data-slot='dialog-close']:focus-visible,
 [data-slot='sheet-close']:focus-visible,
 [data-slot='popover-close']:focus-visible {
-	outline: 2px solid var(--focus);
+	outline: 1px solid var(--focus);
 	outline-offset: 2px;
 }
 
 /*
  * Addendum to #90 (visual review): text-like fields. A field keeps its grey
  * `--border-strong` border, so a ring 2px outside it read as a second frame
- * around the field instead of the field changing state. On fields the ring now
- * sits *on* the border: a 2px outline at `-1px` offset covers the 1px border
- * exactly (1px of it over the border, 1px inside) and the border itself turns
- * `--focus`, so no grey edge shows through. Visually the field's own border
- * becomes a 2px focus-coloured one. Buttons, tabs, checkboxes, switches and
- * close buttons keep the separated ring above.
+ * around the field instead of the field changing state, and a 2px ring on the
+ * border was still too heavy next to the rest of the UI. On fields the focus
+ * state is now the field's own 1px border turning `--focus`, plus a faint
+ * `--focus` halo (12% alpha, 2px) that only helps the eye find it. Buttons,
+ * tabs, checkboxes, switches and close buttons keep the separated ring above,
+ * thinned to 1px (visual review): solid `--focus`, so the same 3:1 holds.
  *
- * Still the solid `--focus`, never the translucent halo, so the 3:1 floor holds
- * (default brand, measured): light 5.47:1 on `--surface-1` and 5.06:1 on
- * `--surface-0`; dark 7.08:1 on `--surface-1` and 7.65:1 on `--surface-0`.
+ * The 1px border is the indicator, and it is solid, so the 3:1 floor of #90
+ * holds without the halo (default brand, measured): light 5.47:1 on
+ * `--surface-1` and 5.06:1 on `--surface-0`; dark 7.08:1 on `--surface-1` and
+ * 7.65:1 on `--surface-0`. The halo is decorative and is never relied on, which
+ * is what sank `ring-ring/50`. The transparent outline is for forced-colors
+ * mode, which drops borders' colours and shadows but keeps outlines.
  * `--focus` keeps following the brand colour; `brand-color.ts` guards its
  * contrast.
  *
  * The input group draws the treatment on its wrapper; its inner control must
- * not draw a ring of its own.
+ * not draw a ring of its own. That includes the search box of the combobox and
+ * the command palette (#217): its real `<input>` is `command-input`, inside an
+ * input group, so the group carries the focus and the input draws nothing.
+ *
+ * In a combobox DOM focus stays in the input and the active option is conveyed
+ * with `data-selected` (cmdk auto-selects the first one), so the option gets no
+ * ring of its own: a `--brand-soft` ground plus a 2px `--focus` bar on its left
+ * edge. The bar is solid, so it holds 3:1 where a tint alone does not: 4.74:1
+ * on `--brand-soft` in light and 6.07:1 in dark (and 5.47:1 / 7.08:1 on
+ * `--surface-1`).
  */
 [data-slot='input']:focus-visible,
 [data-slot='textarea']:focus-visible,
-[data-slot='command-input']:focus-visible,
 [data-slot='select-trigger']:focus-visible,
-[data-slot='input-group']:has([data-slot='input-group-control']:focus-visible) {
-	outline: 2px solid var(--focus);
-	outline-offset: -1px;
+.ut-field-control:focus-visible,
+[data-slot='input-group']:has([data-slot='input-group-control']:focus-visible),
+[data-slot='input-group']:has([data-slot='command-input']:focus-visible) {
+	outline: 1px solid transparent;
+	outline-offset: 0;
 	border-color: var(--focus);
-	box-shadow: none;
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 12%, transparent);
 }
 
-[data-slot='input-group-control']:focus-visible {
+[data-slot='command-item'][data-selected] {
+	background-color: var(--brand-soft);
+	box-shadow: inset 2px 0 0 var(--focus);
+}
+
+[data-slot='input-group-control']:focus-visible,
+[data-slot='command-input']:focus-visible {
 	outline: none;
+	box-shadow: none;
 }
 
 /* The vendored `ring-ring/50` halo would double the solid ring on controls. */
@@ -746,8 +766,7 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
 [data-slot='dropdown-menu-checkbox-item']:focus,
 [data-slot='dropdown-menu-sub-trigger']:focus,
 [data-slot='select-item']:focus,
-[data-slot='command-item']:focus,
-[data-slot='command-item'][data-selected] {
+[data-slot='command-item']:focus {
 	outline: 2px solid var(--focus);
 	outline-offset: -2px;
 }
@@ -874,7 +893,7 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
 	}
 
 	:focus-visible {
-		outline: 2px solid var(--focus);
+		outline: 1px solid var(--focus);
 		outline-offset: 2px;
 	}
 }

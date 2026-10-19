@@ -7,6 +7,7 @@
 		createBoardMover,
 		moveLocally,
 		neighboursOf,
+		resolveCollapsed,
 		type BoardState,
 		type BoardTask,
 		type MoveRequest
@@ -99,10 +100,19 @@
 	}
 
 	/** Where each card sat when the drag began: a drop back in place submits nothing. */
+	/** From the moment a card is picked up until it lands: every column's fold state, frozen. */
+	let foldDuringDrag = $state<Record<string, boolean> | null>(null);
+
 	let origin: { taskId: string; stateId: string; before?: string; after?: string } | null = null;
 
 	function consider(stateId: string, items: BoardTask[], info: { id: string; trigger: string }) {
 		if (info.trigger === TRIGGERS.DRAG_STARTED) {
+			foldDuringDrag = Object.fromEntries(
+				columns.map((column) => [
+					column.state.id,
+					resolveCollapsed(column.state.id, column.items.length, folded)
+				])
+			);
 			origin = { taskId: info.id, stateId, ...neighboursOf(items, info.id) };
 		}
 		setColumn(stateId, items);
@@ -110,6 +120,7 @@
 
 	function finalize(stateId: string, items: BoardTask[], info: { id: string; trigger: string }) {
 		setColumn(stateId, items);
+		foldDuringDrag = null;
 		// Only the zone the card landed in submits; the one it left, and a drop
 		// outside every zone, just settle.
 		if (info.trigger !== TRIGGERS.DROPPED_INTO_ZONE || !items.some((i) => i.id === info.id)) return;
@@ -144,6 +155,7 @@
 			{states}
 			{editable}
 			collapsedStates={folded}
+			{foldDuringDrag}
 			ontogglecollapse={toggleCollapse}
 			onconsider={(items, info) => consider(column.state.id, items, info)}
 			onfinalize={(items, info) => finalize(column.state.id, items, info)}
