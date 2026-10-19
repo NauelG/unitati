@@ -5,6 +5,20 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.67.0] - 2026-10-19
+
+### Added
+
+- The ticket composer (app and portal) replaces the native file input with an "Adjuntar" button,
+  removable chips showing each file's name and size, and drag-and-drop onto the composer with a
+  visible drop state. Adding a sixth file or one over 10 MiB is rejected in the browser with an
+  inline message; the valid files are kept. The server still enforces the same limits.
+
+### Changed
+
+- The attachment limits live in `src/lib/domain/attachments.ts`, shared by the server validation
+  and the composer.
+
 ## [0.66.0] - 2026-10-19
 
 ### Added

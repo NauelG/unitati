@@ -1,6 +1,12 @@
 <script lang="ts">
 	import ComponentDocPage from '../ComponentDocPage.svelte';
 	import TicketComposer from '#lib/components/unitati/TicketComposer.svelte';
+
+	function sample(name: string, size: number) {
+		const file = new File(['x'], name);
+		Object.defineProperty(file, 'size', { value: size });
+		return file;
+	}
 </script>
 
 <ComponentDocPage
@@ -28,6 +34,12 @@
 			name: 'placeholder',
 			type: 'string',
 			description: 'Sustituye el placeholder por defecto (público/interno).'
+		},
+		{
+			name: 'initialFiles / initialDragging / initialAttachmentError',
+			type: 'File[] / boolean / string',
+			description:
+				'Solo para la galería: muestran los chips, el estado de arrastre y el mensaje de adjuntos.'
 		}
 	]}
 	usage={`<TicketComposer action="?/reply" allowInternal={isStaff} />`}
@@ -50,6 +62,35 @@
 		<div>
 			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">Con error</p>
 			<TicketComposer action="#" error="No se pudo enviar: el ticket ya está cerrado." />
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">Sin archivos</p>
+			<TicketComposer action="#" />
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Con dos archivos
+			</p>
+			<TicketComposer
+				action="#"
+				initialFiles={[sample('informe.pdf', 245760), sample('captura.png', 1572864)]}
+			/>
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Arrastrando archivos
+			</p>
+			<TicketComposer action="#" initialDragging />
+		</div>
+		<div>
+			<p class="ut-muted mb-2 text-xs font-semibold tracking-[0.04em] uppercase">
+				Con error de adjuntos
+			</p>
+			<TicketComposer
+				action="#"
+				initialFiles={[sample('informe.pdf', 245760)]}
+				initialAttachmentError="video.mov supera el máximo de 10 MB por archivo."
+			/>
 		</div>
 	{/snippet}
 </ComponentDocPage>
