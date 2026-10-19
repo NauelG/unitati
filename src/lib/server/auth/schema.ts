@@ -20,6 +20,8 @@ export const users = pgTable('users', {
 	image: text('image'),
 	/** Product constant, never user-authored (ADR 0007). */
 	role: userRole('role').notNull().default('employee'),
+	/** True after a grant or a reset, until the user picks their own password (#230). */
+	mustChangePassword: boolean('must_change_password').notNull().default(false),
 	...timestamps
 });
 

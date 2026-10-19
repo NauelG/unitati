@@ -4,6 +4,7 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { legacyCatalogueRedirect } from '#lib/settings/legacy-redirects.js';
 import { paraglideMiddleware } from '#lib/paraglide/server.js';
 import { authenticateRequest, isApiPath } from '#lib/server/api/index.js';
+import { passwordChangeRedirect } from '#lib/server/auth/guards.js';
 import { getAuth } from '#lib/server/auth/index.js';
 import { closeDb } from '#lib/server/db/index.js';
 import { resolveSessionUser } from '#lib/server/directory/index.js';
@@ -70,6 +71,12 @@ const authHandle: Handle = async ({ event, resolve }) => {
 	const auth = getAuth();
 	const session = await auth.api.getSession({ headers: event.request.headers });
 	event.locals.user = session?.user ? await resolveSessionUser(session.user.id) : null;
+
+	// A temporary password confines the session to changing it (#230).
+	const confined = passwordChangeRedirect(event.locals.user, event.url.pathname);
+	if (confined) {
+		return new Response(null, { status: 303, headers: { location: confined } });
+	}
 
 	return svelteKitHandler({ event, resolve, auth, building });
 };

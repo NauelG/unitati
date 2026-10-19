@@ -49,6 +49,13 @@ describe('UserMenu', () => {
 		expect(setModeMock).toHaveBeenCalledWith('dark');
 	});
 
+	it('links to the password change page', async () => {
+		await openMenu();
+
+		const link = screen.getByRole('menuitem', { name: 'Cambiar contraseña' });
+		expect(link.getAttribute('href')).toBe('/account/password');
+	});
+
 	it('signs out with a real POST form submission', async () => {
 		await openMenu();
 		const form = document.querySelector<HTMLFormElement>('form[action="/sign-out"]');

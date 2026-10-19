@@ -2,6 +2,10 @@
 	import { tick } from 'svelte';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
+	import KeyRoundIcon from '@lucide/svelte/icons/key-round';
+	import ShieldIcon from '@lucide/svelte/icons/shield';
+	import UserPlusIcon from '@lucide/svelte/icons/user-plus';
+	import UserMinusIcon from '@lucide/svelte/icons/user-minus';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import UserCheckIcon from '@lucide/svelte/icons/user-check';
 	import UserXIcon from '@lucide/svelte/icons/user-x';
@@ -41,6 +45,49 @@
 	let draftDepartmentId = $state<string | null>(null);
 	let draftLocationId = $state<string | null>(null);
 	let saving = $state(false);
+
+	const roleOptions = [
+		{ value: 'employee', label: m.role_employee() },
+		{ value: 'technician', label: m.role_technician() },
+		{ value: 'admin', label: m.role_admin() }
+	];
+
+	/** Access flows: the dialog being filled in, and the one-time result. */
+	let granting = $state<{ person: Person; mode: 'grant' | 'role' } | null>(null);
+	let draftRole = $state('employee');
+	let accessPending = $state(false);
+	let revoking = $state<Person | null>(null);
+	let revokePending = $state(false);
+	let revealed = $state<{ name: string; password: string } | null>(null);
+	let copied = $state(false);
+
+	function openAccess(target: Person, mode: 'grant' | 'role') {
+		draftRole = mode === 'role' && target.role ? target.role : 'employee';
+		granting = { person: target, mode };
+	}
+
+	/** A reset has no question to ask: it posts straight and shows the result. */
+	let resetForm: HTMLFormElement | undefined = $state();
+	let resetId = $state('');
+	let resetName = '';
+
+	async function reset(target: Person) {
+		resetId = target.id;
+		resetName = target.fullName;
+		await tick();
+		resetForm?.requestSubmit();
+	}
+
+	function reveal(name: string, password: string) {
+		copied = false;
+		revealed = { name, password };
+	}
+
+	async function copyPassword() {
+		if (!revealed) return;
+		await navigator.clipboard.writeText(revealed.password);
+		copied = true;
+	}
 
 	const person = $derived(editing && editing !== 'new' ? editing : null);
 
@@ -161,9 +208,9 @@
 {#snippet department(person: Person)}{person.departmentName ??
 		m.directory_no_department()}{/snippet}
 {#snippet location(person: Person)}{person.locationPath ?? m.directory_no_location()}{/snippet}
-{#snippet role(person: Person)}{person.role
+{#snippet role(person: Person)}{person.hasAccess && person.role
 		? (roleLabels[person.role] ?? person.role)
-		: '—'}{/snippet}
+		: m.directory_no_access()}{/snippet}
 {#snippet actions(person: Person)}
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger
@@ -177,6 +224,32 @@
 				<PencilIcon class="size-4" aria-hidden="true" />
 				{m.directory_edit()}
 			</DropdownMenu.Item>
+			{#if !person.hasAccess}
+				{#if person.active}
+					<DropdownMenu.Item onSelect={() => openAccess(person, 'grant')}>
+						<UserPlusIcon class="size-4" aria-hidden="true" />
+						{m.directory_grant_access()}
+					</DropdownMenu.Item>
+				{/if}
+			{:else}
+				<!-- Your own role and the last active admin's are not offered; the actions refuse them too. -->
+				{#if person.id !== data.selfPersonId && person.id !== data.lastAdminId}
+					<DropdownMenu.Item onSelect={() => openAccess(person, 'role')}>
+						<ShieldIcon class="size-4" aria-hidden="true" />
+						{m.directory_change_role()}
+					</DropdownMenu.Item>
+				{/if}
+				<DropdownMenu.Item onSelect={() => reset(person)}>
+					<KeyRoundIcon class="size-4" aria-hidden="true" />
+					{m.directory_reset_password()}
+				</DropdownMenu.Item>
+				{#if person.id !== data.selfPersonId && person.id !== data.lastAdminId}
+					<DropdownMenu.Item class="text-[var(--danger)]" onSelect={() => (revoking = person)}>
+						<UserMinusIcon class="size-4" aria-hidden="true" />
+						{m.directory_revoke_access()}
+					</DropdownMenu.Item>
+				{/if}
+			{/if}
 			{#if person.active}
 				<DropdownMenu.Item
 					class="text-[var(--danger)]"
@@ -221,7 +294,7 @@
 		{/snippet}
 	</PageHeader>
 
-	{#if form && 'message' in form && form.message && ['reactivatePerson', 'deactivatePerson'].includes(form.action) && !confirming}
+	{#if form && 'message' in form && form.message && ['reactivatePerson', 'deactivatePerson', 'resetPassword', 'revokeAccess'].includes(form.action) && !confirming}
 		<FormError class="mt-[var(--space-4)]">{form.message}</FormError>
 	{/if}
 
@@ -278,14 +351,11 @@
 						maxlength={120}
 						required
 					/>
-					<!-- A disabled input is not posted, so a locked email can never travel. -->
 					<Field
 						label={m.directory_field_email()}
 						name="email"
 						type="email"
 						bind:value={draftEmail}
-						disabled={person?.hasAccess ?? false}
-						hint={person?.hasAccess ? m.directory_email_locked() : undefined}
 						error={emailFailure}
 						required
 					/>
@@ -319,6 +389,147 @@
 				</form>
 			{/if}
 		</Dialog>
+
+		<form
+			bind:this={resetForm}
+			method="POST"
+			action="?/resetPassword"
+			use:enhance={() => {
+				return async ({ result, update }) => {
+					if (result.type === 'success' && typeof result.data?.temporaryPassword === 'string') {
+						reveal(resetName, result.data.temporaryPassword);
+					}
+					await update({ reset: false });
+				};
+			}}
+			class="hidden"
+		>
+			<input type="hidden" name="id" value={resetId} />
+		</form>
+
+		<Dialog
+			open={granting !== null}
+			onOpenChange={(next) => {
+				if (!next) granting = null;
+			}}
+			title={granting
+				? granting.mode === 'grant'
+					? m.directory_grant_title({ name: granting.person.fullName })
+					: m.directory_change_role_title({ name: granting.person.fullName })
+				: ''}
+			pending={accessPending}
+		>
+			{#if granting}
+				{@const target = granting}
+				<form
+					method="POST"
+					action={target.mode === 'grant' ? '?/grantAccess' : '?/changeRole'}
+					use:enhance={() => {
+						accessPending = true;
+						return async ({ result, update }) => {
+							accessPending = false;
+							if (result.type === 'success') {
+								granting = null;
+								if (typeof result.data?.temporaryPassword === 'string') {
+									reveal(target.person.fullName, result.data.temporaryPassword);
+								}
+							}
+							await update({ reset: false });
+						};
+					}}
+					class="space-y-[var(--space-4)]"
+				>
+					<input type="hidden" name="id" value={target.person.id} />
+					{#if target.mode === 'grant'}
+						<p class="text-sm text-[var(--ink-muted)]">{m.directory_grant_lede()}</p>
+					{/if}
+					<SelectField
+						label={m.directory_field_role()}
+						name="role"
+						options={roleOptions}
+						bind:value={draftRole}
+						required
+					/>
+
+					{#if form && 'message' in form && form.message && ['grantAccess', 'changeRole'].includes(form.action) && form.id === target.person.id}
+						<FormError>{form.message}</FormError>
+					{/if}
+
+					<div class="flex justify-end gap-[var(--space-2)]">
+						<Button type="button" variant="ghost" size="sm" onclick={() => (granting = null)}>
+							{m.form_cancel()}
+						</Button>
+						<Button type="submit" size="sm" busy={accessPending}>
+							{target.mode === 'grant' ? m.directory_grant_access() : m.catalogue_save()}
+						</Button>
+					</div>
+				</form>
+			{/if}
+		</Dialog>
+
+		<!-- Shown once: closing it drops the password from memory, and nothing stores it. -->
+		<Dialog
+			open={revealed !== null}
+			onOpenChange={(next) => {
+				if (!next) revealed = null;
+			}}
+			title={revealed ? m.directory_temporary_password_title({ name: revealed.name }) : ''}
+		>
+			{#if revealed}
+				<div class="space-y-[var(--space-4)]">
+					<p class="text-sm text-[var(--ink-muted)]">{m.directory_temporary_password_lede()}</p>
+					<div class="flex items-center gap-[var(--space-2)]">
+						<code
+							aria-label={m.directory_temporary_password_label()}
+							class="flex-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] font-mono text-base tracking-wide select-all"
+						>
+							{revealed.password}
+						</code>
+						<Button type="button" variant="ghost" size="sm" onclick={copyPassword}>
+							{copied ? m.directory_copied() : m.directory_copy()}
+						</Button>
+					</div>
+					<p class="text-sm font-medium text-[var(--danger)]" role="note">
+						{m.directory_temporary_password_warning()}
+					</p>
+					<div class="flex justify-end">
+						<Button type="button" size="sm" onclick={() => (revealed = null)}>
+							{m.directory_done()}
+						</Button>
+					</div>
+				</div>
+			{/if}
+		</Dialog>
+
+		<ConfirmDialog
+			open={revoking !== null}
+			onOpenChange={(next) => {
+				if (!next) revoking = null;
+			}}
+			title={m.directory_revoke_title({ name: revoking?.fullName ?? '' })}
+			description={m.directory_revoke_ask()}
+			confirmLabel={m.directory_revoke_access()}
+			pending={revokePending}
+			error={revoking && form?.action === 'revokeAccess' && form.id === revoking.id
+				? form.message
+				: null}
+		>
+			{#snippet action(confirm)}
+				<form
+					method="POST"
+					action="?/revokeAccess"
+					use:enhance={confirmSubmit({
+						onPending: (value) => (revokePending = value),
+						onSettled: (succeeded) => {
+							if (succeeded) revoking = null;
+						}
+					})}
+				>
+					<input type="hidden" name="id" value={revoking?.id ?? ''} />
+					{@render confirm()}
+				</form>
+			{/snippet}
+		</ConfirmDialog>
 
 		<ConfirmDialog
 			open={confirming !== null}

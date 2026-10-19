@@ -13,6 +13,12 @@ export interface SessionUser {
 	name: string;
 	email: string;
 	role: UserRole;
+	/**
+	 * True until the user replaces the temporary password an admin gave them
+	 * (#230); `hooks.server.ts` confines such a session to `/account/password`.
+	 * Absent for an API key, which has no password to change.
+	 */
+	mustChangePassword?: boolean;
 	/** Tenancy scope (ADR 0004). Every query is filtered by it. */
 	organisationId: string;
 	/** Directory record, absent only for a user with no person row. */
@@ -74,4 +80,24 @@ export function requireAnyPermission(
 	const authenticated = requireUser(user);
 	if (!permissions.some((permission) => can(authenticated, permission))) error(404, 'Not found');
 	return authenticated;
+}
+
+export const PASSWORD_CHANGE_PATH = '/account/password';
+
+/** Paths a session with a temporary password may still reach (#230). */
+const PASSWORD_CHANGE_EXEMPT = [PASSWORD_CHANGE_PATH, '/sign-out', '/api/auth', '/_app/'];
+
+/**
+ * Where a session must go before anything else, or null. A user holding a
+ * temporary password can sign out and change it, nothing more. `/api/v1` is
+ * decided by the caller: API keys are not sessions and never carry the flag.
+ */
+export function passwordChangeRedirect(user: SessionUser | null, pathname: string): string | null {
+	if (!user?.mustChangePassword) return null;
+	const exempt = PASSWORD_CHANGE_EXEMPT.some(
+		(path) =>
+			pathname === path ||
+			(path.endsWith('/') ? pathname.startsWith(path) : pathname.startsWith(`${path}/`))
+	);
+	return exempt ? null : PASSWORD_CHANGE_PATH;
 }

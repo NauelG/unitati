@@ -50,6 +50,12 @@
 		{/if}
 		<ThemeMenuItems />
 		<DropdownMenu.Separator />
+		<!-- A real link: it works without script and opens in a new tab on demand. -->
+		<DropdownMenu.Item>
+			{#snippet child({ props })}
+				<a href="/account/password" {...props}>{m.nav_change_password()}</a>
+			{/snippet}
+		</DropdownMenu.Item>
 		<DropdownMenu.Item onSelect={() => signOutForm?.requestSubmit()}>
 			{m.nav_sign_out()}
 		</DropdownMenu.Item>

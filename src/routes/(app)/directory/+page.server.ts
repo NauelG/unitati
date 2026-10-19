@@ -2,11 +2,18 @@ import { z } from 'zod';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import { countAssetsInCustodyOf } from '#lib/server/assets/index.js';
+import {
+	changeAccessEmail,
+	changeRole,
+	deactivatePersonAndEndSessions,
+	grantAccess,
+	resetPassword,
+	revokeAccess
+} from '#lib/server/auth/access.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
 import {
 	countTeams,
 	createPerson,
-	deactivatePerson,
 	listDepartments,
 	listLocations,
 	listPeople,
@@ -46,9 +53,14 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			}
 		: null;
 
+	// The actions refuse these too; the menu just does not offer them (#230).
+	const activeAdmins = people.filter((person) => person.active && person.role === 'admin');
+
 	return {
 		people,
 		teams,
+		selfPersonId: user.personId,
+		lastAdminId: activeAdmins.length === 1 ? activeAdmins[0].id : null,
 		canManagePeople,
 		showInactive,
 		openCreate: canManagePeople && url.searchParams.get('new') === '1',
@@ -65,6 +77,11 @@ function issueOf(fields: Record<string, string>): string {
 	return m.validation_email();
 }
 
+const accessInput = z.object({
+	id: z.uuid(),
+	role: z.enum(['admin', 'technician', 'employee'])
+});
+
 const locationField = z.union([z.uuid(), z.literal('').transform(() => null)]);
 
 const failureMessage = {
@@ -73,6 +90,11 @@ const failureMessage = {
 	department_not_found: () => m.directory_error_department_not_found(),
 	location_not_found: () => m.directory_error_location_not_found(),
 	email_locked: () => m.directory_error_email_locked(),
+	no_access: () => m.directory_error_no_access(),
+	already_has_access: () => m.directory_error_already_has_access(),
+	inactive: () => m.directory_error_inactive(),
+	email_taken: () => m.directory_error_duplicate_email(),
+	last_admin: () => m.directory_error_last_admin(),
 	self: () => m.directory_error_self(),
 	already_inactive: () => m.directory_error_already_inactive(),
 	already_active: () => m.directory_error_already_active()
@@ -112,7 +134,14 @@ export const actions: Actions = {
 		}
 
 		const { fullName, email, departmentId } = parsed.data;
-		const updated = await updatePerson(user, personId, { fullName, email, departmentId });
+		let updated = await updatePerson(user, personId, { fullName, email, departmentId });
+		if (!updated.ok && updated.error === 'email_locked' && email !== undefined) {
+			// The address is also the sign-in, so `auth` changes both rows together;
+			// the directory then sees an unchanged email and applies the rest.
+			const moved = await changeAccessEmail(user, personId, email);
+			if (!moved.ok) return rejected('updatePerson', failureMessage[moved.error](), personId);
+			updated = await updatePerson(user, personId, { fullName, email, departmentId });
+		}
 		if (!updated.ok) return rejected('updatePerson', failureMessage[updated.error](), personId);
 
 		const placed = await setPersonLocation(user, personId, location.data);
@@ -125,7 +154,7 @@ export const actions: Actions = {
 		const target = withId.safeParse(await fieldsOf(request));
 		if (!target.success) return rejected('deactivatePerson', m.directory_error_not_found());
 
-		const outcome = await deactivatePerson(user, target.data.id);
+		const outcome = await deactivatePersonAndEndSessions(user, target.data.id);
 		if (!outcome.ok) {
 			return rejected('deactivatePerson', failureMessage[outcome.error](), target.data.id);
 		}
@@ -142,5 +171,60 @@ export const actions: Actions = {
 			return rejected('reactivatePerson', failureMessage[outcome.error](), target.data.id);
 		}
 		return { action: 'reactivatePerson' as const, message: null, id: null };
+	},
+
+	grantAccess: async ({ locals, request }) => {
+		const user = requirePermission(locals.user, 'people.manage');
+		const parsed = accessInput.safeParse(await fieldsOf(request));
+		if (!parsed.success) return rejected('grantAccess', m.directory_error_invalid());
+
+		const outcome = await grantAccess(user, parsed.data.id, parsed.data.role);
+		if (!outcome.ok)
+			return rejected('grantAccess', failureMessage[outcome.error](), parsed.data.id);
+		return {
+			action: 'grantAccess' as const,
+			message: null,
+			id: parsed.data.id,
+			temporaryPassword: outcome.value.temporaryPassword
+		};
+	},
+
+	resetPassword: async ({ locals, request }) => {
+		const user = requirePermission(locals.user, 'people.manage');
+		const target = withId.safeParse(await fieldsOf(request));
+		if (!target.success) return rejected('resetPassword', m.directory_error_not_found());
+
+		const outcome = await resetPassword(user, target.data.id);
+		if (!outcome.ok) {
+			return rejected('resetPassword', failureMessage[outcome.error](), target.data.id);
+		}
+		return {
+			action: 'resetPassword' as const,
+			message: null,
+			id: target.data.id,
+			temporaryPassword: outcome.value.temporaryPassword
+		};
+	},
+
+	changeRole: async ({ locals, request }) => {
+		const user = requirePermission(locals.user, 'people.manage');
+		const parsed = accessInput.safeParse(await fieldsOf(request));
+		if (!parsed.success) return rejected('changeRole', m.directory_error_invalid());
+
+		const outcome = await changeRole(user, parsed.data.id, parsed.data.role);
+		if (!outcome.ok) return rejected('changeRole', failureMessage[outcome.error](), parsed.data.id);
+		return { action: 'changeRole' as const, message: null, id: null };
+	},
+
+	revokeAccess: async ({ locals, request }) => {
+		const user = requirePermission(locals.user, 'people.manage');
+		const target = withId.safeParse(await fieldsOf(request));
+		if (!target.success) return rejected('revokeAccess', m.directory_error_not_found());
+
+		const outcome = await revokeAccess(user, target.data.id);
+		if (!outcome.ok) {
+			return rejected('revokeAccess', failureMessage[outcome.error](), target.data.id);
+		}
+		return { action: 'revokeAccess' as const, message: null, id: null };
 	}
 };
