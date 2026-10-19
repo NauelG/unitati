@@ -5,6 +5,24 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.81.0] - 2026-10-19
+
+### Added
+
+- Access for people, granted by an admin at `/directory`: "Dar acceso" creates the credential with a
+  role and a system-generated 16-character temporary password, shown once with a copy button. The
+  person must change it at first sign-in at `/account/password` (also reachable from "Cambiar
+  contraseña" in the user menu); until then every other page redirects there. A row menu offers
+  "Cambiar rol", "Restablecer contraseña" (new temporary password, signs the user out everywhere)
+  and "Retirar acceso" (the person stays in the directory as "Sin acceso"). The last active admin
+  cannot be demoted or revoked, and nobody can do either to themselves (#230).
+
+### Changed
+
+- Deactivating a person with access now ends their sessions and blocks sign-in with "Tu cuenta está
+  desactivada"; reactivating restores it. The email of a person with access is editable and
+  changes the sign-in too, in one transaction (#230).
+
 ## [0.80.0] - 2026-10-19
 
 ### Added
@@ -30,6 +48,7 @@ minor bumps carry features and patch bumps carry fixes.
   gone; readers see the same page without outlines. "Mover a proyecto" stays a header button.
 - The task `update` action takes one field per post: keys that are absent stay untouched, it accepts
   `taskTag`, and a description over 20,000 characters is refused.
+||||||| parent of 2bf096e (feat(auth): grant access with a temporary password and a role (#230))
 
 ## [0.78.1] - 2026-10-19
 
@@ -38,6 +57,7 @@ minor bumps carry features and patch bumps carry fixes.
 - The in-place text editor (`EditableText`, used for the project name and code) drew a 2px brand
   ring around the field on focus, heavier than every other field. It now uses the shared field
   focus treatment: a 1px `--focus` border with a faint halo.
+||||||| parent of 600c1fc (feat(auth): grant access with a temporary password and a role (#230))
 
 ## [0.78.0] - 2026-10-19
 

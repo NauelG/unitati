@@ -33,6 +33,15 @@ export type {
 	DepartmentEntry,
 	DepartmentRenameFailure
 } from './departments';
+export {
+	countActiveAdmins,
+	findPersonForAccess,
+	isUserActive,
+	linkPersonToUser,
+	setPersonEmail,
+	userIdOfPerson
+} from './access';
+export type { PersonForAccess } from './access';
 export { setPersonLocation } from './person-location';
 export type { SetPersonLocationFailure } from './person-location';
 export { createPerson, deactivatePerson, reactivatePerson, updatePerson } from './people';
@@ -60,8 +69,9 @@ export type { SetBrandAssetFailure, UpdateBrandingFailure } from './branding';
  * Resolves a signed-in credential into the person it belongs to, which is what
  * carries the tenancy scope (ADR 0004).
  *
- * Returns null when a credential has no directory record: that user cannot act
- * on anything, so treating them as anonymous is safer than inventing a scope.
+ * Returns null when a credential has no directory record, or its person is
+ * deactivated: that user cannot act on anything, so treating them as anonymous
+ * is safer than inventing a scope.
  */
 export async function resolveSessionUser(userId: string): Promise<SessionUser | null> {
 	const [row] = await getDb()
@@ -70,12 +80,14 @@ export async function resolveSessionUser(userId: string): Promise<SessionUser | 
 			name: users.name,
 			email: users.email,
 			role: users.role,
+			mustChangePassword: users.mustChangePassword,
 			organisationId: people.organisationId,
 			personId: people.id
 		})
 		.from(users)
 		.innerJoin(people, eq(people.userId, users.id))
-		.where(eq(users.id, userId))
+		// A deactivated person is signed out in effect, whatever sessions linger (#230).
+		.where(and(eq(users.id, userId), eq(people.active, true)))
 		.limit(1);
 
 	return row ?? null;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { requireAnyPermission, type SessionUser } from './guards';
+import { passwordChangeRedirect, requireAnyPermission, type SessionUser } from './guards';
 
 const user = (role: SessionUser['role']): SessionUser => ({
 	id: 'u1',
@@ -37,5 +37,26 @@ describe('requireAnyPermission', () => {
 
 	it('refuses to guard with an empty list rather than let everybody in', () => {
 		expect(() => requireAnyPermission(user('admin'), [])).toThrow(/at least one/);
+	});
+});
+
+describe('passwordChangeRedirect', () => {
+	const forced = { ...user('technician'), mustChangePassword: true };
+
+	it('sends a session with a temporary password to the change page from anywhere else', () => {
+		expect(passwordChangeRedirect(forced, '/')).toBe('/account/password');
+		expect(passwordChangeRedirect(forced, '/tickets/abc')).toBe('/account/password');
+		expect(passwordChangeRedirect(forced, '/login')).toBe('/account/password');
+	});
+
+	it('lets it reach the page itself, sign-out and assets', () => {
+		expect(passwordChangeRedirect(forced, '/account/password')).toBeNull();
+		expect(passwordChangeRedirect(forced, '/sign-out')).toBeNull();
+		expect(passwordChangeRedirect(forced, '/_app/immutable/chunk.js')).toBeNull();
+	});
+
+	it('leaves everyone else alone', () => {
+		expect(passwordChangeRedirect(user('admin'), '/')).toBeNull();
+		expect(passwordChangeRedirect(null, '/')).toBeNull();
 	});
 });

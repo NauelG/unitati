@@ -19,3 +19,7 @@ People, teams, departments, locations and the organisation's brand, name and col
 - `createLocation`, `updateLocation` and `deleteLocation` return an `Outcome`. Updating a parent locks the organisation row first and answers `cycle` for a loop; deleting answers `in_use` while children or assets remain. A person that points at the location is cleared, not blocking.
 - `countLocationChildren(organisationId, id)` backs the `in_use` message.
 - `locationInput` (`validation.ts`) is the one Zod schema, shared by the Settings route and the API: trimmed text, blank becomes `null`, coordinates both-or-neither, comma accepted as decimal separator.
+
+## Access (credentials)
+
+`access.ts` holds what the `auth` domain needs to grant, change and revoke a person's sign-in (ADR [0033](../../../../docs/adr/0033-staff-managed-credentials.md)): `findPersonForAccess`, `linkPersonToUser`, `setPersonEmail`, `countActiveAdmins`, all taking the caller's transaction, plus `userIdOfPerson` and `isUserActive`. `resolveSessionUser` returns nobody for a deactivated person.

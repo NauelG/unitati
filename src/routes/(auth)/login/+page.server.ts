@@ -5,7 +5,8 @@ import { z } from 'zod';
 import { APIError } from 'better-auth/api';
 import { getAuth } from '#lib/server/auth/index.js';
 import { applyAuthCookies } from '#lib/server/auth/cookies.js';
-import { needsSetup } from '#lib/server/directory/index.js';
+import { endSessions } from '#lib/server/auth/access.js';
+import { isUserActive, needsSetup } from '#lib/server/directory/index.js';
 import { m } from '#lib/paraglide/messages.js';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -26,11 +27,18 @@ export const actions: Actions = {
 		if (!form.valid) return fail(400, { form });
 
 		try {
-			const { headers } = await getAuth().api.signInEmail({
+			const { headers, response } = await getAuth().api.signInEmail({
 				body: { email: form.data.email, password: form.data.password },
 				headers: event.request.headers,
 				returnHeaders: true
 			});
+
+			// Deactivation blocks sign-in (#230). Said only after the password was
+			// right, so the message tells nobody which addresses exist.
+			if (!(await isUserActive(response.user.id))) {
+				await endSessions(response.user.id);
+				return fail(400, { form, message: m.login_deactivated() });
+			}
 			applyAuthCookies(headers, event.cookies);
 		} catch (error) {
 			// Wrong password and unknown address answer identically on purpose:
