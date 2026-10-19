@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.70.0] - 2026-10-19
+
+### Changed
+
+- The topbar's user cluster (theme toggle, avatar, name, "Cerrar sesión") is now a single avatar
+  button that opens a user menu, in the app and in the portal. The menu shows name and email, the
+  theme as a light/dark/system radio group, and "Cerrar sesión" (still a real POST). `ThemeToggle`
+  is replaced by `UserMenu` (#213).
+
 ## [0.69.0] - 2026-10-19
 
 ### Changed

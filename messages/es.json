@@ -12,6 +12,7 @@
 	"nav_directory": "Personas",
 	"nav_sign_out": "Cerrar sesión",
 	"nav_user_menu": "Menú de usuario",
+	"nav_user_menu_of": "Menú de usuario de {name}",
 	"nav_main": "Navegación principal",
 	"nav_components": "Componentes",
 	"nav_modules_section": "Módulos",

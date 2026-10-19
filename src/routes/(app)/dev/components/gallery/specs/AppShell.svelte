@@ -133,7 +133,7 @@
 		{
 			name: 'topbarEnd',
 			type: 'Snippet',
-			description: 'El lado derecho de la topbar: tema, usuario, salir.'
+			description: 'El lado derecho de la topbar: menú de usuario.'
 		}
 	]}
 	usage={`<AppShell {links}>

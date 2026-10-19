@@ -83,12 +83,12 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/SegmentedControl.svelte')
 	},
 	{
-		id: 'theme-toggle',
-		name: 'ThemeToggle',
+		id: 'user-menu',
+		name: 'UserMenu',
 		category: 'actions',
-		summary: 'Claro / Oscuro / Sistema, como grupo de radio en un menú desplegable.',
-		sourceFile: 'ThemeToggle.svelte',
-		load: () => import('./specs/ThemeToggle.svelte')
+		summary: 'El botón de perfil de la topbar: identidad, tema y cerrar sesión en un menú.',
+		sourceFile: 'UserMenu.svelte',
+		load: () => import('./specs/UserMenu.svelte')
 	},
 
 	// Fields
@@ -577,6 +577,11 @@ export interface GalleryException {
  * a reason a reviewer would accept, not "not done yet".
  */
 export const GALLERY_EXCEPTIONS: GalleryException[] = [
+	{
+		sourceFile: 'ThemeMenuItems.svelte',
+		reason:
+			'Not a standalone component: the theme radio group is the body of a dropdown menu and renders only inside one. It is shown, working, in the UserMenu entry.'
+	},
 	{
 		sourceFile: 'MoveTaskDialog.svelte',
 		reason:
