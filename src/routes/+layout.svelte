@@ -11,6 +11,8 @@
 	import { markHydrated } from '#lib/hydration.svelte.js';
 	import { THEME_CANVAS_COLORS } from '#lib/theme.js';
 	import { prefersReducedMotion, registerViewTransitionSettle } from '#lib/motion.js';
+	import { APP_ENV } from '$app/env/public';
+	import EnvironmentBadge from '#lib/components/unitati/EnvironmentBadge.svelte';
 	import type { LayoutProps } from './$types';
 
 	let { children, data }: LayoutProps = $props();
@@ -110,3 +112,6 @@
 <ModeWatcher defaultMode="system" themeColors={THEME_CANVAS_COLORS} />
 
 {@render children()}
+
+<!-- Once, for every screen: app, portal, auth and setup. Renders nothing in production. -->
+<EnvironmentBadge environment={APP_ENV} />

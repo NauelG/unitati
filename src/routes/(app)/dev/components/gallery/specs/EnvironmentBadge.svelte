@@ -8,8 +8,7 @@
 	summary="Indicador de entorno no-productivo; no renderiza nada en producción."
 	role="Existe para decir 'esto no es lo real'; mostrarla en todas partes no diría nada. development y staging llevan tonos distintos — un desarrollador local y el host de staging compartido no deben confundirse en una captura de pantalla."
 	whenToUse={[
-		'En la topbar de la app, siempre con APP_ENV (ADR 0013), nunca con un valor inventado.',
-		'En la pantalla de login, para que el estado del entorno sea visible antes de autenticar.'
+		'Una sola vez, en el layout raíz, siempre con APP_ENV (ADR 0013), nunca con un valor inventado: flota abajo a la derecha sobre toda la UI, también en login y portal.'
 	]}
 	whenNotToUse={[
 		'Para el estado de un ticket o de un activo: usa StatusBadge.',
@@ -20,6 +19,12 @@
 			name: 'environment',
 			type: "'development' | 'staging' | 'production'",
 			description: 'APP_ENV. En production el componente no renderiza nada.'
+		},
+		{
+			name: 'floating',
+			type: 'boolean',
+			description:
+				'Por defecto true: fija, abajo a la derecha, por encima de todo y sin capturar clics. false lo pinta en línea (solo esta galería).'
 		}
 	]}
 	usage={`<EnvironmentBadge environment={APP_ENV} />`}
@@ -28,10 +33,11 @@
 >
 	{#snippet demo()}
 		<div class="flex flex-wrap items-center gap-[var(--space-3)]">
-			<EnvironmentBadge environment="development" />
-			<EnvironmentBadge environment="staging" />
+			<EnvironmentBadge environment="development" floating={false} />
+			<EnvironmentBadge environment="staging" floating={false} />
 			<span class="text-sm text-[var(--ink-muted)]">
-				<EnvironmentBadge environment="production" />(vacío, a propósito) — producción.
+				<EnvironmentBadge environment="production" floating={false} />(vacío, a propósito) —
+				producción.
 			</span>
 		</div>
 	{/snippet}

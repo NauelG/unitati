@@ -17,7 +17,6 @@
 		AppShellNavLeaf,
 		AppShellNavLink
 	} from '#lib/components/unitati/app-shell-nav.js';
-	import EnvironmentBadge from '#lib/components/unitati/EnvironmentBadge.svelte';
 	import Tooltip from '#lib/components/unitati/Tooltip.svelte';
 	import ThemeToggle from '#lib/components/unitati/ThemeToggle.svelte';
 	import { Toaster } from '#lib/components/ui/sonner/index.js';
@@ -165,7 +164,6 @@
 	settings={showSettings ? settingsLink : undefined}
 >
 	{#snippet topbarEnd()}
-		<EnvironmentBadge environment={APP_ENV} />
 		<!--
 			The theme switch sits in the user area (#90), beside the avatar and
 			sign-out rather than in the sidebar: it is a preference of the person
@@ -202,4 +200,4 @@
 	toast still escapes a plain `overflow` ancestor, but sitting outside it
 	entirely removes any doubt the portal could end up clipped.
 -->
-<Toaster />
+<Toaster position="bottom-center" />
