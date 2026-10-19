@@ -5,6 +5,18 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.82.0] - 2026-10-19
+
+### Added
+
+- CSV import of people (#21, #262). An admin or anyone with `people.manage` opens
+  "Importar" in the directory, uploads a CSV, maps its columns (pre-filled from the header names,
+  in English or Spanish), reviews what will be created and imports it. The import is all or
+  nothing: one invalid row stops everything, with the rows and reasons listed. People whose email
+  already exists are skipped; missing departments and locations are created and listed in the
+  preview. The activity of an imported person says it came from an import. Limits: 5 MB and 5,000
+  rows; the image now sets `BODY_SIZE_LIMIT=6M` so the upload fits (ADR 0034).
+
 ## [0.81.1] - 2026-10-19
 
 ### Fixed

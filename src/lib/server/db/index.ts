@@ -15,6 +15,9 @@ export type Database = ReturnType<typeof create>;
  */
 export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
 
+/** What a write runs on: the pool, or the transaction of a caller that owns the commit. */
+export type Executor = Database | Transaction;
+
 function create() {
 	if (!DATABASE_URL) throw new Error('DATABASE_URL is not set');
 	return drizzle(postgres(DATABASE_URL), { schema });

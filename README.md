@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.81.1-1d5cf0" alt="Version 0.81.1" />
+  <img src="https://img.shields.io/badge/version-0.82.0-1d5cf0" alt="Version 0.82.0" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
 </p>
@@ -172,11 +172,15 @@ the organisation and the first administrator. After that, [`/login`](http://loca
 
 ### Environment
 
-| Variable             | Required      | Purpose                                            |
-| -------------------- | ------------- | -------------------------------------------------- |
-| `DATABASE_URL`       | to run        | Postgres connection string                         |
-| `BETTER_AUTH_SECRET` | to run        | Signs session cookies and tokens                   |
-| `BETTER_AUTH_URL`    | in production | Public origin; defaults to `http://localhost:5173` |
+| Variable             | Required      | Purpose                                                    |
+| -------------------- | ------------- | ---------------------------------------------------------- |
+| `DATABASE_URL`       | to run        | Postgres connection string                                 |
+| `BETTER_AUTH_SECRET` | to run        | Signs session cookies and tokens                           |
+| `BETTER_AUTH_URL`    | in production | Public origin; defaults to `http://localhost:5173`         |
+| `BODY_SIZE_LIMIT`    | no            | Largest request body; `512K` by default, `6M` in the image |
+
+`BODY_SIZE_LIMIT` is read by `adapter-node`. The image sets it to `6M` so a 5 MB CSV import fits
+with its multipart overhead; lowering it breaks imports and logo uploads.
 
 None of them is needed to `build`: building analyses the app without opening a connection
 (see `src/env.ts`).

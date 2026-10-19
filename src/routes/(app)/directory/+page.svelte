@@ -289,6 +289,7 @@
 				{m.directory_show_inactive()}
 			</a>
 			{#if data.canManagePeople}
+				<Button href="/directory/import" variant="secondary">{m.import_open()}</Button>
 				<Button onclick={openCreate}>{m.directory_new()}</Button>
 			{/if}
 		{/snippet}

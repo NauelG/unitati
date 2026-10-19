@@ -164,7 +164,9 @@ export function activitySentence(entry: ActivityEntry): string {
 			});
 
 		case 'person.created':
-			return m.activity_person_created();
+			return entry.payload.via === 'import'
+				? m.activity_person_created_imported()
+				: m.activity_person_created();
 
 		case 'person.deactivated':
 			return m.activity_person_deactivated();
@@ -179,14 +181,20 @@ export function activitySentence(entry: ActivityEntry): string {
 			});
 
 		case 'person.location.changed':
-			return entry.payload.reason === 'location_deleted'
-				? m.activity_person_location_cleared_by_delete({
-						location: entry.payload.from?.path ?? m.directory_no_location()
-					})
-				: m.activity_person_location_changed({
-						from: entry.payload.from?.path ?? m.directory_no_location(),
-						to: entry.payload.to?.path ?? m.directory_no_location()
-					});
+			if (entry.payload.reason === 'location_deleted') {
+				return m.activity_person_location_cleared_by_delete({
+					location: entry.payload.from?.path ?? m.directory_no_location()
+				});
+			}
+			if (entry.payload.reason === 'imported') {
+				return m.activity_person_location_imported({
+					location: entry.payload.to?.path ?? m.directory_no_location()
+				});
+			}
+			return m.activity_person_location_changed({
+				from: entry.payload.from?.path ?? m.directory_no_location(),
+				to: entry.payload.to?.path ?? m.directory_no_location()
+			});
 
 		case 'catalogue.location.created':
 			return m.activity_location_created({ path: entry.payload.path });

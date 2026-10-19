@@ -35,6 +35,8 @@ A ticket **cites** a page when a reply links it or a technician adds it to the t
 
 A **service account** is an organisation-owned API principal with the technician or employee role and no `Person` ([ADR 0022](adr/0022-api-layer-and-api-keys.md)). It is disabled, never deleted, because the `ActivityLog` entries it wrote name it as their actor (a row has a person, a service account, or neither for the system, never both).
 
+An **import** is a bulk entry of records from a CSV file (#21, [ADR 0034](adr/0034-csv-import.md)). It is not an entity: nothing is stored about the import itself, and the records it creates are ordinary records, marked `via: 'import'` in their activity.
+
 `CustomField` is deliberately absent: it is post-v1 in the [roadmap](roadmap-v1.md).
 
 ## Core entities
