@@ -709,22 +709,38 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
  * contrast.
  *
  * The input group draws the treatment on its wrapper; its inner control must
- * not draw a ring of its own.
+ * not draw a ring of its own. That includes the search box of the combobox and
+ * the command palette (#217): its real `<input>` is `command-input`, inside an
+ * input group, so the group carries the focus and the input draws nothing.
+ *
+ * In a combobox DOM focus stays in the input and the active option is conveyed
+ * with `data-selected` (cmdk auto-selects the first one), so the option gets no
+ * ring of its own: a `--brand-soft` ground plus a 2px `--focus` bar on its left
+ * edge. The bar is solid, so it holds 3:1 where a tint alone does not: 4.74:1
+ * on `--brand-soft` in light and 6.07:1 in dark (and 5.47:1 / 7.08:1 on
+ * `--surface-1`).
  */
 [data-slot='input']:focus-visible,
 [data-slot='textarea']:focus-visible,
-[data-slot='command-input']:focus-visible,
 [data-slot='select-trigger']:focus-visible,
 .ut-field-control:focus-visible,
-[data-slot='input-group']:has([data-slot='input-group-control']:focus-visible) {
+[data-slot='input-group']:has([data-slot='input-group-control']:focus-visible),
+[data-slot='input-group']:has([data-slot='command-input']:focus-visible) {
 	outline: 1px solid transparent;
 	outline-offset: 0;
 	border-color: var(--focus);
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 12%, transparent);
 }
 
-[data-slot='input-group-control']:focus-visible {
+[data-slot='command-item'][data-selected] {
+	background-color: var(--brand-soft);
+	box-shadow: inset 2px 0 0 var(--focus);
+}
+
+[data-slot='input-group-control']:focus-visible,
+[data-slot='command-input']:focus-visible {
 	outline: none;
+	box-shadow: none;
 }
 
 /* The vendored `ring-ring/50` halo would double the solid ring on controls. */
@@ -750,8 +766,7 @@ html[data-sidebar-collapsed] .ut-sidebar .ut-brand-mark {
 [data-slot='dropdown-menu-checkbox-item']:focus,
 [data-slot='dropdown-menu-sub-trigger']:focus,
 [data-slot='select-item']:focus,
-[data-slot='command-item']:focus,
-[data-slot='command-item'][data-selected] {
+[data-slot='command-item']:focus {
 	outline: 2px solid var(--focus);
 	outline-offset: -2px;
 }
