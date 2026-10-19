@@ -21,10 +21,22 @@ export type {
 	LocationEntry,
 	LocationUpdateFailure
 } from './locations';
+export {
+	createDepartment,
+	deleteDepartment,
+	listDepartments,
+	renameDepartment
+} from './departments';
+export type {
+	DepartmentCreateFailure,
+	DepartmentDeleteFailure,
+	DepartmentEntry,
+	DepartmentRenameFailure
+} from './departments';
 export { setPersonLocation } from './person-location';
 export type { SetPersonLocationFailure } from './person-location';
-export { locationInput } from './validation';
-export type { LocationInput } from './validation';
+export { departmentInput, locationInput } from './validation';
+export type { DepartmentInput, LocationInput } from './validation';
 export type { Organisation, Person, Department, Location, Team } from './schema';
 export {
 	getBrand,

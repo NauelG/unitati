@@ -58,3 +58,8 @@ export const locationInput = z
 	});
 
 export type LocationInput = z.output<typeof locationInput>;
+
+/** A department's name: the only field, trimmed, 1-80 characters. */
+export const departmentInput = z.object({ name: z.string().trim().min(1).max(80) });
+
+export type DepartmentInput = z.output<typeof departmentInput>;

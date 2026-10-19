@@ -2,6 +2,14 @@
 
 People, teams, departments, locations and the organisation's brand, name and colour (`getBrand`, `updateBranding`). The single directory every other domain points to: a ticket requester, an asset assignee and a task owner are all the same `Person`.
 
+## Departments
+
+`departments.ts` owns the catalogue behind `/settings/directory/departments`.
+
+- `listDepartments(organisationId)` returns `{ id, name, peopleCount }`, by name, from one grouped query.
+- `createDepartment`, `renameDepartment` and `deleteDepartment` return an `Outcome`. Renaming to the same name succeeds without writing. Deleting answers `{ kind: 'in_use', people }` while anyone is in the department: `people.department_id` is `set null`, so the database would not refuse, and the check lives in the `DELETE` itself.
+- `departmentInput` is the Zod schema: the name trimmed, 1-80 characters.
+
 ## Locations
 
 `locations.ts` owns the tree ([ADR 0027](../../../../docs/adr/0027-locations-hierarchy-coordinates-and-deletion.md)).

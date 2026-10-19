@@ -108,6 +108,7 @@
 	"validation_email": "Escribe un correo electrónico válido.",
 	"validation_password_short": "La contraseña debe tener al menos {min} caracteres.",
 	"validation_name_required": "Escribe un nombre.",
+	"validation_name_too_long": "El nombre no puede pasar de {max} caracteres.",
 
 	"directory_title": "Personas",
 	"directory_lede": "Quién trabaja aquí, dónde, en qué departamento y con qué permisos.",
@@ -1095,5 +1096,23 @@
 	"locations_in_use_assets_other": "{count} activos",
 	"locations_in_use_and": " y ",
 	"locations_delete_people_one": "1 persona perderá su ubicación.",
-	"locations_delete_people_other": "{count} personas perderán su ubicación."
+	"locations_delete_people_other": "{count} personas perderán su ubicación.",
+	"settings_module_directory": "Directorio",
+	"settings_section_departments": "Departamentos",
+	"departments_title": "Departamentos",
+	"departments_lede": "Las áreas de la organización a las que pertenecen las personas.",
+	"departments_new": "Nuevo departamento",
+	"departments_empty": "Todavía no hay departamentos.",
+	"departments_column_name": "Nombre",
+	"departments_column_people": "Personas",
+	"departments_column_actions": "Acciones",
+	"departments_actions_label": "Acciones de {name}",
+	"departments_rename": "Renombrar",
+	"departments_rename_title": "Renombrar {name}",
+	"departments_field_name": "Nombre del departamento",
+	"departments_delete_title": "Eliminar {name}",
+	"departments_error_duplicate": "Ya hay un departamento con ese nombre.",
+	"departments_error_not_found": "Ese departamento ya no existe.",
+	"departments_in_use_one": "No se puede eliminar: tiene 1 persona.",
+	"departments_in_use_other": "No se puede eliminar: tiene {count} personas."
 }
