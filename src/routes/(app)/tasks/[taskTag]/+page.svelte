@@ -84,8 +84,8 @@
 	const styles = pageHeader({ level: 'record' });
 
 	/** A rename leaves the URL pointing at nothing: go to the new one instead of reloading the old. */
-	async function followNewTag(result: Record<string, unknown>) {
-		const next = result.taskTag;
+	async function followNewTag(result: Record<string, unknown> | undefined) {
+		const next = result?.taskTag;
 		if (typeof next !== 'string' || next === data.task.taskTag) return false;
 		await goto(`/tasks/${encodeURIComponent(next)}`, { replaceState: true, invalidateAll: true });
 		return true;

@@ -5,6 +5,20 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.79.0] - 2026-10-19
+
+### Changed
+
+- The task page edits in place (ADR 0029, #227). The title and the code are editable in the header (the
+  code is checked for duplicates and the reserved `new`, shows the error under the input and, on
+  success, moves the page to the new URL); the state is a chip in the header; assignees and the due
+  date are edited in "Detalles" (assignees save when the popover closes; the date has "Hoy" and
+  "Borrar"). The description renders as rich text and is edited where it is shown, with
+  Guardar/Cancelar. The "Editar" button and sheet and the "Estado" and "Asignadas a" panels are
+  gone; readers see the same page without outlines. "Mover a proyecto" stays a header button.
+- The task `update` action takes one field per post: keys that are absent stay untouched, it accepts
+  `taskTag`, and a description over 20,000 characters is refused.
+
 ## [0.78.1] - 2026-10-19
 
 ### Fixed
