@@ -107,6 +107,20 @@
 				ontogglecollapse={fold('default:doing')}
 				onquickcreate={() => {}}
 			/>
+			<!-- Collapsed with a long name: the vertical text ends in an ellipsis -->
+			<BoardColumn
+				state={{
+					id: 'long',
+					name: 'Pendiente de revisión por el equipo de calidad',
+					group: 'started',
+					position: 2
+				}}
+				items={[]}
+				{states}
+				editable
+				collapsedStates={stored('long:long')}
+				ontogglecollapse={fold('long:long')}
+			/>
 			<!-- Read-only: the toggle is still there -->
 			<BoardColumn
 				state={states[0]}
