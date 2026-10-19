@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { DEFAULT_QUEUE_COLOR, QUEUE_COLORS } from '#lib/domain/queue-color.js';
+import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS_PER_COMMENT } from '#lib/domain/attachments.js';
 import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 import { PRIORITIES } from '#lib/domain/status.js';
 
@@ -25,8 +26,7 @@ const nonEmpty = z.string().trim().min(1);
 /** A ticket is about a handful of machines; a bound stops a posted array from becoming a query per id. */
 export const MAX_AFFECTED_ASSETS = 20;
 
-export const MAX_ATTACHMENTS_PER_COMMENT = 5;
-export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+export { MAX_ATTACHMENTS_PER_COMMENT, MAX_ATTACHMENT_BYTES };
 
 /** A file as the domain receives it: bytes already read, not a web `File`. */
 export interface UploadedFile {
