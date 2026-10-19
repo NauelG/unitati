@@ -112,6 +112,15 @@ describe('resolveCollapsed', () => {
 		expect(resolveCollapsed('s', 2, {})).toBe(false);
 	});
 
+	it('keeps an empty column open for the whole drag, so hovering cannot make it flicker', () => {
+		expect(resolveCollapsed('s', 0, {}, true)).toBe(false);
+		expect(resolveCollapsed('s', 1, {}, true)).toBe(false);
+	});
+
+	it('still honours a stored choice while dragging', () => {
+		expect(resolveCollapsed('s', 0, { s: 'collapsed' }, true)).toBe(true);
+	});
+
 	it('reads only the entry of its own state', () => {
 		expect(resolveCollapsed('s', 2, { other: 'collapsed' })).toBe(false);
 	});

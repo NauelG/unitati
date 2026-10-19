@@ -24,6 +24,8 @@
 		 * is folded when empty. Reading it is not a write: read-only boards use it too.
 		 */
 		collapsedStates?: Record<string, StatePreference>;
+		/** A card is being dragged somewhere on the board: the fold state stops following the hover. */
+		dragging?: boolean;
 		/** The toggle in the header: the choice to store for this column. */
 		ontogglecollapse?: (stateId: string, preference: StatePreference) => void;
 		onconsider?: (items: BoardTask[], info: DndEvent<BoardTask>['info']) => void;
@@ -38,6 +40,7 @@
 		states = [],
 		editable = false,
 		collapsedStates = {},
+		dragging = false,
 		ontogglecollapse,
 		onconsider,
 		onfinalize,
@@ -49,7 +52,7 @@
 	 * A strip: by the person's choice, or — with none — when nothing is in it,
 	 * not even a card hovering over it mid-drag.
 	 */
-	const collapsed = $derived(resolveCollapsed(state.id, items.length, collapsedStates));
+	const collapsed = $derived(resolveCollapsed(state.id, items.length, collapsedStates, dragging));
 	const bodyId = $derived(`board-column-body-${state.id}`);
 	const tone = $derived(stateGroupBadge(state.group).tone);
 	const flipDurationMs = $derived(prefersReducedMotion() ? 0 : MOTION_BASE_MS);
