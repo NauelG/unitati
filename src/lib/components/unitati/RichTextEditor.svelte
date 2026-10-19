@@ -11,7 +11,10 @@
 		slots: {
 			root: [
 				'relative rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)]',
-				'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--focus)]'
+				// Same treatment as a text field (#216): the border turns `--focus`, plus a faint halo.
+				// The transparent outline is the forced-colors fallback.
+				'focus-within:border-[var(--focus)] focus-within:outline focus-within:outline-1 focus-within:outline-transparent',
+				'focus-within:shadow-[0_0_0_2px_color-mix(in_srgb,var(--focus)_12%,transparent)]'
 			],
 			toolbar: 'flex flex-wrap items-center gap-1 border-b border-[var(--border)] p-1',
 			tool: [
@@ -22,7 +25,7 @@
 			],
 			surface: 'max-h-64 min-h-[76px] overflow-y-auto',
 			content: [
-				'min-h-[76px] p-[var(--space-3)] outline-none',
+				'min-h-[76px] p-[var(--space-3)] outline-none [&_.ProseMirror]:outline-none',
 				'[&_.is-editor-empty:first-child::before]:pointer-events-none',
 				'[&_.is-editor-empty:first-child::before]:float-left [&_.is-editor-empty:first-child::before]:h-0',
 				'[&_.is-editor-empty:first-child::before]:text-[var(--ink-muted)]',
