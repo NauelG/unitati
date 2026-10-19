@@ -57,7 +57,7 @@ minor bumps carry features and patch bumps carry fixes.
 - The in-place text editor (`EditableText`, used for the project name and code) drew a 2px brand
   ring around the field on focus, heavier than every other field. It now uses the shared field
   focus treatment: a 1px `--focus` border with a faint halo.
-||||||| parent of 600c1fc (feat(auth): grant access with a temporary password and a role (#230))
+  ||||||| parent of 600c1fc (feat(auth): grant access with a temporary password and a role (#230))
 
 ## [0.78.0] - 2026-10-19
 
