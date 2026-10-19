@@ -9,6 +9,7 @@ import {
 	unique,
 	uuid
 } from 'drizzle-orm/pg-core';
+import { DEFAULT_QUEUE_COLOR, QUEUE_COLORS } from '#lib/domain/queue-color.js';
 import { PRIORITIES, TICKET_STATUSES } from '#lib/domain/status.js';
 import { timestamps } from '../shared/columns';
 import { searchVector, tsvector } from '../shared/search-vector';
@@ -46,6 +47,8 @@ export const queues = pgTable(
 			.notNull()
 			.references(() => organisations.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
+		/** A palette key (`#lib/domain/queue-color.js`), so tickets can be told apart at a glance. */
+		color: text('color', { enum: QUEUE_COLORS }).notNull().default(DEFAULT_QUEUE_COLOR),
 		...timestamps
 	},
 	(table) => [unique('queues_org_name').on(table.organisationId, table.name)]

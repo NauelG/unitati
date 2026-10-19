@@ -22,8 +22,10 @@ import {
 	deleteQueue,
 	getAttachment,
 	getTicketByTag,
+	listQueues,
 	listTickets,
 	moveTicketToQueue,
+	renameQueue,
 	setTicketPriority,
 	ticketThread,
 	type UploadedFile
@@ -685,6 +687,34 @@ describe('visibility and staff writes', () => {
 			ok: false,
 			error: 'assignee_not_found'
 		});
+	});
+
+	it('gives a queue a colour, grey by default, and carries it onto its tickets', async () => {
+		const w = await workspace();
+		const created = await createQueue(w.technician, { name: 'Redes', color: 'teal' });
+		const plain = await createQueue(w.technician, { name: 'Impresoras' });
+		expect(created.ok && plain.ok).toBe(true);
+		if (!created.ok || !plain.ok) return;
+
+		const byId = async () =>
+			Object.fromEntries((await listQueues(w.technician)).map((q) => [q.id, q.color]));
+		expect(await byId()).toMatchObject({ [created.value.id]: 'teal', [plain.value.id]: 'gray' });
+
+		await renameQueue(w.technician, created.value.id, { name: 'Redes', color: 'violet' });
+		expect((await byId())[created.value.id]).toBe('violet');
+
+		const { ticketTag } = await open(w);
+		await moveTicketToQueue(w.technician, ticketTag, created.value.id);
+		const ticket = await getTicketByTag(w.technician, ticketTag);
+		expect(ticket.ok && ticket.value.queueColor).toBe('violet');
+	});
+
+	it('rejects a colour outside the palette', async () => {
+		const w = await workspace();
+		await expect(
+			// @ts-expect-error: not a palette key
+			createQueue(w.technician, { name: 'Redes', color: '#ff0000' })
+		).rejects.toThrow();
 	});
 
 	it('refuses to delete a queue that has tickets', async () => {

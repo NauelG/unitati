@@ -17,7 +17,15 @@
 	import { field } from '#lib/components/unitati/Field.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
+	import QueueLabel from '#lib/components/unitati/QueueLabel.svelte';
+	import {
+		DEFAULT_QUEUE_COLOR,
+		QUEUE_COLORS,
+		queueColorVar,
+		type QueueColor
+	} from '#lib/domain/queue-color.js';
 	import { m } from '#lib/paraglide/messages.js';
+	import { queueColorLabel } from '#lib/queue-color-label.js';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -25,6 +33,7 @@
 	interface Queue {
 		id: string;
 		name: string;
+		color: QueueColor;
 	}
 
 	// Same input styling as `Field`, without its label: a row in a list is
@@ -33,14 +42,17 @@
 
 	const dialog = catalogueDialog<Queue>({ createAction: 'create', editAction: 'rename' });
 	let draftName = $state('');
+	let draftColor = $state<QueueColor>(DEFAULT_QUEUE_COLOR);
 
 	function openCreate() {
 		draftName = '';
+		draftColor = DEFAULT_QUEUE_COLOR;
 		dialog.openCreate();
 	}
 
 	function openEdit(queue: Queue) {
 		draftName = queue.name;
+		draftColor = queue.color;
 		dialog.openEdit(queue);
 	}
 
@@ -81,7 +93,7 @@
 			<ul class="divide-y divide-[var(--border)]">
 				{#each data.queues as queue (queue.id)}
 					<li class="flex items-center justify-between gap-[var(--space-3)] p-[var(--space-3)]">
-						<span class="min-w-0 truncate text-sm text-[var(--ink)]">{queue.name}</span>
+						<QueueLabel name={queue.name} color={queue.color} class="text-sm text-[var(--ink)]" />
 						<div class="flex shrink-0 items-center gap-[var(--space-2)]">
 							<Button
 								type="button"
@@ -168,6 +180,28 @@
 				<span class="text-label text-[var(--ink)]">{m.queues_name()}</span>
 				<input name="name" bind:value={draftName} class={input} required />
 			</label>
+
+			<fieldset class="flex flex-col gap-[var(--space-2)]">
+				<legend class="mb-[var(--space-1)] text-label text-[var(--ink)]">{m.queues_color()}</legend>
+				<div class="flex flex-wrap gap-[var(--space-2)]">
+					{#each QUEUE_COLORS as color (color)}
+						<label
+							class="relative size-8 cursor-pointer rounded-[var(--radius-full)] has-[:checked]:ring-2 has-[:checked]:ring-[var(--ink)] has-[:checked]:ring-offset-2 has-[:checked]:ring-offset-[var(--surface-1)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--focus)]"
+							style:background-color={queueColorVar(color)}
+							title={queueColorLabel(color)}
+						>
+							<input
+								type="radio"
+								name="color"
+								value={color}
+								bind:group={draftColor}
+								class="sr-only"
+								aria-label={queueColorLabel(color)}
+							/>
+						</label>
+					{/each}
+				</div>
+			</fieldset>
 
 			{#if dialogFailure}
 				<FormError>{dialogFailure}</FormError>
