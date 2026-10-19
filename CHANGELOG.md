@@ -5,6 +5,14 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.65.0] - 2026-10-19
+
+### Changed
+
+- Creating an asset model is a dialog opened from "¿No encuentras el modelo? Añádelo" under the
+  "Modelo" field, on `/assets/new`, `/assets/[tag]/edit` and the edit sheet on the asset record.
+  The new model is selected on save. `/assets/new` loses its side column (#220).
+
 ## [0.64.1] - 2026-10-19
 
 ### Changed
