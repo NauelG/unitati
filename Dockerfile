@@ -6,11 +6,30 @@
 
 ARG NODE_VERSION=24
 
+# ── manifests ───────────────────────────────────────────────────────────────
+# Every release writes its version into package.json and package-lock.json, and
+# an image is only published for a release: the `npm ci` layers below never once
+# came from the cache. Here both files lose the project's own version, so those
+# layers change only when a dependency does. The build stage copies the real
+# package.json back with the sources, so the build still reads the real version.
+FROM node:${NODE_VERSION}-slim AS manifests
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN node -e " \
+  const fs = require('node:fs'); \
+  const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); \
+  const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8')); \
+  pkg.version = lock.version = lock.packages[''].version = '0.0.0'; \
+  fs.writeFileSync('package.json', JSON.stringify(pkg)); \
+  fs.writeFileSync('package-lock.json', JSON.stringify(lock)); \
+"
+
 # ── build ───────────────────────────────────────────────────────────────────
 FROM node:${NODE_VERSION}-slim AS build
 WORKDIR /app
 
-COPY package.json package-lock.json .npmrc ./
+COPY --from=manifests /app/package.json /app/package-lock.json ./
+COPY .npmrc ./
 # --ignore-scripts: `prepare` runs svelte-kit sync before the sources exist.
 RUN npm ci --ignore-scripts
 
@@ -22,7 +41,8 @@ RUN npm run prepare && npm run build
 # ── production dependencies ─────────────────────────────────────────────────
 FROM node:${NODE_VERSION}-slim AS deps
 WORKDIR /app
-COPY package.json package-lock.json .npmrc ./
+COPY --from=manifests /app/package.json /app/package-lock.json ./
+COPY .npmrc ./
 RUN npm ci --omit=dev --ignore-scripts
 
 # ── runtime ─────────────────────────────────────────────────────────────────
