@@ -5,6 +5,26 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.72.1] - 2026-10-19
+
+### Changed
+
+- The focus indicator is subtler and no longer draws a second frame around fields. On text fields
+  (inputs, textareas, selects, search selects, input groups, the rich text editor and the search box
+  of the combobox and command palette) the field's own border turns the focus colour, with a faint
+  halo; buttons, tabs, checkboxes, switches and close buttons keep a separated ring, thinned to
+  1px. Contrast stays above 3:1 in both themes. The highlighted option of the combobox and command
+  palette shows a soft background with a bar on its left edge instead of a ring, and the board
+  column a card is dragged over is marked with a soft background and a 1px inset outline.
+
+### Fixed
+
+- Dragging a task no longer makes the columns widen, fold and flicker under the card: the columns
+  keep their fold state for the whole drag.
+- Pages no longer fail to hydrate. The sidebar counts and the KPI cards used a number component
+  whose server-rendered markup Svelte could not hydrate, which threw the page into the error state;
+  both now print the plain number until the app has hydrated and roll it from then on.
+
 ## [0.72.0] - 2026-10-19
 
 ### Added
