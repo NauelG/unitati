@@ -5,7 +5,8 @@ import EditableHarness from '#lib/testing/EditableHarness.svelte';
 // What the server answers to the next submit; the real `enhance` needs SvelteKit's runtime.
 const outcome = vi.hoisted(() => ({
 	result: { type: 'success' } as { type: string; data?: unknown },
-	submitted: [] as FormData[]
+	submitted: [] as FormData[],
+	actions: [] as string[]
 }));
 
 // Same contract as SvelteKit's `enhance`: run the submit function, then hand its callback the
@@ -21,6 +22,7 @@ vi.mock('$app/forms', () => ({
 			event.preventDefault();
 			const formData = new FormData(form);
 			outcome.submitted.push(formData);
+			outcome.actions.push(form.getAttribute('action') ?? '');
 			const done = submit({ formData });
 			await done({ result: outcome.result, update: async () => {} });
 		};
@@ -40,6 +42,7 @@ beforeAll(() => {
 beforeEach(() => {
 	outcome.result = { type: 'success' };
 	outcome.submitted = [];
+	outcome.actions = [];
 	location.hash = '';
 });
 afterEach(() => toastError.mockClear());
@@ -149,5 +152,16 @@ describe('EditableText', () => {
 		const input = await screen.findByRole('textbox', { name: 'Título' });
 		expect(screen.getByRole('alert').textContent).toBe('Ese código ya existe.');
 		expect(input.getAttribute('aria-invalid')).toBe('true');
+	});
+});
+
+describe('EditableDetailRow with actionFor', () => {
+	it('posts the empty choice to its own action and a value to the default one', async () => {
+		render(EditableHarness, { component: 'row', initial: 'new', routed: true, noneLabel: 'Nadie' });
+		await openAndPick(/^Estado/, 'Nadie');
+		await waitFor(() => expect(outcome.actions).toEqual(['?/clear']));
+
+		await openAndPick(/^Estado/, 'En curso');
+		await waitFor(() => expect(outcome.actions).toEqual(['?/clear', '?/save']));
 	});
 });
