@@ -28,12 +28,7 @@ export const MAX_AFFECTED_ASSETS = 20;
 
 export { MAX_ATTACHMENTS_PER_COMMENT, MAX_ATTACHMENT_BYTES };
 
-/** A file as the domain receives it: bytes already read, not a web `File`. */
-export interface UploadedFile {
-	filename: string;
-	contentType: string;
-	data: Uint8Array;
-}
+export type { UploadedFile } from '../shared/attachments';
 
 export const createTicketInput = z.object({
 	subject: nonEmpty,
@@ -68,9 +63,4 @@ export type CreateTicketInput = z.input<typeof createTicketInput>;
 export type AddCommentInput = z.input<typeof addCommentInput>;
 export type QueueInput = z.input<typeof queueInput>;
 
-/** `null` when the files are acceptable, otherwise the reason. */
-export function attachmentProblem(files: readonly UploadedFile[]): 'too_many' | 'too_large' | null {
-	if (files.length > MAX_ATTACHMENTS_PER_COMMENT) return 'too_many';
-	if (files.some((file) => file.data.byteLength > MAX_ATTACHMENT_BYTES)) return 'too_large';
-	return null;
-}
+export { attachmentProblem } from '../shared/attachments';

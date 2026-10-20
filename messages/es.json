@@ -1297,7 +1297,6 @@
 	"import_assets_error_invalid_boolean": "El valor de «compartido» no es válido (sí o no)",
 	"import_assets_error_catalogue_conflict": "No se ha podido crear un fabricante, categoría, modelo, ubicación o persona porque ya existe",
 	"import_assets_error_asset_conflict": "No se ha podido registrar el activo",
-
 	"settings_section_handover_agreements": "Actas de entrega",
 	"handover_agreements_title": "Actas de entrega y devolución",
 	"handover_agreements_lede": "El texto que firma quien recibe o devuelve un equipo. Cada cambio crea una versión nueva: lo ya firmado no se reescribe.",
@@ -1331,5 +1330,20 @@
 	"handover_link_error": "Indica un número entero de días entre {min} y {max}.",
 	"handover_link_save": "Guardar",
 	"catalogue_requires_handover": "Requiere acta",
-	"catalogue_requires_handover_label": "{name}: requiere acta de entrega"
+	"catalogue_requires_handover_label": "{name}: requiere acta de entrega",
+	"activity_project_attachment_added": "Adjuntó «{filename}»",
+	"activity_project_attachment_removed": "Quitó el adjunto «{filename}»",
+	"activity_task_attachment_added": "Adjuntó «{filename}»",
+	"activity_task_attachment_removed": "Quitó el adjunto «{filename}»",
+	"attachments_heading": "Adjuntos",
+	"attachments_none": "Todavía no hay archivos adjuntos.",
+	"attachments_list_label": "Archivos adjuntos",
+	"attachments_download": "Descargar {filename}",
+	"attachments_upload_submit": "Subir",
+	"attachments_pick_none": "Elige al menos un archivo.",
+	"attachments_too_many_selected": "Solo se pueden adjuntar {max} archivos por envío.",
+	"attachments_remove_button": "Quitar {filename}",
+	"attachments_remove_title": "Quitar adjunto",
+	"attachments_remove_description": "Se quitará «{filename}» y se borrará el archivo. No se puede deshacer.",
+	"attachments_remove_confirm": "Quitar adjunto"
 }

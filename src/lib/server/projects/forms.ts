@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { ZodError } from 'zod';
+import { uploadedFilesOf, type UploadedFile } from '../shared/attachments';
 
 /**
  * What the projects and tasks actions do with a request: read the string
@@ -25,6 +26,19 @@ export async function fieldsOf(request: Request): Promise<Fields> {
 		all: (key) => strings(key).map((value) => value.trim()),
 		has: (key) => data.has(key)
 	};
+}
+
+/**
+ * The files a multipart form posted under `files`. Lives with the domain, as
+ * `readTicketForm` does for tickets: a route is not where bytes become
+ * `UploadedFile`.
+ */
+export async function readAttachmentForm(
+	request: Request
+): Promise<{ files: UploadedFile[]; attachmentId: string }> {
+	const data = await request.formData();
+	const id = data.get('attachmentId');
+	return { files: await uploadedFilesOf(data), attachmentId: typeof id === 'string' ? id : '' };
 }
 
 /** An empty box is "no value", which for an optional field is a real choice. */

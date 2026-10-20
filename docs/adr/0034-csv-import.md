@@ -49,8 +49,10 @@ bypasses what each domain already enforces and records.
    `reason: 'imported'`. Nothing groups an import's records afterwards, and there is no undo.
 9. **Limits.** 5 MB and 5,000 rows, enforced on the server by `parseCsv` and checked on the client
    before uploading. `adapter-node` rejects bodies above `BODY_SIZE_LIMIT` (512K by default) before
-   any of this runs, so the image sets `BODY_SIZE_LIMIT=6M`: the 5 MB file plus multipart overhead.
-   Lowering it breaks imports and logo uploads.
+   any of this runs, so the image sets `BODY_SIZE_LIMIT`: the 5 MB file plus multipart overhead fit
+   in `6M`. The image now sets `56M` (5 attachments of 10 MiB plus overhead, #285, [ADR
+   0039](0039-attachments-per-owning-domain.md)); the 5 MB check above is still the CSV import's
+   own. Lowering it breaks imports, logo uploads and attachments.
 10. **Encoding and delimiter.** UTF-8 first, Windows-1252 if the bytes are not valid UTF-8 (what
     Excel writes on Windows). A BOM is stripped. The delimiter is `;` if the first line has more of
     them than `,` outside quotes.

@@ -29,6 +29,7 @@
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import ProjectProgress from '#lib/components/unitati/ProjectProgress.svelte';
+	import RecordAttachments from '#lib/components/unitati/RecordAttachments.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
 	import RollingNumber from '#lib/components/unitati/RollingNumber.svelte';
@@ -463,6 +464,14 @@
 		<WorkPanel heading={m.project_detail_progress()}>
 			<ProjectProgress counts={data.progress.counts} />
 		</WorkPanel>
+
+		<RecordAttachments
+			items={data.attachments}
+			downloadBase="/project-attachments"
+			canManage={writable}
+			uploadError={failureFor('addAttachments')}
+			removeError={failureFor('removeAttachment')}
+		/>
 
 		<RelationConstellation
 			centre={{ kind: 'project', tag: project.projectTag }}

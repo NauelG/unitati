@@ -18,6 +18,8 @@ export {
 	tasks,
 	taskAssignees,
 	stateGroup,
+	projectAttachments,
+	taskAttachments,
 	projectCodeSequence,
 	taskCodeSequence
 } from './schema';
@@ -29,7 +31,7 @@ export type { TaskLinkTarget, ProjectLinkTarget } from './link-targets';
 export { taskSummaries, tasksOfProject, projectSummaries, readsProjects } from './summaries';
 export type { TaskSummary, ProjectSummary } from './summaries';
 export { requireProjectRead, requireProjectWrite } from './guards';
-export { fieldsOf, firstField, orNull, rejected } from './forms';
+export { fieldsOf, firstField, orNull, rejected, readAttachmentForm } from './forms';
 export { readBoardPreference } from './board-preference';
 export type { Fields } from './forms';
 
@@ -95,6 +97,25 @@ export type {
 	AssignFailure,
 	MoveTaskFailure
 } from './tasks';
+
+export {
+	addProjectAttachments,
+	addTaskAttachments,
+	listProjectAttachments,
+	listTaskAttachments,
+	removeProjectAttachment,
+	removeTaskAttachment,
+	getProjectAttachment,
+	getTaskAttachment
+} from './attachments';
+export type {
+	AttachmentView,
+	AttachmentBytes,
+	AttachmentDeps,
+	AddProjectAttachmentsFailure,
+	AddTaskAttachmentsFailure,
+	RemoveAttachmentFailure
+} from './attachments';
 
 export { moveTaskToProject } from './reparent';
 export type { MoveTaskToProjectFailure } from './reparent';

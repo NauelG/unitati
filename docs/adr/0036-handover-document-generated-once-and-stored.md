@@ -35,7 +35,8 @@ ticket attachments. So does the mailer, which only sends plain text. The runtime
 5. **Stored through the same `Storage` interface, promoted to `shared/`.** The handover keeps the
    key and the hash of its document and its signature image. Nothing is copied into the
    `attachments` table: a handover document is not an attachment. Nobody uploads it, it can never be
-   replaced, and it can never be deleted.
+   replaced, and it can never be deleted. Generalising that table stays deferred; projects and
+   tasks got their own tables instead ([ADR 0039](0039-attachments-per-owning-domain.md)).
 6. **The mailer moves to `shared/` too, and learns attachments**, because `assets` must send mail
    and may not reach into `service-desk` to do it ([ADR 0002](0002-server-modules-by-domain.md)).
 

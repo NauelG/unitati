@@ -11,7 +11,8 @@ import { newReplyMail } from './mail';
 import { attachments, ticketComments, tickets } from './schema';
 import { requireTicketScope, seesInternal } from './scope';
 import { compareThreadItems } from './thread-order';
-import { resolveDeps, storeFiles, type Deps } from './tickets';
+import { storeFiles } from '../shared/attachments';
+import { resolveDeps, type Deps } from './tickets';
 import {
 	addCommentInput,
 	attachmentProblem,

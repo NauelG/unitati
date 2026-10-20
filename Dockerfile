@@ -50,7 +50,7 @@ FROM node:${NODE_VERSION}-slim AS runtime
 ENV NODE_ENV=production \
     PORT=3000 \
     UPLOADS_DIR=/data/uploads \
-    BODY_SIZE_LIMIT=6M
+    BODY_SIZE_LIMIT=56M
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules

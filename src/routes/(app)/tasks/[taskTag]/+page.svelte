@@ -15,6 +15,7 @@
 	import { pageHeader } from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import { prose } from '#lib/components/unitati/prose.js';
+	import RecordAttachments from '#lib/components/unitati/RecordAttachments.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
 	import RichTextEditor from '#lib/components/unitati/RichTextEditor.svelte';
@@ -357,6 +358,16 @@
 				<p class="text-sm text-[var(--ink-muted)]">{m.task_detail_description_none()}</p>
 			{/if}
 		</WorkPanel>
+	</div>
+
+	<div class="mt-[var(--space-6)]">
+		<RecordAttachments
+			items={data.attachments}
+			downloadBase="/task-attachments"
+			canManage={data.canManage}
+			uploadError={failureFor('addAttachments')}
+			removeError={failureFor('removeAttachment')}
+		/>
 	</div>
 
 	{#snippet side()}

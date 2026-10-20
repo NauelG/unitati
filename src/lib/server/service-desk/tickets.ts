@@ -16,6 +16,7 @@ import { sendQuietly, type Mailer } from '../shared/mail';
 import { resolvedMail } from './mail';
 import { queues, ticketComments, tickets, attachments } from './schema';
 import { requireTicketScope, seesInternal } from './scope';
+import { storeFiles } from '../shared/attachments';
 import type { Storage } from '../shared/storage';
 import { DEFAULT_TICKET_ORDER, type TicketOrder } from './ticket-order';
 import { canTransition } from './transitions';
@@ -494,24 +495,6 @@ export async function createTicket(
 		if (uniqueConstraintName(error) === 'tickets_org_tag') return failure('duplicate_ticket_tag');
 		throw error;
 	}
-}
-
-/** Writes the bytes and returns the rows describing them. Keys are server-generated. */
-export async function storeFiles(storage: Storage, organisationId: string, files: UploadedFile[]) {
-	return Promise.all(
-		files.map(async (file) => {
-			const storageKey = `${organisationId}/${crypto.randomUUID()}`;
-			await storage.put(storageKey, file.data);
-			return {
-				row: {
-					filename: file.filename,
-					contentType: file.contentType,
-					byteSize: file.data.byteLength,
-					storageKey
-				}
-			};
-		})
-	);
 }
 
 type ChangeFailure = 'ticket_not_found';
