@@ -5,6 +5,22 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.90.0] - 2026-10-20
+
+### Added
+
+- The public signing page of a handover, `/handover/<token>` (#25, #275). The person opens their
+  link with no session, under the organisation's brand, and reads the code, the agreement and the
+  assets as they were snapshotted. **Accept** takes a ticked confirmation and a signature drawn with
+  a finger or the mouse; the server refuses an empty, unreadable or over-200 KB PNG. **Reject** takes
+  a reason of 1 to 1000 characters and mails the technician who issued the handover when mail is
+  on. The decision is final and frozen with its evidence: signature in storage, time, IP and user
+  agent. It consumes the link, writes `handover.accepted` or `handover.rejected` on each asset and
+  on the person, and emits the matching domain event after commit. Unknown, expired and already
+  decided links each get their own page, which reveals nothing about the handover. The page is never
+  cached, indexed or sent as a referrer, and a session holding a temporary password can still reach
+  it. Behind a reverse proxy, set `ADDRESS_HEADER` so the recorded IP is the signer's.
+
 ## [0.89.1] - 2026-10-20
 
 ### Fixed
