@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.83.1] - 2026-10-20
+
+### Fixed
+
+- Task list: the state dropdown in the actions column sat under the row's stretched link, so
+  clicking it opened the task instead, and the native select looked out of place. The state is now
+  an editable chip in the State column (the same one the task page uses) and the actions column
+  keeps only "Mover a proyecto"; both sit above the row link and take the click.
+
 ## [0.83.0] - 2026-10-19
 
 ### Added
