@@ -117,4 +117,14 @@ describe('asset record in-place editing', () => {
 		renderPage({ canManage: true, canCheckout: false });
 		expect(await screen.findByRole('button', { name: 'Añadir nota' })).toBeTruthy();
 	});
+
+	it('offers the label only to someone who can manage assets', () => {
+		const { unmount } = renderPage({ canManage: true, canCheckout: false });
+		const link = screen.getByRole('link', { name: 'Imprimir etiqueta' });
+		expect(link.getAttribute('href')).toBe('/assets/labels?tag=AST-1');
+		unmount();
+
+		renderPage({ canManage: false, canCheckout: true });
+		expect(screen.queryByRole('link', { name: 'Imprimir etiqueta' })).toBeNull();
+	});
 });

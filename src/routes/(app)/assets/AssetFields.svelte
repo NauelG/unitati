@@ -18,6 +18,8 @@
 		modelOptions: SelectOption[];
 		/** Registering explains the generated tag; editing has no use for the hint. */
 		tagHint?: string;
+		/** The tag the asset has today: once the field differs, the printed label is stale. */
+		storedTag?: string;
 		/** What only this form asks for, between the model and the shared switch. */
 		extra?: Snippet;
 		/** The tag is required once an asset has one: clearing it would change nothing. */
@@ -33,11 +35,14 @@
 		errors,
 		modelOptions,
 		tagHint,
+		storedTag,
 		extra,
 		tagRequired = false,
 		modelPlaceholder,
 		onaddmodel
 	}: Props = $props();
+
+	const tagChanged = $derived(storedTag !== undefined && values.assetTag?.trim() !== storedTag);
 </script>
 
 <div class="space-y-[var(--space-5)]">
@@ -52,7 +57,7 @@
 	<Field
 		label={m.asset_form_tag()}
 		name="assetTag"
-		hint={tagHint}
+		hint={tagHint ?? (tagChanged ? m.labels_reprint_note() : undefined)}
 		bind:value={values.assetTag}
 		error={errors.assetTag?.[0]}
 		required={tagRequired}

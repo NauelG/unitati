@@ -37,6 +37,7 @@
 			errors={$errors}
 			{modelOptions}
 			tagRequired
+			storedTag={data.assetTag}
 			onaddmodel={() => (modelOpen = true)}
 		/>
 
