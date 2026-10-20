@@ -274,12 +274,20 @@ export function listManufacturers(
 		.orderBy(asc(manufacturers.name));
 }
 
+export interface CategoryEntry extends CatalogueEntry {
+	requiresHandover: boolean;
+}
+
 export function listCategories(
 	organisationId: string,
 	executor: Executor = getDb()
-): Promise<CatalogueEntry[]> {
+): Promise<CategoryEntry[]> {
 	return executor
-		.select({ id: categories.id, name: categories.name })
+		.select({
+			id: categories.id,
+			name: categories.name,
+			requiresHandover: categories.requiresHandover
+		})
 		.from(categories)
 		.where(eq(categories.organisationId, organisationId))
 		.orderBy(asc(categories.name));

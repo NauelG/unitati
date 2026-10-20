@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { ensureDefaultHandoverTemplates } from '../assets';
 import { getDb } from '../db';
 import { organisations, people } from '../directory/schema';
 import { ensureDefaultStates } from '../projects';
@@ -36,6 +37,8 @@ export async function provisionFirstAdmin(
 
 		// An organisation is born with a board to put tasks on (#121).
 		await ensureDefaultStates(tx, organisation.id);
+		// ...and with an agreement text for each direction of handover (#273).
+		await ensureDefaultHandoverTemplates(tx, organisation.id);
 
 		await tx
 			.update(users)

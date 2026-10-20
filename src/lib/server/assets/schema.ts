@@ -1,7 +1,9 @@
 import { sql, type SQL } from 'drizzle-orm';
 import {
 	boolean,
+	check,
 	index,
+	integer,
 	pgEnum,
 	pgSequence,
 	pgTable,
@@ -93,6 +95,8 @@ export const categories = pgTable(
 			.notNull()
 			.references(() => organisations.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
+		/** Handing out equipment of this category needs the receiver's signature (ADR 0035). */
+		requiresHandover: boolean('requires_handover').notNull().default(false),
 		...timestamps
 	},
 	(table) => [unique('categories_org_name').on(table.organisationId, table.name)]
@@ -222,6 +226,69 @@ export const assets = pgTable(
 		index('assets_model_idx').on(table.assetModelId),
 		index('assets_search_gin').using('gin', table.search),
 		index('assets_search_shared_gin').using('gin', table.searchShared)
+	]
+);
+
+export const handoverDirection = pgEnum('handover_direction', ['delivery', 'return']);
+
+/**
+ * Handover settings, 1:1 with the organisation like `organisation_branding`: no
+ * row means the defaults, so reading never needs a seed.
+ */
+export const handoverSettings = pgTable(
+	'handover_settings',
+	{
+		organisationId: uuid('organisation_id')
+			.primaryKey()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		linkValidDays: integer('link_valid_days').notNull().default(14),
+		...timestamps
+	},
+	(table) => [
+		check('handover_settings_link_valid_days', sql`${table.linkValidDays} between 1 and 90`)
+	]
+);
+
+/**
+ * The agreement text for one direction: global (`category_id` null) or the
+ * override of one category. The text itself lives in the versions (ADR 0035,
+ * decision 7).
+ */
+export const handoverTemplates = pgTable(
+	'handover_templates',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		direction: handoverDirection('direction').notNull(),
+		categoryId: uuid('category_id').references(() => categories.id, { onDelete: 'restrict' }),
+		...timestamps
+	},
+	(table) => [
+		unique('handover_templates_org_direction_category')
+			.on(table.organisationId, table.direction, table.categoryId)
+			.nullsNotDistinct()
+	]
+);
+
+/** Append-only, like a page revision (ADR 0031): a row is never updated. */
+export const handoverTemplateVersions = pgTable(
+	'handover_template_versions',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		templateId: uuid('template_id')
+			.notNull()
+			.references(() => handoverTemplates.id, { onDelete: 'restrict' }),
+		version: integer('version').notNull(),
+		body: text('body').notNull(),
+		createdByPersonId: uuid('created_by_person_id').references(() => people.id, {
+			onDelete: 'set null'
+		}),
+		createdAt: timestamps.createdAt
+	},
+	(table) => [
+		unique('handover_template_versions_template_version').on(table.templateId, table.version)
 	]
 );
 
