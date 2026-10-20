@@ -36,6 +36,29 @@ export { assetStateDistribution } from './state-distribution';
 export type { AssetStateSlice } from './state-distribution';
 
 export {
+	listHandoverAgreements,
+	listHandoverTemplateVersions,
+	saveHandoverTemplate,
+	removeHandoverOverride,
+	getHandoverSettings,
+	setHandoverLinkValidDays,
+	setCategoryRequiresHandover,
+	ensureDefaultHandoverTemplates,
+	LINK_VALID_DAYS_DEFAULT,
+	LINK_VALID_DAYS_MIN,
+	LINK_VALID_DAYS_MAX
+} from './handover-templates';
+export type {
+	HandoverAgreement,
+	HandoverSettings,
+	HandoverTemplateVersion,
+	RemoveHandoverOverrideFailure,
+	SaveHandoverTemplateFailure
+} from './handover-templates';
+export { renderHandoverTemplate, resolveHandoverTemplate } from './handover-template';
+export type { HandoverDirection } from './handover-template';
+
+export {
 	createManufacturer,
 	createCategory,
 	createAssetModel,
@@ -51,6 +74,7 @@ export {
 } from './catalogue';
 export type {
 	CatalogueEntry,
+	CategoryEntry,
 	CatalogueFailure,
 	CatalogueEditFailure,
 	CatalogueDeleteFailure,

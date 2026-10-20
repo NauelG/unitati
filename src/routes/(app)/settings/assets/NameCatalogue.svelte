@@ -22,6 +22,8 @@
 	interface Entry {
 		id: string;
 		name: string;
+		/** Present only on categories: the flag shown as a switch beside the name. */
+		requiresHandover?: boolean;
 	}
 
 	interface Props {
@@ -102,6 +104,23 @@
 					<li class="flex items-center justify-between gap-[var(--space-3)] p-[var(--space-3)]">
 						<span class="min-w-0 truncate text-sm text-[var(--ink)]">{entry.name}</span>
 						<div class="flex shrink-0 items-center gap-[var(--space-2)]">
+							{#if entry.requiresHandover !== undefined}
+								<form method="POST" action="?/setRequiresHandover" use:enhance>
+									<input type="hidden" name="id" value={entry.id} />
+									<label
+										class="flex items-center gap-[var(--space-2)] text-small text-[var(--ink)]"
+									>
+										<input
+											type="checkbox"
+											name="requiresHandover"
+											checked={entry.requiresHandover}
+											aria-label={m.catalogue_requires_handover_label({ name: entry.name })}
+											onchange={(event) => event.currentTarget.form?.requestSubmit()}
+										/>
+										{m.catalogue_requires_handover()}
+									</label>
+								</form>
+							{/if}
 							<Button
 								type="button"
 								variant="ghost"

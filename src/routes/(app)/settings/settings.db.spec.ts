@@ -15,6 +15,10 @@ import { load as loadModels } from './assets/models/+page.server';
 import { load as loadCategories } from './assets/categories/+page.server';
 import { load as loadManufacturers } from './assets/manufacturers/+page.server';
 import { load as loadLocations, actions as locationActions } from './assets/locations/+page.server';
+import {
+	load as loadHandover,
+	actions as handoverActions
+} from './assets/handover-agreements/+page.server';
 import { load as loadQueues } from './service-desk/queues/+page.server';
 import { load as loadBranding, actions as brandingActions } from './platform/branding/+page.server';
 
@@ -85,6 +89,35 @@ describe('the moved catalogues (#126)', () => {
 		for (const load of [loadModels, loadCategories, loadManufacturers, loadQueues]) {
 			expect(await statusOf(() => load(event(technician)))).toBeUndefined();
 		}
+	});
+});
+
+describe('/settings/assets/handover-agreements', () => {
+	it('answers 403 to an employee, for the load and for every action', async () => {
+		const { employee } = await createWorkspace();
+
+		expect(await statusOf(() => loadHandover(event(employee)))).toBe(403);
+		for (const name of ['save', 'removeOverride', 'linkDays'] as const) {
+			expect(await statusOf(() => handoverActions[name](event(employee)))).toBe(403);
+		}
+	});
+
+	it('saves a template, its flag and the link validity for a technician', async () => {
+		const { technician } = await createWorkspace();
+
+		await handoverActions.save(
+			event(technician, { direction: 'delivery', categoryId: '', body: 'Texto' })
+		);
+		await handoverActions.linkDays(event(technician, { days: '30' }));
+
+		const page = (await loadHandover(event(technician))) as {
+			agreements: { versions: { body: string }[] }[];
+			linkValidDays: number;
+			missingGlobals: string[];
+		};
+		expect(page.agreements[0].versions[0].body).toBe('Texto');
+		expect(page.linkValidDays).toBe(30);
+		expect(page.missingGlobals).toEqual(['return']);
 	});
 });
 

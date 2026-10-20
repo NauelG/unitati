@@ -73,7 +73,8 @@ describe('visibleSections', () => {
 			'/settings/assets/models',
 			'/settings/assets/categories',
 			'/settings/assets/manufacturers',
-			'/settings/assets/locations'
+			'/settings/assets/locations',
+			'/settings/assets/handover-agreements'
 		]);
 		expect(deskManager).toEqual(['/settings/service-desk/queues']);
 	});
