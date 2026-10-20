@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.88.0-1d5cf0" alt="Version 0.88.0" />
+  <img src="https://img.shields.io/badge/version-0.89.0-1d5cf0" alt="Version 0.89.0" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
 </p>
