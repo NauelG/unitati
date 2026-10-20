@@ -13,10 +13,10 @@ import { countActiveProjects, countOpenTasks } from '#lib/server/projects/index.
 import type { Permission } from '#lib/server/access/permissions.js';
 import type { LayoutServerLoad } from './$types';
 
-export const load: LayoutServerLoad = async ({ locals }) => {
+export const load: LayoutServerLoad = async ({ locals, url }) => {
 	if (await needsSetup()) redirect(303, '/setup');
 
-	const user = requireUser(locals.user);
+	const user = requireUser(locals.user, url);
 	const permissions = permissionsFor(user.role);
 	const hasAnyPermission = (list: readonly Permission[]) =>
 		list.some((permission) => permissions.includes(permission));

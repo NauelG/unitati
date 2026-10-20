@@ -1,4 +1,5 @@
 import { sql, type SQL, type SQLWrapper } from 'drizzle-orm';
+import { codeFromScan } from '../../domain/scan';
 import type { SearchDictionary } from './search-vector';
 
 /**
@@ -33,7 +34,8 @@ export interface SearchTerm {
  * applies to a Spanish column: "impresoras:*" and "impresora" meet at the stem.
  */
 export function parseSearchTerm(input: string): SearchTerm | null {
-	const raw = input.trim();
+	// A scanned label arrives as a URL: what the viewer means is the code in it.
+	const raw = codeFromScan(input) ?? input.trim();
 	const words = raw.match(/[\p{L}\p{N}]+/gu) ?? [];
 	if (words.length === 0) return null;
 

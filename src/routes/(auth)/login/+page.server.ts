@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { APIError } from 'better-auth/api';
 import { getAuth } from '#lib/server/auth/index.js';
 import { applyAuthCookies } from '#lib/server/auth/cookies.js';
+import { safeRedirectTarget } from '#lib/server/auth/redirect.js';
 import { endSessions } from '#lib/server/auth/access.js';
 import { isUserActive, needsSetup } from '#lib/server/directory/index.js';
 import { m } from '#lib/paraglide/messages.js';
@@ -12,13 +13,17 @@ import type { Actions, PageServerLoad } from './$types';
 
 const schema = z.object({
 	email: z.email({ message: m.validation_email() }),
-	password: z.string().min(1, { message: m.login_failed() })
+	password: z.string().min(1, { message: m.login_failed() }),
+	redirectTo: z.string().optional()
 });
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url }) => {
 	// An installation with nobody in it has nothing to sign into yet.
 	if (await needsSetup()) redirect(303, '/setup');
-	return { form: await superValidate(zod4(schema)) };
+	const redirectTo = url.searchParams.get('redirectTo');
+	return {
+		form: await superValidate({ redirectTo: safeRedirectTarget(redirectTo) }, zod4(schema))
+	};
 };
 
 export const actions: Actions = {
@@ -47,6 +52,6 @@ export const actions: Actions = {
 			throw error;
 		}
 
-		redirect(303, '/');
+		redirect(303, safeRedirectTarget(form.data.redirectTo));
 	}
 };

@@ -6,6 +6,7 @@ import type { LayoutServerLoad } from './$types';
  * that page lives here for its bare layout and needs a session (#230).
  */
 export const load: LayoutServerLoad = ({ locals, url }) => {
-	if (url.pathname !== PASSWORD_CHANGE_PATH) redirectIfSignedIn(locals.user);
+	if (url.pathname !== PASSWORD_CHANGE_PATH)
+		redirectIfSignedIn(locals.user, url.searchParams.get('redirectTo'));
 	return {};
 };

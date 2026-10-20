@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { passwordChangeRedirect, requireAnyPermission, type SessionUser } from './guards';
+import {
+	passwordChangeRedirect,
+	requireAnyPermission,
+	requireUser,
+	type SessionUser
+} from './guards';
 
 const user = (role: SessionUser['role']): SessionUser => ({
 	id: 'u1',
@@ -58,5 +63,28 @@ describe('passwordChangeRedirect', () => {
 	it('leaves everyone else alone', () => {
 		expect(passwordChangeRedirect(user('admin'), '/')).toBeNull();
 		expect(passwordChangeRedirect(null, '/')).toBeNull();
+	});
+});
+
+describe('requireUser', () => {
+	const locationOf = (run: () => unknown): string | undefined => {
+		try {
+			run();
+		} catch (thrown) {
+			return (thrown as { location?: string }).location;
+		}
+		return undefined;
+	};
+
+	it('sends an anonymous visitor to the login with the page they were going to', () => {
+		const url = new URL('http://localhost/service-desk/TCK-0001?tab=x');
+		expect(locationOf(() => requireUser(null, url))).toBe(
+			'/login?redirectTo=%2Fservice-desk%2FTCK-0001%3Ftab%3Dx'
+		);
+	});
+
+	it('sends them to a bare login when there is no target', () => {
+		expect(locationOf(() => requireUser(null))).toBe('/login');
+		expect(locationOf(() => requireUser(null, new URL('http://localhost/')))).toBe('/login');
 	});
 });

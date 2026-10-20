@@ -41,6 +41,7 @@
 				</p>
 
 				<form method="POST" use:enhance class="mt-[var(--space-6)] space-y-[var(--space-4)]">
+					<input type="hidden" name="redirectTo" bind:value={$form.redirectTo} />
 					<Field
 						label={m.login_email_label()}
 						name="email"

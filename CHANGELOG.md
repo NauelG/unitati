@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.84.0] - 2026-10-20
+
+### Added
+
+- Scan route for asset labels (#22, #269). `/s/{tag}` takes whoever scans a label to the asset,
+  or answers 404 when they may not see it; someone without a session goes to the login first.
+  Global search also accepts a scanned label URL and offers the asset as the exact hit
+  (ADR 0038).
+- Signing in returns to the page you were going to, not always the home screen. Only
+  same-origin paths are honoured.
+
 ## [0.83.1] - 2026-10-20
 
 ### Fixed
