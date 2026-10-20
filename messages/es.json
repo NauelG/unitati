@@ -812,7 +812,6 @@
 	"tasks_empty_search": "Ninguna tarea coincide con «{term}».",
 	"tasks_clear_filter": "Borrar filtro",
 	"tasks_unassigned": "Sin asignar",
-	"tasks_change_state": "Cambiar estado",
 	"task_detail_project": "Proyecto",
 	"task_detail_state": "Estado",
 	"task_detail_assignees": "Asignadas a",

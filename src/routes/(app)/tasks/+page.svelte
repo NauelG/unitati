@@ -6,17 +6,17 @@
 	import SearchX from '@lucide/svelte/icons/search-x';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import DataTable, { type DataTableColumn } from '#lib/components/unitati/DataTable.svelte';
+	import EditableChip from '#lib/components/unitati/EditableChip.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import MoveTaskDialog from '#lib/components/unitati/MoveTaskDialog.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
-	import { stateGroupLabel } from '#lib/components/unitati/status.js';
+	import { stateGroupBadge, stateGroupLabel } from '#lib/components/unitati/status.js';
 	import { STATE_GROUPS } from '#lib/domain/status.js';
 	import { formatDay } from '#lib/format-date.js';
 	import { formatKeys, isMacPlatform, keymapRegistry } from '#lib/keymap.js';
-	import { optimisticEnhance } from '#lib/optimistic.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
@@ -35,13 +35,17 @@
 	 * once, and goes back if the server refuses. Cleared when the authoritative
 	 * list arrives.
 	 */
-	let moved = $derived.by<Record<string, { name: string; group: Row['stateGroup'] }>>(() => {
+	let moved = $derived.by<Record<string, string>>(() => {
 		void data.tasks;
 		return {};
 	});
 
 	const stateOptions = $derived(
-		data.states.map((state) => ({ value: state.id, label: state.name }))
+		data.states.map((state) => ({
+			value: state.id,
+			label: state.name,
+			tone: stateGroupBadge(state.group).tone
+		}))
 	);
 	const scopeOptions = $derived([
 		{ value: 'mine', label: m.tasks_filter_mine() },
@@ -64,7 +68,7 @@
 			run: () => {
 				if (!activeKey) return;
 				document
-					.querySelector<HTMLElement>(`form[data-state="${CSS.escape(activeKey)}"] button`)
+					.querySelector<HTMLElement>(`[data-state="${CSS.escape(activeKey)}"] button`)
 					?.focus();
 			}
 		});
@@ -101,8 +105,31 @@
 	</a>
 {/snippet}
 {#snippet state(row: Row)}
-	{@const shown = moved[row.taskTag] ?? { name: row.stateName, group: row.stateGroup }}
-	<StatusBadge status={shown.group} label={shown.name} />
+	{#if data.canManage && !row.projectArchived}
+		<!-- Lifted above the row's stretched link, so the chip takes the click. -->
+		<span class="relative z-10 inline-flex" data-state={row.taskTag}>
+			<EditableChip
+				value={moved[row.taskTag] ?? row.stateId}
+				options={stateOptions}
+				action="/tasks/{encodeURIComponent(row.taskTag)}?/changeState"
+				name="stateId"
+				label={m.tasks_column_state()}
+				editable
+				optimistic={(formData) => {
+					const previous = moved[row.taskTag];
+					moved = { ...moved, [row.taskTag]: String(formData.get('stateId')) };
+					return () => {
+						const rest = Object.fromEntries(
+							Object.entries(moved).filter(([tag]) => tag !== row.taskTag)
+						);
+						moved = previous ? { ...rest, [row.taskTag]: previous } : rest;
+					};
+				}}
+			/>
+		</span>
+	{:else}
+		<StatusBadge status={row.stateGroup} label={row.stateName} />
+	{/if}
 {/snippet}
 {#snippet assignees(row: Row)}
 	{#if row.assignees.length > 0}
@@ -117,36 +144,12 @@
 {/snippet}
 {#snippet actionsCell(row: Row)}
 	{#if !row.projectArchived}
-		<form
-			method="POST"
-			action="/tasks/{encodeURIComponent(row.taskTag)}?/changeState"
-			data-state={row.taskTag}
-			class="flex items-center gap-[var(--space-2)]"
-			use:optimisticEnhance={(formData) => {
-				const next = data.states.find((state) => state.id === formData.get('stateId'));
-				const previous = moved[row.taskTag];
-				if (next) moved = { ...moved, [row.taskTag]: { name: next.name, group: next.group } };
-				return () => {
-					const rest = Object.fromEntries(
-						Object.entries(moved).filter(([tag]) => tag !== row.taskTag)
-					);
-					moved = previous ? { ...rest, [row.taskTag]: previous } : rest;
-				};
-			}}
-		>
-			<SelectField
-				label={m.tasks_change_state()}
-				labelHidden
-				name="stateId"
-				options={stateOptions}
-				value={row.stateId}
-			/>
-			<Button type="submit" variant="ghost" size="sm">{m.tasks_change_state()}</Button>
+		<span class="relative z-10 inline-flex">
 			<Button type="button" variant="ghost" size="sm" onclick={() => (moving = row)}>
 				<ArrowRightLeft class="size-4" aria-hidden="true" />
 				{m.task_move_action()}
 			</Button>
-		</form>
+		</span>
 	{/if}
 {/snippet}
 
