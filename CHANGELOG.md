@@ -5,6 +5,13 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.90.1] - 2026-10-20
+
+### Changed
+
+- The signing page's reject toggle reads "Información incorrecta: rechazar la entrega" instead of
+  "¿Algo no cuadra? Rechazar la entrega", a neutral wording for the person signing (#275).
+
 ## [0.90.0] - 2026-10-20
 
 ### Added
