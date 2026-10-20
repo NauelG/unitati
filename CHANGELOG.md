@@ -5,6 +5,14 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.84.2] - 2026-10-20
+
+### Changed
+
+- `Storage` and the mailer moved from `service-desk` to `shared/`, and mail messages can carry
+  attachments (#272). No behaviour change for ticket attachments or ticket mail; it lets `assets`
+  store and send handover files without importing another domain (ADR 0036).
+
 ## [0.84.1] - 2026-10-20
 
 ### Fixed
