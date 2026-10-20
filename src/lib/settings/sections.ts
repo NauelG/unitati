@@ -77,6 +77,12 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
 		permission: 'assets.manage'
 	},
 	{
+		module: 'assets',
+		href: '/settings/assets/labels',
+		label: m.settings_section_labels,
+		permission: 'assets.manage'
+	},
+	{
 		module: 'service-desk',
 		href: '/settings/service-desk/queues',
 		label: m.queues_title,

@@ -254,6 +254,29 @@ export const handoverSettings = pgTable(
 );
 
 /**
+ * Label settings, 1:1 with the organisation like `handover_settings`: no row,
+ * or a `NULL` owner text, means the default "Propiedad de {product name}"
+ * (ADR 0038). The `CHECK` is a code-point backstop; the grapheme limit lives in
+ * the domain.
+ */
+export const assetLabelSettings = pgTable(
+	'asset_label_settings',
+	{
+		organisationId: uuid('organisation_id')
+			.primaryKey()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		ownerText: text('owner_text'),
+		...timestamps
+	},
+	(table) => [
+		check(
+			'asset_label_settings_owner_text_length',
+			sql`char_length(btrim(${table.ownerText})) between 1 and 600`
+		)
+	]
+);
+
+/**
  * The agreement text for one direction: global (`category_id` null) or the
  * override of one category. The text itself lives in the versions (ADR 0035,
  * decision 7).

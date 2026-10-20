@@ -3,7 +3,7 @@ import QRCode from 'qrcode';
 import { BETTER_AUTH_URL } from '$app/env/private';
 import { MAX_LABELS, parseFormat, parseSkip } from '#lib/domain/label-formats.js';
 import { scanUrl } from '#lib/domain/scan.js';
-import { listAssetsByTags } from '#lib/server/assets/index.js';
+import { getLabelSettings, listAssetsByTags } from '#lib/server/assets/index.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
 import type { PageServerLoad } from './$types';
 
@@ -38,7 +38,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	// be useless for years (ADR 0038).
 	const origin = new URL(BETTER_AUTH_URL).origin;
 
-	const found = await listAssetsByTags(user, requested);
+	const [found, settings] = await Promise.all([
+		listAssetsByTags(user, requested),
+		getLabelSettings(user.organisationId)
+	]);
 	const foundTags = new Set(found.map((asset) => asset.assetTag));
 
 	const labels = await Promise.all(
@@ -53,6 +56,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		format,
 		skip,
 		labels,
+		// `null` is the default line, rendered in the viewer's locale by the page.
+		ownerText: settings.ownerText,
 		missing: requested.filter((tag) => !foundTags.has(tag)),
 		requested,
 		origin,

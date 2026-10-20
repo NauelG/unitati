@@ -56,10 +56,18 @@ margin: 0 }`) and the browser's print dialog does the rest. There is no PDF libr
    `roll-62x29` (one label per page). A template editor would be a second product; the formats
    are the ones sold as ordinary A4 sheets and a common thermal roll. On the sheets, a start
    position leaves the first cells empty so a partly used sheet is not wasted; the roll has none.
-3. **What a label shows**: the QR, the tag, "Propiedad de {product name}" (with the brand mark
-   where it fits) and, on the large format only, the asset name. **Never the serial, the custodian
-   or the location**: a label is stuck on a thing that leaves the building, and the people
-   scanning it are answered by what their session may see (decision 3), not by what is printed.
+3. **What a label shows**: the QR, the tag, the owner line (with the brand mark where it fits)
+   and, on the large format only, the asset name. **Never the serial, the custodian or the
+   location**: a label is stuck on a thing that leaves the building, and the people scanning it
+   are answered by what their session may see (decision 3), not by what is printed.
+   **The owner line is the organisation's.** By default it reads "Propiedad de {product name}";
+   whoever manages assets can replace the whole line, wording included, in Settings › Assets ›
+   Labels (one line, at most 60 characters, clamped to two lines on the sheet). It is stored in
+   `asset_label_settings`, owned by the assets domain and 1:1 with the organisation like
+   `handover_settings`; blank or no row means the default, which is never stored as text so it
+   follows the product name and the locale. It does not live in the brand
+   ([ADR 0026](0026-per-organisation-branding.md)): it is a decision about what the inventory
+   prints, made by the people who print, under `assets.manage` rather than `organisation.manage`.
 4. **The QR origin is `BETTER_AUTH_URL`**, the installation's one public origin, already used by
    authentication and by mail links. Not the request's origin: a label printed from
    `http://192.168.1.10:3000` would be useless for years. Not a per-organisation setting: it

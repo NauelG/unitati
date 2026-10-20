@@ -1383,5 +1383,14 @@
 	"labels_missing": "{n} etiquetas no encontradas: {tags}",
 	"labels_origin_mismatch": "Estás en {requestOrigin}, pero los QR apuntarán a {origin}. Comprueba que esa dirección es accesible desde los móviles antes de imprimir.",
 	"labels_empty": "No hay ninguna etiqueta que imprimir.",
-	"labels_reprint_note": "Si ya has impreso la etiqueta de este activo, tendrás que reimprimirla."
+	"labels_reprint_note": "Si ya has impreso la etiqueta de este activo, tendrás que reimprimirla.",
+	"settings_section_labels": "Etiquetas",
+	"label_settings_title": "Etiquetas de activos",
+	"label_settings_lede": "Lo que se imprime en las etiquetas QR, además del código y la etiqueta del activo.",
+	"label_settings_owner": "Texto de propiedad",
+	"label_settings_owner_hint": "Sustituye la línea entera, «Propiedad de» incluido. Déjalo vacío para usar «{fallback}». Máximo {max} caracteres.",
+	"label_settings_owner_error": "Escribe como máximo {max} caracteres, en una sola línea.",
+	"label_settings_preview": "Así se verá: {text}",
+	"label_settings_save": "Guardar",
+	"label_settings_saved": "Etiquetas guardadas. Las ya impresas no cambian."
 }
