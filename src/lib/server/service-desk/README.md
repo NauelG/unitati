@@ -12,10 +12,8 @@ requester somebody answered. Later: canned responses, SLAs, inbound email.
 | `queues.ts`      | Queue CRUD and the default queue a portal ticket lands in                                                                                                                                |
 | `transitions.ts` | The status workflow, as data                                                                                                                                                             |
 | `scope.ts`       | Which tickets a viewer sees; who sees internal notes                                                                                                                                     |
-| `storage.ts`     | The `Storage` interface, local-filesystem and in-memory implementations                                                                                                                  |
-| `mail.ts`        | The SMTP mailer, `sendQuietly` (logs a failure, never throws) and the templates, including `taskCompletedMail`; exported for domains that react to events (ADR 0023)                     |
+| `mail.ts`        | The ticket mail templates, including `taskCompletedMail`; exported for domains that react to events (ADR 0023). Sending lives in `shared/mail.ts`                                        |
 | `summaries.ts`   | Reads other domains draw on: `ticketSummaries`, `assignedOpenTickets`                                                                                                                    |
-| `runtime.ts`     | The only file that reads the environment; everything else takes collaborators as arguments                                                                                               |
 
 ## Decisions worth knowing before changing this
 

@@ -11,11 +11,12 @@ import { uniqueConstraintName } from '../db/errors';
 import { people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
-import { runtimeMailer, runtimeStorage } from './runtime';
-import { resolvedMail, sendQuietly, type Mailer } from './mail';
+import { runtimeMailer, runtimeStorage } from '../shared/runtime';
+import { sendQuietly, type Mailer } from '../shared/mail';
+import { resolvedMail } from './mail';
 import { queues, ticketComments, tickets, attachments } from './schema';
 import { requireTicketScope, seesInternal } from './scope';
-import type { Storage } from './storage';
+import type { Storage } from '../shared/storage';
 import { DEFAULT_TICKET_ORDER, type TicketOrder } from './ticket-order';
 import { canTransition } from './transitions';
 import {

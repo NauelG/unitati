@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('$app/env/private', () => ({ BETTER_AUTH_URL: 'https://unitati.test' }));
-vi.mock('./service-desk', () => ({ runtimeMailer: () => null }));
+vi.mock('./shared/runtime', () => ({ runtimeMailer: () => null }));
 const notify = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock('./links/notify-task-completed', () => ({ notifyTaskCompleted: notify }));
 

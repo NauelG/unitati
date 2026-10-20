@@ -1,6 +1,6 @@
 import { BETTER_AUTH_URL } from '$app/env/private';
 import { notifyTaskCompleted } from './links/notify-task-completed';
-import { runtimeMailer } from './service-desk';
+import { runtimeMailer } from './shared/runtime';
 import { on } from './shared/events';
 
 /**

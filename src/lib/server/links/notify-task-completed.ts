@@ -2,7 +2,8 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../db';
 import { contactsOf } from '../directory';
 import type { DomainEvents } from '../shared/events';
-import { assignedOpenTickets, sendQuietly, taskCompletedMail, type Mailer } from '../service-desk';
+import { assignedOpenTickets, taskCompletedMail } from '../service-desk';
+import { sendQuietly, type Mailer } from '../shared/mail';
 import { ticketTask } from './schema';
 
 /**
