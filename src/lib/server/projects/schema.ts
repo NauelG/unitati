@@ -158,7 +158,64 @@ export const taskAssignees = pgTable(
 	]
 );
 
+/**
+ * Files attached to a project or to a task (ADR 0039). Each domain owns its
+ * attachments table and shares only the byte store, so these cannot be the
+ * service desk's `attachments`. They hang off the record itself, not off a
+ * comment: tasks have no comment thread. Bytes live in `Storage`, keyed by
+ * `storage_key`.
+ */
+export const projectAttachments = pgTable(
+	'project_attachments',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		projectId: uuid('project_id')
+			.notNull()
+			.references(() => projects.id, { onDelete: 'cascade' }),
+		uploadedByPersonId: uuid('uploaded_by_person_id').references(() => people.id, {
+			onDelete: 'set null'
+		}),
+		filename: text('filename').notNull(),
+		/** `application/octet-stream` when the browser sends none. */
+		contentType: text('content_type').notNull(),
+		byteSize: integer('byte_size').notNull(),
+		/** Server-generated and opaque: never derived from the filename or the request. */
+		storageKey: text('storage_key').notNull().unique(),
+		...timestamps
+	},
+	(table) => [index('project_attachments_project_idx').on(table.projectId)]
+);
+
+export const taskAttachments = pgTable(
+	'task_attachments',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		taskId: uuid('task_id')
+			.notNull()
+			.references(() => tasks.id, { onDelete: 'cascade' }),
+		uploadedByPersonId: uuid('uploaded_by_person_id').references(() => people.id, {
+			onDelete: 'set null'
+		}),
+		filename: text('filename').notNull(),
+		/** `application/octet-stream` when the browser sends none. */
+		contentType: text('content_type').notNull(),
+		byteSize: integer('byte_size').notNull(),
+		/** Server-generated and opaque: never derived from the filename or the request. */
+		storageKey: text('storage_key').notNull().unique(),
+		...timestamps
+	},
+	(table) => [index('task_attachments_task_idx').on(table.taskId)]
+);
+
 export type State = typeof states.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
 export type TaskAssignee = typeof taskAssignees.$inferSelect;
+export type ProjectAttachment = typeof projectAttachments.$inferSelect;
+export type TaskAttachment = typeof taskAttachments.$inferSelect;

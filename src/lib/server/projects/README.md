@@ -49,6 +49,21 @@ from `requireProjectScope` / `requireTaskScope` (`scope.ts`).
   contain at least one of them. With no directory record, the clause is dropped and the viewer sees
   nothing, not every unassigned task.
 - Every write requires `projects.manage` (`requireManage`), as a backstop to the route's gate.
+- Attachments follow the record: an employee sees a task's files only on tasks assigned to them,
+  and a project's files only on projects that contain one of those tasks. An id they may not read
+  is `attachment_not_found`, as is one from another organisation.
+
+## Attachments
+
+Projects and tasks hold files (`attachments.ts`, ADR 0039): `project_attachments` and
+`task_attachments`, one row per file, bytes in the shared `Storage`. Same limits as tickets: 5
+files per submission, 10 MiB each (`attachments_too_many`, `attachments_too_large`). Adding locks
+the project like any write, so an archived project fails with `project_archived`; the bytes are
+written first and deleted again if the transaction fails. Removing deletes the row, then the bytes
+after commit, ignoring a storage failure: an orphaned file is harmless, a row pointing at missing
+bytes is not. Each add and remove writes `project.attachment.*` / `task.attachment.*` with the
+filename as a snapshot. A moved task keeps its files, because they hang off the task.
+Downloads are `/project-attachments/{id}` and `/task-attachments/{id}`, always `attachment`.
 
 ## Search
 

@@ -6,6 +6,7 @@ import {
 	resolveView,
 	serializeBoardPreference
 } from '#lib/board-preference.js';
+import { attachmentFailureMessage } from '#lib/attachment-errors.js';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
@@ -22,10 +23,14 @@ import {
 	firstField,
 	orNull,
 	rejected,
+	addProjectAttachments,
 	archiveProject,
 	createTask,
 	createTaskInput,
 	getProject,
+	listProjectAttachments,
+	readAttachmentForm,
+	removeProjectAttachment,
 	listStates,
 	listTasks,
 	moveTask,
@@ -53,7 +58,7 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 
 	// What the viewer can see of the project: an employee gets their own tasks
 	// and counts of exactly those (the domain scopes both from the same viewer).
-	const [tasks, states, progress, people, related] = await Promise.all([
+	const [tasks, states, progress, people, related, attachments] = await Promise.all([
 		listTasks(user, { projectId: project.id }),
 		listStates(user),
 		projectProgress(user, project.id),
@@ -62,9 +67,10 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 			: Promise.resolve([]),
 		// The tickets behind this project, already scoped to what the viewer may
 		// see: an employee gets their own, and every count below follows suit.
-		relatedTo(user, { kind: 'project', id: project.id })
+		relatedTo(user, { kind: 'project', id: project.id }),
+		listProjectAttachments(user, project.id)
 	]);
-	if (!progress.ok) error(404, 'Not found');
+	if (!progress.ok || !attachments.ok) error(404, 'Not found');
 
 	// The person's board preference (#127), cleaned of anything the cookie should
 	// not carry. An explicit ?view= wins over it, and is never stored: opening
@@ -99,6 +105,7 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 		canManage,
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
 		related,
+		attachments: attachments.value,
 		// The header's summary value: direct plus via tasks, resolved and closed left out.
 		openTickets: openTicketCount(related),
 		// Unlinking concerns the ticket, so it is `tickets.manage` and it survives
@@ -222,6 +229,41 @@ export const actions: Actions = {
 			return rejected('unlinkTicket', m.related_unlink_failed());
 		}
 		return { action: 'unlinkTicket' as const };
+	},
+
+	// Both need `projects.manage`; downloading is the route's, open to every reader.
+	addAttachments: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const { files } = await readAttachmentForm(request);
+		if (files.length === 0) return rejected('addAttachments', m.attachments_pick_none());
+
+		const project = await targetOf(user, params.tag);
+		const outcome = await addProjectAttachments(user, project.id, files);
+		if (!outcome.ok) {
+			if (outcome.error === 'project_not_found') error(404, 'Not found');
+			return rejected('addAttachments', attachmentFailureMessage(outcome.error));
+		}
+
+		return { action: 'addAttachments' as const };
+	},
+
+	removeAttachment: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const { attachmentId } = await readAttachmentForm(request);
+		if (!z.uuid().safeParse(attachmentId).success) {
+			return rejected('removeAttachment', m.action_error_invalid());
+		}
+
+		// The page's project must be one the viewer can reach; the domain then
+		// resolves the attachment inside the organisation.
+		await targetOf(user, params.tag);
+		const outcome = await removeProjectAttachment(user, attachmentId);
+		// Already gone, e.g. a second tab removed it first: the reload shows the truth.
+		if (!outcome.ok && outcome.error !== 'attachment_not_found') {
+			return rejected('removeAttachment', attachmentFailureMessage(outcome.error));
+		}
+
+		return { action: 'removeAttachment' as const };
 	},
 
 	unarchive: async ({ locals, params }) => {

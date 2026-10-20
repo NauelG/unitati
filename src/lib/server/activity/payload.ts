@@ -183,6 +183,14 @@ export const PAYLOAD_SCHEMAS = {
 		to: isoDate.nullable()
 	}),
 
+	// The filename as it read when the file was added or removed: the row is
+	// gone after a removal, and the history must still say which file it was.
+	'project.attachment.added': z.object({ filename: presentName }),
+	'project.attachment.removed': z.object({ filename: presentName }),
+
+	'task.attachment.added': z.object({ filename: presentName }),
+	'task.attachment.removed': z.object({ filename: presentName }),
+
 	'task.created': z.object({
 		taskTag: presentName,
 		title: presentName

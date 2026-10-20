@@ -1,21 +1,26 @@
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
 import { renderMarkdown } from '#lib/server/shared/markdown.js';
+import { attachmentFailureMessage } from '#lib/attachment-errors.js';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 import { listPeople } from '#lib/server/directory/index.js';
 import { relatedTo, taskTimeline, unlinkTask } from '#lib/server/links/index.js';
 import {
+	addTaskAttachments,
 	fieldsOf,
 	firstField,
 	orNull,
 	rejected,
 	getTask,
 	listProjects,
+	listTaskAttachments,
 	listStates,
 	moveTask,
 	moveTaskToProject,
+	readAttachmentForm,
+	removeTaskAttachment,
 	requireProjectRead,
 	requireProjectWrite,
 	setAssignees,
@@ -38,6 +43,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	// An archived project is read-only: its tasks render no write affordance.
 	const canManage = can(user, 'projects.manage') && !task.projectArchived;
 
+	const attachments = await listTaskAttachments(user, task.id);
+	if (!attachments.ok) error(404, 'Not found');
+
 	const [states, people, projects] = canManage
 		? await Promise.all([listStates(user), listPeople(user.organisationId), listProjects(user)])
 		: [[], [], []];
@@ -46,6 +54,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		task,
 		descriptionHtml: renderMarkdown(task.description ?? ''),
 		canManage,
+		attachments: attachments.value,
 		states: states.map(({ id, name, group }) => ({ id, name, group })),
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
 		// The destinations of "Mover a proyecto": active, in scope, and not this one.
@@ -194,6 +203,38 @@ export const actions: Actions = {
 			return rejected('unlinkTicket', m.related_unlink_failed());
 		}
 		return { action: 'unlinkTicket' as const };
+	},
+
+	addAttachments: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const { files } = await readAttachmentForm(request);
+		if (files.length === 0) return rejected('addAttachments', m.attachments_pick_none());
+
+		const task = await targetOf(user, params.taskTag);
+		const outcome = await addTaskAttachments(user, task.id, files);
+		if (!outcome.ok) {
+			if (outcome.error === 'task_not_found') error(404, 'Not found');
+			return rejected('addAttachments', attachmentFailureMessage(outcome.error));
+		}
+
+		return { action: 'addAttachments' as const };
+	},
+
+	removeAttachment: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const { attachmentId } = await readAttachmentForm(request);
+		if (!z.uuid().safeParse(attachmentId).success) {
+			return rejected('removeAttachment', m.action_error_invalid());
+		}
+
+		await targetOf(user, params.taskTag);
+		const outcome = await removeTaskAttachment(user, attachmentId);
+		// Already gone, e.g. a second tab removed it first: the reload shows the truth.
+		if (!outcome.ok && outcome.error !== 'attachment_not_found') {
+			return rejected('removeAttachment', attachmentFailureMessage(outcome.error));
+		}
+
+		return { action: 'removeAttachment' as const };
 	},
 
 	setAssignees: async ({ request, locals, params }) => {

@@ -137,6 +137,18 @@ export function activitySentence(entry: ActivityEntry): string {
 				to: entry.payload.to ?? m.activity_due_none()
 			});
 
+		case 'project.attachment.added':
+			return m.activity_project_attachment_added({ filename: entry.payload.filename });
+
+		case 'project.attachment.removed':
+			return m.activity_project_attachment_removed({ filename: entry.payload.filename });
+
+		case 'task.attachment.added':
+			return m.activity_task_attachment_added({ filename: entry.payload.filename });
+
+		case 'task.attachment.removed':
+			return m.activity_task_attachment_removed({ filename: entry.payload.filename });
+
 		case 'task.created':
 			return m.activity_task_created();
 

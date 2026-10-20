@@ -3,6 +3,7 @@
 	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
 	import ArrowRightLeft from '@lucide/svelte/icons/arrow-right-left';
+	import Paperclip from '@lucide/svelte/icons/paperclip';
 	import FolderPlus from '@lucide/svelte/icons/folder-plus';
 	import ListTodo from '@lucide/svelte/icons/list-todo';
 	import Flag from '@lucide/svelte/icons/flag';
@@ -90,12 +91,16 @@
 		'project.unarchived': ArchiveRestore,
 		'project.owner.changed': UserCheck,
 		'project.due.changed': CalendarClock,
+		'project.attachment.added': Paperclip,
+		'project.attachment.removed': Paperclip,
 		'task.created': ListTodo,
 		'task.state.changed': RefreshCw,
 		'task.assigned': UserCheck,
 		'task.unassigned': UserMinus,
 		'task.due.changed': CalendarClock,
 		'task.project.changed': ArrowRightLeft,
+		'task.attachment.added': Paperclip,
+		'task.attachment.removed': Paperclip,
 		'person.created': UserPlus,
 		'person.deactivated': UserRoundX,
 		'person.reactivated': UserRoundCheck,

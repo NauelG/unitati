@@ -89,6 +89,10 @@ describe('activitySentence', () => {
 				}
 			},
 			{ verb: 'project.due.changed', payload: { from: null, to: '2026-12-01' } },
+			{ verb: 'project.attachment.added', payload: { filename: 'plan.pdf' } },
+			{ verb: 'project.attachment.removed', payload: { filename: 'plan.pdf' } },
+			{ verb: 'task.attachment.added', payload: { filename: 'plan.pdf' } },
+			{ verb: 'task.attachment.removed', payload: { filename: 'plan.pdf' } },
 			{ verb: 'task.created', payload: { taskTag: 'TSK-0001', title: 'Mudanza' } },
 			{
 				verb: 'task.state.changed',
@@ -108,6 +112,12 @@ describe('activitySentence', () => {
 		for (const entry of entries) {
 			expect(activitySentence(entry).trim()).not.toBe('');
 		}
+	});
+
+	it('names the file in an attachment entry', () => {
+		expect(
+			activitySentence({ verb: 'task.attachment.added', payload: { filename: 'plan.pdf' } })
+		).toContain('plan.pdf');
 	});
 
 	it('does not leak the note body into the sentence', () => {

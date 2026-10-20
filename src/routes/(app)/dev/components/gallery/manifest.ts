@@ -618,6 +618,11 @@ export const GALLERY_EXCEPTIONS: GalleryException[] = [
 		sourceFile: 'MoveTaskDialog.svelte',
 		reason:
 			"Bound to one record: it posts to the task record's own `moveToProject` action (#120), so it cannot render outside a task page. The generic shell is the Dialog entry."
+	},
+	{
+		sourceFile: 'RecordAttachments.svelte',
+		reason:
+			"Bound to one record: it posts to the project's or task's own `addAttachments` / `removeAttachment` actions (#285) and links to its download route, so it cannot render outside those pages. Its parts are in the gallery: ConfirmDialog, WorkPanel and Button."
 	}
 ];
 
