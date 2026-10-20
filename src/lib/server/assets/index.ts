@@ -59,6 +59,9 @@ export type {
 export { deliver, listDeliverableAssets } from './deliver';
 export type { DeliverableAsset, DeliverDeps, DeliverFailure, DeliveredHandover } from './deliver';
 export { renderHandoverTemplate, resolveHandoverTemplate } from './handover-template';
+
+export { getLabelSettings, setLabelOwnerText } from './label-settings';
+export type { LabelSettings, SetLabelOwnerTextFailure } from './label-settings';
 export type { HandoverDirection } from './handover-template';
 
 export {

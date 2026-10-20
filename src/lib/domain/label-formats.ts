@@ -13,6 +13,12 @@ export const DEFAULT_LABEL_FORMAT: LabelFormatKey = 'a4-3x8';
 /** The most labels one print job carries. */
 export const MAX_LABELS = 500;
 
+/**
+ * The longest owner line an organisation may set, in graphemes. At 6 pt it is
+ * about three lines on the dense format; the sheet clamps it to two.
+ */
+export const LABEL_OWNER_TEXT_MAX = 60;
+
 interface Mm {
 	width: number;
 	height: number;
@@ -32,7 +38,7 @@ export interface LabelFormat {
 	tagPt: number;
 	/** Whether the asset name is printed (large format only). */
 	showName: boolean;
-	/** Whether the brand's mark sits beside "Propiedad de …" when the brand has one. */
+	/** Whether the brand's mark sits beside the owner line when the brand has one. */
 	showMark: boolean;
 	/** A sheet of cells with a start position, as opposed to one label per page. */
 	sheet: boolean;

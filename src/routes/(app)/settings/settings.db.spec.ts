@@ -19,6 +19,7 @@ import {
 	load as loadHandover,
 	actions as handoverActions
 } from './assets/handover-agreements/+page.server';
+import { load as loadLabels, actions as labelActions } from './assets/labels/+page.server';
 import { load as loadQueues } from './service-desk/queues/+page.server';
 import { load as loadBranding, actions as brandingActions } from './platform/branding/+page.server';
 
@@ -118,6 +119,45 @@ describe('/settings/assets/handover-agreements', () => {
 		expect(page.agreements[0].versions[0].body).toBe('Texto');
 		expect(page.linkValidDays).toBe(30);
 		expect(page.missingGlobals).toEqual(['return']);
+	});
+});
+
+describe('/settings/assets/labels', () => {
+	it('answers 403 to an employee, for the load and for the action', async () => {
+		const { employee } = await createWorkspace();
+
+		expect(await statusOf(() => loadLabels(event(employee)))).toBe(403);
+		expect(await statusOf(() => labelActions.save(event(employee, { ownerText: 'Mine' })))).toBe(
+			403
+		);
+	});
+
+	it('saves the owner line for a technician and clears it back to the default', async () => {
+		const { technician } = await createWorkspace();
+		expect(await loadLabels(event(technician))).toMatchObject({ ownerText: null });
+
+		expect(await labelActions.save(event(technician, { ownerText: ' Acme IT ' }))).toEqual({
+			saved: true,
+			ownerText: 'Acme IT'
+		});
+		expect(await loadLabels(event(technician))).toMatchObject({ ownerText: 'Acme IT' });
+
+		await labelActions.save(event(technician, { ownerText: '' }));
+		expect(await loadLabels(event(technician))).toMatchObject({ ownerText: null });
+	});
+
+	it('refuses a line that is too long with the typed text echoed back', async () => {
+		const { technician } = await createWorkspace();
+		const long = 'x'.repeat(61);
+
+		const refused = (await labelActions.save(event(technician, { ownerText: long }))) as {
+			status: number;
+			data: { ownerText: string; error: string };
+		};
+
+		expect(refused.status).toBe(400);
+		expect(refused.data.ownerText).toBe(long);
+		expect(refused.data.error).not.toBe('');
 	});
 });
 

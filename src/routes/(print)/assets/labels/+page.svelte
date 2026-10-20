@@ -113,7 +113,7 @@
 		labels={data.labels}
 		format={data.format}
 		skip={data.skip}
-		productName={data.brand.productName}
+		owner={data.ownerText ?? m.labels_owned_by({ name: data.brand.productName })}
 		markUrl={brandAssetUrl('mark', data.brand)}
 	/>
 {/if}

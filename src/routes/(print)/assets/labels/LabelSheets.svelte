@@ -5,7 +5,6 @@
 		layoutSheets,
 		type LabelFormatKey
 	} from '#lib/domain/label-formats.js';
-	import { m } from '#lib/paraglide/messages.js';
 
 	export interface PrintableLabel {
 		tag: string;
@@ -18,12 +17,13 @@
 		format: LabelFormatKey;
 		/** Empty cells at the start of the first sheet. */
 		skip: number;
-		productName: string;
+		/** The owner line, already resolved: the organisation's text or "Propiedad de {product name}". */
+		owner: string;
 		/** URL of the brand's mark, when it has one. */
 		markUrl: string | null;
 	}
 
-	let { labels, format, skip, productName, markUrl }: Props = $props();
+	let { labels, format, skip, owner, markUrl }: Props = $props();
 
 	const spec = $derived(LABEL_FORMATS[format]);
 	const sheets = $derived(layoutSheets(format, labels, skip));
@@ -69,7 +69,7 @@
 							{#if spec.showName}<p class="name">{cell.name}</p>{/if}
 							<p class="owner">
 								{#if markUrl && spec.showMark}<img class="mark" src={markUrl} alt="" />{/if}
-								<span>{m.labels_owned_by({ name: productName })}</span>
+								<span>{owner}</span>
 							</p>
 						</div>
 					</article>
@@ -159,7 +159,18 @@
 		font-size: 6pt;
 		line-height: 1.2;
 	}
+	/* The organisation writes this line (up to 60 characters): never more than two lines. */
+	.owner span {
+		min-width: 0;
+		overflow-wrap: anywhere;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
 	.mark {
+		flex: none;
 		height: 3.5mm;
 		width: auto;
 		max-width: 6mm;

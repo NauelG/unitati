@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.89.0] - 2026-10-20
+
+### Added
+
+- The owner line on asset labels is configurable. In Settings › Assets › Labels, whoever manages
+  assets can replace "Propiedad de {product name}" with their own text, wording included (one line,
+  up to 60 characters). Leaving it empty goes back to the default. Labels already printed do not
+  change.
+
 ## [0.88.0] - 2026-10-20
 
 ### Added

@@ -9,6 +9,7 @@ import {
 	createOrganisation,
 	createViewer
 } from '#lib/server/assets/testing/fixtures.js';
+import { setLabelOwnerText } from '#lib/server/assets/index.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 import { load } from './+page.server';
 
@@ -16,6 +17,7 @@ interface LoadData {
 	format: string;
 	skip: number;
 	labels: { tag: string; name: string; qrSvg: string }[];
+	ownerText: string | null;
 	missing: string[];
 	origin: string;
 	requestOrigin: string;
@@ -92,6 +94,14 @@ describe('/assets/labels load', () => {
 
 		expect(Object.keys(result.data?.labels[0] ?? {}).sort()).toEqual(['name', 'qrSvg', 'tag']);
 		expect(JSON.stringify(result.data)).not.toContain('SECRET-SERIAL');
+	});
+
+	it('sends the organisation’s owner line, or null for the default', async () => {
+		expect((await run(technician, 'tag=AST-0001')).data?.ownerText).toBeNull();
+
+		await setLabelOwnerText(technician, 'Pertenece a Acme IT');
+
+		expect((await run(technician, 'tag=AST-0001')).data?.ownerText).toBe('Pertenece a Acme IT');
 	});
 
 	it('refuses more than 500 tags and accepts exactly 500', async () => {

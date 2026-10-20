@@ -18,7 +18,7 @@ function draw(format: LabelFormatKey, count: number, skip = 0, markUrl: string |
 		labels: labels(count),
 		format,
 		skip,
-		productName: 'Acme IT',
+		owner: 'Propiedad de Acme IT',
 		markUrl
 	});
 }
