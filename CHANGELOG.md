@@ -5,6 +5,21 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.91.0] - 2026-10-20
+
+### Added
+
+- Waiving a required handover, with a permission and a reason (#277, ADR 0035 decision 8). A new
+  permission `assets.handover.waive`, held by admins only, adds **Dispensar la firma** to the
+  Deliver dialog when one of the ticked assets requires a handover. Choosing it asks for a reason (1
+  to 500 characters); the delivery then records custody and a `waived` `HND-####` handover with the
+  reason, the asset snapshots and who waived it, with no agreement text, no signing link and no
+  mail, and needs no delivery template. `handover.waived` lands on each asset and on the person,
+  with the reason. A waiver without the permission, or on a delivery that requires no handover, is
+  refused and writes nothing. The database enforces that a waived handover has a reason and no
+  token, text or template. The API offers no waive option, and the permission is not an API key
+  scope.
+
 ## [0.90.1] - 2026-10-20
 
 ### Changed
