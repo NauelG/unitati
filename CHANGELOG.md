@@ -5,6 +5,18 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.87.0] - 2026-10-20
+
+### Added
+
+- Printable QR labels for assets (#22, #270). From an asset record, or from up to 500 assets
+  selected in `/assets`, "Imprimir etiqueta(s)" opens a print page with three formats (A4 3 × 8,
+  A4 4 × 10, 62 × 29 mm roll) and a start position for partly used sheets. Every QR points at the
+  installation's public address (`BETTER_AUTH_URL`) and the page warns when it is opened from
+  another one. Labels show the tag and the owner, and the name on the large format; never the
+  serial, custodian or location. Only people who can manage assets can print. Editing a tag
+  reminds you that its printed label has to be reprinted.
+
 ## [0.86.0] - 2026-10-20
 
 ### Added
