@@ -49,7 +49,10 @@ export function optimisticEnhance(
 			// `reset: false`: an optimistic form already shows the submitted
 			// value, so resetting it to whatever it held before submission would
 			// itself be a visible flicker backwards.
-			await update({ reset: false });
+			// `navigate: false`: kit 3 follows a result's `location`, and a form that
+			// posts to another record's action (a state chip in a list) would land on
+			// that record's page. The mirror already shows the value; stay put.
+			await update({ reset: false, navigate: false });
 		};
 	});
 }
