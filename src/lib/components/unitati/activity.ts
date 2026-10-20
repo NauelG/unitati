@@ -25,7 +25,9 @@ function priorityWord(priority: Priority): string {
 export function activitySentence(entry: ActivityEntry): string {
 	switch (entry.verb) {
 		case 'asset.created':
-			return m.activity_asset_created();
+			return entry.payload.via === 'import'
+				? m.activity_asset_created_imported()
+				: m.activity_asset_created();
 
 		case 'custody.assigned':
 			return m.activity_custody_assigned({ personName: entry.payload.toPersonName });

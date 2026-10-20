@@ -5,6 +5,21 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.83.0] - 2026-10-19
+
+### Added
+
+- CSV import of assets (#21, #263). Anyone with `assets.manage` opens "Importar" in the assets
+  list, uploads a CSV (the Unitati template, a Snipe-IT custom report or a Shelf export), maps its
+  columns and the values of the state column, reviews what will be created and imports it, all or
+  nothing. Missing manufacturers, categories, models, locations and custodians are created and
+  listed in the preview (custodians only by someone with `people.manage`). Assets whose tag, or
+  serial when there is no tag, already exist are skipped, so importing the same file twice creates
+  nothing; rows with neither are created again and the preview warns about it. Imported assets get
+  their custody and notes, and their activity says they came from an import. The generated tag
+  sequence moves past the file's explicit `AST-` tags, so registering by hand afterwards never
+  collides (ADR 0034).
+
 ## [0.82.0] - 2026-10-19
 
 ### Added

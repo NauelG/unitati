@@ -55,6 +55,39 @@ bypasses what each domain already enforces and records.
     Excel writes on Windows). A BOM is stripped. The delimiter is `;` if the first line has more of
     them than `,` outside quotes.
 
+## Assets
+
+The assets import (#263) is the second record type on the same engine, with no change to the
+decisions above.
+
+- **Identity, create only.** A tag already in the organisation skips the row. A new tag whose
+  serial belongs to another asset is an error (`serial_taken`). Without a tag, an existing serial
+  skips the row. Without either, the row is created and the preview warns that importing the file
+  again creates it again: there is nothing to recognise it by. Tags and serials compare
+  case-blind, and a tag or serial repeated inside the file is an error on every occurrence after
+  the first.
+- **The tag sequence runs first.** An explicit tag never touches `asset_code_seq`, so before any
+  row is inserted the import moves the sequence past the highest `AST-<n>` in the file
+  (`advanceAssetTagSequence`). Otherwise a row without a tag, inserted before a later row that
+  names `AST-0905`, would draw that very tag from the sequence and collide. `setval` is not
+  transactional: a rolled-back import leaves a gap in the generated tags, nothing worse.
+- **State values are mapped, not guessed.** Every distinct value of the state column maps to one
+  of the four states, prefilled by synonyms (a trailing `(…)` is stripped first, as Snipe-IT
+  writes `Ready to Deploy (deployable)`). A value left unmapped blocks the preview; a column with
+  more than 50 distinct values is refused as probably not a state. An empty cell becomes `in_use`
+  with a custodian and `in_stock` without.
+- **Custodians.** By email: the person must exist and be active; it is created only when the actor
+  holds `people.manage` and the row gives a name. By name alone: exactly one active person, never
+  created. Custody is assigned after the asset is inserted, so the activity reads `asset.created`
+  (`via: 'import'`), `custody.assigned`, `note.added`; no `state.changed` or `location.changed`.
+- **Who may create what.** The assets import is gated by `assets.manage`, and so are the
+  manufacturers, categories, models and locations it creates, as in `/settings/assets`. Only the
+  people it creates need `people.manage` (decision 6 applies to them alone); without it a custodian
+  that does not exist is an error, not a creation.
+- **Reads go through the executor too.** The catalogue and asset writes check their model,
+  manufacturer, category and location inside the executor they are given, so what the import
+  created earlier in its transaction is visible to them.
+
 ## Consequences
 
 - A new importable record type is a field list, a planner and a commit built from the same

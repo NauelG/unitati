@@ -69,7 +69,8 @@ const nullableNumber = z.number().nullable();
 export const PAYLOAD_SCHEMAS = {
 	'asset.created': z.object({
 		assetTag: presentName,
-		name: presentName
+		name: presentName,
+		via: z.literal('import').optional()
 	}),
 
 	'custody.assigned': z.object({

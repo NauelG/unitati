@@ -249,6 +249,17 @@ describe('activitySentence for linked assets', () => {
 	});
 });
 
+describe('activitySentence for imported assets', () => {
+	it('says an asset was registered by an import', () => {
+		expect(
+			activitySentence({
+				verb: 'asset.created',
+				payload: { assetTag: 'AST-0001', name: 'MacBook Pro', via: 'import' }
+			})
+		).toBe('Registró el activo mediante una importación');
+	});
+});
+
 describe('activitySentence for directory events', () => {
 	const DEPARTMENT = '3f1e0c9a-0000-4000-8000-000000000003';
 

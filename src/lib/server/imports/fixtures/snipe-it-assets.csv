@@ -1,0 +1,4 @@
+Company,Asset Name,Asset Tag,Asset Model,Model No.,Category,Manufacturer,Serial Number,Purchase Date,Purchase Cost,Order Number,Supplier,Location,Default Location,Checked Out To,Type,Username,Email,Employee No.,Department,Status,Checkout Date,Notes
+Acme,Ada laptop,AST-0900,ThinkPad T14,T14G3,Laptops,Lenovo,SN-100,2024-01-10,1200,PO-1,Dell,Barcelona office,Barcelona office,Ada Lovelace,user,ada,ada@example.com,E1,Engineering,Ready to Deploy (deployable),2024-02-01,Bought in January
+Acme,Spare monitor,,UltraSharp U2723QE,U2723,Monitors,Dell,SN-200,,,,,GRO,,,,,,,,Pending,,
+Acme,Old printer,AST-0902,LaserJet Pro M404,M404,Printers,HP,,,,,,,,,,,,,,Archived,,

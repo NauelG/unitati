@@ -1,8 +1,9 @@
 import { and, asc, eq } from 'drizzle-orm';
-import { getDb } from '../db';
+import { getDb, type Executor } from '../db';
 import { constraintViolation, uniqueConstraintName } from '../db/errors';
 import type { SessionUser } from '../auth/guards';
 import { failure, success, type Outcome } from '../shared/outcome';
+import type { WriteOptions } from '../shared/write-options';
 import { assetModels, categories, manufacturers } from './schema';
 import type { AssetModelInput, CategoryInput, ManufacturerInput } from './validation';
 
@@ -28,11 +29,17 @@ import type { AssetModelInput, CategoryInput, ManufacturerInput } from './valida
  * would trade real duplication for a type parameter nobody can read.
  */
 async function catalogued<Row>(
-	insert: () => Promise<Row[]>
+	executor: Executor,
+	insert: (tx: Executor) => Promise<Row[]>
 ): Promise<Outcome<Row, CatalogueFailure>> {
 	try {
-		const [row] = await insert();
-		return success(row);
+		// A transaction of its own (a savepoint under an import's): the unique
+		// violation is caught *outside* it, so only the insert is rolled back and
+		// the caller's transaction stays usable.
+		return await executor.transaction(async (tx) => {
+			const [row] = await insert(tx);
+			return success(row);
+		});
 	} catch (error) {
 		if (uniqueConstraintName(error) !== null) return failure('duplicate_name');
 		throw error;
@@ -89,9 +96,10 @@ async function removed(
 
 async function modelReferences(
 	organisationId: string,
-	input: AssetModelInput
+	input: AssetModelInput,
+	executor: Executor = getDb()
 ): Promise<'manufacturer_not_found' | 'category_not_found' | null> {
-	const [manufacturer] = await getDb()
+	const [manufacturer] = await executor
 		.select({ id: manufacturers.id })
 		.from(manufacturers)
 		.where(
@@ -103,7 +111,7 @@ async function modelReferences(
 		.limit(1);
 	if (!manufacturer) return 'manufacturer_not_found';
 
-	const [category] = await getDb()
+	const [category] = await executor
 		.select({ id: categories.id })
 		.from(categories)
 		.where(and(eq(categories.id, input.categoryId), eq(categories.organisationId, organisationId)))
@@ -113,10 +121,11 @@ async function modelReferences(
 
 export function createManufacturer(
 	actor: SessionUser,
-	input: ManufacturerInput
+	input: ManufacturerInput,
+	options: WriteOptions = {}
 ): Promise<Outcome<{ id: string }, CatalogueFailure>> {
-	return catalogued(() =>
-		getDb()
+	return catalogued(options.executor ?? getDb(), (tx) =>
+		tx
 			.insert(manufacturers)
 			.values({ ...input, organisationId: actor.organisationId })
 			.returning({ id: manufacturers.id })
@@ -125,10 +134,11 @@ export function createManufacturer(
 
 export function createCategory(
 	actor: SessionUser,
-	input: CategoryInput
+	input: CategoryInput,
+	options: WriteOptions = {}
 ): Promise<Outcome<{ id: string }, CatalogueFailure>> {
-	return catalogued(() =>
-		getDb()
+	return catalogued(options.executor ?? getDb(), (tx) =>
+		tx
 			.insert(categories)
 			.values({ ...input, organisationId: actor.organisationId })
 			.returning({ id: categories.id })
@@ -137,13 +147,15 @@ export function createCategory(
 
 export async function createAssetModel(
 	actor: SessionUser,
-	input: AssetModelInput
+	input: AssetModelInput,
+	options: WriteOptions = {}
 ): Promise<Outcome<{ id: string }, AssetModelFailure>> {
-	const missing = await modelReferences(actor.organisationId, input);
+	const executor = options.executor ?? getDb();
+	const missing = await modelReferences(actor.organisationId, input, executor);
 	if (missing) return failure(missing);
 
-	return catalogued(() =>
-		getDb()
+	return catalogued(executor, (tx) =>
+		tx
 			.insert(assetModels)
 			.values({ ...input, organisationId: actor.organisationId })
 			.returning({ id: assetModels.id })
@@ -251,16 +263,22 @@ export function deleteAssetModel(
  * `directory.listPeople`: a catalogue is not redacted, so there is nothing for
  * a viewer's role to decide and nothing but the tenancy scope to inject.
  */
-export function listManufacturers(organisationId: string): Promise<CatalogueEntry[]> {
-	return getDb()
+export function listManufacturers(
+	organisationId: string,
+	executor: Executor = getDb()
+): Promise<CatalogueEntry[]> {
+	return executor
 		.select({ id: manufacturers.id, name: manufacturers.name })
 		.from(manufacturers)
 		.where(eq(manufacturers.organisationId, organisationId))
 		.orderBy(asc(manufacturers.name));
 }
 
-export function listCategories(organisationId: string): Promise<CatalogueEntry[]> {
-	return getDb()
+export function listCategories(
+	organisationId: string,
+	executor: Executor = getDb()
+): Promise<CatalogueEntry[]> {
+	return executor
 		.select({ id: categories.id, name: categories.name })
 		.from(categories)
 		.where(eq(categories.organisationId, organisationId))
@@ -274,8 +292,11 @@ export interface AssetModelEntry extends CatalogueEntry {
 	categoryName: string;
 }
 
-export function listAssetModels(organisationId: string): Promise<AssetModelEntry[]> {
-	return getDb()
+export function listAssetModels(
+	organisationId: string,
+	executor: Executor = getDb()
+): Promise<AssetModelEntry[]> {
+	return executor
 		.select({
 			id: assetModels.id,
 			name: assetModels.name,
