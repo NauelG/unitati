@@ -13,6 +13,8 @@ minor bumps carry features and patch bumps carry fixes.
   clicking it opened the task instead, and the native select looked out of place. The state is now
   an editable chip in the State column (the same one the task page uses) and the actions column
   keeps only "Mover a proyecto"; both sit above the row link and take the click.
+- Optimistic forms that post to another record's action (the state chip in the task list) no longer
+  navigate to that record after saving; they stay on the page.
 
 ## [0.83.0] - 2026-10-19
 
