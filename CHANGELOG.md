@@ -5,6 +5,21 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.86.0] - 2026-10-20
+
+### Added
+
+- Attach files to projects and tasks (#285): list, download and remove them from the project and
+  task pages. Same limits as ticket attachments (5 files per submission, 10 MiB each),
+  `projects.manage` to add or remove, read access inherited from the project or task, read-only on
+  an archived project. Each add and remove appears in the timeline with the file name. Each domain
+  keeps its own attachments table and shares only the byte store (ADR 0039).
+
+### Changed
+
+- The image sets `BODY_SIZE_LIMIT=56M` (was `6M`). With `6M`, a single 10 MiB file never reached the
+  server, ticket attachments included: the body was cut before any code read it.
+
 ## [0.85.0] - 2026-10-20
 
 ### Added
