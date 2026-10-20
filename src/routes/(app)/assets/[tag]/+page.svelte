@@ -480,7 +480,7 @@
 		{/snippet}
 	</Sheet>
 
-	{#if asset.visibility === 'full' && data.canCheckout}
+	{#if asset.visibility === 'full' && data.canCheckout && deliverOpen}
 		<DeliverDialog
 			open={deliverOpen}
 			onOpenChange={(next) => (deliverOpen = next)}
