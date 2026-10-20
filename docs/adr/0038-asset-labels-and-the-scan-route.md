@@ -48,7 +48,9 @@ Labels are printed from an HTML page, `/assets/labels` (#270).
 margin: 0 }`) and the browser's print dialog does the rest. There is no PDF library to
    maintain, the preview on screen is the document, and text prints sharp because it is real text.
    The QR is the only generated artefact: server-side SVG from `qrcode`, error correction M,
-   drawn without a margin and padded in CSS so the 4-module quiet zone is exact.
+   drawn without a margin and padded in CSS so the 4-module quiet zone is exact. The sheet itself
+   is always white paper with black ink, whatever the theme or brand colour: a scanner needs the
+   contrast, and it is the one place the design tokens deliberately do not apply.
 2. **Three fixed formats**, defined once in `src/lib/domain/label-formats.ts`: `a4-3x8`
    (24 labels of 70 × 37 mm, the default), `a4-4x10` (40 labels of 52.5 × 29.7 mm) and
    `roll-62x29` (one label per page). A template editor would be a second product; the formats

@@ -10,7 +10,7 @@ import type { PageServerLoad } from './$types';
 /** Error correction M: a scuffed or creased sticker still scans, at a size that stays printable. */
 const QR_OPTIONS = { errorCorrectionLevel: 'M', margin: 0 } as const;
 
-/** Drawn with `margin: 0`: the page pads the 4-module quiet zone in CSS (see `qrModules`). */
+/** Drawn with `margin: 0`: the sheet pads the 4-module quiet zone in CSS. */
 function qrFor(text: string) {
 	return QRCode.toString(text, { ...QR_OPTIONS, type: 'svg' });
 }
@@ -57,15 +57,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		requested,
 		origin,
 		requestOrigin: url.origin,
-		originMismatch: origin !== url.origin,
-		// The widest QR of the batch: the page sizes the quiet zone from it, so a
-		// narrower code only ever gets more margin, never less.
-		qrModules: labels.length > 0 ? Math.max(...labels.map((label) => moduleCount(label.qrSvg))) : 0
+		originMismatch: origin !== url.origin
 	};
 };
-
-/** The side of a QR in modules, read from the `viewBox` the library writes. */
-function moduleCount(svg: string): number {
-	const match = /viewBox="0 0 (\d+) \d+"/.exec(svg);
-	return match ? Number(match[1]) : 0;
-}

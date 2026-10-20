@@ -21,16 +21,22 @@
 		productName: string;
 		/** URL of the brand's mark, when it has one. */
 		markUrl: string | null;
-		/** Width of the widest QR in modules, to size the quiet zone. */
-		qrModules: number;
 	}
 
-	let { labels, format, skip, productName, markUrl, qrModules }: Props = $props();
+	let { labels, format, skip, productName, markUrl }: Props = $props();
 
 	const spec = $derived(LABEL_FORMATS[format]);
 	const sheets = $derived(layoutSheets(format, labels, skip));
-	// The 4-module quiet zone, as a share of the QR box: 4 / (modules + 2 × 4).
-	const quiet = $derived(qrModules > 0 ? (4 / (qrModules + 8)) * 100 : 0);
+
+	/**
+	 * The 4-module quiet zone as a share of the QR box (`--qr`): 4 / (modules + 2 × 4).
+	 * It is a ratio of `--qr`, not a CSS percentage: a percentage padding resolves against
+	 * the parent's width, which is the whole label.
+	 */
+	function quietRatio(svg: string): number {
+		const modules = Number(/viewBox="0 0 (\d+) \d+"/.exec(svg)?.[1] ?? 0);
+		return modules > 0 ? 4 / (modules + 8) : 0;
+	}
 	// On screen only: a roll label is tiny and a sheet is taller than a window.
 	const zoom = $derived(spec.sheet ? 0.9 : 4);
 </script>
@@ -54,7 +60,7 @@
 			{#each cells as cell, cellIndex (cellIndex)}
 				{#if cell}
 					<article class="label" data-label={cell.tag}>
-						<div class="qr" style:padding="{quiet}%" aria-hidden="true">
+						<div class="qr" style:--quiet={quietRatio(cell.qrSvg)} aria-hidden="true">
 							<!-- eslint-disable-next-line svelte/no-at-html-tags -- SVG written by the qrcode library from a URL we built -->
 							{@html cell.qrSvg}
 						</div>
@@ -112,6 +118,7 @@
 		flex: none;
 		width: var(--qr);
 		height: var(--qr);
+		padding: calc(var(--qr) * var(--quiet, 0));
 		background: #fff;
 	}
 	.qr :global(svg) {
@@ -169,11 +176,11 @@
 		}
 		.sheet {
 			zoom: var(--zoom);
-			border: 1px solid #d4d4d8;
-			box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+			border: 1px solid var(--border);
+			box-shadow: var(--shadow-sm, 0 1px 4px rgb(0 0 0 / 0.12));
 		}
 		.label {
-			outline: 1px dashed #e4e4e7;
+			outline: 1px dashed var(--border);
 			outline-offset: -1px;
 		}
 	}

@@ -19,12 +19,18 @@ function draw(format: LabelFormatKey, count: number, skip = 0, markUrl: string |
 		format,
 		skip,
 		productName: 'Acme IT',
-		markUrl,
-		qrModules: 29
+		markUrl
 	});
 }
 
 describe('LabelSheets', () => {
+	it('pads the QR by 4 modules, as a share of the QR box', () => {
+		const { container } = draw('a4-3x8', 1);
+		const qr = container.querySelector<HTMLElement>('.qr');
+		// 29 modules + 2 × 4 quiet modules => 4 / 37.
+		expect(Number(qr?.style.getPropertyValue('--quiet'))).toBeCloseTo(4 / 37, 5);
+	});
+
 	it('starts the first sheet at the chosen cell and spills onto a second sheet', () => {
 		const { container } = draw('a4-3x8', 30, 5);
 

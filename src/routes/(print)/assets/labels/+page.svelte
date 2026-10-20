@@ -62,7 +62,7 @@
 </svelte:head>
 
 <div
-	class="toolbar flex flex-wrap items-end gap-4 border-b border-zinc-200 bg-white p-4 print:hidden"
+	class="toolbar flex flex-wrap items-end gap-4 border-b border-[var(--border)] bg-[var(--surface-1)] p-4 print:hidden"
 >
 	<SelectField
 		label={m.labels_format()}
@@ -89,7 +89,7 @@
 	<Button type="button" onclick={() => window.print()}>{m.labels_print()}</Button>
 	<Button href={backHref} variant="ghost">{m.labels_back()}</Button>
 
-	<p class="w-full text-sm text-zinc-600" data-origin>
+	<p class="w-full text-sm text-[var(--ink-muted)]" data-origin>
 		{m.labels_points_to({ address: data.origin })}
 	</p>
 
@@ -115,6 +115,5 @@
 		skip={data.skip}
 		productName={data.brand.productName}
 		markUrl={brandAssetUrl('mark', data.brand)}
-		qrModules={data.qrModules}
 	/>
 {/if}
