@@ -369,7 +369,7 @@
 	"signing_confirm_delivery": "He leído el acuerdo y confirmo que he recibido los equipos de la lista.",
 	"signing_confirm_return": "He leído el acuerdo y confirmo que he devuelto los equipos de la lista.",
 	"signing_accept_submit": "Aceptar y firmar",
-	"signing_reject_toggle": "¿Algo no cuadra? Rechazar la entrega",
+	"signing_reject_toggle": "Información incorrecta: rechazar la entrega",
 	"signing_reject_reason": "Motivo del rechazo",
 	"signing_reject_hint": "Explica qué no coincide, por ejemplo un equipo que no has recibido.",
 	"signing_reject_submit": "Rechazar la entrega",
