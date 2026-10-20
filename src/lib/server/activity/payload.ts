@@ -60,6 +60,15 @@ const handoverAsset = z.object({
 	model: presentName
 });
 
+/** A handover operation: which one, for whom, and every asset it lists. */
+const handoverOperation = z.object({
+	handoverId: z.uuid(),
+	code: presentName,
+	personId: z.uuid(),
+	personName: presentName,
+	assets: z.array(handoverAsset)
+});
+
 /** A location as it read when an entry was written: its id for linking, its path as the fact. */
 const locationRef = z.object({ id: z.uuid(), path: presentName });
 
@@ -97,23 +106,10 @@ export const PAYLOAD_SCHEMAS = {
 
 	// One entry on every asset of the operation and one on the person. The assets
 	// are snapshots (ADR 0035, decision 6); the signing token never appears here.
-	'handover.issued': z.object({
-		handoverId: z.uuid(),
-		code: presentName,
-		personId: z.uuid(),
-		personName: presentName,
-		assets: z.array(handoverAsset)
-	}),
+	'handover.issued': handoverOperation,
 
 	// The same shape, plus why nobody was asked to sign (ADR 0035, decision 8).
-	'handover.waived': z.object({
-		handoverId: z.uuid(),
-		code: presentName,
-		personId: z.uuid(),
-		personName: presentName,
-		reason: presentName,
-		assets: z.array(handoverAsset)
-	}),
+	'handover.waived': handoverOperation.extend({ reason: presentName }),
 
 	// The person's decision, on every asset of the handover and on the person. The
 	// actor is the person themselves: they decided through the link, not a session.

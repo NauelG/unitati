@@ -381,6 +381,7 @@ describe('the handovers table refuses', () => {
 		expect(await violation(waivedRow({ waiveReason: null }))).toMatchObject(WAIVED);
 		expect(await violation(waivedRow({ tokenHash: 'abc' }))).toMatchObject(WAIVED);
 		expect(await violation(waivedRow({ bodySnapshot: 'text' }))).toMatchObject(WAIVED);
+		expect(await violation(waivedRow({ expiresAt: new Date() }))).toMatchObject(WAIVED);
 		// The well-formed row is accepted, so the three refusals are about what they changed.
 		await expect(waivedRow({})).resolves.toBeDefined();
 	});

@@ -76,15 +76,6 @@ export type DeliveredHandover =
 
 const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' });
 
-/**
- * Who may waive. A service account never does: the API offers no waive option
- * (#277), and a scoped key cannot hold the permission anyway, but the domain
- * says so itself rather than relying on the endpoint.
- */
-function mayWaive(actor: SessionUser): boolean {
-	return !actor.serviceAccountId && can(actor, 'assets.handover.waive');
-}
-
 export async function deliver(
 	actor: SessionUser,
 	request: DeliverRequest,
@@ -99,7 +90,9 @@ export async function deliver(
 
 	let waiveReason: string | null = null;
 	if (request.waive) {
-		if (!mayWaive(actor)) return failure('waive_forbidden');
+		// Admins only. A service account never qualifies: it cannot have the admin
+		// role (`service_accounts_not_admin`), and the API offers no waive option.
+		if (!can(actor, 'assets.handover.waive')) return failure('waive_forbidden');
 		waiveReason = request.waive.reason.trim();
 		if (waiveReason.length === 0 || waiveReason.length > WAIVE_REASON_MAX) {
 			return failure('invalid_waive_reason');
@@ -197,7 +190,7 @@ export async function deliver(
 
 		if (!required) return success({ handover: null, mail: null });
 
-		const common = {
+		const handoverBase = {
 			organisationId: actor.organisationId,
 			direction: 'delivery' as const,
 			personId: person.id,
@@ -209,7 +202,7 @@ export async function deliver(
 		};
 
 		let pending: { token: string; expiresAt: Date; organisationName: string } | null = null;
-		let row: { id: string; code: string };
+		let handover: { id: string; code: string };
 		if (issuing) {
 			const rendered = renderHandoverTemplate(issuing.body, {
 				personName: person.fullName,
@@ -219,10 +212,10 @@ export async function deliver(
 			const token = generateHandoverToken();
 			const expiresAt = new Date(now.getTime() + issuing.linkValidDays * 24 * 60 * 60 * 1000);
 			pending = { token, expiresAt, organisationName: issuing.organisationName };
-			[row] = await tx
+			[handover] = await tx
 				.insert(handovers)
 				.values({
-					...common,
+					...handoverBase,
 					status: 'pending',
 					templateVersionId: issuing.templateVersionId,
 					bodySnapshot: rendered.text,
@@ -233,9 +226,9 @@ export async function deliver(
 				.returning({ id: handovers.id, code: handovers.code });
 		} else {
 			// No token, no text, no template, no mail: the reason is the record.
-			[row] = await tx
+			[handover] = await tx
 				.insert(handovers)
-				.values({ ...common, status: 'waived', waiveReason })
+				.values({ ...handoverBase, status: 'waived', waiveReason })
 				.returning({ id: handovers.id, code: handovers.code });
 		}
 
@@ -248,7 +241,7 @@ export async function deliver(
 		}));
 		await tx.insert(handoverAssets).values(
 			snapshots.map((snapshot) => ({
-				handoverId: row.id,
+				handoverId: handover.id,
 				assetId: snapshot.assetId,
 				assetTagSnapshot: snapshot.assetTag,
 				assetNameSnapshot: snapshot.assetName,
@@ -258,8 +251,8 @@ export async function deliver(
 		);
 
 		const payload = {
-			handoverId: row.id,
-			code: row.code,
+			handoverId: handover.id,
+			code: handover.code,
 			personId: person.id,
 			personName: person.fullName,
 			assets: snapshots
@@ -279,7 +272,7 @@ export async function deliver(
 
 		if (!pending) {
 			return success({
-				handover: { status: 'waived' as const, id: row.id, code: row.code },
+				handover: { status: 'waived' as const, id: handover.id, code: handover.code },
 				mail: null
 			});
 		}
@@ -288,8 +281,8 @@ export async function deliver(
 		return success({
 			handover: {
 				status: 'pending' as const,
-				id: row.id,
-				code: row.code,
+				id: handover.id,
+				code: handover.code,
 				token: pending.token,
 				link,
 				expiresAt: pending.expiresAt
@@ -299,7 +292,7 @@ export async function deliver(
 				...handoverLinkMail({
 					personName: person.fullName,
 					organisationName: pending.organisationName,
-					code: row.code,
+					code: handover.code,
 					link,
 					expiresOn: dateFormat.format(pending.expiresAt)
 				})

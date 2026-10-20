@@ -19,8 +19,8 @@
 		currentId: string;
 		/** Holds `assets.handover.waive` (ADR 0035, decision 8): only then is waiving offered. */
 		canWaive?: boolean;
-		/** The longest waive reason the server accepts. */
-		waiveReasonMax?: number;
+		/** The longest waive reason the server accepts; from the server, so the two cannot drift. */
+		waiveReasonMax: number;
 		error?: string;
 	}
 
@@ -31,7 +31,7 @@
 		assets,
 		currentId,
 		canWaive = false,
-		waiveReasonMax = 500,
+		waiveReasonMax,
 		error
 	}: Props = $props();
 

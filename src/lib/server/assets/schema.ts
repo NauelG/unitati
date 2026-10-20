@@ -427,7 +427,9 @@ export const handovers = pgTable(
 			sql`${table.status} <> 'waived' or (
 				${table.waiveReason} is not null
 				and ${table.tokenHash} is null
+				and ${table.expiresAt} is null
 				and ${table.bodySnapshot} is null
+				and ${table.bodySha256} is null
 				and ${table.templateVersionId} is null
 			)`
 		),

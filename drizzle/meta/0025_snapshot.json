@@ -1,5 +1,5 @@
 {
-  "id": "9b0f0f38-a669-4ac6-9534-03ddf646ea75",
+  "id": "278c34c8-9cc1-47ce-908f-37bbff940646",
   "prevId": "8bb39983-585d-4800-8d3b-42a3fd1bb12a",
   "version": "7",
   "dialect": "postgresql",
@@ -2274,7 +2274,7 @@
         },
         "handovers_waived_has_reason_and_no_link": {
           "name": "handovers_waived_has_reason_and_no_link",
-          "value": "\"handovers\".\"status\" <> 'waived' or (\n\t\t\t\t\"handovers\".\"waive_reason\" is not null\n\t\t\t\tand \"handovers\".\"token_hash\" is null\n\t\t\t\tand \"handovers\".\"body_snapshot\" is null\n\t\t\t\tand \"handovers\".\"template_version_id\" is null\n\t\t\t)"
+          "value": "\"handovers\".\"status\" <> 'waived' or (\n\t\t\t\t\"handovers\".\"waive_reason\" is not null\n\t\t\t\tand \"handovers\".\"token_hash\" is null\n\t\t\t\tand \"handovers\".\"expires_at\" is null\n\t\t\t\tand \"handovers\".\"body_snapshot\" is null\n\t\t\t\tand \"handovers\".\"body_sha256\" is null\n\t\t\t\tand \"handovers\".\"template_version_id\" is null\n\t\t\t)"
         }
       },
       "isRLSEnabled": false
