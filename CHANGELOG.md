@@ -5,6 +5,14 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.84.1] - 2026-10-20
+
+### Fixed
+
+- Choosing a state from the chip in the task list opened the task once it was saved. Optimistic
+  forms that post to another record's action now stay on the page after saving instead of
+  following the result's location.
+
 ## [0.84.0] - 2026-10-20
 
 ### Added
