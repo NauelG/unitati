@@ -11,6 +11,7 @@ import { failure, success, type Outcome } from '../shared/outcome';
 import type { WriteOptions } from '../shared/write-options';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
 import { assetModels, assets, categories, manufacturers } from './schema';
+import { recordCustodyAssigned } from './custody';
 import { requireAssetScope } from './scope';
 import { viewAsset, type AssetView } from './view';
 import { registerAssetInput, updateAssetDetailsInput } from './validation';
@@ -55,6 +56,8 @@ export type {
 	RemoveHandoverOverrideFailure,
 	SaveHandoverTemplateFailure
 } from './handover-templates';
+export { deliver, listDeliverableAssets } from './deliver';
+export type { DeliverableAsset, DeliverDeps, DeliverFailure, DeliveredHandover } from './deliver';
 export { renderHandoverTemplate, resolveHandoverTemplate } from './handover-template';
 export type { HandoverDirection } from './handover-template';
 
@@ -681,8 +684,11 @@ async function lockedAsset(tx: Transaction, actor: SessionUser, assetId: string)
 export type AssignCustodyFailure = 'asset_not_found' | 'person_not_found' | 'already_in_custody';
 
 /**
- * Hands an asset to a person. Custody is a technician recording a fact, not a
- * workflow with a signature — the request-and-acceptance flow is #25.
+ * The low-level recorder of custody: it sets the holder and writes
+ * `custody.assigned`, and nothing else. It never issues a handover, which is why
+ * only callers that record historical facts use it directly: CSV import and the
+ * seed. Everything a person does goes through `deliver`, so the rule that a
+ * category can require a signature cannot be bypassed (ADR 0035).
  *
  * An asset somebody already holds is refused rather than silently reassigned:
  * the handover would leave `custody.assigned` with no `custody.returned` before
@@ -712,19 +718,7 @@ export async function assignCustody(
 
 		if (!person) return failure('person_not_found');
 
-		await tx
-			.update(assets)
-			.set({ custodianPersonId: person.id, updatedAt: new Date() })
-			.where(eq(assets.id, asset.id));
-
-		await recordActivity(tx, {
-			organisationId: actor.organisationId,
-			...actorColumns(actor),
-			target: { assetId: asset.id },
-			verb: 'custody.assigned',
-			payload: { toPersonId: person.id, toPersonName: person.fullName }
-		});
-
+		await recordCustodyAssigned(tx, actor, asset.id, person);
 		return success(undefined);
 	});
 }

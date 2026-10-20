@@ -1,4 +1,7 @@
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { ensureDefaultHandoverTemplates } from '../assets';
+import { categories, handovers } from '../assets/schema';
 import {
 	createAsset,
 	createCatalogue,
@@ -366,6 +369,7 @@ describe('custody, state, location and notes', () => {
 		const returnedTwice = await send('DELETE', path, key);
 
 		expect(assigned.response.status).toBe(200);
+		expect(assigned.body.handoverCode).toBeNull();
 		expect(assigned.body.data.custodian).toEqual({ id: ada.id, name: 'Ada Lovelace' });
 		expect(again.response.status).toBe(409);
 		expect(again.body.error.code).toBe('already_in_custody');
@@ -373,6 +377,31 @@ describe('custody, state, location and notes', () => {
 		expect(returned.body.data.custodian).toBeNull();
 		expect(returnedTwice.response.status).toBe(409);
 		expect(returnedTwice.body.error.code).toBe('not_in_custody');
+	});
+
+	it('issues a handover for an asset whose category requires one, and returns its code', async () => {
+		const { organisation, technician, catalogue } = await workspace();
+		await ensureDefaultHandoverTemplates(getDb(), organisation.id);
+		await getDb()
+			.update(categories)
+			.set({ requiresHandover: true })
+			.where(eq(categories.id, catalogue.categoryId));
+		const asset = await createAsset(organisation.id, catalogue.modelId);
+		const ada = await createPerson(organisation.id, 'Ada Lovelace');
+		const key = await keyFor(technician, ['assets.checkout']);
+
+		const { response, body } = await send('POST', `/api/v1/assets/${asset.assetTag}/custody`, key, {
+			personId: ada.id
+		});
+
+		expect(response.status).toBe(200);
+		expect(body.handoverCode).toMatch(/^HND-\d{4}$/);
+		expect(JSON.stringify(body)).not.toContain('/handover/');
+		const [row] = await getDb().select().from(handovers);
+		expect(row.code).toBe(body.handoverCode);
+		// A personal key acts as its owner; only a service-account key is the issuer itself.
+		expect(row.issuedByPersonId).toBe(technician.personId);
+		expect(row.issuedByServiceAccountId).toBeNull();
 	});
 
 	it('answers 400 on personId for a person who does not exist', async () => {

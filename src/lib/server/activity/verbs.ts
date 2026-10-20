@@ -16,6 +16,7 @@ export const ACTIVITY_VERBS = [
 	'asset.created',
 	'custody.assigned',
 	'custody.returned',
+	'handover.issued',
 	'state.changed',
 	'location.changed',
 	'note.added',

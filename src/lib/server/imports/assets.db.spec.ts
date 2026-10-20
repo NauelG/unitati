@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { AssetsMapping } from '#lib/domain/imports.js';
 import type { AssetState } from '#lib/domain/status.js';
 import { activity } from '../activity/schema';
+import { handovers } from '../assets/schema';
 import { addNote, assetModels, assets, categories, manufacturers, registerAsset } from '../assets';
 import { createCatalogue, createOrganisation, createViewer } from '../assets/testing/fixtures';
 import { getDb } from '../db';
@@ -130,7 +131,10 @@ describe('the assets import', () => {
 
 	it('writes asset.created via import, then custody and notes, and no state or location events', async () => {
 		const { actor, data, mapping } = await bigScenario();
+		// Even if every category already required a signature: an import records history.
+		await getDb().update(categories).set({ requiresHandover: true });
 		await commitAssetsImport(actor, data, mapping);
+		expect(await getDb().select().from(handovers)).toHaveLength(0);
 
 		const byName = async (name: string) =>
 			(

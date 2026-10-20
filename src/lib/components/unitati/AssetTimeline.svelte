@@ -1,4 +1,5 @@
 <script lang="ts" module>
+	import FileSignature from '@lucide/svelte/icons/file-signature';
 	import Archive from '@lucide/svelte/icons/archive';
 	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
@@ -69,6 +70,7 @@
 		'asset.created': PackagePlus,
 		'custody.assigned': UserCheck,
 		'custody.returned': Undo2,
+		'handover.issued': FileSignature,
 		'state.changed': RefreshCw,
 		'location.changed': MapPin,
 		'note.added': MessageSquare,
