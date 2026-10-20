@@ -5,6 +5,14 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.89.1] - 2026-10-20
+
+### Fixed
+
+- The delivery dialog on an asset no longer drops back to its form right after delivering. The page
+  reload that follows a delivery reset the dialog, so the handover code and the signing link, shown
+  once, vanished and a second submit failed with "Revisa el valor elegido" (#274).
+
 ## [0.89.0] - 2026-10-20
 
 ### Added

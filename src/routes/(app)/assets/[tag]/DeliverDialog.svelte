@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { applyAction, enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import Button from '#lib/components/unitati/Button.svelte';
@@ -20,21 +21,14 @@
 
 	let { open, onOpenChange, people, assets, currentId, error }: Props = $props();
 
+	// No reset effect: the page mounts this dialog afresh on every open, and an
+	// effect here would re-run when a reload swaps `currentId`'s source object,
+	// wiping the success view (the link is shown once).
 	let personId = $state<string | null>(null);
-	let selected = $state<string[]>([]);
+	let selected = $state<string[]>([untrack(() => currentId)]);
 	let pending = $state(false);
 	let done = $state<{ code: string | null; link: string | null } | null>(null);
 	let copied = $state(false);
-
-	// A fresh dialog each time it opens, with the current asset ticked.
-	$effect(() => {
-		if (open) {
-			personId = null;
-			selected = [currentId];
-			done = null;
-			copied = false;
-		}
-	});
 
 	const issuing = $derived(assets.some((a) => selected.includes(a.id) && a.requiresHandover));
 
