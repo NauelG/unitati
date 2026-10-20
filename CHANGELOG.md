@@ -19,6 +19,7 @@ minor bumps carry features and patch bumps carry fixes.
   direction has none and can write it. Resolving the template for a set of categories and rendering
   it (`{{person.name}}`, `{{organisation.name}}`, `{{date}}`, with its sha256) are pure functions,
   ready for issuing handovers in the next slice (ADR 0035).
+
 ## [0.84.2] - 2026-10-20
 
 ### Changed
@@ -54,7 +55,7 @@ minor bumps carry features and patch bumps carry fixes.
   clicking it opened the task instead, and the native select looked out of place. The state is now
   an editable chip in the State column (the same one the task page uses) and the actions column
   keeps only "Mover a proyecto"; both sit above the row link and take the click.
-||||||| parent of 432bc81 (feat(assets): handover agreement templates and requires-handover flag)
+  ||||||| parent of 432bc81 (feat(assets): handover agreement templates and requires-handover flag)
 
 ## [0.83.0] - 2026-10-19
 
