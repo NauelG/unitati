@@ -51,6 +51,15 @@ const linkedProject = z.object({
 	projectName: presentName
 });
 
+/** An asset as a handover lists it, frozen at the operation (ADR 0035, decision 6). */
+const handoverAsset = z.object({
+	assetId: z.uuid(),
+	assetTag: presentName,
+	assetName: presentName,
+	serial: z.string().nullable(),
+	model: presentName
+});
+
 /** A location as it read when an entry was written: its id for linking, its path as the fact. */
 const locationRef = z.object({ id: z.uuid(), path: presentName });
 
@@ -93,15 +102,17 @@ export const PAYLOAD_SCHEMAS = {
 		code: presentName,
 		personId: z.uuid(),
 		personName: presentName,
-		assets: z.array(
-			z.object({
-				assetId: z.uuid(),
-				assetTag: presentName,
-				assetName: presentName,
-				serial: z.string().nullable(),
-				model: presentName
-			})
-		)
+		assets: z.array(handoverAsset)
+	}),
+
+	// The same shape, plus why nobody was asked to sign (ADR 0035, decision 8).
+	'handover.waived': z.object({
+		handoverId: z.uuid(),
+		code: presentName,
+		personId: z.uuid(),
+		personName: presentName,
+		reason: presentName,
+		assets: z.array(handoverAsset)
 	}),
 
 	// The person's decision, on every asset of the handover and on the person. The

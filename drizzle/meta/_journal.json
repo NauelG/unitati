@@ -176,6 +176,13 @@
       "when": 1792498919999,
       "tag": "0024_handover_decisions",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792500107001,
+      "tag": "0025_handover_waiver",
+      "breakpoints": true
     }
   ]
 }

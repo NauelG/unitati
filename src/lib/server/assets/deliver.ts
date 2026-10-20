@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { can } from '../access/permissions';
 import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Executor } from '../db';
@@ -26,7 +27,8 @@ import {
  *
  * Custody is recorded at once, for every asset, or for none. When any asset's
  * category requires a handover, the same transaction also issues a pending one
- * listing all of them, with the rendered agreement and a single-use token.
+ * listing all of them, with the rendered agreement and a single-use token; or,
+ * when the actor waives it, a `waived` one with the reason and nothing to sign.
  */
 
 export interface DeliverDeps {
@@ -36,42 +38,79 @@ export interface DeliverDeps {
 	now?: () => Date;
 }
 
+export interface DeliverRequest {
+	personId: string;
+	assetIds: readonly string[];
+	/**
+	 * Records the required handover as waived instead of asking for a signature
+	 * (ADR 0035, decision 8). Needs `assets.handover.waive`, and a handover that
+	 * is actually required.
+	 */
+	waive?: { reason: string };
+}
+
 export type DeliverFailure =
 	| 'no_assets'
 	| 'asset_not_found'
 	| 'person_not_found'
 	| 'already_in_custody'
-	| 'no_delivery_template';
+	| 'no_delivery_template'
+	| 'waive_forbidden'
+	| 'waive_not_required'
+	| 'invalid_waive_reason';
 
-export interface DeliveredHandover {
-	id: string;
-	code: string;
-	/** The plain token, shown to the technician once. Only its sha256 is stored. */
-	token: string;
-	link: string;
-	expiresAt: Date;
-}
+/** The bounds of a waiver's reason, after trimming. */
+export const WAIVE_REASON_MAX = 500;
+
+export type DeliveredHandover =
+	| {
+			status: 'pending';
+			id: string;
+			code: string;
+			/** The plain token, shown to the technician once. Only its sha256 is stored. */
+			token: string;
+			link: string;
+			expiresAt: Date;
+	  }
+	| { status: 'waived'; id: string; code: string };
 
 const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' });
 
+/**
+ * Who may waive. A service account never does: the API offers no waive option
+ * (#277), and a scoped key cannot hold the permission anyway, but the domain
+ * says so itself rather than relying on the endpoint.
+ */
+function mayWaive(actor: SessionUser): boolean {
+	return !actor.serviceAccountId && can(actor, 'assets.handover.waive');
+}
+
 export async function deliver(
 	actor: SessionUser,
-	personId: string,
-	assetIds: readonly string[],
+	request: DeliverRequest,
 	deps: DeliverDeps = {}
 ): Promise<Outcome<{ handover: DeliveredHandover | null }, DeliverFailure>> {
 	const mailer = deps.mailer === undefined ? runtimeMailer() : deps.mailer;
 	const linkTo = deps.linkTo ?? ((token: string) => `${runtimeOrigin()}/handover/${token}`);
 	const now = (deps.now ?? (() => new Date()))();
 
-	const ids = [...new Set(assetIds)];
+	const ids = [...new Set(request.assetIds)];
 	if (ids.length === 0) return failure('no_assets');
+
+	let waiveReason: string | null = null;
+	if (request.waive) {
+		if (!mayWaive(actor)) return failure('waive_forbidden');
+		waiveReason = request.waive.reason.trim();
+		if (waiveReason.length === 0 || waiveReason.length > WAIVE_REASON_MAX) {
+			return failure('invalid_waive_reason');
+		}
+	}
 
 	const outcome = await getDb().transaction(async (tx) => {
 		const [person] = await tx
 			.select({ id: people.id, fullName: people.fullName, email: people.email })
 			.from(people)
-			.where(and(eq(people.id, personId), eq(people.organisationId, actor.organisationId)))
+			.where(and(eq(people.id, request.personId), eq(people.organisationId, actor.organisationId)))
 			.limit(1);
 		if (!person) return failure('person_not_found' as const);
 
@@ -100,15 +139,18 @@ export async function deliver(
 		}
 
 		const required = rows.some((row) => row.requiresHandover);
+		// A waiver of nothing would be a record that means nothing.
+		if (waiveReason !== null && !required) return failure('waive_not_required' as const);
 
 		// Resolved before anything is written: a refusal must leave no custody behind.
+		// A waiver has nothing to render, so it needs no template.
 		let issuing: {
 			templateVersionId: string;
 			body: string;
 			organisationName: string;
 			linkValidDays: number;
 		} | null = null;
-		if (required) {
+		if (required && waiveReason === null) {
 			const templates = await tx
 				.select({
 					id: handoverTemplates.id,
@@ -153,46 +195,60 @@ export async function deliver(
 
 		for (const row of rows) await recordCustodyAssigned(tx, actor, row.id, person);
 
-		if (!issuing) return success({ handover: null, mail: null });
+		if (!required) return success({ handover: null, mail: null });
 
-		const rendered = renderHandoverTemplate(issuing.body, {
-			personName: person.fullName,
-			organisationName: issuing.organisationName,
-			date: dateFormat.format(now)
-		});
-		const token = generateHandoverToken();
-		const expiresAt = new Date(now.getTime() + issuing.linkValidDays * 24 * 60 * 60 * 1000);
+		const common = {
+			organisationId: actor.organisationId,
+			direction: 'delivery' as const,
+			personId: person.id,
+			personNameSnapshot: person.fullName,
+			recipientEmailSnapshot: person.email,
+			issuedByPersonId: actor.serviceAccountId ? null : actor.personId,
+			issuedByServiceAccountId: actor.serviceAccountId ?? null,
+			issuedAt: now
+		};
 
-		const [handover] = await tx
-			.insert(handovers)
-			.values({
-				organisationId: actor.organisationId,
-				direction: 'delivery',
-				status: 'pending',
-				personId: person.id,
-				personNameSnapshot: person.fullName,
-				recipientEmailSnapshot: person.email,
-				templateVersionId: issuing.templateVersionId,
-				bodySnapshot: rendered.text,
-				bodySha256: rendered.sha256,
-				tokenHash: hashHandoverToken(token),
-				expiresAt,
-				issuedByPersonId: actor.serviceAccountId ? null : actor.personId,
-				issuedByServiceAccountId: actor.serviceAccountId ?? null,
-				issuedAt: now
-			})
-			.returning({ id: handovers.id, code: handovers.code });
+		let pending: { token: string; expiresAt: Date; organisationName: string } | null = null;
+		let row: { id: string; code: string };
+		if (issuing) {
+			const rendered = renderHandoverTemplate(issuing.body, {
+				personName: person.fullName,
+				organisationName: issuing.organisationName,
+				date: dateFormat.format(now)
+			});
+			const token = generateHandoverToken();
+			const expiresAt = new Date(now.getTime() + issuing.linkValidDays * 24 * 60 * 60 * 1000);
+			pending = { token, expiresAt, organisationName: issuing.organisationName };
+			[row] = await tx
+				.insert(handovers)
+				.values({
+					...common,
+					status: 'pending',
+					templateVersionId: issuing.templateVersionId,
+					bodySnapshot: rendered.text,
+					bodySha256: rendered.sha256,
+					tokenHash: hashHandoverToken(token),
+					expiresAt
+				})
+				.returning({ id: handovers.id, code: handovers.code });
+		} else {
+			// No token, no text, no template, no mail: the reason is the record.
+			[row] = await tx
+				.insert(handovers)
+				.values({ ...common, status: 'waived', waiveReason })
+				.returning({ id: handovers.id, code: handovers.code });
+		}
 
-		const snapshots = rows.map((row) => ({
-			assetId: row.id,
-			assetTag: row.assetTag,
-			assetName: row.name,
-			serial: row.serial,
-			model: row.modelName
+		const snapshots = rows.map((asset) => ({
+			assetId: asset.id,
+			assetTag: asset.assetTag,
+			assetName: asset.name,
+			serial: asset.serial,
+			model: asset.modelName
 		}));
 		await tx.insert(handoverAssets).values(
 			snapshots.map((snapshot) => ({
-				handoverId: handover.id,
+				handoverId: row.id,
 				assetId: snapshot.assetId,
 				assetTagSnapshot: snapshot.assetTag,
 				assetNameSnapshot: snapshot.assetName,
@@ -202,33 +258,50 @@ export async function deliver(
 		);
 
 		const payload = {
-			handoverId: handover.id,
-			code: handover.code,
+			handoverId: row.id,
+			code: row.code,
 			personId: person.id,
 			personName: person.fullName,
 			assets: snapshots
 		};
+		const entry =
+			waiveReason === null
+				? { verb: 'handover.issued' as const, payload }
+				: { verb: 'handover.waived' as const, payload: { ...payload, reason: waiveReason } };
 		for (const target of [...ids.map((assetId) => ({ assetId })), { personId: person.id }]) {
 			await recordActivity(tx, {
 				organisationId: actor.organisationId,
 				...actorColumns(actor),
 				target,
-				verb: 'handover.issued',
-				payload
+				...entry
 			});
 		}
 
-		const link = linkTo(token);
+		if (!pending) {
+			return success({
+				handover: { status: 'waived' as const, id: row.id, code: row.code },
+				mail: null
+			});
+		}
+
+		const link = linkTo(pending.token);
 		return success({
-			handover: { id: handover.id, code: handover.code, token, link, expiresAt },
+			handover: {
+				status: 'pending' as const,
+				id: row.id,
+				code: row.code,
+				token: pending.token,
+				link,
+				expiresAt: pending.expiresAt
+			},
 			mail: {
 				to: person.email,
 				...handoverLinkMail({
 					personName: person.fullName,
-					organisationName: issuing.organisationName,
-					code: handover.code,
+					organisationName: pending.organisationName,
+					code: row.code,
 					link,
-					expiresOn: dateFormat.format(expiresAt)
+					expiresOn: dateFormat.format(pending.expiresAt)
 				})
 			}
 		});

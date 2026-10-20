@@ -421,6 +421,16 @@ export const handovers = pgTable(
 				and ${table.decidedAt} is not null
 			)`
 		),
+		// A waiver says why nobody was asked, and has nothing to sign (ADR 0035, decision 8).
+		check(
+			'handovers_waived_has_reason_and_no_link',
+			sql`${table.status} <> 'waived' or (
+				${table.waiveReason} is not null
+				and ${table.tokenHash} is null
+				and ${table.bodySnapshot} is null
+				and ${table.templateVersionId} is null
+			)`
+		),
 		index('handovers_person_idx').on(table.personId)
 	]
 );

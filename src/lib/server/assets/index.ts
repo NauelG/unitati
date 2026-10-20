@@ -56,7 +56,7 @@ export type {
 	RemoveHandoverOverrideFailure,
 	SaveHandoverTemplateFailure
 } from './handover-templates';
-export { deliver, listDeliverableAssets } from './deliver';
+export { deliver, listDeliverableAssets, WAIVE_REASON_MAX } from './deliver';
 export { decideHandover, openHandover } from './handover-decision';
 export type {
 	DecideFailure,
@@ -67,7 +67,13 @@ export type {
 	SigningAsset,
 	SigningView
 } from './handover-decision';
-export type { DeliverableAsset, DeliverDeps, DeliverFailure, DeliveredHandover } from './deliver';
+export type {
+	DeliverableAsset,
+	DeliverDeps,
+	DeliverFailure,
+	DeliveredHandover,
+	DeliverRequest
+} from './deliver';
 export { renderHandoverTemplate, resolveHandoverTemplate } from './handover-template';
 
 export { getLabelSettings, setLabelOwnerText } from './label-settings';

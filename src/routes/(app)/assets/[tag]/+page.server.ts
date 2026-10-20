@@ -16,6 +16,7 @@ import {
 	getAssetByTag,
 	listAssetModels,
 	returnCustody,
+	WAIVE_REASON_MAX,
 	type FullAssetView
 } from '#lib/server/assets/index.js';
 import {
@@ -145,6 +146,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		recentMonths: RECENT_MONTHS,
 		canManage,
 		canCheckout,
+		// Only offered inside the delivery dialog, so it needs `assets.checkout` too (ADR 0035, decision 8).
+		canWaiveHandover: canCheckout && can(user, 'assets.handover.waive'),
+		waiveReasonMax: WAIVE_REASON_MAX,
 		// Links are written on the ticket, so the ticket permission decides (#168).
 		canLinkTickets: asset.visibility === 'full' && can(user, 'tickets.manage'),
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
@@ -171,7 +175,13 @@ async function targetOf(user: SessionUser, tag: string): Promise<FullAssetView> 
 	return found.value;
 }
 
-const deliverForm = z.object({ personId: z.uuid(), assetIds: z.array(z.uuid()).min(1) });
+const deliverForm = z.object({
+	personId: z.uuid(),
+	assetIds: z.array(z.uuid()).min(1),
+	// A checkbox: present means ticked.
+	waive: z.literal('on').optional(),
+	waiveReason: z.string().optional()
+});
 const stateForm = z.object({ state: z.enum(ASSET_STATES) });
 // An empty string is "no location", which is a real choice, not a missing value.
 const locationForm = z.object({ locationId: z.union([z.uuid(), z.literal('')]) });
@@ -183,13 +193,20 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const parsed = deliverForm.safeParse({
 			personId: data.get('personId'),
-			assetIds: data.getAll('assetIds')
+			assetIds: data.getAll('assetIds'),
+			waive: data.get('waive') ?? undefined,
+			waiveReason: data.get('waiveReason') ?? undefined
 		});
 		if (!parsed.success) return rejected('deliver', m.action_error_invalid());
 
 		// The URL's asset must be visible to the actor; the dialog only preselects it.
 		await targetOf(user, params.tag);
-		const outcome = await deliver(user, parsed.data.personId, parsed.data.assetIds);
+		// The reason's bounds and the permission are the domain's to check, not the form's.
+		const outcome = await deliver(user, {
+			personId: parsed.data.personId,
+			assetIds: parsed.data.assetIds,
+			waive: parsed.data.waive ? { reason: parsed.data.waiveReason ?? '' } : undefined
+		});
 
 		if (!outcome.ok) {
 			const reasons = {
@@ -197,7 +214,10 @@ export const actions: Actions = {
 				person_not_found: m.action_error_person_missing(),
 				already_in_custody: m.action_error_already_in_custody(),
 				asset_not_found: m.asset_error_gone(),
-				no_delivery_template: m.deliver_error_no_template()
+				no_delivery_template: m.deliver_error_no_template(),
+				waive_forbidden: m.deliver_error_waive_forbidden(),
+				waive_not_required: m.deliver_error_waive_not_required(),
+				invalid_waive_reason: m.deliver_error_waive_reason({ max: WAIVE_REASON_MAX })
 			};
 			return rejected('deliver', reasons[outcome.error]);
 		}
@@ -206,7 +226,8 @@ export const actions: Actions = {
 		return {
 			action: 'deliver' as const,
 			handoverCode: handover?.code ?? null,
-			handoverLink: handover?.link ?? null
+			handoverLink: handover?.status === 'pending' ? handover.link : null,
+			handoverWaived: handover?.status === 'waived'
 		};
 	},
 
