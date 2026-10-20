@@ -60,6 +60,12 @@ describe('passwordChangeRedirect', () => {
 		expect(passwordChangeRedirect(forced, '/_app/immutable/chunk.js')).toBeNull();
 	});
 
+	it('lets it reach a handover signing page, which needs no session at all (#275)', () => {
+		expect(passwordChangeRedirect(forced, '/handover/abc123')).toBeNull();
+		expect(passwordChangeRedirect(forced, '/handover')).toBe('/account/password');
+		expect(passwordChangeRedirect(forced, '/handovers')).toBe('/account/password');
+	});
+
 	it('leaves everyone else alone', () => {
 		expect(passwordChangeRedirect(user('admin'), '/')).toBeNull();
 		expect(passwordChangeRedirect(null, '/')).toBeNull();

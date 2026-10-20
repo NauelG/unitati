@@ -79,6 +79,9 @@ Four facts about the codebase shape the answer:
   outside `(app)` and `(portal)`, under the organisation's brand
   ([ADR 0026](0026-per-organisation-branding.md)), and the auth and password-change redirects in
   `hooks.server.ts` must let it through. Tokens are never logged.
+- A consumed link must still answer "already decided" rather than "unknown", so the decision moves
+  the hash from `token_hash` to `consumed_token_hash` instead of discarding it (#275). Neither
+  column ever holds the token itself.
 - Its interface is in the UI language ([ADR 0008](0008-ui-language.md)); the agreement is in
   whatever language the organisation wrote it.
 - Custody becomes multi-asset in one transaction: N custodies and their handover commit together,

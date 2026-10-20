@@ -1,5 +1,7 @@
 <script lang="ts" module>
 	import FileSignature from '@lucide/svelte/icons/file-signature';
+	import FileCheck from '@lucide/svelte/icons/file-check';
+	import FileX from '@lucide/svelte/icons/file-x';
 	import Archive from '@lucide/svelte/icons/archive';
 	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
@@ -71,6 +73,8 @@
 		'custody.assigned': UserCheck,
 		'custody.returned': Undo2,
 		'handover.issued': FileSignature,
+		'handover.accepted': FileCheck,
+		'handover.rejected': FileX,
 		'state.changed': RefreshCw,
 		'location.changed': MapPin,
 		'note.added': MessageSquare,

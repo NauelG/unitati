@@ -363,6 +363,13 @@ export const handovers = pgTable(
 		bodySha256: text('body_sha256'),
 		/** Only the sha256 of the single-use token; the token itself is never stored. */
 		tokenHash: text('token_hash').unique(),
+		/**
+		 * The hash `token_hash` held when the decision consumed it. The link no longer
+		 * decides anything, but opening it again must say "already decided" rather
+		 * than "unknown" (#275); a resend replaces neither, since it never reaches a
+		 * decided handover.
+		 */
+		consumedTokenHash: text('consumed_token_hash').unique(),
 		expiresAt: timestamp('expires_at', { withTimezone: true }),
 		issuedByPersonId: uuid('issued_by_person_id').references(() => people.id, {
 			onDelete: 'restrict'
@@ -396,6 +403,22 @@ export const handovers = pgTable(
 				and ${table.bodySnapshot} is not null
 				and ${table.bodySha256} is not null
 				and ${table.templateVersionId} is not null
+			)`
+		),
+		// The evidence of a decision (ADR 0035, decision 6) cannot be half written.
+		check(
+			'handovers_accepted_has_evidence',
+			sql`${table.status} <> 'accepted' or (
+				${table.signatureStorageKey} is not null
+				and ${table.decidedAt} is not null
+				and ${table.signerIp} is not null
+			)`
+		),
+		check(
+			'handovers_rejected_has_reason',
+			sql`${table.status} <> 'rejected' or (
+				${table.decisionReason} is not null
+				and ${table.decidedAt} is not null
 			)`
 		),
 		index('handovers_person_idx').on(table.personId)

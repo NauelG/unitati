@@ -26,6 +26,27 @@ export interface DomainEvents {
 		actorPersonId: string | null;
 		occurredAt: Date;
 	};
+	/** A person accepted a handover through its signing link (ADR 0035). */
+	'handover.accepted': {
+		organisationId: string;
+		handoverId: string;
+		handoverCode: string;
+		direction: 'delivery' | 'return';
+		personId: string;
+		personName: string;
+		occurredAt: Date;
+	};
+	/** A person rejected a handover through its signing link, with their reason. */
+	'handover.rejected': {
+		organisationId: string;
+		handoverId: string;
+		handoverCode: string;
+		direction: 'delivery' | 'return';
+		personId: string;
+		personName: string;
+		reason: string;
+		occurredAt: Date;
+	};
 }
 
 export type EventName = keyof DomainEvents;
