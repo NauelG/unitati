@@ -35,6 +35,9 @@ export function activitySentence(entry: ActivityEntry): string {
 		case 'custody.returned':
 			return m.activity_custody_returned({ personName: entry.payload.fromPersonName });
 
+		case 'handover.issued':
+			return m.activity_handover_issued({ code: entry.payload.code });
+
 		case 'state.changed':
 			return m.activity_state_changed({
 				from: statusLabel(entry.payload.from),

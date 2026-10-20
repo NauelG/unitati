@@ -9,7 +9,7 @@ import { assetModelInput, registerAssetInput } from '#lib/server/assets/validati
  * `custodianPersonId` is deliberately not here, and neither is the rest of what
  * the register schema carries. Custody is an event, not a field: a form that
  * could set it would write the row without the `custody.assigned` entry that
- * makes the history trustworthy (ADR 0009). It goes through `assignCustody`.
+ * makes the history trustworthy (ADR 0009). It goes through `deliver`.
  *
  * What a blank input becomes is Superforms' behaviour, not ours, and it is the
  * behaviour this relies on: an empty `assetTag` is dropped (so the sequence

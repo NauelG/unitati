@@ -83,6 +83,24 @@ export const PAYLOAD_SCHEMAS = {
 		fromPersonName: presentName
 	}),
 
+	// One entry on every asset of the operation and one on the person. The assets
+	// are snapshots (ADR 0035, decision 6); the signing token never appears here.
+	'handover.issued': z.object({
+		handoverId: z.uuid(),
+		code: presentName,
+		personId: z.uuid(),
+		personName: presentName,
+		assets: z.array(
+			z.object({
+				assetId: z.uuid(),
+				assetTag: presentName,
+				assetName: presentName,
+				serial: z.string().nullable(),
+				model: presentName
+			})
+		)
+	}),
+
 	'state.changed': z.object({
 		from: assetState,
 		to: assetState

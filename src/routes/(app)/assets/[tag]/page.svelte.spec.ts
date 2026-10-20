@@ -63,6 +63,7 @@ function pageData(permissions: { canManage: boolean; canCheckout: boolean }) {
 			{ id: 'p-2', fullName: 'Bernat Soler' }
 		],
 		locations: [],
+		deliverable: [],
 		editModels: [],
 		manufacturers: [],
 		categories: [],
@@ -83,13 +84,15 @@ describe('asset record in-place editing', () => {
 		await waitFor(() => expect(submitted.actions).toEqual(['?/returnCustody']));
 	});
 
-	it('assigns custody when a person is picked', async () => {
-		renderPage({ canManage: true, canCheckout: true });
-		await fireEvent.click(screen.getByRole('button', { name: /^Custodia/ }));
-		await fireEvent.click(
-			await screen.findByRole('option', { name: 'Bernat Soler', hidden: true })
-		);
-		await waitFor(() => expect(submitted.actions).toEqual(['?/assignCustody']));
+	it('offers the delivery dialog instead of a select when nobody holds the asset', async () => {
+		const data = pageData({ canManage: true, canCheckout: true }) as Record<string, unknown>;
+		data.asset = { ...asset, custodianPersonId: null, custodianName: null };
+		data.deliverable = [{ id: 'a-1', assetTag: 'AST-1', name: 'Laptop', requiresHandover: true }];
+		render(Page, { data, form: null } as never);
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Entregar…' }));
+		expect(await screen.findByText(/Se emitirá una entrega pendiente de firma/)).toBeTruthy();
+		expect(screen.queryByRole('button', { name: /^Custodia/ })).toBeNull();
 	});
 
 	it('shows no Custodia, Estado, Ubicación or Nota panels', () => {

@@ -3,7 +3,7 @@ import { ASSET_STATES } from '#lib/domain/status.js';
 import {
 	addNote,
 	assetTimeline,
-	assignCustody,
+	deliver,
 	changeLocation,
 	changeState,
 	getAssetByTag,
@@ -305,17 +305,21 @@ export const assignCustodyEndpoint = defineEndpoint({
 	path: '/assets/{tag}/custody',
 	summary: 'Hand an asset to a person.',
 	description:
-		"Records that the asset is now in the custody of `personId`. An asset already in someone's custody is not reassigned silently: return it first. An unknown `personId` is a `400` on that field.",
+		"Records that the asset is now in the custody of `personId`. An asset already in someone's custody is not reassigned silently: return it first. An unknown `personId` is a `400` on that field. If the asset's category requires a handover, a pending delivery handover is issued and its code is returned as `handoverCode` (otherwise `null`); the signing link is mailed to the person when mail is on, and is never part of the response. With no delivery template configured the request is refused with `409` `no_delivery_template` and nothing is written.",
 	example: { personId: '00000000-0000-4000-8000-000000000000' },
 	permissions: CHECKOUT,
 	input: z.object({ tag, personId: z.uuid() }),
-	output: assetResponse,
+	output: z.object({ data: assetSchema, handoverCode: z.string().nullable() }),
 	handler: async ({ principal, input }) => {
 		const actor = withReads(principal);
 		const target = await targetOf(actor, input.tag);
-		const outcome = await assignCustody(actor, target.id, input.personId);
+		// The one door to custody for a person's action, so a required handover cannot be skipped.
+		const outcome = await deliver(actor, input.personId, [target.id]);
 		if (!outcome.ok) throw assetRefusal(outcome.error);
-		return written(actor, input.tag);
+		return {
+			...(await written(actor, input.tag)),
+			handoverCode: outcome.value.handover?.code ?? null
+		};
 	}
 });
 

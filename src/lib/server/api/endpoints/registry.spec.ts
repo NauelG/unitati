@@ -93,7 +93,7 @@ describe('the endpoint registry', () => {
 		};
 		const byId = new Map(ENDPOINTS.map((endpoint) => [endpoint.id, endpoint]));
 		const pairs = {
-			'assets.custody.assign': 'assignCustody',
+			'assets.custody.assign': 'deliver',
 			'assets.custody.return': 'returnCustody',
 			'assets.state': 'changeState',
 			'assets.location': 'changeLocation',

@@ -9,7 +9,8 @@ import { can } from '#lib/server/access/permissions.js';
 import {
 	addNote,
 	assetTimeline,
-	assignCustody,
+	deliver,
+	listDeliverableAssets,
 	changeLocation,
 	changeState,
 	getAssetByTag,
@@ -88,6 +89,11 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		asset.visibility === 'full' && (canManage || canCheckout)
 			? await Promise.all([listPeople(user.organisationId), listLocations(user.organisationId)])
 			: [[], []];
+	// What the delivery dialog can offer: only for someone who can hand an asset over.
+	const deliverable =
+		asset.visibility === 'full' && canCheckout && asset.custodianPersonId === null
+			? await listDeliverableAssets(user.organisationId)
+			: [];
 
 	// The contextual edit `Sheet` (ADR 0020) reuses `/assets/[tag]/edit`'s own
 	// form shape and action. `superValidate` runs unconditionally — it is a
@@ -143,6 +149,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		canLinkTickets: asset.visibility === 'full' && can(user, 'tickets.manage'),
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
 		locations,
+		deliverable,
 		editForm,
 		editModels,
 		modelForm,
@@ -164,30 +171,43 @@ async function targetOf(user: SessionUser, tag: string): Promise<FullAssetView> 
 	return found.value;
 }
 
-const personForm = z.object({ personId: z.uuid() });
+const deliverForm = z.object({ personId: z.uuid(), assetIds: z.array(z.uuid()).min(1) });
 const stateForm = z.object({ state: z.enum(ASSET_STATES) });
 // An empty string is "no location", which is a real choice, not a missing value.
 const locationForm = z.object({ locationId: z.union([z.uuid(), z.literal('')]) });
 const noteForm = z.object({ text: z.string().trim().min(1) });
 
 export const actions: Actions = {
-	assignCustody: async ({ request, locals, params }) => {
+	deliver: async ({ request, locals, params }) => {
 		const user = requirePermission(locals.user, 'assets.checkout');
-		const parsed = personForm.safeParse(await fieldsOf(request));
-		if (!parsed.success) return rejected('assignCustody', m.action_error_invalid());
+		const data = await request.formData();
+		const parsed = deliverForm.safeParse({
+			personId: data.get('personId'),
+			assetIds: data.getAll('assetIds')
+		});
+		if (!parsed.success) return rejected('deliver', m.action_error_invalid());
 
-		const asset = await targetOf(user, params.tag);
-		const outcome = await assignCustody(user, asset.id, parsed.data.personId);
+		// The URL's asset must be visible to the actor; the dialog only preselects it.
+		await targetOf(user, params.tag);
+		const outcome = await deliver(user, parsed.data.personId, parsed.data.assetIds);
 
 		if (!outcome.ok) {
 			const reasons = {
+				no_assets: m.action_error_invalid(),
 				person_not_found: m.action_error_person_missing(),
 				already_in_custody: m.action_error_already_in_custody(),
-				asset_not_found: m.asset_error_gone()
+				asset_not_found: m.asset_error_gone(),
+				no_delivery_template: m.deliver_error_no_template()
 			};
-			return rejected('assignCustody', reasons[outcome.error]);
+			return rejected('deliver', reasons[outcome.error]);
 		}
-		return { action: 'assignCustody' as const };
+		const { handover } = outcome.value;
+		// The only moment the plain link exists on screen: it is not stored.
+		return {
+			action: 'deliver' as const,
+			handoverCode: handover?.code ?? null,
+			handoverLink: handover?.link ?? null
+		};
 	},
 
 	returnCustody: async ({ locals, params }) => {

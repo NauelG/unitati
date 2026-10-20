@@ -2,12 +2,15 @@ import { sql, type SQL } from 'drizzle-orm';
 import {
 	boolean,
 	check,
+	customType,
 	index,
 	integer,
 	pgEnum,
 	pgSequence,
+	primaryKey,
 	pgTable,
 	text,
+	timestamp,
 	unique,
 	uniqueIndex,
 	uuid
@@ -16,6 +19,7 @@ import { ASSET_STATES } from '#lib/domain/status.js';
 import { timestamps } from '../shared/columns';
 import { searchVector as sharedSearchVector, tsvector } from '../shared/search-vector';
 import { locations, organisations, people } from '../directory/schema';
+import { serviceAccounts } from '../api/schema';
 
 /**
  * The inventory: what exists, what model it is, who holds it and where it sits.
@@ -290,6 +294,107 @@ export const handoverTemplateVersions = pgTable(
 	(table) => [
 		unique('handover_template_versions_template_version').on(table.templateId, table.version)
 	]
+);
+
+/** `HND-####` comes from here (ADR 0010). */
+export const handoverCodeSequence = pgSequence('handover_code_seq');
+
+/** `expired` is never stored: a pending handover past `expires_at` is expired (ADR 0035, decision 3). */
+export const handoverStatus = pgEnum('handover_status', [
+	'pending',
+	'accepted',
+	'rejected',
+	'waived'
+]);
+
+const inet = customType<{ data: string }>({ dataType: () => 'inet' });
+
+/**
+ * The receiving person's statement about an operation (ADR 0035): one row per
+ * delivery or return, listing every asset of it. Beside custody, never instead
+ * of it. Rows are never deleted; the foreign key to `people` is `restrict` and
+ * the snapshots keep what was signed true after a rename.
+ */
+export const handovers = pgTable(
+	'handovers',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		code: text('code')
+			.notNull()
+			.default(sql`'HND-' || lpad(nextval('handover_code_seq')::text, 4, '0')`),
+		direction: handoverDirection('direction').notNull(),
+		status: handoverStatus('status').notNull(),
+		personId: uuid('person_id')
+			.notNull()
+			.references(() => people.id, { onDelete: 'restrict' }),
+		personNameSnapshot: text('person_name_snapshot').notNull(),
+		recipientEmailSnapshot: text('recipient_email_snapshot').notNull(),
+		templateVersionId: uuid('template_version_id').references(() => handoverTemplateVersions.id, {
+			onDelete: 'restrict'
+		}),
+		/** The literal text the signer sees, and its hash. */
+		bodySnapshot: text('body_snapshot'),
+		bodySha256: text('body_sha256'),
+		/** Only the sha256 of the single-use token; the token itself is never stored. */
+		tokenHash: text('token_hash').unique(),
+		expiresAt: timestamp('expires_at', { withTimezone: true }),
+		issuedByPersonId: uuid('issued_by_person_id').references(() => people.id, {
+			onDelete: 'restrict'
+		}),
+		issuedByServiceAccountId: uuid('issued_by_service_account_id').references(
+			() => serviceAccounts.id,
+			{ onDelete: 'restrict' }
+		),
+		issuedAt: timestamp('issued_at', { withTimezone: true }).notNull(),
+		waiveReason: text('waive_reason'),
+		decidedAt: timestamp('decided_at', { withTimezone: true }),
+		decisionReason: text('decision_reason'),
+		signatureStorageKey: text('signature_storage_key'),
+		signerIp: inet('signer_ip'),
+		signerUserAgent: text('signer_user_agent'),
+		documentStorageKey: text('document_storage_key'),
+		documentSha256: text('document_sha256'),
+		...timestamps
+	},
+	(table) => [
+		unique('handovers_org_code').on(table.organisationId, table.code),
+		check(
+			'handovers_at_most_one_issuer',
+			sql`num_nonnulls(${table.issuedByPersonId}, ${table.issuedByServiceAccountId}) <= 1`
+		),
+		check(
+			'handovers_pending_has_link_and_text',
+			sql`${table.status} <> 'pending' or (
+				${table.tokenHash} is not null
+				and ${table.expiresAt} is not null
+				and ${table.bodySnapshot} is not null
+				and ${table.bodySha256} is not null
+				and ${table.templateVersionId} is not null
+			)`
+		),
+		index('handovers_person_idx').on(table.personId)
+	]
+);
+
+/** What was handed over, as it read at the time: a renamed asset does not rewrite what someone signed. */
+export const handoverAssets = pgTable(
+	'handover_assets',
+	{
+		handoverId: uuid('handover_id')
+			.notNull()
+			.references(() => handovers.id, { onDelete: 'cascade' }),
+		assetId: uuid('asset_id')
+			.notNull()
+			.references(() => assets.id, { onDelete: 'restrict' }),
+		assetTagSnapshot: text('asset_tag_snapshot').notNull(),
+		assetNameSnapshot: text('asset_name_snapshot').notNull(),
+		serialSnapshot: text('serial_snapshot'),
+		modelSnapshot: text('model_snapshot').notNull()
+	},
+	(table) => [primaryKey({ columns: [table.handoverId, table.assetId] })]
 );
 
 export type Manufacturer = typeof manufacturers.$inferSelect;

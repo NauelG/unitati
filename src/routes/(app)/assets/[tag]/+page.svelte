@@ -31,6 +31,7 @@
 	import type { PageProps } from './$types';
 	import AssetFields from '../AssetFields.svelte';
 	import CreateModelDialog from '../CreateModelDialog.svelte';
+	import DeliverDialog from './DeliverDialog.svelte';
 	import { locationOptions, options, stateOptions } from '../options';
 
 	let { data, form }: PageProps = $props();
@@ -39,6 +40,19 @@
 
 	const unlinkTicketError = $derived(
 		form && 'action' in form && form.action === 'unlinkTicket' && 'message' in form
+			? form.message
+			: undefined
+	);
+
+	// Handing an asset over is a dialog, not a select: the technician must see the link (ADR 0035).
+	let deliverOpen = $state(false);
+	$effect(() => {
+		if (data.canCheckout && location.hash === '#action-custody' && data.deliverable.length > 0) {
+			deliverOpen = true;
+		}
+	});
+	const deliverError = $derived(
+		form && 'action' in form && form.action === 'deliver' && 'message' in form
 			? form.message
 			: undefined
 	);
@@ -162,35 +176,43 @@
 {/snippet}
 
 {#snippet custodianRow()}
-	<EditableDetailRow
-		kind="select"
-		label={m.asset_detail_custodian()}
-		value={localCustodianPersonId}
-		display={localCustodianName ?? ''}
-		placeholder={m.assets_no_custodian()}
-		options={personOptions}
-		noneLabel={m.asset_custody_nobody()}
-		action="?/assignCustody"
-		actionFor={(personId) => (personId === '' ? '?/returnCustody' : '?/assignCustody')}
-		name="personId"
-		editable={data.canCheckout}
-		openOnHash="action-custody"
-		optimistic={(formData) => {
-			const personId = formData.get('personId');
-			const previousId = localCustodianPersonId;
-			const previousName = localCustodianName;
-			const person = data.people.find((candidate) => candidate.id === personId);
-			// "Nadie" posts an empty id: that clears the custodian. An unknown id changes nothing.
-			if (person || personId === '') {
-				localCustodianPersonId = person ? person.id : null;
-				localCustodianName = person ? person.fullName : null;
-			}
-			return () => {
-				localCustodianPersonId = previousId;
-				localCustodianName = previousName;
-			};
-		}}
-	/>
+	{#if data.canCheckout && localCustodianPersonId === null}
+		<span id="action-custody" class="flex items-center gap-[var(--space-3)]">
+			<span class="text-[var(--ink-muted)]">{m.assets_no_custodian()}</span>
+			<Button type="button" size="sm" variant="secondary" onclick={() => (deliverOpen = true)}>
+				{m.deliver_button()}
+			</Button>
+		</span>
+	{:else}
+		<EditableDetailRow
+			kind="select"
+			label={m.asset_detail_custodian()}
+			value={localCustodianPersonId}
+			display={localCustodianName ?? ''}
+			placeholder={m.assets_no_custodian()}
+			options={personOptions}
+			noneLabel={m.asset_custody_nobody()}
+			action="?/returnCustody"
+			name="personId"
+			editable={data.canCheckout}
+			openOnHash="action-custody"
+			optimistic={(formData) => {
+				const personId = formData.get('personId');
+				const previousId = localCustodianPersonId;
+				const previousName = localCustodianName;
+				const person = data.people.find((candidate) => candidate.id === personId);
+				// "Nadie" posts an empty id: that clears the custodian. An unknown id changes nothing.
+				if (person || personId === '') {
+					localCustodianPersonId = person ? person.id : null;
+					localCustodianName = person ? person.fullName : null;
+				}
+				return () => {
+					localCustodianPersonId = previousId;
+					localCustodianName = previousName;
+				};
+			}}
+		/>
+	{/if}
 {/snippet}
 
 {#snippet locationRow()}
@@ -457,6 +479,17 @@
 			</div>
 		{/snippet}
 	</Sheet>
+
+	{#if asset.visibility === 'full' && data.canCheckout}
+		<DeliverDialog
+			open={deliverOpen}
+			onOpenChange={(next) => (deliverOpen = next)}
+			people={personOptions}
+			assets={data.deliverable}
+			currentId={asset.id}
+			error={deliverError}
+		/>
+	{/if}
 
 	<CreateModelDialog
 		open={modelOpen}

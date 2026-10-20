@@ -1,4 +1,5 @@
 import {
+	BETTER_AUTH_URL,
 	MAIL_FROM,
 	SMTP_HOST,
 	SMTP_PASSWORD,
@@ -36,4 +37,9 @@ export function runtimeMailer(): Mailer | null {
 		});
 	}
 	return mailer;
+}
+
+/** The public origin of this installation, for links that leave the app (a mailed signing link). */
+export function runtimeOrigin(): string {
+	return BETTER_AUTH_URL.replace(/\/+$/, '');
 }
