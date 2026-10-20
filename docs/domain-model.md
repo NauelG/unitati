@@ -4,16 +4,16 @@ Draft. Names here become folder names in `src/lib/server/<domain>/` (see [ADR 00
 
 ## Domains
 
-| Domain         | Owns                                                                                             |
-| -------------- | ------------------------------------------------------------------------------------------------ |
-| `directory`    | `Organisation`, `OrganisationBranding`, `BrandAsset`, `Person`, `Team`, `Department`, `Location` |
-| `assets`       | `Asset`, `AssetModel`, `Category`, `Manufacturer`, `Custody`; later `Kit`, `License`             |
-| `service-desk` | `Ticket`, `Queue`, `Comment` (public / internal); later `CannedResponse`, `Sla`                  |
-| `projects`     | `Project`, `Task`, `State` + `StateGroup`; later `Milestone`                                     |
-| `knowledge`    | `Space`, `Page`, `PageRevision`                                                                  |
-| `links`        | the pairwise join tables and the uniform read facade over them                                   |
-| `api`          | `ApiKey`, `ServiceAccount`; the `/api/v1` endpoint registry                                      |
-| cross-cutting  | `ActivityLog`, `Attachment`, global search                                                       |
+| Domain         | Owns                                                                                                                 |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `directory`    | `Organisation`, `OrganisationBranding`, `BrandAsset`, `Person`, `Team`, `Department`, `Location`                     |
+| `assets`       | `Asset`, `AssetModel`, `Category`, `Manufacturer`, `Custody`, `Handover`, `HandoverTemplate`; later `Kit`, `License` |
+| `service-desk` | `Ticket`, `Queue`, `RequestForm`, `Comment` (public / internal); later `CannedResponse`, `Sla`                       |
+| `projects`     | `Project`, `Task`, `State` + `StateGroup`; later `Milestone`                                                         |
+| `knowledge`    | `Space`, `Page`, `PageRevision`                                                                                      |
+| `links`        | the pairwise join tables and the uniform read facade over them                                                       |
+| `api`          | `ApiKey`, `ServiceAccount`; the `/api/v1` endpoint registry                                                          |
+| cross-cutting  | `ActivityLog`, `Attachment`, global search                                                                           |
 
 `directory` is the only domain everyone depends on. The other domains do not import each other's tables; they relate through `links`.
 
@@ -23,6 +23,8 @@ A **location** is a place, nested without types: a building contains floors, a f
 
 A person's location is where they usually work: one per person, any node of the tree. It is informative and independent of the custody of their assets, and Unitati owns it whatever channel wrote it. Only `people.manage` changes it, and every change is recorded as `person.location.changed`.
 
+**Custody** is who holds an asset now: a fact a technician records, one holder at a time. A **handover** is the holder's signed statement about a custody change ([ADR 0035](adr/0035-handover-evidence-and-signing-tokens.md)): one person, one **direction** (`delivery` or `return`) and every asset of that operation. It is `pending`, `accepted`, `rejected` or `waived`, and a pending one past its expiry is **expired**. A handover sits beside custody and never gates it: a rejection does not return the equipment, and a decided handover is never reopened, only replaced by a new one. It is required when one of its assets is in a category that **requires handover**; **waiving** it takes a permission and a reason. Its **document** is the PDF generated once when it is decided ([ADR 0036](adr/0036-handover-document-generated-once-and-stored.md)). _Avoid_: acceptance, acknowledgement, receipt, checkout, delivery note. A **handover template** is the agreement text for one direction, global or overriding it for one category; every edit appends a version, and a handover keeps the exact text it was signed against.
+
 `Organisation` exists so the schema is tenant-ready while exactly one row is used: every aggregate root carries `organisation_id` ([ADR 0004](adr/0004-tenancy.md)).
 
 `State` carries a user-chosen name and a system-owned `StateGroup` (`backlog`, `unstarted`, `started`, `completed`, `cancelled`). That split is how a catalogue stays configurable while the structure does not — the shape Plane uses. The group is fixed when a state is created and never changes; code depends on the group, never on the name. A `Task` sits in exactly one `State`, and its board column is ordered by a fractional `position`.
@@ -30,6 +32,8 @@ A person's location is where they usually work: one per person, any node of the 
 A project is **archived** rather than deleted, and an archived project (with its tasks) is read-only. A task has **assignees** — any number of people — and a project has at most one owner.
 
 The knowledge base is the one place the organisation writes documentation (#17, which absorbed #49). A **space** is a top-level container of pages, and the boundary of who may read them: its **audience** is `staff` (technicians and admins) or `portal` (employees too), and every page in it shares that audience; a page has no audience of its own. A space also carries a name, a description, an icon and a colour, each picked from a fixed set. Admins maintain spaces as a catalogue and may change a space's audience; a space with pages is archived, never deleted. Moving a page to another space moves its subtree, and when the audiences differ that move changes who can read every page in it. A **page** is one node of a space's tree: a page may hold prose, child pages, or both, and its siblings are ordered by hand through a fractional `position`. _Avoid_: article, doc, wiki page, note. A page is identified by its **code** (`DOC-0012`), generated and, unlike other record codes, never editable, because pages link to one another by it. Titles need not be unique, not even among siblings. A page is a **draft**, **published** or **archived**; it is never deleted, archiving a page archives its subtree, and a published page cannot sit under a draft. Draft is only the state of a page that has never been published: every staff member sees drafts, employees never do, and saving a published page publishes the change at once. Every save appends a **page revision**, an immutable copy of the content; restoring one appends a new revision, and a save based on a revision that is no longer the latest is refused rather than overwriting someone else's edit. Only technicians and admins write pages.
+
+A **queue** is who works a ticket; a **request form** is what the employee asked for ([ADR 0037](adr/0037-request-forms-not-ticket-types.md)). A request form is a configurable entry the portal offers, with a name, a target queue and a system-owned **kind** (`equipment` first) that decides its fields and how it is fulfilled. A ticket filed through one remembers it; staff-created tickets have none. _Avoid_: ticket type, request type, catalogue item.
 
 A ticket **cites** a page when a reply links it or a technician adds it to the ticket. A public reply cites only published pages of `portal` spaces; an internal note, any published page its author can read. Removing the link from the text keeps the citation. A requester whose cited page is no longer readable to them sees its code and nothing else, not even the title.
 
@@ -76,14 +80,16 @@ erDiagram
 One join table per pair, each with real foreign keys, all owned by `links`
 ([ADR 0005](adr/0005-single-suite-and-relations.md)):
 
-| Table            | Relation                    | Panel label     | Meaning                                              | Tier    |
-| ---------------- | --------------------------- | --------------- | ---------------------------------------------------- | ------- |
-| `ticket_asset`   | ticket `affects` asset      | _Affects_       | The ticket is about this device                      | MVP     |
-| `ticket_task`    | ticket `resolved-by` task   | _Resolved in_   | A task carries the work that resolves the ticket     | MVP     |
-| `ticket_project` | ticket `handled-in` project | _Handled in_    | The ticket is attended within this programme of work | MVP     |
-| `project_asset`  | project `targets` asset     | _Targets_       | The asset is in the project's scope                  | post-v1 |
-| `ticket_page`    | ticket `cites` page         | _Documentation_ | A reply pointed at the page; it may not resolve it   | v1      |
-| `project_page`   | page `documents` project    | _Documentation_ | The page is part of the project's documentation      | v1      |
+| Table             | Relation                       | Panel label     | Meaning                                                     | Tier    |
+| ----------------- | ------------------------------ | --------------- | ----------------------------------------------------------- | ------- |
+| `ticket_asset`    | ticket `affects` asset         | _Affects_       | The ticket is about this device                             | MVP     |
+| `ticket_task`     | ticket `resolved-by` task      | _Resolved in_   | A task carries the work that resolves the ticket            | MVP     |
+| `ticket_project`  | ticket `handled-in` project    | _Handled in_    | The ticket is attended within this programme of work        | MVP     |
+| `project_asset`   | project `targets` asset        | _Targets_       | The asset is in the project's scope                         | post-v1 |
+| `ticket_page`     | ticket `cites` page            | _Documentation_ | A reply pointed at the page; it may not resolve it          | v1      |
+| `project_page`    | page `documents` project       | _Documentation_ | The page is part of the project's documentation             | v1      |
+| `ticket_handover` | ticket `fulfilled-by` handover | _Handover_      | The handover delivers or collects what the ticket asked for | v1      |
+| `ticket_category` | ticket `requests` category     | _Requested_     | An equipment request asks for an asset of this category     | v1      |
 
 Each row also carries `createdBy` and `createdAt`, so a relation can be attributed like any
 other record. Every one of these tables carries a **composite unique constraint on its pair**:

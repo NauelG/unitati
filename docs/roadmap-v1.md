@@ -98,7 +98,8 @@ place to write documentation, so that it is trusted
 | QR / barcode labels, print, scan     | Core to inventory work, not decoration              | Shelf, Snipe-IT |
 | `ReportFound`                        | Scan a lost device's label and report it; near-free | Shelf           |
 | Physical audit sessions              | Annual inventory is a legal requirement for many    | Shelf, Snipe-IT |
-| Checkout request and acceptance      | Signed handover of equipment has legal value        | Snipe-IT        |
+| Signed handover, delivery and return | Signed handover of equipment has legal value        | Snipe-IT, Shelf |
+| Equipment request                    | An employee asks for equipment instead of mailing   | Snipe-IT        |
 | Licences and seats                   | Software is the other half of IT inventory          | Snipe-IT        |
 | Consumables, accessories, components | The rest of what a technician hands out             | Snipe-IT        |
 | Kits                                 | "Laptop + dock + monitor" moves as one unit         | Shelf, Snipe-IT |
