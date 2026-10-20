@@ -3,6 +3,7 @@
 	import FormError from '#lib/components/unitati/FormError.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Pencil from '@lucide/svelte/icons/pencil';
+	import Printer from '@lucide/svelte/icons/printer';
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import { superForm } from 'sveltekit-superforms';
@@ -262,6 +263,12 @@
 		codeViewTransitionName={toViewTransitionName('record', asset.assetTag)}
 	>
 		{#snippet actions()}
+			{#if data.canManage}
+				<Button href="/assets/labels?tag={encodeURIComponent(asset.assetTag)}" variant="secondary">
+					<Printer class="size-4" aria-hidden="true" />
+					{m.labels_print_one()}
+				</Button>
+			{/if}
 			{#if data.canManage && asset.visibility === 'full'}
 				<Button
 					href="/assets/{encodeURIComponent(asset.assetTag)}/edit"
@@ -433,6 +440,7 @@
 				errors={$editErrors}
 				modelOptions={editModelOptions}
 				tagRequired
+				storedTag={asset.assetTag}
 				onaddmodel={() => (modelOpen = true)}
 			/>
 		{/snippet}

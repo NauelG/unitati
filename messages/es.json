@@ -1345,5 +1345,22 @@
 	"attachments_remove_button": "Quitar {filename}",
 	"attachments_remove_title": "Quitar adjunto",
 	"attachments_remove_description": "Se quitará «{filename}» y se borrará el archivo. No se puede deshacer.",
-	"attachments_remove_confirm": "Quitar adjunto"
+	"attachments_remove_confirm": "Quitar adjunto",
+	"labels_print_one": "Imprimir etiqueta",
+	"labels_print_many": "Imprimir etiquetas ({n})",
+	"labels_max_batch": "Máximo 500 etiquetas por lote",
+	"labels_title": "Etiquetas de activos",
+	"labels_format": "Formato",
+	"labels_format_a4_3x8": "A4, 3 × 8 (70 × 37 mm)",
+	"labels_format_a4_4x10": "A4, 4 × 10 (52 × 30 mm)",
+	"labels_format_roll": "Rollo 62 × 29 mm",
+	"labels_start_position": "Empezar en la posición",
+	"labels_points_to": "Los QR apuntan a {address}",
+	"labels_owned_by": "Propiedad de {name}",
+	"labels_print": "Imprimir",
+	"labels_back": "Volver",
+	"labels_missing": "{n} etiquetas no encontradas: {tags}",
+	"labels_origin_mismatch": "Estás en {requestOrigin}, pero los QR apuntarán a {origin}. Comprueba que esa dirección es accesible desde los móviles antes de imprimir.",
+	"labels_empty": "No hay ninguna etiqueta que imprimir.",
+	"labels_reprint_note": "Si ya has impreso la etiqueta de este activo, tendrás que reimprimirla."
 }

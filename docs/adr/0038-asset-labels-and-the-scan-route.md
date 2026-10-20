@@ -42,7 +42,36 @@ something stable, and what the scanner sees must depend on who is scanning.
 
 ## Printing
 
-To be written with #270: formats, label size and the public address setting.
+Labels are printed from an HTML page, `/assets/labels` (#270).
+
+1. **HTML and `@page`, not PDF.** The page declares its sheet in millimetres (`@page { size;
+margin: 0 }`) and the browser's print dialog does the rest. There is no PDF library to
+   maintain, the preview on screen is the document, and text prints sharp because it is real text.
+   The QR is the only generated artefact: server-side SVG from `qrcode`, error correction M,
+   drawn without a margin and padded in CSS so the 4-module quiet zone is exact.
+2. **Three fixed formats**, defined once in `src/lib/domain/label-formats.ts`: `a4-3x8`
+   (24 labels of 70 × 37 mm, the default), `a4-4x10` (40 labels of 52.5 × 29.7 mm) and
+   `roll-62x29` (one label per page). A template editor would be a second product; the formats
+   are the ones sold as ordinary A4 sheets and a common thermal roll. On the sheets, a start
+   position leaves the first cells empty so a partly used sheet is not wasted; the roll has none.
+3. **What a label shows**: the QR, the tag, "Propiedad de {product name}" (with the brand mark
+   where it fits) and, on the large format only, the asset name. **Never the serial, the custodian
+   or the location**: a label is stuck on a thing that leaves the building, and the people
+   scanning it are answered by what their session may see (decision 3), not by what is printed.
+4. **The QR origin is `BETTER_AUTH_URL`**, the installation's one public origin, already used by
+   authentication and by mail links. Not the request's origin: a label printed from
+   `http://192.168.1.10:3000` would be useless for years. Not a per-organisation setting: it
+   would be a second source for the same fact, and the per-organisation origin for auth, mail and
+   labels must be decided together in #42. When the page is opened from another origin, a
+   visible warning says where the codes will point; it does not block printing.
+5. **`assets.manage` only, at most 500 labels per job.** More than 500 tags, or none, is a 400.
+   Tags the viewer cannot see or that do not exist are listed as missing and the rest print;
+   the page cannot tell the two apart, as with the scan route. Like every permission denial in
+   the app ([ADR 0007](0007-roles-and-permissions.md)) the answer for someone without the
+   permission is 404.
+6. **Printing is not an event.** It leaves no activity on the asset: the label is a copy of the
+   tag, not a change to the asset. Renaming a tag shows a note in the edit form, because the
+   printed label is now stale (decision 8).
 
 ## Consequences
 

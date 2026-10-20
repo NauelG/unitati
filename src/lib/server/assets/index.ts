@@ -435,6 +435,34 @@ export async function resolveAssetTags(
 	return new Map(rows.map((row) => [row.assetTag, row.id]));
 }
 
+/**
+ * What a printed label needs of each asset (ADR 0038): the tag and the name,
+ * in the order of `assetTags`. Same visibility rule as `resolveAssetTags`: a
+ * tag that is not in the result is unknown or invisible, and nobody can tell
+ * which. Serial, custodian and location are deliberately not selected.
+ */
+export async function listAssetsByTags(
+	viewer: SessionUser,
+	assetTags: readonly string[]
+): Promise<{ assetTag: string; name: string }[]> {
+	if (assetTags.length === 0) return [];
+	if (
+		!can(viewer, 'assets.view') &&
+		!can(viewer, 'assets.view.own') &&
+		!can(viewer, 'assets.view.shared')
+	) {
+		return [];
+	}
+
+	const rows = await getDb()
+		.select({ assetTag: assets.assetTag, name: assets.name })
+		.from(assets)
+		.where(and(requireAssetScope(viewer), inArray(assets.assetTag, [...assetTags])));
+
+	const byTag = new Map(rows.map((row) => [row.assetTag, row]));
+	return assetTags.flatMap((tag) => byTag.get(tag) ?? []);
+}
+
 /** The asset behind a `/assets/AST-0142` URL (ADR 0010), redacted for its viewer. */
 export async function getAssetByTag(
 	viewer: SessionUser,

@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import Plus from '@lucide/svelte/icons/plus';
+	import Printer from '@lucide/svelte/icons/printer';
 	import Search from '@lucide/svelte/icons/search';
 	import SearchX from '@lucide/svelte/icons/search-x';
 	import { goto } from '$app/navigation';
@@ -13,6 +15,7 @@
 	import ListToolbar from '#lib/components/unitati/ListToolbar.svelte';
 	import Pager from '#lib/components/unitati/Pager.svelte';
 	import RollingText from '#lib/components/unitati/RollingText.svelte';
+	import { MAX_LABELS } from '#lib/domain/label-formats.js';
 	import { rollingSummary } from '#lib/rolling.js';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
@@ -35,6 +38,17 @@
 
 	/** Roving focus's active row (#88), read by the `a`/`e`/`l` keymap verbs below. */
 	let activeKey = $state<string | null>(null);
+
+	/**
+	 * Row selection for printing labels (ADR 0038): only with `assets.manage`,
+	 * since `undefined` is what keeps the table's checkbox column off. It lives
+	 * in the page, not the URL, and survives paging because the table does.
+	 */
+	let selected = $state<string[] | undefined>(untrack(() => (data.canManage ? [] : undefined)));
+	const selectedCount = $derived(selected?.length ?? 0);
+	const labelsHref = $derived(
+		`/assets/labels?${(selected ?? []).map((tag) => `tag=${encodeURIComponent(tag)}`).join('&')}`
+	);
 	const mac = isMacPlatform();
 
 	$effect(() => {
@@ -263,6 +277,22 @@
 				<Search class="size-4" aria-hidden="true" />
 				{m.assets_search_submit()}
 			</Button>
+			{#if selectedCount > 0}
+				{#if selectedCount > MAX_LABELS}
+					<Button type="button" variant="secondary" disabled aria-describedby="labels-max">
+						<Printer class="size-4" aria-hidden="true" />
+						{m.labels_print_many({ n: selectedCount })}
+					</Button>
+					<span id="labels-max" class="text-small text-[var(--ink-muted)]">
+						{m.labels_max_batch()}
+					</span>
+				{:else}
+					<Button href={labelsHref} variant="secondary">
+						<Printer class="size-4" aria-hidden="true" />
+						{m.labels_print_many({ n: selectedCount })}
+					</Button>
+				{/if}
+			{/if}
 		</ListToolbar>
 
 		{#snippet emptyAction()}
@@ -285,6 +315,7 @@
 			rowLabel={(row) => row.name}
 			href={(row) => `/assets/${encodeURIComponent(row.assetTag)}`}
 			bind:activeKey
+			bind:selected
 			compact
 			loading={navigating.to?.route.id === page.route.id}
 			class="rounded-t-none"
