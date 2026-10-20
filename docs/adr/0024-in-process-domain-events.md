@@ -13,7 +13,7 @@ the only writer of a task's state, so the fact happens in exactly one place that
 name the people who care about it.
 
 Until now there was no mechanism for this. `recordActivity` is a log, not a hook or a bus, and
-mail is a fire-and-forget courtesy after commit (`sendQuietly` in `service-desk/mail.ts`).
+mail is a fire-and-forget courtesy after commit (`sendQuietly` in `shared/mail.ts`).
 
 ## Decision
 

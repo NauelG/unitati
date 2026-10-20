@@ -10,7 +10,7 @@ import {
 	createWorkspace,
 	statesByGroup
 } from '../projects/testing/fixtures';
-import type { Mailer, MailMessage } from '../service-desk';
+import type { Mailer, MailMessage } from '../shared/mail';
 import { tickets } from '../service-desk/schema';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
 import { flushEvents, on, resetSubscriptions, setDispatchMode } from '../shared/events';

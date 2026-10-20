@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { activity } from '../activity';
 import { createOrganisation, createViewer } from '../assets/testing/fixtures';
 import { getDb } from '../db';
-import { InMemoryStorage } from './storage';
+import { InMemoryStorage } from '../shared/storage';
 import { changeTicketSubject, createTicket } from './index';
 import { tickets } from './schema';
 import { createQueue } from './testing/fixtures';

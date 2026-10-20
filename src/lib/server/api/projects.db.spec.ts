@@ -13,7 +13,7 @@ import {
 	createWorkspace,
 	statesByGroup
 } from '../projects/testing/fixtures';
-import type { MailMessage } from '../service-desk';
+import type { MailMessage } from '../shared/mail';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
 import { flushEvents, on, resetSubscriptions, setDispatchMode } from '../shared/events';
 import { authenticateRequest } from './authenticate-request';

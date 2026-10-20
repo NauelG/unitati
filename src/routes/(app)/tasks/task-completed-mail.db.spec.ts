@@ -9,7 +9,7 @@ import {
 	statesByGroup
 } from '#lib/server/projects/testing/fixtures.js';
 import { actionEvent } from '#lib/server/projects/testing/action-event.js';
-import type { MailMessage } from '#lib/server/service-desk/index.js';
+import type { MailMessage } from '#lib/server/shared/mail.js';
 import { createQueue, createTicket } from '#lib/server/service-desk/testing/fixtures.js';
 import { flushEvents, on, resetSubscriptions, setDispatchMode } from '#lib/server/shared/events.js';
 import { actions as boardActions } from '../projects/[tag]/+page.server';

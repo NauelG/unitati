@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { activity } from '../activity';
 import { createOrganisation, createViewer } from '../assets/testing/fixtures';
 import { getDb } from '../db';
-import type { Mailer } from './mail';
+import type { Mailer } from '../shared/mail';
 import { addComment, createTicket, editComment, ticketThread } from './index';
 import { ticketComments, tickets } from './schema';
-import { InMemoryStorage } from './storage';
+import { InMemoryStorage } from '../shared/storage';
 import { createQueue } from './testing/fixtures';
 
 async function workspace() {

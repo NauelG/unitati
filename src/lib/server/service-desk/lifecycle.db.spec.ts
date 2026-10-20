@@ -12,7 +12,7 @@ import {
 	createViewer,
 	createViewerWithoutPerson
 } from '../assets/testing/fixtures';
-import type { Mailer } from './mail';
+import type { Mailer } from '../shared/mail';
 import {
 	addComment,
 	assignTicket,
@@ -30,7 +30,7 @@ import {
 	ticketThread,
 	type UploadedFile
 } from './index';
-import { InMemoryStorage } from './storage';
+import { InMemoryStorage } from '../shared/storage';
 import { createQueue as insertQueue } from './testing/fixtures';
 
 async function workspace() {

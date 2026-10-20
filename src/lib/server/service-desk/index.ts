@@ -58,10 +58,8 @@ export {
 } from './summaries';
 export type { TicketRow, AssignedOpenTicket } from './summaries';
 
-/** Outbound mail, for the domains that react to events with a message (ADR 0024). */
-export { sendQuietly, taskCompletedMail } from './mail';
-export type { Mailer, MailMessage } from './mail';
-export { runtimeMailer } from './runtime';
+/** Ticket mail templates, for the domains that react to events with a message (ADR 0024). */
+export { taskCompletedMail } from './mail';
 
 export { ticketThread, addComment, editComment, getAttachment } from './comments';
 export type {
