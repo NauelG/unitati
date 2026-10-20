@@ -5,6 +5,22 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.88.0] - 2026-10-20
+
+### Added
+
+- Delivering several assets in one operation, with a pending handover when one is required (#25,
+  #274). The assign-custody select on the asset page becomes a **Deliver** dialog: pick a person,
+  tick the assets (the current one preselected) and see before confirming whether a handover will be
+  issued. In one transaction every asset gets its custody, and if any belongs to a category that
+  requires it, a pending `HND-####` handover lists all of them, with the agreement rendered from its
+  template and a single-use signing link (only its sha256 is stored). The link is mailed to the
+  person when mail is on and shown once to the technician with a copy button; a failed send changes
+  nothing. If one asset is already held, nothing is written; with no delivery template the delivery
+  is refused. `handover.issued` lands on each asset and on the person. The API custody endpoint
+  goes through the same operation and returns `handoverCode` (`null` when none). CSV import and the
+  seed keep recording custody without handovers. The signing page itself arrives with the next slice.
+
 ## [0.87.0] - 2026-10-20
 
 ### Added
