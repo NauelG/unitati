@@ -17,6 +17,8 @@ export const ACTIVITY_VERBS = [
 	'custody.assigned',
 	'custody.returned',
 	'handover.issued',
+	'handover.accepted',
+	'handover.rejected',
 	'state.changed',
 	'location.changed',
 	'note.added',

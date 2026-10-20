@@ -57,6 +57,16 @@ export type {
 	SaveHandoverTemplateFailure
 } from './handover-templates';
 export { deliver, listDeliverableAssets } from './deliver';
+export { decideHandover, openHandover } from './handover-decision';
+export type {
+	DecideFailure,
+	DecidedStatus,
+	DecisionDeps,
+	DecisionEvidence,
+	HandoverDecision,
+	SigningAsset,
+	SigningView
+} from './handover-decision';
 export type { DeliverableAsset, DeliverDeps, DeliverFailure, DeliveredHandover } from './deliver';
 export { renderHandoverTemplate, resolveHandoverTemplate } from './handover-template';
 

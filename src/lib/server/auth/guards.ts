@@ -94,8 +94,21 @@ export function requireAnyPermission(
 
 export const PASSWORD_CHANGE_PATH = '/account/password';
 
-/** Paths a session with a temporary password may still reach (#230). */
-const PASSWORD_CHANGE_EXEMPT = [PASSWORD_CHANGE_PATH, '/sign-out', '/api/auth', '/_app/'];
+/** The public signing page of a handover, `/handover/<token>` (ADR 0035): no session needed. */
+export const SIGNING_PATH_PREFIX = '/handover/';
+
+/**
+ * Paths a session with a temporary password may still reach (#230). The
+ * signing page (#275) is public and ignores the session, so a person who also
+ * happens to hold a temporary password can still decide their handover.
+ */
+const PASSWORD_CHANGE_EXEMPT = [
+	PASSWORD_CHANGE_PATH,
+	'/sign-out',
+	'/api/auth',
+	'/_app/',
+	SIGNING_PATH_PREFIX
+];
 
 /**
  * Where a session must go before anything else, or null. A user holding a

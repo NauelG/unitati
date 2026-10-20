@@ -3,6 +3,7 @@ import { beforeEach } from 'vitest';
 import { DATABASE_URL } from '$app/env/private';
 import { resetBrandCache } from '../../directory';
 import { resetSubscriptions, setDispatchMode } from '../../shared/events';
+import { resetRuntime } from '../../shared/runtime';
 import { getDb } from '..';
 import { assertTestDatabase } from './database-url';
 import { emptyAllTablesStatement } from './tables';
@@ -37,4 +38,5 @@ beforeEach(async () => {
 	resetBrandCache();
 	resetSubscriptions();
 	setDispatchMode('async');
+	resetRuntime();
 });

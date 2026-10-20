@@ -25,6 +25,9 @@ const ticketPriority = z.enum(PRIORITIES);
 /** A name that is present is a real name; a name that is absent is `null`. */
 const presentName = z.string().min(1);
 
+/** Free text a person wrote, such as the reason for a rejection: never empty. */
+const presentText = z.string().min(1);
+
 /** A calendar date (`YYYY-MM-DD`), as the `date` columns hold it: no time, no zone. */
 const isoDate = z.iso.date();
 
@@ -99,6 +102,23 @@ export const PAYLOAD_SCHEMAS = {
 				model: presentName
 			})
 		)
+	}),
+
+	// The person's decision, on every asset of the handover and on the person. The
+	// actor is the person themselves: they decided through the link, not a session.
+	'handover.accepted': z.object({
+		handoverId: z.uuid(),
+		code: presentName,
+		personId: z.uuid(),
+		personName: presentName
+	}),
+
+	'handover.rejected': z.object({
+		handoverId: z.uuid(),
+		code: presentName,
+		personId: z.uuid(),
+		personName: presentName,
+		reason: presentText
 	}),
 
 	'state.changed': z.object({

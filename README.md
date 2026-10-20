@@ -215,7 +215,9 @@ toolchain on those platforms.
 `node --env-file=.env build` serves on port 3000. Behind a reverse proxy, adapter-node must be
 told its public origin or **every form submission is rejected** as cross-site: set
 `PROTOCOL_HEADER=x-forwarded-proto` and `HOST_HEADER=x-forwarded-host`. The `ORIGIN` variable
-of earlier versions no longer exists in adapter-node 6.
+of earlier versions no longer exists in adapter-node 6. Set `ADDRESS_HEADER=x-forwarded-for` too
+(and `XFF_DEPTH` to the number of proxies), or the IP recorded with a signed handover is the
+proxy's, not the signer's.
 
 Unitati is served at the **root of its origin**: `kit.paths.base` stays empty. A deployment that
 needs isolation gets its own hostname, port or Tailscale Service, never a subpath — see

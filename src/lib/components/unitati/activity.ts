@@ -38,6 +38,15 @@ export function activitySentence(entry: ActivityEntry): string {
 		case 'handover.issued':
 			return m.activity_handover_issued({ code: entry.payload.code });
 
+		case 'handover.accepted':
+			return m.activity_handover_accepted({ code: entry.payload.code });
+
+		case 'handover.rejected':
+			return m.activity_handover_rejected({
+				code: entry.payload.code,
+				reason: entry.payload.reason
+			});
+
 		case 'state.changed':
 			return m.activity_state_changed({
 				from: statusLabel(entry.payload.from),

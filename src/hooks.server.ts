@@ -72,7 +72,8 @@ const authHandle: Handle = async ({ event, resolve }) => {
 	const session = await auth.api.getSession({ headers: event.request.headers });
 	event.locals.user = session?.user ? await resolveSessionUser(session.user.id) : null;
 
-	// A temporary password confines the session to changing it (#230).
+	// A temporary password confines the session to changing it (#230). The public
+	// handover signing page is exempt (#275); no layout signs anyone in for it.
 	const confined = passwordChangeRedirect(event.locals.user, event.url.pathname);
 	if (confined) {
 		return new Response(null, { status: 303, headers: { location: confined } });

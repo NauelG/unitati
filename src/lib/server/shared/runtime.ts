@@ -39,6 +39,24 @@ export function runtimeMailer(): Mailer | null {
 	return mailer;
 }
 
+/**
+ * Tests only: what `runtimeStorage` and `runtimeMailer` hand out until the next
+ * `resetRuntime()`. For a route spec, whose handler cannot take collaborators as
+ * arguments. A `vi.mock` of this file is not enough there: the db project shares
+ * one module graph (ADR 0032), so a domain module imported by an earlier file
+ * keeps the real one.
+ */
+export function overrideRuntime(next: { storage?: Storage; mailer?: Mailer | null }): void {
+	if (next.storage) storage = next.storage;
+	if (next.mailer !== undefined) mailer = next.mailer;
+}
+
+/** Tests only; the database harness calls it before every test. */
+export function resetRuntime(): void {
+	storage = undefined;
+	mailer = undefined;
+}
+
 /** The public origin of this installation, for links that leave the app (a mailed signing link). */
 export function runtimeOrigin(): string {
 	return BETTER_AUTH_URL.replace(/\/+$/, '');
