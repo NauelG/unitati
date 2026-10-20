@@ -187,7 +187,7 @@ export const actions: Actions = {
 		});
 		if (!parsed.success) return rejected('deliver', m.action_error_invalid());
 
-		// The page's own asset must be one of them: the dialog preselects it.
+		// The URL's asset must be visible to the actor; the dialog only preselects it.
 		await targetOf(user, params.tag);
 		const outcome = await deliver(user, parsed.data.personId, parsed.data.assetIds);
 
