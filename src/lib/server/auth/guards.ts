@@ -1,5 +1,6 @@
 import { error, redirect } from '@sveltejs/kit';
 import { can, type Permission } from '../access/permissions';
+import { loginPathFor, safeRedirectTarget } from './redirect';
 import type { UserRole } from './schema';
 
 /**
@@ -36,15 +37,19 @@ export interface SessionUser {
 	scopes?: readonly Permission[];
 }
 
-/** `(app)` group: anonymous visitors go to the login screen. */
-export function requireUser(user: SessionUser | null): SessionUser {
-	if (!user) redirect(303, '/login');
+/**
+ * `(app)` group: anonymous visitors go to the login screen. Pass the request
+ * `url` from a `load` so the login returns them to the page they were going to;
+ * actions omit it and redirect without a target.
+ */
+export function requireUser(user: SessionUser | null, url?: URL): SessionUser {
+	if (!user) redirect(303, loginPathFor(url));
 	return user;
 }
 
 /** `(auth)` group: authenticated users have no business on the login screen. */
-export function redirectIfSignedIn(user: SessionUser | null): void {
-	if (user) redirect(303, '/');
+export function redirectIfSignedIn(user: SessionUser | null, redirectTo?: string | null): void {
+	if (user) redirect(303, safeRedirectTarget(redirectTo));
 }
 
 /**
@@ -54,8 +59,12 @@ export function redirectIfSignedIn(user: SessionUser | null): void {
  *
  * Denials are 404, not 403: confirming that a resource exists is itself a leak.
  */
-export function requirePermission(user: SessionUser | null, permission: Permission): SessionUser {
-	const authenticated = requireUser(user);
+export function requirePermission(
+	user: SessionUser | null,
+	permission: Permission,
+	url?: URL
+): SessionUser {
+	const authenticated = requireUser(user, url);
 	if (!can(authenticated, permission)) error(404, 'Not found');
 	return authenticated;
 }
@@ -71,13 +80,14 @@ export function requirePermission(user: SessionUser | null, permission: Permissi
  */
 export function requireAnyPermission(
 	user: SessionUser | null,
-	permissions: readonly Permission[]
+	permissions: readonly Permission[],
+	url?: URL
 ): SessionUser {
 	if (permissions.length === 0) {
 		throw new Error('requireAnyPermission needs at least one permission.');
 	}
 
-	const authenticated = requireUser(user);
+	const authenticated = requireUser(user, url);
 	if (!permissions.some((permission) => can(authenticated, permission))) error(404, 'Not found');
 	return authenticated;
 }
