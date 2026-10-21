@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray } from 'drizzle-orm';
+import { deriveHandoverState, type HandoverState } from '#lib/domain/handover.js';
 import { assetHref, projectHref, taskHref, ticketHref } from '#lib/domain/routes.js';
 import type { AssetState, Priority, StateGroup, TicketStatus } from '#lib/domain/status.js';
 import { can } from '../access/permissions';
@@ -56,11 +57,8 @@ export type RestrictedRecordRef<K extends RecordKind = RecordKind> = Omit<Record
 	href: null;
 };
 
-/**
- * Where a handover stands today (ADR 0035, decision 3). `expired` is never
- * stored: it is a pending handover past its date, computed when read.
- */
-export type HandoverState = 'pending' | 'accepted' | 'rejected' | 'waived' | 'expired';
+/** Where a handover stands today: derived in the domain, never stored as `expired`. */
+export type { HandoverState };
 
 /** A task's state as it is today: the group is the product's, the name the organisation's. */
 export interface TaskStatus {
@@ -500,16 +498,6 @@ async function ticketsViaTasksOf(viewer: SessionUser, projectId: string): Promis
 /* Tickets and the handovers that fulfil them (#279)                          */
 /* -------------------------------------------------------------------------- */
 
-function handoverState(
-	status: Exclude<HandoverState, 'expired'>,
-	expiresAt: Date | null,
-	now: Date
-) {
-	return status === 'pending' && expiresAt !== null && expiresAt.getTime() <= now.getTime()
-		? 'expired'
-		: status;
-}
-
 /** Handovers are staff business (signature evidence): never shown to a requester. */
 async function handoversFulfilling(viewer: SessionUser, ticketId: string): Promise<RelatedItem[]> {
 	const now = new Date();
@@ -535,7 +523,7 @@ async function handoversFulfilling(viewer: SessionUser, ticketId: string): Promi
 
 	return rows.map((row) => ({
 		ref: { kind: 'handover' as const, id: row.id, tag: row.code, title: row.person, href: null },
-		status: handoverState(row.status, row.expiresAt, now),
+		status: deriveHandoverState(row, now),
 		linkedAt: row.linkedAt
 	}));
 }
