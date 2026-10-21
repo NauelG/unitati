@@ -5,6 +5,22 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.103.0] - 2026-10-21
+
+### Added
+
+- **@mentions in ticket comments** (#33, #303): type `@` in a reply, an internal note, an edit or a
+  ticket's opening message (staff form) to name a colleague. The list shows at most 8 people with
+  their email, answers to the arrow keys, Enter and Esc, and only offers who can read what you are
+  writing: staff for an internal note; staff and the requester for a public comment; in the portal,
+  the assignee and the staff who have answered. The person named gets a notification (and an email
+  if their preferences say so) and follows the ticket; editing a comment notifies only the people
+  the edit adds. Mentions render as a chip. Task and project descriptions do not react to `@`.
+
+### Changed
+
+- The staff form that opens a ticket now uses the rich text editor for its message, like replies.
+
 ## [0.102.0] - 2026-10-21
 
 ### Added
