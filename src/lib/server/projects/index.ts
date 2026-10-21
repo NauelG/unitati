@@ -21,11 +21,13 @@ export {
 	projectAttachments,
 	taskAttachments,
 	projectCodeSequence,
-	taskCodeSequence
+	taskCodeSequence,
+	projectVisibility,
+	projectMembers
 } from './schema';
 export type { State, Project, Task, TaskAssignee } from './schema';
 
-export { requireProjectScope, requireTaskScope } from './scope';
+export { requireProjectScope, requireTaskScope, seesAllProjects } from './scope';
 export { findTaskInScope, findProjectInScope, taskSnapshot, projectSnapshot } from './link-targets';
 export type { TaskLinkTarget, ProjectLinkTarget } from './link-targets';
 export { taskSummaries, tasksOfProject, projectSummaries, readsProjects } from './summaries';
@@ -72,6 +74,21 @@ export type {
 	CreateProjectFailure,
 	UpdateProjectFailure
 } from './projects';
+
+export {
+	setProjectVisibility,
+	addProjectMember,
+	removeProjectMember,
+	listProjectMembers,
+	canManageMembers
+} from './members';
+export type {
+	ProjectVisibility,
+	ProjectMemberView,
+	MembershipFailure,
+	AddMemberFailure,
+	RemoveMemberFailure
+} from './members';
 
 export {
 	listTasks,
@@ -129,6 +146,7 @@ export {
 	updateTaskInput,
 	createStateInput,
 	updateStateInput,
+	PROJECT_VISIBILITIES,
 	RESERVED_PROJECT_TAGS,
 	RESERVED_TASK_TAGS,
 	TASK_TITLE_MAX

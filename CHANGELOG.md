@@ -5,6 +5,21 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.99.0] - 2026-10-21
+
+### Added
+
+- Members-only projects (#58, #309): a project can be visible to the whole organisation (the default)
+  or only to its members and admins. A members-only project and its tasks vanish for everyone else
+  — lists, records, board, search, counters and the API answer as if it did not exist — and every
+  write on it fails as not found. The new "Visibilidad" panel on the project record lets the owner
+  and admins switch it and manage members; switching to members-only seeds the owner, you and
+  everyone already assigned. Assigning a non-member is refused (`not_a_member`), removing a member
+  with tasks asks for confirmation and unassigns them, and the owner cannot be removed. A lock marks
+  members-only projects in the list and the header; `/projects/new` and the API
+  (`visibility` on `POST`/`PATCH /projects`, and on the project shape) take the setting.
+  Notifications about a members-only project reach only members and admins.
+
 ## [0.98.0] - 2026-10-21
 
 ### Added

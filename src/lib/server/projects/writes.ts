@@ -3,7 +3,8 @@ import type { SessionUser } from '../auth/guards';
 import type { Database, Transaction } from '../db';
 import { people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
-import { projects, tasks, type Task } from './schema';
+import { projectMembers, projects, tasks, type Task } from './schema';
+import { writableProject } from './scope';
 
 /**
  * What every write in the domain shares: locking the project it touches, and the
@@ -28,7 +29,13 @@ export async function lockProject(
 	const [project] = await tx
 		.select()
 		.from(projects)
-		.where(and(eq(projects.id, projectId), eq(projects.organisationId, actor.organisationId)))
+		.where(
+			and(
+				eq(projects.id, projectId),
+				eq(projects.organisationId, actor.organisationId),
+				writableProject(actor)
+			)
+		)
 		.for('update');
 
 	if (!project) return failure('project_not_found');
@@ -55,7 +62,8 @@ export async function lockProjects(
 		.where(
 			and(
 				inArray(projects.id, [...new Set(projectIds)]),
-				eq(projects.organisationId, actor.organisationId)
+				eq(projects.organisationId, actor.organisationId),
+				writableProject(actor)
 			)
 		)
 		.orderBy(asc(projects.id))
@@ -109,4 +117,41 @@ export async function findPerson(
 		.from(people)
 		.where(and(eq(people.id, personId), eq(people.organisationId, organisationId)));
 	return person ?? null;
+}
+
+/**
+ * Whether a person may be put on a task of this project. Everybody may on an
+ * open project; on a members-only one only its members may, because an
+ * assignment never widens access (ADR 0041) — the way in is `addProjectMember`.
+ */
+export async function canBeAssigned(
+	tx: Transaction,
+	project: Pick<typeof projects.$inferSelect, 'id' | 'visibility'>,
+	personId: string
+): Promise<boolean> {
+	if (project.visibility === 'organisation') return true;
+
+	const [row] = await tx
+		.select({ personId: projectMembers.personId })
+		.from(projectMembers)
+		.where(and(eq(projectMembers.projectId, project.id), eq(projectMembers.personId, personId)));
+	return row !== undefined;
+}
+
+/**
+ * Who may be told about something in this project: `undefined` for an open
+ * project (no restriction), the members for a members-only one. Handed to
+ * `notify` as its `audience`; admins are let through there.
+ */
+export async function notificationAudience(
+	tx: Transaction,
+	project: Pick<typeof projects.$inferSelect, 'id' | 'visibility'>
+): Promise<ReadonlySet<string> | undefined> {
+	if (project.visibility === 'organisation') return undefined;
+
+	const rows = await tx
+		.select({ personId: projectMembers.personId })
+		.from(projectMembers)
+		.where(eq(projectMembers.projectId, project.id));
+	return new Set(rows.map((row) => row.personId));
 }

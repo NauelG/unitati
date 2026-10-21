@@ -1,8 +1,9 @@
-import { and, eq, exists, sql, type SQL } from 'drizzle-orm';
+import { and, eq, exists, or, sql, type SQL } from 'drizzle-orm';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
-import { projects, taskAssignees, tasks } from './schema';
+import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { projectMembers, projects, taskAssignees, tasks } from './schema';
 
 /**
  * Which tasks and projects a viewer may see, as SQL. A leaf module, like
@@ -13,6 +14,12 @@ import { projects, taskAssignees, tasks } from './schema';
  * `projects.view` sees the organisation. `projects.view.assigned` sees the tasks
  * somebody put them on, and the projects that contain at least one such task —
  * the `tickets.view.own` shape (ADR 0007); per-project membership is #58.
+ *
+ * **Members-only projects (ADR 0041)** narrow every one of these further: a
+ * project whose `visibility` is `members` is visible to its members and to
+ * admins, and so are its tasks, whatever the viewer's role would otherwise show.
+ * The condition is part of the same predicate, so every call site picks it up and
+ * a record the viewer cannot see is simply absent — `not_found`, never a 403.
  *
  * Returns `null` only when the viewer holds **no** project-read permission at
  * all, which the callers turn into a thrown error: an empty list is
@@ -37,8 +44,73 @@ function assignedPersonId(viewer: SessionUser): string | null {
 	return can(viewer, 'projects.view.assigned') ? viewer.personId : null;
 }
 
+/** Admins see every project, members-only ones included. */
+export function seesAllProjects(viewer: SessionUser): boolean {
+	return viewer.role === 'admin';
+}
+
+/**
+ * The membership half of the scope, written against the `projects` row it is
+ * given: an open project, or one the viewer is a member of. Absent for an admin.
+ * A viewer with no directory record (`personId === null`, an API key) matches no
+ * members-only project — the same null discipline as `assignedPersonId`.
+ */
+function membershipOf(
+	viewer: SessionUser,
+	project: { id: AnyPgColumn; visibility: AnyPgColumn }
+): SQL | undefined {
+	if (seesAllProjects(viewer)) return undefined;
+
+	const open = eq(project.visibility, 'organisation');
+	if (viewer.personId === null) return open;
+
+	return or(
+		open,
+		exists(
+			getDb()
+				.select({ one: sql`1` })
+				.from(projectMembers)
+				.where(
+					and(
+						eq(projectMembers.projectId, project.id),
+						eq(projectMembers.personId, viewer.personId)
+					)
+				)
+		)
+	);
+}
+
+/**
+ * The projects table reached from a task, for the membership condition. Aliased
+ * so the subquery cannot be confused with the `projects` a task listing joins.
+ */
+function taskProjectMembership(viewer: SessionUser): SQL | undefined {
+	if (seesAllProjects(viewer)) return undefined;
+
+	const owning = alias(projects, 'scope_projects');
+	return exists(
+		getDb()
+			.select({ one: sql`1` })
+			.from(owning)
+			.where(and(eq(owning.id, tasks.projectId), membershipOf(viewer, owning)))
+	);
+}
+
+/**
+ * The condition a **write** adds on top of locking a project by id: the actor
+ * can see it. Writes follow reads (ADR 0041), so a project the actor cannot see
+ * fails like one that does not exist. Reads and writes share `membershipOf`, so
+ * the two cannot drift apart.
+ */
+export function writableProject(actor: SessionUser): SQL | undefined {
+	return membershipOf(actor, projects);
+}
+
 function visibleTasks(viewer: SessionUser): SQL | null {
-	const organisation = eq(tasks.organisationId, viewer.organisationId);
+	const organisation = and(
+		eq(tasks.organisationId, viewer.organisationId),
+		taskProjectMembership(viewer)
+	) as SQL;
 
 	if (can(viewer, 'projects.view')) return organisation;
 	if (!can(viewer, 'projects.view.assigned')) return null;
@@ -58,7 +130,10 @@ function visibleTasks(viewer: SessionUser): SQL | null {
 }
 
 function visibleProjects(viewer: SessionUser): SQL | null {
-	const organisation = eq(projects.organisationId, viewer.organisationId);
+	const organisation = and(
+		eq(projects.organisationId, viewer.organisationId),
+		membershipOf(viewer, projects)
+	) as SQL;
 
 	if (can(viewer, 'projects.view')) return organisation;
 	if (!can(viewer, 'projects.view.assigned')) return null;

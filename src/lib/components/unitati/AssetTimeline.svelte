@@ -13,6 +13,7 @@
 	import ListTodo from '@lucide/svelte/icons/list-todo';
 	import Flag from '@lucide/svelte/icons/flag';
 	import Inbox from '@lucide/svelte/icons/inbox';
+	import Lock from '@lucide/svelte/icons/lock';
 	import Link from '@lucide/svelte/icons/link';
 	import MapPinMinus from '@lucide/svelte/icons/map-pin-minus';
 	import MapPinPen from '@lucide/svelte/icons/map-pin-pen';
@@ -101,6 +102,9 @@
 		'project.unarchived': ArchiveRestore,
 		'project.owner.changed': UserCheck,
 		'project.due.changed': CalendarClock,
+		'project.visibility.changed': Lock,
+		'project.member.added': UserPlus,
+		'project.member.removed': UserMinus,
 		'project.attachment.added': Paperclip,
 		'project.attachment.removed': Paperclip,
 		'task.created': ListTodo,

@@ -2,6 +2,7 @@
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Archive from '@lucide/svelte/icons/archive';
 	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
+	import Lock from '@lucide/svelte/icons/lock';
 	import FolderKanban from '@lucide/svelte/icons/folder-kanban';
 	import Plus from '@lucide/svelte/icons/plus';
 	import Search from '@lucide/svelte/icons/search';
@@ -16,6 +17,7 @@
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import ProjectProgress from '#lib/components/unitati/ProjectProgress.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
+	import Tooltip from '#lib/components/unitati/Tooltip.svelte';
 	import { formatDay } from '#lib/format-date.js';
 	import { formatKeys, isMacPlatform, keymapRegistry } from '#lib/keymap.js';
 	import { optimisticEnhance } from '#lib/optimistic.js';
@@ -111,7 +113,21 @@
 </script>
 
 {#snippet tag(row: Row)}{row.projectTag}{/snippet}
-{#snippet name(row: Row)}{row.name}{/snippet}
+{#snippet name(row: Row)}
+	{row.name}
+	{#if row.visibility === 'members'}
+		<Tooltip content={m.project_visibility_locked()} side="right">
+			{#snippet child({ props })}
+				<span
+					{...props}
+					class="ml-[var(--space-1)] inline-flex align-middle text-[var(--ink-muted)]"
+				>
+					<Lock class="size-3.5" aria-label={m.project_visibility_locked()} />
+				</span>
+			{/snippet}
+		</Tooltip>
+	{/if}
+{/snippet}
 {#snippet owner(row: Row)}
 	{#if row.ownerName}{row.ownerName}{:else}—{/if}
 {/snippet}

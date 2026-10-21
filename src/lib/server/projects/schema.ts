@@ -63,6 +63,13 @@ export const states = pgTable(
 	(table) => [unique('states_org_name').on(table.organisationId, table.name)]
 );
 
+/**
+ * Who may see a project (ADR 0041). `organisation` is every viewer the role
+ * rules already admit; `members` narrows that to the people listed in
+ * `project_members`, plus admins.
+ */
+export const projectVisibility = pgEnum('project_visibility', ['organisation', 'members']);
+
 export const projects = pgTable(
 	'projects',
 	{
@@ -79,6 +86,7 @@ export const projects = pgTable(
 		ownerPersonId: uuid('owner_person_id').references(() => people.id, { onDelete: 'set null' }),
 		/** A calendar date, not an instant: `YYYY-MM-DD` in and out. */
 		dueDate: date('due_date', { mode: 'string' }),
+		visibility: projectVisibility('visibility').notNull().default('organisation'),
 		/** Archived means read-only. There is no delete. */
 		archivedAt: timestamp('archived_at', { withTimezone: true }),
 		search: tsvector('search')
@@ -134,6 +142,31 @@ export const tasks = pgTable(
 		index('tasks_column_idx').on(table.projectId, table.stateId, table.position),
 		index('tasks_state_idx').on(table.stateId),
 		index('tasks_search_gin').using('gin', table.search)
+	]
+);
+
+/**
+ * The people a `members` project is visible to. Rows survive a switch back to
+ * `organisation` so that switching again restores the same list. Admins see
+ * every project and are not listed unless they were added.
+ */
+export const projectMembers = pgTable(
+	'project_members',
+	{
+		projectId: uuid('project_id')
+			.notNull()
+			.references(() => projects.id, { onDelete: 'cascade' }),
+		personId: uuid('person_id')
+			.notNull()
+			.references(() => people.id, { onDelete: 'cascade' }),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [
+		primaryKey({ columns: [table.projectId, table.personId] }),
+		index('project_members_person_idx').on(table.personId)
 	]
 );
 
@@ -215,6 +248,7 @@ export const taskAttachments = pgTable(
 
 export type State = typeof states.$inferSelect;
 export type Project = typeof projects.$inferSelect;
+export type ProjectMember = typeof projectMembers.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
 export type TaskAssignee = typeof taskAssignees.$inferSelect;
 export type ProjectAttachment = typeof projectAttachments.$inferSelect;

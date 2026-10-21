@@ -610,6 +610,11 @@ export interface GalleryException {
  */
 export const GALLERY_EXCEPTIONS: GalleryException[] = [
 	{
+		sourceFile: 'ProjectVisibilityPanel.svelte',
+		reason:
+			'Bound to the project record: its radio, add and remove forms post to the ?/setVisibility, ?/addMember and ?/removeMember actions of /projects/[tag], which answer 404 without a project the viewer can see.'
+	},
+	{
 		sourceFile: 'NotificationBell.svelte',
 		reason:
 			'Bound to the session: it polls and posts to /notifications/*, which answer 401 without a user, so it cannot render working in the gallery. It sits in both topbars.'

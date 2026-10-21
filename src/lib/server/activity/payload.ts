@@ -249,6 +249,21 @@ export const PAYLOAD_SCHEMAS = {
 		to: isoDate.nullable()
 	}),
 
+	'project.visibility.changed': z.object({
+		from: z.enum(['organisation', 'members']),
+		to: z.enum(['organisation', 'members'])
+	}),
+
+	// Name snapshots, like every person here. `unassignedTaskCount` is what the
+	// removal took the person off, so the history explains the task entries
+	// written beside it.
+	'project.member.added': z.object({ personId: z.uuid(), personName: presentName }),
+	'project.member.removed': z.object({
+		personId: z.uuid(),
+		personName: presentName,
+		unassignedTaskCount: z.number().int().nonnegative()
+	}),
+
 	// The filename as it read when the file was added or removed: the row is
 	// gone after a removal, and the history must still say which file it was.
 	'project.attachment.added': z.object({ filename: presentName }),
