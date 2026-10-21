@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { documentTitle } from '#lib/brand.svelte.js';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import Plus from '@lucide/svelte/icons/plus';
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import Search from '@lucide/svelte/icons/search';
+	import XIcon from '@lucide/svelte/icons/x';
 	import SearchX from '@lucide/svelte/icons/search-x';
 	import { goto } from '$app/navigation';
 	import { navigating, page } from '$app/state';
@@ -78,7 +80,7 @@
 	const arrivedTags = $derived.by(() =>
 		urgentArrivals.observe(
 			data.result.rows,
-			`${data.search}|${data.queueId}|${data.requestFormId}|${data.status}|${data.result.page}`
+			`${data.search}|${data.queueId}|${data.requestFormId}|${data.status}|${data.requester?.id ?? ''}|${data.result.page}`
 		)
 	);
 
@@ -127,8 +129,17 @@
 
 	const sorted = $derived(page.url.searchParams.has('sort'));
 	const filtering = $derived(
-		Boolean(data.search || data.queueId || data.requestFormId || data.status)
+		Boolean(data.search || data.queueId || data.requestFormId || data.status || data.requester)
 	);
+
+	/** The chip's own link: the same list, minus the requester. */
+	const withoutRequester = $derived.by(() => {
+		const params = new SvelteURLSearchParams(page.url.search);
+		params.delete('requester');
+		params.delete('page');
+		const query = params.toString();
+		return query ? `?${query}` : '?';
+	});
 
 	function pageHref(target: number): string {
 		const parts = [
@@ -136,6 +147,7 @@
 			data.queueId ? `queue=${data.queueId}` : null,
 			data.requestFormId ? `form=${data.requestFormId}` : null,
 			data.status ? `status=${data.status}` : null,
+			data.requester ? `requester=${data.requester.id}` : null,
 			sorted ? `sort=${data.order.key}&dir=${data.order.direction}` : null,
 			target > 1 ? `page=${target}` : null
 		].filter((part) => part !== null);
@@ -225,6 +237,9 @@
 			`rounded-t-none` on the table below, so one border reads as one panel.
 		-->
 		<ListToolbar>
+			{#if data.requester}
+				<input type="hidden" name="requester" value={data.requester.id} />
+			{/if}
 			{#if sorted}
 				<input type="hidden" name="sort" value={data.order.key} />
 				<input type="hidden" name="dir" value={data.order.direction} />
@@ -268,6 +283,20 @@
 				{m.tickets_search_submit()}
 			</Button>
 		</ListToolbar>
+		{#if data.requester}
+			<div
+				class="flex items-center gap-[var(--space-2)] border-x border-[var(--border)] bg-[var(--surface)] px-[var(--space-4)] py-[var(--space-2)]"
+			>
+				<a
+					href={withoutRequester}
+					class="inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-full)] bg-[var(--surface-2)] px-[var(--space-3)] py-0.5 text-xs font-medium text-[var(--ink)] hover:bg-[var(--border)]"
+					aria-label={m.tickets_requester_chip_remove()}
+				>
+					{m.tickets_requester_chip({ name: data.requester.name ?? '—' })}
+					<XIcon class="size-3" aria-hidden="true" />
+				</a>
+			</div>
+		{/if}
 
 		<DataTable
 			{columns}

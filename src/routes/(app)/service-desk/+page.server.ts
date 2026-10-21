@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { TICKET_STATUSES } from '#lib/domain/status.js';
 import { can } from '#lib/server/access/permissions.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
+import { listPeople } from '#lib/server/directory/index.js';
 import { pageWindowFrom } from '#lib/server/shared/pagination.js';
 import {
 	listQueues,
@@ -21,6 +22,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const queueId = z.uuid().safeParse(url.searchParams.get('queue')).data;
 	const requestFormId = z.uuid().safeParse(url.searchParams.get('form')).data;
 	const status = z.enum(TICKET_STATUSES).safeParse(url.searchParams.get('status')).data;
+	// The person page's "Ver todos" (#298). An id from another organisation matches nothing.
+	const requesterId = z.uuid().safeParse(url.searchParams.get('requester')).data;
 
 	const order = parseTicketOrder(url.searchParams);
 
@@ -32,6 +35,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			queueId,
 			requestFormId,
 			status,
+			requesterPersonId: requesterId,
 			order
 		}),
 		listQueues(user),
@@ -40,8 +44,15 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		ticketSummary(user)
 	]);
 
+	const requesterName = requesterId
+		? ((await listPeople(user.organisationId, { includeInactive: true })).find(
+				(person) => person.id === requesterId
+			)?.fullName ?? null)
+		: null;
+
 	return {
 		result,
+		requester: requesterId ? { id: requesterId, name: requesterName } : null,
 		search,
 		order,
 		summary,

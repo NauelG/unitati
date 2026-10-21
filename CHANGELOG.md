@@ -5,6 +5,23 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.99.0] - 2026-10-21
+
+### Added
+
+- **Person page: actions, activity and requested tickets** (#298): `/directory/{id}` now carries
+  every action of the directory row menu (edit, grant access or change role, reset password,
+  revoke access, deactivate or reactivate, take equipment back) with the same permissions and the
+  same dialogs, a "Tickets solicitados" section with the person's five latest open tickets, and an
+  "Actividad" timeline. "Ver todos" opens the service desk filtered by `?requester={id}`, with a
+  removable "Solicitante" chip.
+
+### Changed
+
+- Directory rows link to the person page; the "Ver" and "Recuperar" links in the name cell are
+  gone. Taking equipment back is now "Recuperar equipos…" in the row menu and opens the person
+  page with the take-back dialog.
+
 ## [0.98.0] - 2026-10-21
 
 ### Added

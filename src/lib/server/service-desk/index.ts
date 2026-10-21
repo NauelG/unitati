@@ -38,7 +38,8 @@ export {
 	countOpen,
 	ticketSummary,
 	hasPortalActivity,
-	myOpenTickets
+	myOpenTickets,
+	openTicketsRequestedBy
 } from './tickets';
 export type {
 	Deps,
