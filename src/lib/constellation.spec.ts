@@ -268,6 +268,15 @@ describe('constellationItems', () => {
 		).toEqual([]);
 	});
 
+	it('draws nothing for work that is only a restricted count', () => {
+		expect(
+			constellationItems([
+				{ relation: 'resolved_in', icon: 'task', items: [], restricted: 2 },
+				{ relation: 'handled_in', icon: 'project', items: [], restricted: 1 }
+			])
+		).toEqual([]);
+	});
+
 	it('draws the tasks of a project once each instead of their tickets again', () => {
 		const items = constellationItems([
 			{ relation: 'handles', icon: 'ticket', items: [ticketItem('TCK-0001')] },
