@@ -1,0 +1,54 @@
+# Local evaluation: Postgres + public Unitati image + an HTTP reverse proxy.
+# Run from the repository checkout with a .env.production file:
+# docker compose --env-file .env.production -f docs/deploy/compose.yaml up -d --wait
+# See docs/self-hosting.md before exposing a production instance to the internet.
+name: unitati-evaluation
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: unitati
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: unitati
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U unitati -d unitati']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    image: ${UNITATI_IMAGE:-ghcr.io/nauelg/unitati:latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://unitati:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}@db:5432/unitati
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env.production}
+      BETTER_AUTH_URL: http://localhost:8080
+      APP_ENV: production
+      UPLOADS_DIR: /data/uploads
+      PROTOCOL_HEADER: x-forwarded-proto
+      HOST_HEADER: x-forwarded-host
+      ADDRESS_HEADER: x-forwarded-for
+      XFF_DEPTH: 1
+      PORT: 3000
+    volumes:
+      - uploads:/data/uploads
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    command: ['caddy', 'reverse-proxy', '--from', ':8080', '--to', 'app:3000']
+    depends_on:
+      - app
+    ports:
+      - '127.0.0.1:8080:8080'
+
+volumes:
+  postgres-data:
+  uploads:

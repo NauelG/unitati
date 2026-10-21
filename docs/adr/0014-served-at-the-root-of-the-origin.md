@@ -53,4 +53,4 @@ verified working on `talos` where `tailscale serve` sends `x-forwarded-host` inc
   `paths: { base: '/x' }` in `vite.config.ts` and reading the value from a spec: still `undefined`.
   Such a test would pass or fail identically with any configuration, so it would guard nothing while
   looking like it did. A text-matching test over `vite.config.ts` was ruled out as well. The
-  protection is this record, the README sentence, and review.
+  protection is this record, the [self-hosting guide](../self-hosting.md), and review.
