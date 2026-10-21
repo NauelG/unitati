@@ -7,6 +7,7 @@
 	import FormError from '#lib/components/unitati/FormError.svelte';
 	import SelectField, { type SelectOption } from '#lib/components/unitati/SelectField.svelte';
 	import TextAreaField from '#lib/components/unitati/TextAreaField.svelte';
+	import SigningLinkPanel from '../SigningLinkPanel.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 
 	interface Props {
@@ -43,8 +44,12 @@
 	let waive = $state(false);
 	let waiveReason = $state('');
 	let pending = $state(false);
-	let done = $state<{ code: string | null; link: string | null; waived: boolean } | null>(null);
-	let copied = $state(false);
+	let done = $state<{
+		code: string | null;
+		link: string | null;
+		qrSvg: string | null;
+		waived: boolean;
+	} | null>(null);
 
 	const issuing = $derived(assets.some((a) => selected.includes(a.id) && a.requiresHandover));
 	// Waiving is only offered when there is a handover to waive; unticking the
@@ -57,11 +62,6 @@
 	function toggle(id: string, checked: boolean) {
 		selected = checked ? [...selected, id] : selected.filter((other) => other !== id);
 	}
-
-	async function copy(link: string) {
-		await navigator.clipboard.writeText(link);
-		copied = true;
-	}
 </script>
 
 <Dialog
@@ -73,21 +73,9 @@
 >
 	{#if done}
 		<div class="space-y-[var(--space-4)]">
-			{#if done.code && done.link}
+			{#if done.code && done.link && done.qrSvg}
 				<p class="text-sm">{m.deliver_done_code({ code: done.code })}</p>
-				<label class="block space-y-[var(--space-1)] text-sm">
-					<span>{m.deliver_link_label()}</span>
-					<input
-						readonly
-						value={done.link}
-						class="w-full rounded border border-[var(--border)] bg-[var(--surface-2)] p-2 font-mono text-xs"
-						onfocus={(event) => event.currentTarget.select()}
-					/>
-				</label>
-				<p class="text-sm text-[var(--ink-muted)]">{m.deliver_link_once()}</p>
-				<Button type="button" variant="secondary" onclick={() => copy(done!.link!)}>
-					{copied ? m.deliver_copied() : m.deliver_copy()}
-				</Button>
+				<SigningLinkPanel link={done.link} qrSvg={done.qrSvg} />
 			{:else if done.waived && done.code}
 				<p class="text-sm">{m.deliver_done_waived({ code: done.code })}</p>
 			{:else}
@@ -110,6 +98,7 @@
 						done = {
 							code: (result.data.handoverCode as string | null) ?? null,
 							link: (result.data.handoverLink as string | null) ?? null,
+							qrSvg: (result.data.qrSvg as string | null) ?? null,
 							waived: result.data.handoverWaived === true
 						};
 						await invalidateAll();

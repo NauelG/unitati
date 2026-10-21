@@ -12,6 +12,7 @@
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import TextAreaField from '#lib/components/unitati/TextAreaField.svelte';
 	import { prose } from '#lib/components/unitati/prose.js';
+	import { handoverConditionLabel } from '#lib/components/unitati/handover-condition.js';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import { MAX_DECISION_REASON } from '#lib/domain/handover.js';
 	import { m } from '#lib/paraglide/messages.js';
@@ -141,6 +142,17 @@
 									<dd class="font-mono text-xs leading-5 text-[var(--ink)]">
 										{asset.serial ?? m.signing_asset_no_serial()}
 									</dd>
+									{#if asset.condition}
+										<dt>{m.signing_asset_condition()}</dt>
+										<dd class="text-[var(--ink)]">
+											<span class={asset.condition === 'good' ? '' : 'font-medium'}>
+												{handoverConditionLabel(asset.condition)}
+											</span>
+											{#if asset.conditionNotes}
+												<span class="block text-[var(--ink-muted)]">{asset.conditionNotes}</span>
+											{/if}
+										</dd>
+									{/if}
 								</dl>
 							</li>
 						{/each}

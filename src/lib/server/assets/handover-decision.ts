@@ -7,7 +7,7 @@ import { emit } from '../shared/events';
 import { sendQuietly, type Mailer, type MailMessage } from '../shared/mail';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { runtimeMailer, runtimeStorage } from '../shared/runtime';
-import { MAX_DECISION_REASON } from '#lib/domain/handover.js';
+import { MAX_DECISION_REASON, type HandoverCondition } from '#lib/domain/handover.js';
 import type { Storage } from '../shared/storage';
 import { ensureHandoverDocument, type DocumentDeps } from './handover-documents';
 import { handoverRejectedMail } from './handover-mail';
@@ -35,6 +35,9 @@ export interface SigningAsset {
 	name: string;
 	serial: string | null;
 	model: string;
+	/** How it came back, on a return (#278); `null` on a delivery. */
+	condition: HandoverCondition | null;
+	conditionNotes: string | null;
 }
 
 /**
@@ -96,7 +99,9 @@ export async function openHandover(
 			assetTag: handoverAssets.assetTagSnapshot,
 			name: handoverAssets.assetNameSnapshot,
 			serial: handoverAssets.serialSnapshot,
-			model: handoverAssets.modelSnapshot
+			model: handoverAssets.modelSnapshot,
+			condition: handoverAssets.condition,
+			conditionNotes: handoverAssets.conditionNotes
 		})
 		.from(handoverAssets)
 		.where(eq(handoverAssets.handoverId, row.id))
@@ -256,6 +261,7 @@ export async function decideHandover(
 					mail = {
 						to: issuer.email,
 						...handoverRejectedMail({
+							direction: row.direction,
 							issuerName: issuer.fullName,
 							personName: row.personName,
 							code: row.code,

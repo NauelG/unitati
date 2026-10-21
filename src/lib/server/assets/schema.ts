@@ -15,6 +15,7 @@ import {
 	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core';
+import { HANDOVER_CONDITIONS } from '#lib/domain/handover.js';
 import { ASSET_STATES } from '#lib/domain/status.js';
 import { timestamps } from '../shared/columns';
 import { searchVector as sharedSearchVector, tsvector } from '../shared/search-vector';
@@ -437,7 +438,16 @@ export const handovers = pgTable(
 	]
 );
 
-/** What was handed over, as it read at the time: a renamed asset does not rewrite what someone signed. */
+/** How an asset came back (#278), recorded by the technician on every return. */
+export const handoverAssetCondition = pgEnum('handover_asset_condition', HANDOVER_CONDITIONS);
+
+/**
+ * What was handed over, as it read at the time: a renamed asset does not rewrite what someone signed.
+ *
+ * `condition` is set on every asset of a `return` handover and on none of a
+ * `delivery`. A row-level `CHECK` cannot see the parent's direction, so the
+ * domain enforces it: only `takeBack` writes a condition, and it writes one per asset.
+ */
 export const handoverAssets = pgTable(
 	'handover_assets',
 	{
@@ -450,9 +460,18 @@ export const handoverAssets = pgTable(
 		assetTagSnapshot: text('asset_tag_snapshot').notNull(),
 		assetNameSnapshot: text('asset_name_snapshot').notNull(),
 		serialSnapshot: text('serial_snapshot'),
-		modelSnapshot: text('model_snapshot').notNull()
+		modelSnapshot: text('model_snapshot').notNull(),
+		condition: handoverAssetCondition('condition'),
+		conditionNotes: text('condition_notes')
 	},
-	(table) => [primaryKey({ columns: [table.handoverId, table.assetId] })]
+	(table) => [
+		primaryKey({ columns: [table.handoverId, table.assetId] }),
+		// Notes describe a condition; they never stand alone.
+		check(
+			'handover_assets_notes_need_condition',
+			sql`${table.conditionNotes} is null or ${table.condition} is not null`
+		)
+	]
 );
 
 export type Manufacturer = typeof manufacturers.$inferSelect;

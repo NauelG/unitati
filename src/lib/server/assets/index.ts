@@ -11,7 +11,7 @@ import { failure, success, type Outcome } from '../shared/outcome';
 import type { WriteOptions } from '../shared/write-options';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
 import { assetModels, assets, categories, manufacturers } from './schema';
-import { recordCustodyAssigned } from './custody';
+import { recordCustodyAssigned, recordCustodyReturned } from './custody';
 import { requireAssetScope } from './scope';
 import { viewAsset, type AssetView } from './view';
 import { registerAssetInput, updateAssetDetailsInput } from './validation';
@@ -57,6 +57,9 @@ export type {
 	SaveHandoverTemplateFailure
 } from './handover-templates';
 export { deliver, listDeliverableAssets, WAIVE_REASON_MAX } from './deliver';
+export { takeBack, listAssetsHeldBy } from './take-back';
+export { signingLinkQr } from './handover-qr';
+export type { HeldAsset, TakeBackDeps, TakeBackFailure, TakeBackItem } from './take-back';
 export { decideHandover, openHandover } from './handover-decision';
 export { ensureHandoverDocument, getHandoverDocument } from './handover-documents';
 export type {
@@ -750,6 +753,12 @@ export async function assignCustody(
 
 export type ReturnCustodyFailure = 'asset_not_found' | 'not_in_custody';
 
+/**
+ * The low-level recorder of a return, `assignCustody`'s counterpart: it clears
+ * the holder and writes `custody.returned`, with no condition and no handover.
+ * The seed and the API use it; a technician in the app goes through `takeBack`,
+ * so a category that requires a signature gets its return handover (#278).
+ */
 export async function returnCustody(
 	actor: SessionUser,
 	assetId: string
@@ -760,7 +769,7 @@ export async function returnCustody(
 		if (asset.custodianPersonId === null) return failure('not_in_custody');
 
 		const [person] = await tx
-			.select({ fullName: people.fullName })
+			.select({ id: people.id, fullName: people.fullName })
 			.from(people)
 			.where(eq(people.id, asset.custodianPersonId))
 			.limit(1);
@@ -779,19 +788,7 @@ export async function returnCustody(
 			);
 		}
 
-		await tx
-			.update(assets)
-			.set({ custodianPersonId: null, updatedAt: new Date() })
-			.where(eq(assets.id, asset.id));
-
-		await recordActivity(tx, {
-			organisationId: actor.organisationId,
-			...actorColumns(actor),
-			target: { assetId: asset.id },
-			verb: 'custody.returned',
-			payload: { fromPersonId: asset.custodianPersonId, fromPersonName: person.fullName }
-		});
-
+		await recordCustodyReturned(tx, actor, asset.id, person);
 		return success(undefined);
 	});
 }

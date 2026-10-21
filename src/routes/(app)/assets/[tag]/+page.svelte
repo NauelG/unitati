@@ -32,6 +32,7 @@
 	import AssetFields from '../AssetFields.svelte';
 	import CreateModelDialog from '../CreateModelDialog.svelte';
 	import DeliverDialog from './DeliverDialog.svelte';
+	import TakeBackDialog from '../TakeBackDialog.svelte';
 	import { locationOptions, options, stateOptions } from '../options';
 
 	let { data, form }: PageProps = $props();
@@ -46,6 +47,7 @@
 
 	// Handing an asset over is a dialog, not a select: the technician must see the link (ADR 0035).
 	let deliverOpen = $state(false);
+	let takeBackOpen = $state(false);
 	$effect(() => {
 		if (data.canCheckout && location.hash === '#action-custody' && data.deliverable.length > 0) {
 			deliverOpen = true;
@@ -53,6 +55,11 @@
 	});
 	const deliverError = $derived(
 		form && 'action' in form && form.action === 'deliver' && 'message' in form
+			? form.message
+			: undefined
+	);
+	const takeBackError = $derived(
+		form && 'action' in form && form.action === 'takeBack' && 'message' in form
 			? form.message
 			: undefined
 	);
@@ -184,34 +191,14 @@
 			</Button>
 		</span>
 	{:else}
-		<EditableDetailRow
-			kind="select"
-			label={m.asset_detail_custodian()}
-			value={localCustodianPersonId}
-			display={localCustodianName ?? ''}
-			placeholder={m.assets_no_custodian()}
-			options={personOptions}
-			noneLabel={m.asset_custody_nobody()}
-			action="?/returnCustody"
-			name="personId"
-			editable={data.canCheckout}
-			openOnHash="action-custody"
-			optimistic={(formData) => {
-				const personId = formData.get('personId');
-				const previousId = localCustodianPersonId;
-				const previousName = localCustodianName;
-				const person = data.people.find((candidate) => candidate.id === personId);
-				// "Nadie" posts an empty id: that clears the custodian. An unknown id changes nothing.
-				if (person || personId === '') {
-					localCustodianPersonId = person ? person.id : null;
-					localCustodianName = person ? person.fullName : null;
-				}
-				return () => {
-					localCustodianPersonId = previousId;
-					localCustodianName = previousName;
-				};
-			}}
-		/>
+		<span id="action-custody" class="flex items-center gap-[var(--space-3)]">
+			<span class="text-[var(--ink-muted)]">{localCustodianName ?? m.assets_no_custodian()}</span>
+			{#if data.canCheckout && localCustodianPersonId}
+				<Button type="button" size="sm" variant="secondary" onclick={() => (takeBackOpen = true)}>
+					{m.take_back_button()}
+				</Button>
+			{/if}
+		</span>
 	{/if}
 {/snippet}
 
@@ -480,19 +467,6 @@
 		{/snippet}
 	</Sheet>
 
-	{#if asset.visibility === 'full' && data.canCheckout && deliverOpen}
-		<DeliverDialog
-			open={deliverOpen}
-			onOpenChange={(next) => (deliverOpen = next)}
-			people={personOptions}
-			assets={data.deliverable}
-			currentId={asset.id}
-			canWaive={data.canWaiveHandover}
-			waiveReasonMax={data.waiveReasonMax}
-			error={deliverError}
-		/>
-	{/if}
-
 	<CreateModelDialog
 		open={modelOpen}
 		onOpenChange={(next) => (modelOpen = next)}
@@ -528,4 +502,29 @@
 			</form>
 		{/snippet}
 	</ConfirmDialog>
+{/if}
+
+{#if asset.visibility === 'full' && data.canCheckout && deliverOpen}
+	<DeliverDialog
+		open={deliverOpen}
+		onOpenChange={(next) => (deliverOpen = next)}
+		people={personOptions}
+		assets={data.deliverable}
+		currentId={asset.id}
+		canWaive={data.canWaiveHandover}
+		waiveReasonMax={data.waiveReasonMax}
+		error={deliverError}
+	/>
+{/if}
+
+{#if asset.visibility === 'full' && data.canCheckout && takeBackOpen && localCustodianPersonId}
+	<TakeBackDialog
+		open={takeBackOpen}
+		onOpenChange={(next) => (takeBackOpen = next)}
+		person={{ id: localCustodianPersonId, fullName: localCustodianName ?? '' }}
+		assets={data.heldAssets}
+		currentId={asset.id}
+		action="?/takeBack"
+		error={takeBackError}
+	/>
 {/if}

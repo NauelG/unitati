@@ -10,12 +10,13 @@ import {
 	addNote,
 	assetTimeline,
 	deliver,
+	listAssetsHeldBy,
 	listDeliverableAssets,
+	signingLinkQr,
 	changeLocation,
 	changeState,
 	getAssetByTag,
 	listAssetModels,
-	returnCustody,
 	WAIVE_REASON_MAX,
 	type FullAssetView
 } from '#lib/server/assets/index.js';
@@ -39,6 +40,7 @@ import {
 import { emptyModelForm, modelCatalogues } from '../create-model.server';
 import { editAssetForm } from '../forms';
 import { fieldsOf, rejected } from '../form-data';
+import { takeBackAction } from '../take-back-action';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
@@ -94,6 +96,10 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	const deliverable =
 		asset.visibility === 'full' && canCheckout && asset.custodianPersonId === null
 			? await listDeliverableAssets(user.organisationId)
+			: [];
+	const heldAssets =
+		asset.visibility === 'full' && canCheckout && asset.custodianPersonId
+			? await listAssetsHeldBy(user.organisationId, asset.custodianPersonId)
 			: [];
 
 	// The contextual edit `Sheet` (ADR 0020) reuses `/assets/[tag]/edit`'s own
@@ -154,6 +160,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
 		locations,
 		deliverable,
+		heldAssets,
 		editForm,
 		editModels,
 		modelForm,
@@ -227,22 +234,15 @@ export const actions: Actions = {
 			action: 'deliver' as const,
 			handoverCode: handover?.code ?? null,
 			handoverLink: handover?.status === 'pending' ? handover.link : null,
-			handoverWaived: handover?.status === 'waived'
+			handoverWaived: handover?.status === 'waived',
+			qrSvg: handover?.status === 'pending' ? await signingLinkQr(handover.link) : null
 		};
 	},
 
-	returnCustody: async ({ locals, params }) => {
+	takeBack: async ({ request, locals, params }) => {
 		const user = requirePermission(locals.user, 'assets.checkout');
 		const asset = await targetOf(user, params.tag);
-		const outcome = await returnCustody(user, asset.id);
-
-		if (!outcome.ok) {
-			return rejected(
-				'returnCustody',
-				outcome.error === 'not_in_custody' ? m.action_error_not_in_custody() : m.asset_error_gone()
-			);
-		}
-		return { action: 'returnCustody' as const };
+		return takeBackAction(user, await request.formData(), asset.id);
 	},
 
 	changeState: async ({ request, locals, params }) => {

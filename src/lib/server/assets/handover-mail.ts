@@ -1,21 +1,29 @@
+import type { HandoverDirection } from './handover-template';
+
 /**
  * The mail that carries a signing link (ADR 0035, decision 4). Spanish, like the
  * other transactional mail; the agreement itself is in whatever language the
  * organisation wrote it.
  */
 export function handoverLinkMail(input: {
+	direction: HandoverDirection;
 	personName: string;
 	organisationName: string;
 	code: string;
 	link: string;
 	expiresOn: string;
 }): { subject: string; text: string } {
+	const delivery = input.direction === 'delivery';
 	return {
-		subject: `[${input.code}] ${input.organisationName}: confirma la recepción de tu equipo`,
+		subject: delivery
+			? `[${input.code}] ${input.organisationName}: confirma la recepción de tu equipo`
+			: `[${input.code}] ${input.organisationName}: confirma la devolución de tu equipo`,
 		text: [
 			`Hola ${input.personName},`,
 			'',
-			`${input.organisationName} te ha entregado equipo y necesita que lo confirmes con tu firma.`,
+			delivery
+				? `${input.organisationName} te ha entregado equipo y necesita que lo confirmes con tu firma.`
+				: `Has devuelto equipo a ${input.organisationName}. Revisa el estado registrado de cada equipo y confírmalo con tu firma.`,
 			'',
 			input.link,
 			'',
@@ -26,21 +34,26 @@ export function handoverLinkMail(input: {
 
 /** To the technician who issued a handover, when the person rejects it (#275). */
 export function handoverRejectedMail(input: {
+	direction: HandoverDirection;
 	issuerName: string;
 	personName: string;
 	code: string;
 	reason: string;
 }): { subject: string; text: string } {
+	const delivery = input.direction === 'delivery';
+	const noun = delivery ? 'la entrega' : 'la devolución';
 	return {
-		subject: `[${input.code}] ${input.personName} ha rechazado la entrega`,
+		subject: `[${input.code}] ${input.personName} ha rechazado ${noun}`,
 		text: [
 			`Hola ${input.issuerName},`,
 			'',
-			`${input.personName} ha rechazado la entrega ${input.code} con este motivo:`,
+			`${input.personName} ha rechazado ${noun} ${input.code} con este motivo:`,
 			'',
 			input.reason,
 			'',
-			'La custodia no ha cambiado. Para corregirla, recupera los equipos o emite una entrega nueva.'
+			delivery
+				? 'La custodia no ha cambiado. Para corregirla, recupera los equipos o emite una entrega nueva.'
+				: 'La custodia sigue devuelta. Si el estado registrado no era correcto, revísalo con la persona.'
 		].join('\n')
 	};
 }
