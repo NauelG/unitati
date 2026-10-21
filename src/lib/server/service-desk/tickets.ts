@@ -139,6 +139,8 @@ export interface TicketListRequest extends PageRequest {
 	queueId?: string;
 	requestFormId?: string;
 	status?: TicketStatus;
+	/** Only the tickets this person opened (the person page's "Ver todos", #298). */
+	requesterPersonId?: string;
 	/** Defaults to the most recently touched first. */
 	order?: TicketOrder;
 }
@@ -161,7 +163,8 @@ export async function listTickets(
 		term ? matchesSearch(term, viewer) : undefined,
 		request.queueId ? eq(tickets.queueId, request.queueId) : undefined,
 		request.requestFormId ? eq(tickets.requestFormId, request.requestFormId) : undefined,
-		request.status ? eq(tickets.status, request.status) : undefined
+		request.status ? eq(tickets.status, request.status) : undefined,
+		request.requesterPersonId ? eq(tickets.requesterPersonId, request.requesterPersonId) : undefined
 	) as SQL;
 
 	const rows = await ticketsWithRelations()
@@ -313,6 +316,28 @@ export async function myOpenTickets(viewer: SessionUser, limit = 5): Promise<Tic
 	const where = and(
 		requireTicketScope(viewer),
 		eq(tickets.assigneePersonId, viewer.personId),
+		sql`${tickets.status} not in ('resolved', 'closed')`
+	) as SQL;
+
+	return ticketsWithRelations()
+		.where(where)
+		.orderBy(desc(tickets.updatedAt), asc(tickets.id))
+		.limit(limit);
+}
+
+/**
+ * The person page's "Tickets solicitados" (#298): the open tickets a person
+ * opened, newest-updated first. Scoped like every other read, so a viewer sees
+ * no more here than in the list.
+ */
+export async function openTicketsRequestedBy(
+	viewer: SessionUser,
+	personId: string,
+	limit = 5
+): Promise<TicketView[]> {
+	const where = and(
+		requireTicketScope(viewer),
+		eq(tickets.requesterPersonId, personId),
 		sql`${tickets.status} not in ('resolved', 'closed')`
 	) as SQL;
 
