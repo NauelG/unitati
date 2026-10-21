@@ -1,12 +1,8 @@
 <p align="center">
-  <picture>
-    <source
-      media="(prefers-color-scheme: dark)"
-      srcset="docs/design/assets/brand/unitati-lockup-inverse.svg"
-    />
-    <img src="docs/design/assets/brand/unitati-lockup.svg" alt="Unitati" width="340" />
-  </picture>
+  <img src="docs/design/assets/brand/unitati-mark.svg" alt="" width="84" />
 </p>
+
+<h1 align="center">Unitati</h1>
 
 <p align="center">
   Projects, service desk and IT asset management for internal IT teams, on one data model.
