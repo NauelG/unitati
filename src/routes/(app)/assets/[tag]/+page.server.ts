@@ -37,10 +37,12 @@ import {
 	type AssetTimelineItem,
 	type AssetRelatedGroup
 } from '#lib/server/links/index.js';
+import { getTicketByTag } from '#lib/server/service-desk/index.js';
 import { emptyModelForm, modelCatalogues } from '../create-model.server';
 import { editAssetForm } from '../forms';
 import { fieldsOf, rejected } from '../form-data';
 import { takeBackAction } from '../take-back-action';
+import { ticketLinkFor } from '../ticket-link';
 import type { Actions, PageServerLoad } from './$types';
 
 /**
@@ -77,7 +79,7 @@ async function timelineRailOf(
 	};
 }
 
-export const load: PageServerLoad = async ({ locals, params }) => {
+export const load: PageServerLoad = async ({ locals, params, url }) => {
 	const user = requireAnyPermission(locals.user, ASSET_READ_PERMISSIONS);
 
 	const found = await getAssetByTag(user, params.tag);
@@ -141,8 +143,22 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		editable ? modelCatalogues(user) : Promise.resolve({ manufacturers: [], categories: [] })
 	]);
 
+	// Coming from a ticket (#279): the dialogs preselect it and its requester.
+	// Only for someone who may link, and only a ticket they can read.
+	const ticketTag = url.searchParams.get('ticket');
+	const fromTicket =
+		ticketTag && canCheckout && can(user, 'tickets.manage')
+			? await getTicketByTag(user, ticketTag.trim().toUpperCase())
+			: null;
+
 	return {
 		asset,
+		fromTicket: fromTicket?.ok
+			? {
+					tag: fromTicket.value.ticketTag,
+					requesterPersonId: fromTicket.value.requesterPersonId
+				}
+			: null,
 		// Unawaited on purpose (#89): SvelteKit streams this to the client as a
 		// promise, resolved by `+page.svelte`'s `{#await}` behind a skeleton.
 		timelineRail: timelineRailOf(user, params.tag, {
@@ -209,11 +225,18 @@ export const actions: Actions = {
 		// The URL's asset must be visible to the actor; the dialog only preselects it.
 		await targetOf(user, params.tag);
 		// The reason's bounds and the permission are the domain's to check, not the form's.
-		const outcome = await deliver(user, {
-			personId: parsed.data.personId,
-			assetIds: parsed.data.assetIds,
-			waive: parsed.data.waive ? { reason: parsed.data.waiveReason ?? '' } : undefined
-		});
+		const ticketLink = await ticketLinkFor(user, data.get('ticketTag'));
+		if (!ticketLink.ok) return rejected('deliver', m.ticket_handover_error_ticket());
+
+		const outcome = await deliver(
+			user,
+			{
+				personId: parsed.data.personId,
+				assetIds: parsed.data.assetIds,
+				waive: parsed.data.waive ? { reason: parsed.data.waiveReason ?? '' } : undefined
+			},
+			{ afterIssue: ticketLink.afterIssue }
+		);
 
 		if (!outcome.ok) {
 			const reasons = {

@@ -1,6 +1,7 @@
 <script lang="ts" module>
 	import { tv } from '#lib/tv.js';
 
+	import FileSignature from '@lucide/svelte/icons/file-signature';
 	import FolderKanban from '@lucide/svelte/icons/folder-kanban';
 	import Laptop from '@lucide/svelte/icons/laptop';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
@@ -11,7 +12,8 @@
 		asset: Laptop,
 		ticket: Ticket,
 		project: FolderKanban,
-		task: ListChecks
+		task: ListChecks,
+		handover: FileSignature
 	};
 
 	/**

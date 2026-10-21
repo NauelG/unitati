@@ -4,8 +4,8 @@
  * from here, never from a file inside.
  */
 
-export { ticketAsset, ticketTask, ticketProject } from './schema';
-export type { TicketAsset, TicketTask, TicketProject } from './schema';
+export { ticketAsset, ticketTask, ticketProject, ticketHandover } from './schema';
+export type { TicketAsset, TicketTask, TicketProject, TicketHandover } from './schema';
 
 export { linkAsset, linkAssetToTicket, linkTicketAssets, unlinkAsset } from './ticket-asset';
 export type {
@@ -15,6 +15,14 @@ export type {
 	UnlinkAssetFailure,
 	TicketAssetPair
 } from './ticket-asset';
+
+export { linkHandover, linkHandoverByCode, unlinkHandover } from './ticket-handover';
+export type {
+	LinkHandoverByCodeFailure,
+	LinkHandoverFailure,
+	TicketHandoverPair,
+	UnlinkHandoverFailure
+} from './ticket-handover';
 
 export {
 	linkTask,
@@ -40,6 +48,7 @@ export type {
 	RecordRef,
 	RestrictedRecordRef,
 	AssetRelatedGroup,
+	HandoverState,
 	TaskStatus,
 	ProjectStatus,
 	RelatedGroup,

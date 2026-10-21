@@ -1,7 +1,7 @@
 import { index, pgTable, unique, uuid } from 'drizzle-orm/pg-core';
 import { timestamps } from '../shared/columns';
 import { organisations, people } from '../directory/schema';
-import { assets } from '../assets/schema';
+import { assets, handovers } from '../assets/schema';
 import { projects, tasks } from '../projects/schema';
 import { tickets } from '../service-desk/schema';
 
@@ -106,3 +106,36 @@ export const ticketProject = pgTable(
 
 export type TicketTask = typeof ticketTask.$inferSelect;
 export type TicketProject = typeof ticketProject.$inferSelect;
+
+/**
+ * A ticket is fulfilled by this handover (`fulfilled-by`, #279). Many to many.
+ * A request for equipment arrives as a ticket; the handover that answers it is
+ * the other half. Linking never closes the ticket (ADR 0035).
+ */
+export const ticketHandover = pgTable(
+	'ticket_handover',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		ticketId: uuid('ticket_id')
+			.notNull()
+			.references(() => tickets.id, { onDelete: 'cascade' }),
+		handoverId: uuid('handover_id')
+			.notNull()
+			.references(() => handovers.id, { onDelete: 'cascade' }),
+		createdByPersonId: uuid('created_by_person_id').references(() => people.id, {
+			onDelete: 'set null'
+		}),
+		...timestamps
+	},
+	(table) => [
+		/** Unique so ticket merge and split (#20) cannot land the same link twice. */
+		unique('ticket_handover_pair').on(table.ticketId, table.handoverId),
+		/** The decision handler asks "which tickets" for a handover. */
+		index('ticket_handover_handover_idx').on(table.handoverId)
+	]
+);
+
+export type TicketHandover = typeof ticketHandover.$inferSelect;

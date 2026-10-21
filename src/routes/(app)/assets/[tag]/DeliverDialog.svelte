@@ -4,6 +4,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Dialog from '#lib/components/unitati/Dialog.svelte';
+	import Field from '#lib/components/unitati/Field.svelte';
 	import FormError from '#lib/components/unitati/FormError.svelte';
 	import SelectField, { type SelectOption } from '#lib/components/unitati/SelectField.svelte';
 	import TextAreaField from '#lib/components/unitati/TextAreaField.svelte';
@@ -22,6 +23,8 @@
 		canWaive?: boolean;
 		/** The longest waive reason the server accepts; from the server, so the two cannot drift. */
 		waiveReasonMax: number;
+		/** Coming from a ticket (#279): its code is preset, and its requester is preselected. */
+		ticket?: { tag: string; requesterPersonId: string } | null;
 		error?: string;
 	}
 
@@ -33,13 +36,15 @@
 		currentId,
 		canWaive = false,
 		waiveReasonMax,
+		ticket = null,
 		error
 	}: Props = $props();
 
 	// No reset effect: the page mounts this dialog afresh on every open, and an
 	// effect here would re-run when a reload swaps `currentId`'s source object,
 	// wiping the success view (the link is shown once).
-	let personId = $state<string | null>(null);
+	let personId = $state<string | null>(untrack(() => ticket?.requesterPersonId ?? null));
+	let ticketTag = $state(untrack(() => ticket?.tag ?? ''));
 	let selected = $state<string[]>([untrack(() => currentId)]);
 	let waive = $state(false);
 	let waiveReason = $state('');
@@ -115,6 +120,14 @@
 				options={people}
 				bind:value={personId}
 				required
+			/>
+
+			<Field
+				label={m.handover_ticket_field()}
+				name="ticketTag"
+				hint={m.handover_ticket_hint()}
+				bind:value={ticketTag}
+				autocomplete="off"
 			/>
 
 			<fieldset class="space-y-[var(--space-2)]">

@@ -112,6 +112,7 @@ export async function takeBack(
 			now,
 			deps
 		);
+		await deps.afterIssue?.(tx, issued.handover);
 		// Only a delivery can be waived, so a return is always pending.
 		if (issued.handover.status !== 'pending') throw new Error('A return cannot be waived.');
 		return success({ handover: issued.handover, mail: issued.mail });

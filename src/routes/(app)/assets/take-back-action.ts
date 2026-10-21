@@ -4,6 +4,7 @@ import { m } from '#lib/paraglide/messages.js';
 import { signingLinkQr, takeBack } from '#lib/server/assets/index.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 import { rejected } from './form-data';
+import { ticketLinkFor } from './ticket-link';
 
 /** Both the asset and directory surfaces post the same take-back form. */
 const input = z.object({ personId: z.uuid(), assetIds: z.array(z.uuid()).min(1) });
@@ -29,10 +30,14 @@ export async function takeBackAction(actor: SessionUser, data: FormData, require
 		return rejected('takeBack', m.take_back_error_condition());
 	}
 
+	const ticketLink = await ticketLinkFor(actor, data.get('ticketTag'));
+	if (!ticketLink.ok) return rejected('takeBack', m.ticket_handover_error_ticket());
+
 	const outcome = await takeBack(
 		actor,
 		parsed.data.personId,
-		items.filter((item) => item !== null)
+		items.filter((item) => item !== null),
+		{ afterIssue: ticketLink.afterIssue }
 	);
 	if (!outcome.ok) {
 		const reasons = {

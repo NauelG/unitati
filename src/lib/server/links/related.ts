@@ -3,7 +3,7 @@ import { assetHref, projectHref, taskHref, ticketHref } from '#lib/domain/routes
 import type { AssetState, Priority, StateGroup, TicketStatus } from '#lib/domain/status.js';
 import { can } from '../access/permissions';
 import { requireAssetScope } from '../assets';
-import { assets } from '../assets/schema';
+import { assets, handovers } from '../assets/schema';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { listPeople } from '../directory';
@@ -16,7 +16,7 @@ import {
 	type TaskSummary
 } from '../projects';
 import { isRequester, ticketSummaries, tickets, type TicketRow } from '../service-desk';
-import { ticketAsset, ticketProject, ticketTask } from './schema';
+import { ticketAsset, ticketHandover, ticketProject, ticketTask } from './schema';
 
 /**
  * The uniform read interface over storage that is deliberately not uniform
@@ -30,7 +30,7 @@ import { ticketAsset, ticketProject, ticketTask } from './schema';
  * stale status dressed as history (ADR 0009).
  */
 
-export type RecordKind = 'ticket' | 'asset' | 'task' | 'project';
+export type RecordKind = 'ticket' | 'asset' | 'task' | 'project' | 'handover';
 
 /** Which record to look up. */
 export interface RecordLocator {
@@ -55,6 +55,12 @@ export interface RecordRef<K extends RecordKind = RecordKind> {
 export type RestrictedRecordRef<K extends RecordKind = RecordKind> = Omit<RecordRef<K>, 'href'> & {
 	href: null;
 };
+
+/**
+ * Where a handover stands today (ADR 0035, decision 3). `expired` is never
+ * stored: it is a pending handover past its date, computed when read.
+ */
+export type HandoverState = 'pending' | 'accepted' | 'rejected' | 'waived' | 'expired';
 
 /** A task's state as it is today: the group is the product's, the name the organisation's. */
 export interface TaskStatus {
@@ -95,6 +101,8 @@ export type RelatedItem = {
 	projectTag?: string;
 } & (
 	| { ref: RecordRef<'asset'>; status: AssetState }
+	/** There is no page for a handover yet, so it is drawn by its code and goes nowhere. */
+	| { ref: RestrictedRecordRef<'handover'>; status: HandoverState }
 	| {
 			ref: RecordRef<'ticket'>;
 			status: TicketStatus;
@@ -118,7 +126,9 @@ export type RelationName =
 	| 'handled_in'
 	| 'resolves'
 	| 'handles'
-	| 'resolves_via_tasks';
+	| 'resolves_via_tasks'
+	| 'fulfilled_by'
+	| 'fulfils';
 
 export interface RelatedGroup {
 	relation: RelationName;
@@ -486,6 +496,71 @@ async function ticketsViaTasksOf(viewer: SessionUser, projectId: string): Promis
 	);
 }
 
+/* -------------------------------------------------------------------------- */
+/* Tickets and the handovers that fulfil them (#279)                          */
+/* -------------------------------------------------------------------------- */
+
+function handoverState(
+	status: Exclude<HandoverState, 'expired'>,
+	expiresAt: Date | null,
+	now: Date
+) {
+	return status === 'pending' && expiresAt !== null && expiresAt.getTime() <= now.getTime()
+		? 'expired'
+		: status;
+}
+
+/** Handovers are staff business (signature evidence): never shown to a requester. */
+async function handoversFulfilling(viewer: SessionUser, ticketId: string): Promise<RelatedItem[]> {
+	const now = new Date();
+	const rows = await getDb()
+		.select({
+			id: handovers.id,
+			code: handovers.code,
+			person: handovers.personNameSnapshot,
+			status: handovers.status,
+			expiresAt: handovers.expiresAt,
+			linkedAt: ticketHandover.createdAt,
+			createdByPersonId: ticketHandover.createdByPersonId
+		})
+		.from(ticketHandover)
+		.innerJoin(handovers, eq(ticketHandover.handoverId, handovers.id))
+		.where(
+			and(
+				eq(ticketHandover.organisationId, viewer.organisationId),
+				eq(ticketHandover.ticketId, ticketId)
+			)
+		)
+		.orderBy(asc(ticketHandover.createdAt), asc(ticketHandover.id));
+
+	return rows.map((row) => ({
+		ref: { kind: 'handover' as const, id: row.id, tag: row.code, title: row.person, href: null },
+		status: handoverState(row.status, row.expiresAt, now),
+		linkedAt: row.linkedAt
+	}));
+}
+
+async function ticketsFulfilledBy(viewer: SessionUser, handoverId: string): Promise<RelatedItem[]> {
+	if (!can(viewer, 'tickets.view')) return [];
+
+	const links = await getDb()
+		.select({
+			ticketId: ticketHandover.ticketId,
+			linkedAt: ticketHandover.createdAt,
+			createdByPersonId: ticketHandover.createdByPersonId
+		})
+		.from(ticketHandover)
+		.where(
+			and(
+				eq(ticketHandover.organisationId, viewer.organisationId),
+				eq(ticketHandover.handoverId, handoverId)
+			)
+		)
+		.orderBy(asc(ticketHandover.createdAt), asc(ticketHandover.id));
+
+	return ticketItems(viewer, links);
+}
+
 /**
  * What a record is connected to, as groups ready to render, in the design
  * system's order and with empty groups left out (it offers *Link* instead).
@@ -512,6 +587,9 @@ export async function relatedTo(
 				add('resolved_in', 'task', await tasksResolving(viewer, record.id, standing));
 				add('handled_in', 'project', await projectsHandling(viewer, record.id, standing));
 			}
+			if (standing === 'staff') {
+				add('fulfilled_by', 'handover', await handoversFulfilling(viewer, record.id));
+			}
 			break;
 		}
 
@@ -521,6 +599,10 @@ export async function relatedTo(
 
 		case 'task':
 			add('resolves', 'ticket', await ticketsResolvedBy(viewer, record.id));
+			break;
+
+		case 'handover':
+			add('fulfils', 'ticket', await ticketsFulfilledBy(viewer, record.id));
 			break;
 
 		case 'project':

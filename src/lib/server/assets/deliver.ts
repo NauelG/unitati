@@ -107,17 +107,17 @@ export async function deliver(
 		for (const row of rows) await recordCustodyAssigned(tx, actor, row.id, person);
 
 		if (!required) return success({ handover: null, mail: null });
-		return success(
-			await issueHandover(
-				tx,
-				actor,
-				{ direction: 'delivery', prepared, waiveReason },
-				person,
-				rows,
-				now,
-				deps
-			)
+		const issued = await issueHandover(
+			tx,
+			actor,
+			{ direction: 'delivery', prepared, waiveReason },
+			person,
+			rows,
+			now,
+			deps
 		);
+		await deps.afterIssue?.(tx, issued.handover);
+		return success(issued);
 	});
 
 	if (!outcome.ok) return outcome;
