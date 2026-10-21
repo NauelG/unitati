@@ -10,7 +10,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
-	let { form }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 
 	let affected = $state<string[]>([]);
 	let affectedLabels = $state<Record<string, string>>({});
@@ -29,6 +29,36 @@
 		{#snippet summary()}{m.portal_new_lede()}{/snippet}
 	</PageHeader>
 
+	{#if data.requestForms.length > 0}
+		<section class="mt-[var(--space-6)]" aria-labelledby="request-forms-heading">
+			<h2 id="request-forms-heading" class="text-label text-[var(--ink)]">
+				{m.portal_requests_title()}
+			</h2>
+			<p class="text-small text-[var(--ink-muted)]">{m.portal_requests_lede()}</p>
+			<ul class="mt-[var(--space-3)] space-y-[var(--space-2)]">
+				{#each data.requestForms as requestForm (requestForm.id)}
+					<li
+						class="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] p-[var(--space-3)]"
+					>
+						<a
+							href="/portal/tickets/new/request/{requestForm.id}"
+							class="text-sm font-medium text-[var(--brand)] hover:underline"
+						>
+							{requestForm.name}
+						</a>
+						{#if requestForm.descriptionHtml}
+							<div class="text-small text-[var(--ink-muted)]">
+								<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitised by renderMarkdown on the server (ADR 0030) -->
+								{@html requestForm.descriptionHtml}
+							</div>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		</section>
+		<h2 class="mt-[var(--space-8)] text-label text-[var(--ink)]">{m.portal_free_title()}</h2>
+	{/if}
+
 	<form
 		method="POST"
 		enctype="multipart/form-data"
@@ -39,7 +69,7 @@
 				busy = false;
 			};
 		}}
-		class="mt-[var(--space-6)] space-y-[var(--space-4)]"
+		class="mt-[var(--space-4)] space-y-[var(--space-4)]"
 	>
 		<Field label={m.ticket_form_subject()} name="subject" value={values.subject} required />
 

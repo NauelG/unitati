@@ -1,9 +1,13 @@
+import { JUSTIFICATION_MAX } from '#lib/domain/request-form.js';
 import { m } from '#lib/paraglide/messages.js';
 import type {
 	AddCommentFailure,
 	CreateTicketFailure,
 	QueueDeleteFailure,
-	QueueEditFailure
+	QueueEditFailure,
+	RequestFormDeleteFailure,
+	RequestFormEditFailure,
+	SubmitRequestFailure
 } from '#lib/server/service-desk/index.js';
 
 /**
@@ -18,6 +22,9 @@ type Failure =
 	| AddCommentFailure
 	| QueueEditFailure
 	| QueueDeleteFailure
+	| RequestFormEditFailure
+	| RequestFormDeleteFailure
+	| SubmitRequestFailure
 	| 'invalid_transition'
 	| 'assignee_not_found'
 	| 'no_queue';
@@ -37,7 +44,12 @@ const MESSAGES: Record<Failure, () => string> = {
 	queue_in_use: m.queues_error_in_use,
 	invalid_transition: m.ticket_error_invalid_transition,
 	assignee_not_found: m.ticket_error_assignee_not_found,
-	no_queue: m.ticket_error_no_queue
+	no_queue: m.ticket_error_no_queue,
+	category_not_found: m.request_error_category_not_found,
+	request_form_not_found: m.request_error_form_not_found,
+	invalid_request: () => m.request_error_invalid({ max: JUSTIFICATION_MAX }),
+	duplicate_request_form_name: m.request_forms_error_duplicate,
+	request_form_in_use: m.request_forms_error_in_use
 };
 
 export function failureMessage(failure: Failure): string {

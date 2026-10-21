@@ -3,17 +3,18 @@
 Tickets, queues, public and internal comments, attachments, and the outbound mail that tells a
 requester somebody answered. Later: canned responses, SLAs, inbound email.
 
-| File             | Owns                                                                                                                                                                                     |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schema.ts`      | `queues`, `tickets`, `ticket_comments`, `attachments`; the enums and the `TCK-####` sequence                                                                                             |
-| `index.ts`       | The public surface: routes import from here and never from a file inside                                                                                                                 |
-| `tickets.ts`     | Scoped reads, `createTicket` (which also links the assets a ticket is about, through `links`, in the same transaction), and the writes that are events (status, priority, assign, queue) |
-| `comments.ts`    | The thread (comments merged with `activity`), `addComment`, `getAttachment`                                                                                                              |
-| `queues.ts`      | Queue CRUD and the default queue a portal ticket lands in                                                                                                                                |
-| `transitions.ts` | The status workflow, as data                                                                                                                                                             |
-| `scope.ts`       | Which tickets a viewer sees; who sees internal notes                                                                                                                                     |
-| `mail.ts`        | The ticket mail templates, including `taskCompletedMail`; exported for domains that react to events (ADR 0023). Sending lives in `shared/mail.ts`                                        |
-| `summaries.ts`   | Reads other domains draw on: `ticketSummaries`, `assignedOpenTickets`                                                                                                                    |
+| File               | Owns                                                                                                                                                                                     |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema.ts`        | `queues`, `request_forms`, `tickets`, `ticket_comments`, `attachments`; the enums and the `TCK-####` sequence                                                                            |
+| `index.ts`         | The public surface: routes import from here and never from a file inside                                                                                                                 |
+| `tickets.ts`       | Scoped reads, `createTicket` (which also links the assets a ticket is about, through `links`, in the same transaction), and the writes that are events (status, priority, assign, queue) |
+| `comments.ts`      | The thread (comments merged with `activity`), `addComment`, `getAttachment`                                                                                                              |
+| `request-forms.ts` | Request form CRUD and `submitEquipmentRequest` (ADR 0037, #271): the ticket lands in the form's queue with the form and the category recorded                                            |
+| `queues.ts`        | Queue CRUD and the default queue a portal ticket lands in                                                                                                                                |
+| `transitions.ts`   | The status workflow, as data                                                                                                                                                             |
+| `scope.ts`         | Which tickets a viewer sees; who sees internal notes                                                                                                                                     |
+| `mail.ts`          | The ticket mail templates, including `taskCompletedMail`; exported for domains that react to events (ADR 0023). Sending lives in `shared/mail.ts`                                        |
+| `summaries.ts`     | Reads other domains draw on: `ticketSummaries`, `assignedOpenTickets`                                                                                                                    |
 
 ## Decisions worth knowing before changing this
 

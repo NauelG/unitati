@@ -38,6 +38,12 @@
 		<StatusBadge status={ticket.priority} />
 	</div>
 	<h1 class="mt-1 font-display text-lg font-semibold text-[var(--ink)]">{ticket.subject}</h1>
+	{#if ticket.requestFormName}
+		<p class="mt-1 text-small text-[var(--ink-muted)]">
+			{m.ticket_request_form()}: {ticket.requestFormName}{#if data.requestedCategory}
+				· {m.ticket_request_category()}: {data.requestedCategory.name}{/if}
+		</p>
+	{/if}
 
 	{#if data.related.length > 0}
 		<div class="mt-[var(--space-6)]">

@@ -89,6 +89,12 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
 		permission: 'tickets.manage'
 	},
 	{
+		module: 'service-desk',
+		href: '/settings/service-desk/request-forms',
+		label: m.settings_section_request_forms,
+		permission: 'tickets.manage'
+	},
+	{
 		module: 'directory',
 		href: '/settings/directory/departments',
 		label: m.settings_section_departments,

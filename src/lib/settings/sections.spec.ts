@@ -77,7 +77,10 @@ describe('visibleSections', () => {
 			'/settings/assets/handover-agreements',
 			'/settings/assets/labels'
 		]);
-		expect(deskManager).toEqual(['/settings/service-desk/queues']);
+		expect(deskManager).toEqual([
+			'/settings/service-desk/queues',
+			'/settings/service-desk/request-forms'
+		]);
 	});
 });
 

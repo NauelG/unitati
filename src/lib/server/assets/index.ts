@@ -94,6 +94,7 @@ export type {
 } from './handover-decision';
 export type {
 	DeliverableAsset,
+	DeliverableFilter,
 	DeliverDeps,
 	DeliverFailure,
 	DeliveredHandover,

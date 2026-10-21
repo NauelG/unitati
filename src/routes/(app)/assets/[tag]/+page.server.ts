@@ -36,6 +36,7 @@ import {
 	recentTicketCount,
 	assetRelations,
 	relatedTo,
+	requestedCategory,
 	unlinkAsset,
 	type AssetTimelineItem,
 	type AssetRelatedGroup
@@ -97,10 +98,27 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 		asset.visibility === 'full' && (canManage || canCheckout)
 			? await Promise.all([listPeople(user.organisationId), listLocations(user.organisationId)])
 			: [[], []];
+	// Coming from a ticket (#279): the dialogs preselect it and its requester.
+	// Only for someone who may link, and only a ticket they can read.
+	const ticketTag = url.searchParams.get('ticket');
+	const fromTicket =
+		ticketTag && canCheckout && can(user, 'tickets.manage')
+			? await getTicketByTag(user, ticketTag.trim().toUpperCase())
+			: null;
+	// An equipment request narrows the picker to the category it asked for (#271);
+	// the technician can still deliver anything from the asset's own page.
+	const requested =
+		fromTicket?.ok && fromTicket.value.requestFormId
+			? await requestedCategory(user.organisationId, fromTicket.value.id)
+			: null;
 	// What the delivery dialog can offer: only for someone who can hand an asset over.
 	const deliverable =
 		asset.visibility === 'full' && canCheckout && asset.custodianPersonId === null
-			? await listDeliverableAssets(user.organisationId)
+			? await listDeliverableAssets(
+					user.organisationId,
+					undefined,
+					requested ? { categoryId: requested.id } : {}
+				)
 			: [];
 	const heldAssets =
 		asset.visibility === 'full' && canCheckout && asset.custodianPersonId
@@ -153,14 +171,6 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 		emptyModelForm(),
 		editable ? modelCatalogues(user) : Promise.resolve({ manufacturers: [], categories: [] })
 	]);
-
-	// Coming from a ticket (#279): the dialogs preselect it and its requester.
-	// Only for someone who may link, and only a ticket they can read.
-	const ticketTag = url.searchParams.get('ticket');
-	const fromTicket =
-		ticketTag && canCheckout && can(user, 'tickets.manage')
-			? await getTicketByTag(user, ticketTag.trim().toUpperCase())
-			: null;
 
 	return {
 		asset,

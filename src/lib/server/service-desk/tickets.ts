@@ -3,7 +3,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import type { QueueColor } from '#lib/domain/queue-color.js';
 import type { Priority, TicketStatus } from '#lib/domain/status.js';
 import { actorColumns, recordActivity } from '../activity';
-import { linkAsset } from '../links';
+import { linkAsset, type LinkCategoryFailure } from '../links';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
@@ -14,7 +14,8 @@ import { page, pageWindow, type Page, type PageRequest } from '../shared/paginat
 import { runtimeMailer, runtimeStorage } from '../shared/runtime';
 import { sendQuietly, type Mailer } from '../shared/mail';
 import { resolvedMail } from './mail';
-import { queues, ticketComments, tickets, attachments } from './schema';
+import { queues, requestForms, ticketComments, tickets, attachments } from './schema';
+import type { Transaction } from '../db';
 import { requireTicketScope, seesInternal } from './scope';
 import { storeFiles } from '../shared/attachments';
 import type { Storage } from '../shared/storage';
@@ -73,6 +74,8 @@ const ticketColumns = {
 	requesterName: requester.fullName,
 	assigneePersonId: tickets.assigneePersonId,
 	assigneeName: assignee.fullName,
+	requestFormId: tickets.requestFormId,
+	requestFormName: requestForms.name,
 	createdAt: tickets.createdAt,
 	updatedAt: tickets.updatedAt
 };
@@ -91,6 +94,9 @@ export type TicketView = {
 	requesterName: string;
 	assigneePersonId: string | null;
 	assigneeName: string | null;
+	/** The request form the ticket came from (ADR 0037); null for free-text and staff tickets. */
+	requestFormId: string | null;
+	requestFormName: string | null;
 	createdAt: Date;
 	updatedAt: Date;
 };
@@ -101,7 +107,8 @@ function ticketsWithRelations() {
 		.from(tickets)
 		.innerJoin(queues, eq(tickets.queueId, queues.id))
 		.innerJoin(requester, eq(tickets.requesterPersonId, requester.id))
-		.leftJoin(assignee, eq(tickets.assigneePersonId, assignee.id));
+		.leftJoin(assignee, eq(tickets.assigneePersonId, assignee.id))
+		.leftJoin(requestForms, eq(tickets.requestFormId, requestForms.id));
 }
 
 /**
@@ -129,6 +136,7 @@ function matchesSearch(term: string, viewer: SessionUser): SQL {
 export interface TicketListRequest extends PageRequest {
 	search?: string;
 	queueId?: string;
+	requestFormId?: string;
 	status?: TicketStatus;
 	/** Defaults to the most recently touched first. */
 	order?: TicketOrder;
@@ -151,6 +159,7 @@ export async function listTickets(
 		requireTicketScope(viewer),
 		term ? matchesSearch(term, viewer) : undefined,
 		request.queueId ? eq(tickets.queueId, request.queueId) : undefined,
+		request.requestFormId ? eq(tickets.requestFormId, request.requestFormId) : undefined,
 		request.status ? eq(tickets.status, request.status) : undefined
 	) as SQL;
 
@@ -353,7 +362,19 @@ export type CreateTicketFailure =
 	| 'attachments_too_many'
 	| 'attachments_too_large'
 	| 'asset_not_found'
+	| LinkCategoryFailure
 	| 'duplicate_ticket_tag';
+
+/**
+ * What only a request form adds to a ticket. Not part of `CreateTicketInput`:
+ * that schema is what the API and the forms post, and a form id there would
+ * let anybody file a ticket under any form (ADR 0037).
+ */
+export interface TicketOrigin {
+	requestFormId: string;
+	/** Runs in the opening transaction, after the ticket and its comment exist. */
+	inTransaction?: (tx: Transaction, ticket: { id: string }) => Promise<void>;
+}
 
 /**
  * Thrown from inside the opening transaction to roll it back. A returned
@@ -370,6 +391,13 @@ export type CreateTicketFailure =
  * visibility rule outside `links`, and a gap in the numbering is cheaper.
  */
 class AssetRefused extends Error {}
+
+/** Same reasoning as `AssetRefused`: the request's category was found off-limits mid-transaction. */
+export class CategoryRefused extends Error {
+	constructor(readonly reason: LinkCategoryFailure) {
+		super(reason);
+	}
+}
 
 /** A foreign key proves a row exists, not that it belongs to the actor's organisation. */
 async function sameOrganisation(organisationId: string, queueId: string, personId: string) {
@@ -404,6 +432,17 @@ export async function createTicket(
 	files: UploadedFile[] = [],
 	deps: Deps = {}
 ): Promise<Outcome<{ id: string; ticketTag: string }, CreateTicketFailure>> {
+	return openTicket(actor, input, files, deps);
+}
+
+/** `createTicket`, plus the origin only the request forms supply. */
+export async function openTicket(
+	actor: SessionUser,
+	input: CreateTicketInput,
+	files: UploadedFile[] = [],
+	deps: Deps = {},
+	origin?: TicketOrigin
+): Promise<Outcome<{ id: string; ticketTag: string }, CreateTicketFailure>> {
 	const values = createTicketInput.parse(input);
 	const { storage } = resolveDeps(deps);
 
@@ -430,7 +469,8 @@ export async function createTicket(
 					requesterPersonId: requesterId,
 					// Only staff triage: an employee cannot raise their own urgency.
 					priority: staff ? values.priority : undefined,
-					channel: staff ? 'agent' : 'portal'
+					channel: staff ? 'agent' : 'portal',
+					requestFormId: origin?.requestFormId
 				})
 				.returning({
 					id: tickets.id,
@@ -482,6 +522,8 @@ export async function createTicket(
 				if (!linked.ok) throw new AssetRefused(linked.error);
 			}
 
+			await origin?.inTransaction?.(tx, ticket);
+
 			return success({ id: ticket.id, ticketTag: ticket.ticketTag });
 		});
 	} catch (error) {
@@ -491,6 +533,7 @@ export async function createTicket(
 		if (error instanceof AssetRefused && error.message === 'asset_not_found') {
 			return failure('asset_not_found');
 		}
+		if (error instanceof CategoryRefused) return failure(error.reason);
 
 		if (uniqueConstraintName(error) === 'tickets_org_tag') return failure('duplicate_ticket_tag');
 		throw error;

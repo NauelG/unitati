@@ -78,7 +78,7 @@
 	const arrivedTags = $derived.by(() =>
 		urgentArrivals.observe(
 			data.result.rows,
-			`${data.search}|${data.queueId}|${data.status}|${data.result.page}`
+			`${data.search}|${data.queueId}|${data.requestFormId}|${data.status}|${data.result.page}`
 		)
 	);
 
@@ -116,18 +116,25 @@
 		{ value: '', label: m.tickets_filter_all_queues() },
 		...data.queues.map((queue) => ({ value: queue.id, label: queue.name }))
 	]);
+	const requestFormOptions = $derived([
+		{ value: '', label: m.ticket_filter_request_form_all() },
+		...data.requestForms.map((requestForm) => ({ value: requestForm.id, label: requestForm.name }))
+	]);
 	const statusOptions = $derived([
 		{ value: '', label: m.tickets_filter_all_statuses() },
 		...TICKET_STATUSES.map((value) => ({ value, label: statusLabel(value) }))
 	]);
 
 	const sorted = $derived(page.url.searchParams.has('sort'));
-	const filtering = $derived(Boolean(data.search || data.queueId || data.status));
+	const filtering = $derived(
+		Boolean(data.search || data.queueId || data.requestFormId || data.status)
+	);
 
 	function pageHref(target: number): string {
 		const parts = [
 			data.search ? `q=${encodeURIComponent(data.search)}` : null,
 			data.queueId ? `queue=${data.queueId}` : null,
+			data.requestFormId ? `form=${data.requestFormId}` : null,
 			data.status ? `status=${data.status}` : null,
 			sorted ? `sort=${data.order.key}&dir=${data.order.direction}` : null,
 			target > 1 ? `page=${target}` : null
@@ -242,6 +249,14 @@
 				options={queueOptions}
 				value={data.queueId}
 			/>
+			{#if data.requestForms.length > 0}
+				<SelectField
+					label={m.ticket_filter_request_form()}
+					name="form"
+					options={requestFormOptions}
+					value={data.requestFormId}
+				/>
+			{/if}
 			<SelectField
 				label={m.tickets_filter_status()}
 				name="status"

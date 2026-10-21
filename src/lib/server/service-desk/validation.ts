@@ -2,6 +2,11 @@ import { z } from 'zod';
 import { DEFAULT_QUEUE_COLOR, QUEUE_COLORS } from '#lib/domain/queue-color.js';
 import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS_PER_COMMENT } from '#lib/domain/attachments.js';
 import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
+import {
+	JUSTIFICATION_MAX,
+	REQUEST_FORM_DESCRIPTION_MAX,
+	REQUEST_FORM_KINDS
+} from '#lib/domain/request-form.js';
 import { PRIORITIES } from '#lib/domain/status.js';
 
 /**
@@ -59,6 +64,28 @@ export const queueInput = z.object({
 	color: z.enum(QUEUE_COLORS).default(DEFAULT_QUEUE_COLOR)
 });
 
+export const requestFormInput = z.object({
+	name: nonEmpty,
+	description: z.string().trim().max(REQUEST_FORM_DESCRIPTION_MAX).default(''),
+	kind: z.enum(REQUEST_FORM_KINDS),
+	queueId: z.uuid(),
+	active: z.boolean().default(true)
+});
+
+export const requestFormEditInput = requestFormInput.omit({ kind: true });
+
+/** What an employee posts to an `equipment` form. The form fixes the queue; the employee never names one. */
+export const equipmentRequestInput = z.object({
+	formId: z.uuid(),
+	categoryId: z.uuid(),
+	justification: nonEmpty.max(JUSTIFICATION_MAX),
+	/** `YYYY-MM-DD`, as a date input posts it. */
+	neededBy: z.iso.date().optional()
+});
+
+export type RequestFormInput = z.input<typeof requestFormInput>;
+export type RequestFormEditInput = z.input<typeof requestFormEditInput>;
+export type EquipmentRequestInput = z.input<typeof equipmentRequestInput>;
 export type CreateTicketInput = z.input<typeof createTicketInput>;
 export type AddCommentInput = z.input<typeof addCommentInput>;
 export type QueueInput = z.input<typeof queueInput>;
