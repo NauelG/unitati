@@ -1662,5 +1662,4 @@
 	"notifications_sentence_task_linked_completed": "Se ha completado la tarea vinculada a {code} · {title}",
 	"notifications_sentence_mention": "{actor} te ha mencionado en {code} · {title}",
 	"notifications_sentence_followed_activity": "Hay novedades en {code} · {title}"
-
 }
