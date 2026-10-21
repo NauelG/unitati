@@ -18,6 +18,8 @@ export type { Snapshot } from './snapshot';
 export { notify } from './notify';
 export type { NotifyInput, NotifyTarget, PendingEmail } from './notify';
 
+export { followTicket } from './follow';
+
 export {
 	notificationMail,
 	sendNotificationEmails,

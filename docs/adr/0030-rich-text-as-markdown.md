@@ -30,8 +30,8 @@ The stored format also decides three other things. `ticket_comments.search` is a
    blocks and blockquotes. **Not allowed:** headings, strikethrough, tables, inline images
    (attachments already exist). The editor's schema and the sanitiser allow-list say the same
    thing.
-5. **Sanitiser allow-list:** tags `p, br, strong, em, ul, ol, li, a, code, pre, blockquote`;
-   attribute `href` on `a` only (plus the `rel` and `target` the transform sets); schemes `http`,
+5. **Sanitiser allow-list:** tags `p, br, strong, em, ul, ol, li, a, code, pre, blockquote` (and
+   the mention `span`, item 10); attribute `href` on `a` only (plus the `rel` and `target` the transform sets); schemes `http`,
    `https`, `mailto`. Every link gets `rel="noopener noreferrer"` and `target="_blank"`. Tags
    outside the list are dropped with their text kept; `script`, `style`, `iframe`, `textarea` and
    `noscript` are dropped with their content. Raw HTML in the source is therefore never rendered.
@@ -43,21 +43,30 @@ The stored format also decides three other things. `ticket_comments.search` is a
    editor and by the domain (`addComment` answers `body_too_long`; the schema has `.max`). It is
    not a database constraint.
 9. **Mail stays link-only.** Changing that is a product decision of its own.
+10. **@mentions (#303)** are the one extension to the allow-list. The stored token is
+    `@[Full Name](person:<uuid>)` (`]` and `\` in the name escaped; `src/lib/domain/mentions.ts`).
+    `renderMarkdown` turns it into `<span class="mention" data-person-id="<uuid>">@Full Name</span>`
+    and the sanitiser keeps exactly that span: a per-call nonce proves it came from a real token, so a
+    `span.mention` typed by hand loses its attributes. Any other `person:` link is rendered as plain
+    text. The editor offers the picker only when given a `mentionSource`; who may be named is decided
+    on the server (`mentionableFor`), never by the client.
 
 ### Packages
 
-| Package                | Version |
-| ---------------------- | ------- |
-| `@tiptap/core`         | 3.32.0  |
-| `@tiptap/pm`           | 3.32.0  |
-| `@tiptap/starter-kit`  | 3.32.0  |
-| `@tiptap/markdown`     | 3.32.0  |
-| `marked`               | 18.1.1  |
-| `sanitize-html`        | 2.18.1  |
-| `@types/sanitize-html` | 2.16.2  |
+| Package                     | Version |
+| --------------------------- | ------- |
+| `@tiptap/core`              | 3.32.0  |
+| `@tiptap/pm`                | 3.32.0  |
+| `@tiptap/starter-kit`       | 3.32.0  |
+| `@tiptap/markdown`          | 3.32.0  |
+| `@tiptap/extension-mention` | 3.32.0  |
+| `@tiptap/suggestion`        | 3.32.0  |
+| `marked`                    | 18.1.1  |
+| `sanitize-html`             | 2.18.1  |
+| `@types/sanitize-html`      | 2.16.2  |
 
 `@tiptap/markdown` requires `@tiptap/core` and `@tiptap/pm` at the same version, so the Tiptap
-packages are pinned together. The spike confirmed that `editor.getMarkdown()` and
+packages are pinned together (`@tiptap/extension-mention` and `@tiptap/suggestion` included, #303). The spike confirmed that `editor.getMarkdown()` and
 `setContent(md, { contentType: 'markdown' })` round-trip bold, lists, links, code and quotes, and
 that the editor runs under jsdom (with layout stubs) for component tests.
 

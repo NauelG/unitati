@@ -35,6 +35,52 @@ describe('renderMarkdown', () => {
 		expect(html).toContain('raw');
 	});
 
+	describe('mentions (#303)', () => {
+		const ID = '6f1d0a39-2c4e-4d8b-9a77-1e2f3a4b5c6d';
+
+		it('turns the token into a chip and nothing else', () => {
+			expect(renderMarkdown(`Hola @[Ada Admin](person:${ID})`)).toBe(
+				`<p>Hola <span class="mention" data-person-id="${ID}">@Ada Admin</span></p>\n`
+			);
+		});
+
+		it('reads the escaped characters of a name back', () => {
+			const html = renderMarkdown(`@[Ada \\] \\\\ (jefa) 🎉](person:${ID})`);
+			expect(html).toContain('>@Ada ] \\ (jefa) 🎉</span>');
+		});
+
+		it('escapes markup inside the name', () => {
+			const html = renderMarkdown(`@[<img src=x onerror=alert(1)>](person:${ID})`);
+			expect(html).not.toContain('<img');
+			expect(html).toContain('@&lt;img src=x onerror=alert(1)&gt;</span>');
+		});
+
+		it('renders any other person: link as plain text', () => {
+			const html = renderMarkdown(`[Ada](person:${ID}) and [Bob](person:not-a-uuid)`);
+			expect(html).not.toMatch(/<a|href|person:/);
+			expect(html).toContain('Ada and Bob');
+		});
+
+		it('does not honour a mention span written by hand', () => {
+			const html = renderMarkdown(`<span class="mention" data-person-id="${ID}">@Fake</span>`);
+			expect(html).not.toContain('mention');
+			expect(html).not.toContain('data-person-id');
+			expect(html).toContain('@Fake');
+		});
+
+		it('keeps javascript: disguised as a mention out of the output', () => {
+			const html = renderMarkdown(
+				[
+					'@[x](javascript:alert(1))',
+					`@[x](person:${ID}" onclick="alert(1))`,
+					`[@[x](person:${ID})](javascript:alert(1))`
+				].join('\n\n')
+			);
+			// The payload may survive as inert text, never as a link or an attribute.
+			expect(html).not.toMatch(/href=|<[^>]*onclick/);
+		});
+	});
+
 	it('renders a heading line as plain paragraph text', () => {
 		const html = renderMarkdown('# Title');
 		expect(html).not.toMatch(/<h\d/);

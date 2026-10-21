@@ -13,5 +13,7 @@ export const prose = [
 	'[&_code]:rounded-[var(--radius-sm)] [&_code]:bg-[var(--surface-2)] [&_code]:px-1 [&_code]:font-mono [&_code]:text-[0.9em]',
 	'[&_pre]:my-[var(--space-2)] [&_pre]:overflow-x-auto [&_pre]:rounded-[var(--radius-md)] [&_pre]:bg-[var(--surface-2)] [&_pre]:p-[var(--space-3)]',
 	'[&_pre_code]:bg-transparent [&_pre_code]:p-0',
+	// The @mention chip (#303), in the editor and in rendered content alike.
+	'[&_.mention]:rounded-[var(--radius-sm)] [&_.mention]:bg-[var(--brand-soft)] [&_.mention]:px-1 [&_.mention]:font-medium [&_.mention]:text-[var(--brand)]',
 	'[&_blockquote]:my-[var(--space-2)] [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--border-strong)] [&_blockquote]:pl-[var(--space-3)] [&_blockquote]:text-[var(--ink-muted)]'
 ];

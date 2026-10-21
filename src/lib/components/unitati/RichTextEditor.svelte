@@ -5,7 +5,7 @@
 	/**
 	 * The rich text editor (ADR 0030): a toolbar over a Tiptap surface whose
 	 * value is **markdown**. Used by the ticket composer; project and task
-	 * descriptions adopt it next.
+	 * descriptions adopt it next. Ticket text can also @mention people (#303).
 	 */
 	export const richTextEditor = tv({
 		slots: {
@@ -72,6 +72,7 @@
 	import SquareCode from '@lucide/svelte/icons/square-code';
 	import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 	import { m } from '#lib/paraglide/messages.js';
+	import { mentionExtension, type MentionSource } from './mention-extension.js';
 
 	interface Props {
 		/** Name of the hidden input that carries the markdown in a form post. */
@@ -85,6 +86,12 @@
 		disabled?: boolean;
 		/** Called on Cmd/Ctrl+Enter. */
 		onsubmitshortcut?: () => void;
+		/**
+		 * Who `@` may offer, asked as the person types (#303). The server decides
+		 * who may be named; without a source `@` is plain text, which is what task
+		 * and project descriptions get.
+		 */
+		mentionSource?: MentionSource;
 		class?: string;
 	}
 
@@ -96,6 +103,7 @@
 		maxLength = RICH_TEXT_MAX_LENGTH,
 		disabled = false,
 		onsubmitshortcut,
+		mentionSource,
 		class: className
 	}: Props = $props();
 
@@ -130,7 +138,15 @@
 						HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' }
 					}
 				}),
-				Markdown
+				Markdown,
+				...(mentionSource
+					? [
+							mentionExtension(mentionSource, {
+								list: m.notifications_mention_label(),
+								empty: m.notifications_mention_empty()
+							})
+						]
+					: [])
 			],
 			editorProps: {
 				attributes: {

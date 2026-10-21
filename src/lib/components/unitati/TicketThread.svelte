@@ -77,6 +77,7 @@
 	import { activitySentence } from './activity.js';
 	import Avatar from './Avatar.svelte';
 	import Button from './Button.svelte';
+	import { fetchMentions } from './mention-source.js';
 	import RichTextEditor from './RichTextEditor.svelte';
 	import RecordRef from './RecordRef.svelte';
 	import { badge } from './StatusBadge.svelte';
@@ -93,10 +94,19 @@
 		editAction?: string;
 		/** Shown under the editor when the last save was refused. */
 		editError?: string;
+		/** The @mention endpoint (#303); the editor asks with the visibility of the comment being edited. */
+		mentionsUrl?: string;
 		class?: string;
 	}
 
-	let { items, attachmentHref, editAction, editError, class: className }: Props = $props();
+	let {
+		items,
+		attachmentHref,
+		editAction,
+		editError,
+		mentionsUrl,
+		class: className
+	}: Props = $props();
 
 	let editingId = $state<string | null>(null);
 	let draft = $state('');
@@ -253,6 +263,10 @@
 									label={m.thread_edit_label()}
 									bind:value={draft}
 									onsubmitshortcut={saveEdit}
+									mentionSource={mentionsUrl
+										? (query) =>
+												fetchMentions(mentionsUrl, { q: query, visibility: item.visibility })
+										: undefined}
 								/>
 								{#if editError}
 									<p class={styles.editError()} role="alert">{editError}</p>

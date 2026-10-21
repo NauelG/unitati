@@ -4,17 +4,20 @@ import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { people } from '../directory/schema';
+import { extractMentions } from '#lib/domain/mentions.js';
 import {
 	notify,
 	sendNotificationEmails,
 	type NotifyInput,
 	type PendingEmail
 } from '../notifications';
-import { plainExcerpt, renderMarkdown } from '../shared/markdown';
+import { renderMarkdown } from '../shared/markdown';
 import { failure, success, type Outcome } from '../shared/outcome';
+import { allowedMentions, commentSnapshot, followMentioned, notifyMentioned } from './mentions';
 import { attachments, ticketComments, tickets } from './schema';
 import { requireTicketScope, seesInternal } from './scope';
 import { compareThreadItems } from './thread-order';
+import { runtimeMailer, runtimeOrigin } from '../shared/runtime';
 import { storeFiles } from '../shared/attachments';
 import { resolveDeps, type Deps } from './tickets';
 import {
@@ -166,9 +169,6 @@ export type AddCommentFailure =
 	| 'attachments_too_large'
 	| 'body_too_long';
 
-/** The longest excerpt a notification carries (ADR 0040). */
-const EXCERPT_LENGTH = 280;
-
 /**
  * Who a new comment concerns (#302): a public one, the requester (`ticket.replied`)
  * and the assignee (`ticket.commented`); an internal one, only the assignee.
@@ -260,19 +260,21 @@ export async function addComment(
 
 			await tx.update(tickets).set({ updatedAt: new Date() }).where(eq(tickets.id, ticket.id));
 
+			// One `notify` for participants and mentions alike, so somebody who is both
+			// gets the strongest notification once (#303).
+			const mentioned = await allowedMentions(tx, actor, ticket, values.visibility, values.body);
 			const pending = await notify(tx, {
 				organisationId: actor.organisationId,
 				actorPersonId: actor.personId,
 				target: { ticketId: ticket.id },
 				visibility: values.visibility,
-				snapshot: {
-					code: ticket.ticketTag,
-					title: ticket.subject,
-					actorName: actor.name,
-					excerpt: plainExcerpt(values.body, EXCERPT_LENGTH) || undefined
-				},
-				recipients: commentRecipients(ticket, values.visibility)
+				snapshot: commentSnapshot(ticket, actor, values.body),
+				recipients: [
+					...commentRecipients(ticket, values.visibility),
+					...mentioned.map((personId) => ({ personId, type: 'mention' as const }))
+				]
 			});
+			await followMentioned(tx, actor.organisationId, ticket, mentioned);
 
 			return { commentId: comment.id, emails: pending };
 		}));
@@ -292,68 +294,92 @@ export type EditCommentFailure = 'not_found' | 'forbidden' | 'body_too_long';
 /**
  * Edits the text of a comment (#222). The comment is found through the
  * actor's ticket scope, so one they cannot see is `not_found`, never
- * `forbidden`, which would confirm it exists. Attachments are untouched, and no
- * mail goes out. An unchanged body records nothing, and the ticket's
+ * `forbidden`, which would confirm it exists. Attachments are untouched, and the only
+ * mail is to people the edit newly @mentions (#303). An unchanged body records nothing, and the ticket's
  * `updated_at` stays put: the list's "recently updated" order is for new
  * activity, not typo fixes.
  */
 export async function editComment(
 	actor: SessionUser,
 	commentId: string,
-	body: string
+	body: string,
+	deps: Deps = {}
 ): Promise<Outcome<void, EditCommentFailure>> {
 	if (body.trim().length > MAX_COMMENT_LENGTH) return failure('body_too_long');
 	const values = editCommentInput.parse({ body });
+	// Not `resolveDeps`: an edit stores no file, so it must not need a storage.
+	const mailer = deps.mailer === undefined ? runtimeMailer() : deps.mailer;
 
-	return getDb().transaction(async (tx) => {
-		const [comment] = await tx
-			.select({
-				id: ticketComments.id,
-				ticketId: ticketComments.ticketId,
-				authorPersonId: ticketComments.authorPersonId,
-				body: ticketComments.body,
-				visibility: ticketComments.visibility,
-				createdAt: ticketComments.createdAt
-			})
-			.from(ticketComments)
-			.innerJoin(tickets, eq(ticketComments.ticketId, tickets.id))
-			.where(
-				and(
-					eq(ticketComments.id, commentId),
-					eq(ticketComments.organisationId, actor.organisationId),
-					requireTicketScope(actor),
-					seesInternal(actor) ? undefined : eq(ticketComments.visibility, 'public')
+	let emails: PendingEmail[] = [];
+	const outcome = await getDb().transaction(
+		async (tx): Promise<Outcome<void, EditCommentFailure>> => {
+			const [comment] = await tx
+				.select({
+					id: ticketComments.id,
+					ticketId: ticketComments.ticketId,
+					authorPersonId: ticketComments.authorPersonId,
+					body: ticketComments.body,
+					visibility: ticketComments.visibility,
+					createdAt: ticketComments.createdAt,
+					ticketTag: tickets.ticketTag,
+					subject: tickets.subject,
+					requesterPersonId: tickets.requesterPersonId,
+					assigneePersonId: tickets.assigneePersonId
+				})
+				.from(ticketComments)
+				.innerJoin(tickets, eq(ticketComments.ticketId, tickets.id))
+				.where(
+					and(
+						eq(ticketComments.id, commentId),
+						eq(ticketComments.organisationId, actor.organisationId),
+						requireTicketScope(actor),
+						seesInternal(actor) ? undefined : eq(ticketComments.visibility, 'public')
+					)
 				)
-			)
-			.limit(1);
-		if (!comment) return failure('not_found');
+				.limit(1);
+			if (!comment) return failure('not_found');
 
-		const [first] = await tx
-			.select({ id: ticketComments.id })
-			.from(ticketComments)
-			.where(eq(ticketComments.ticketId, comment.ticketId))
-			.orderBy(asc(ticketComments.createdAt), asc(ticketComments.id))
-			.limit(1);
+			const [first] = await tx
+				.select({ id: ticketComments.id })
+				.from(ticketComments)
+				.where(eq(ticketComments.ticketId, comment.ticketId))
+				.orderBy(asc(ticketComments.createdAt), asc(ticketComments.id))
+				.limit(1);
 
-		if (!mayEditComment(actor, comment, first?.id === comment.id)) return failure('forbidden');
-		if (comment.body === values.body) return success(undefined);
+			if (!mayEditComment(actor, comment, first?.id === comment.id)) return failure('forbidden');
+			if (comment.body === values.body) return success(undefined);
 
-		const now = new Date();
-		await tx
-			.update(ticketComments)
-			.set({ body: values.body, editedAt: now, updatedAt: now })
-			.where(eq(ticketComments.id, comment.id));
+			const now = new Date();
+			await tx
+				.update(ticketComments)
+				.set({ body: values.body, editedAt: now, updatedAt: now })
+				.where(eq(ticketComments.id, comment.id));
 
-		await recordActivity(tx, {
-			organisationId: actor.organisationId,
-			...actorColumns(actor),
-			target: { ticketId: comment.ticketId },
-			verb: 'comment.edited',
-			payload: { commentId: comment.id, visibility: comment.visibility }
-		});
+			await recordActivity(tx, {
+				organisationId: actor.organisationId,
+				...actorColumns(actor),
+				target: { ticketId: comment.ticketId },
+				verb: 'comment.edited',
+				payload: { commentId: comment.id, visibility: comment.visibility }
+			});
 
-		return success(undefined);
-	});
+			// Only the people this edit adds: those already named were told once.
+			emails = await notifyMentioned(
+				tx,
+				actor,
+				{ ...comment, id: comment.ticketId },
+				comment.visibility,
+				values.body,
+				extractMentions(comment.body)
+			);
+
+			return success(undefined);
+		}
+	);
+
+	// After commit, not awaited (ADR 0006).
+	void sendNotificationEmails(mailer, emails, deps.origin ?? runtimeOrigin());
+	return outcome;
 }
 
 /**

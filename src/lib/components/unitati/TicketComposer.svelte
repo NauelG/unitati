@@ -63,6 +63,7 @@
 	} from '#lib/domain/attachments.js';
 	import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 	import Button from './Button.svelte';
+	import { fetchMentions } from './mention-source.js';
 	import RichTextEditor from './RichTextEditor.svelte';
 
 	interface Props {
@@ -70,6 +71,12 @@
 		action: string;
 		/** Whether the viewer may write internal notes; employees never see the toggle. */
 		allowInternal?: boolean;
+		/**
+		 * The endpoint that says who `@` may offer (#303). The composer adds the
+		 * visibility it is currently writing in, so an internal note never offers
+		 * somebody who could not read it.
+		 */
+		mentionsUrl?: string;
 		/** Shown under the box when the last submission was refused. */
 		error?: string;
 		/** Files already chosen; only the gallery sets it, to show the chip list and the drop state. */
@@ -93,6 +100,7 @@
 	let {
 		action,
 		allowInternal = false,
+		mentionsUrl,
 		error,
 		initialFiles = [],
 		initialDragging = false,
@@ -237,6 +245,10 @@
 			(internal ? m.composer_placeholder_internal() : m.composer_placeholder_portal())}
 		bind:value={body}
 		onsubmitshortcut={send}
+		mentionSource={mentionsUrl
+			? (query) =>
+					fetchMentions(mentionsUrl, { q: query, visibility: internal ? 'internal' : 'public' })
+			: undefined}
 	/>
 
 	<input type="hidden" name="visibility" value={internal ? 'internal' : 'public'} />

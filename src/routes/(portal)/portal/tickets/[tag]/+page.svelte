@@ -56,6 +56,7 @@
 			items={data.thread}
 			attachmentHref={(id) => `/attachments/${id}`}
 			editAction="?/editComment"
+			mentionsUrl={`/portal/tickets/${ticket.ticketTag}/mentions`}
 			{editError}
 		/>
 	</div>
@@ -66,6 +67,7 @@
 		</h2>
 		<TicketComposer
 			action="?/reply"
+			mentionsUrl={`/portal/tickets/${ticket.ticketTag}/mentions`}
 			error={replyError}
 			placeholder={m.composer_placeholder_portal()}
 		/>
