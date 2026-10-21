@@ -5,6 +5,25 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.100.0] - 2026-10-21
+
+### Added
+
+- Unitati is licensed **AGPL-3.0-only** ([ADR 0041](docs/adr/0041-license-agpl-3.0-only.md)):
+  `LICENSE` at the root, `license` and `repository` in `package.json`, and the
+  `org.opencontainers.image.licenses` label on the image.
+- A **"Código fuente"** link next to the version, wherever the version shows: app shell, portal,
+  login, setup, password change and handover signing. It stays with a custom brand and nothing
+  hides it, so every installation offers its source as AGPL section 13 asks. The URL comes from
+  `package.json` `repository` at build time, so a fork that points it at its own code complies
+  without code changes.
+- Contributions carry a DCO sign-off (`git commit -s`); a new `DCO sign-off` CI job checks every
+  commit of a pull request. See `.github/CONTRIBUTING.md`.
+
+### Changed
+
+- The container image `ghcr.io/nauelg/unitati` is public: pulling it needs no login.
+
 ## [0.99.1] - 2026-10-21
 
 ### Fixed
