@@ -5,6 +5,24 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.96.0] - 2026-10-21
+
+### Added
+
+- Equipment requests from the portal through request forms (#271, ADR 0037). A new
+  _Formularios de solicitud_ catalogue under Settings, Service desk (`tickets.manage`) holds each
+  form's name, short Markdown description, target queue and an active flag; the only kind is
+  `equipment`. A form with tickets is deactivated, never deleted, and a queue a form targets cannot
+  be deleted.
+- The portal's new-ticket page offers the active forms beside the free-text ticket, which is
+  unchanged. The equipment form asks for an asset category, a justification (1 to 2000 characters)
+  and an optional needed-by date, and files the ticket in the form's queue with the category
+  linked through `links` (`ticket_category`).
+- The ticket page shows the form and the requested category to staff and to the requester. For an
+  equipment ticket, staff see the in-stock assets of that category with a Deliver link: the asset
+  page opens the deliver dialog with the requester and the ticket preselected and the picker
+  narrowed to that category. The ticket list can be filtered by request form.
+
 ## [0.95.0] - 2026-10-21
 
 ### Added

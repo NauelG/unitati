@@ -383,7 +383,13 @@
 							]
 						: []),
 					{ label: m.ticket_detail_assignee(), value: assigneeValue },
-					{ label: m.ticket_detail_queue(), value: queueValue }
+					{ label: m.ticket_detail_queue(), value: queueValue },
+					...(ticket.requestFormName
+						? [{ label: m.ticket_request_form(), value: ticket.requestFormName }]
+						: []),
+					...(data.requestedCategory
+						? [{ label: m.ticket_request_category(), value: data.requestedCategory.name }]
+						: [])
 				]}
 			/>
 		</WorkPanel>
@@ -436,6 +442,30 @@
 			{#if data.canManage}
 				<WorkPanel heading={m.ticket_handover_title()}>
 					<div class="space-y-[var(--space-3)]">
+						{#if data.canDeliver && data.requestedCategory}
+							<!-- An equipment request: the in-stock assets of the category asked for. -->
+							{#if data.inStockForRequest.length === 0}
+								<p class="m-0 text-sm text-[var(--ink-muted)]">
+									{m.ticket_request_deliver_none({ category: data.requestedCategory.name })}
+								</p>
+							{:else}
+								<ul class="m-0 list-none space-y-[var(--space-1)] p-0 text-sm">
+									{#each data.inStockForRequest as stocked (stocked.assetTag)}
+										<li>
+											<a
+												class="text-[var(--brand)] hover:underline"
+												href="/assets/{encodeURIComponent(
+													stocked.assetTag
+												)}?ticket={encodeURIComponent(ticket.ticketTag)}#action-custody"
+											>
+												{m.ticket_request_deliver_asset({ asset: stocked.assetTag })}
+											</a>
+											<span class="text-[var(--ink-muted)]">{stocked.name}</span>
+										</li>
+									{/each}
+								</ul>
+							{/if}
+						{/if}
 						{#if data.canDeliver}
 							<ul class="m-0 list-none space-y-[var(--space-1)] p-0 text-sm">
 								{#each assetGroups.flatMap((group) => group.items) as item (item.ref.id)}

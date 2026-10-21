@@ -9,6 +9,7 @@ import {
 	assignCustody,
 	deliver,
 	ensureDefaultHandoverTemplates,
+	listDeliverableAssets,
 	setCategoryRequiresHandover
 } from '.';
 import { assets, handoverAssets, handovers } from './schema';
@@ -187,6 +188,23 @@ describe('deliver', () => {
 });
 
 /** ADR 0035, decision 8: waiving is a permission, not a checkbox (#277). */
+describe('listDeliverableAssets', () => {
+	it('narrows to the in-stock assets of one category when asked (#271)', async () => {
+		const { organisation, laptops, mice } = await workspace();
+		const stocked = await createAsset(organisation.id, laptops.modelId, { name: 'Stocked' });
+		await createAsset(organisation.id, laptops.modelId, { name: 'Repairing', state: 'in_repair' });
+		await createAsset(organisation.id, mice.modelId, { name: 'A mouse' });
+
+		const all = await listDeliverableAssets(organisation.id);
+		const narrowed = await listDeliverableAssets(organisation.id, undefined, {
+			categoryId: laptops.categoryId
+		});
+
+		expect(all.map((a) => a.name).sort()).toEqual(['A mouse', 'Repairing', 'Stocked']);
+		expect(narrowed.map((a) => a.id)).toEqual([stocked.id]);
+	});
+});
+
 describe('deliver with a waiver', () => {
 	async function waiving(options: { templates?: boolean } = {}) {
 		const space = await workspace(options);

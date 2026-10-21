@@ -45,7 +45,11 @@
 	// wiping the success view (the link is shown once).
 	let personId = $state<string | null>(untrack(() => ticket?.requesterPersonId ?? null));
 	let ticketTag = $state(untrack(() => ticket?.tag ?? ''));
-	let selected = $state<string[]>([untrack(() => currentId)]);
+	// The current asset is preselected only when the picker offers it: a request for
+	// another category (#271) narrows the list, and a hidden choice must not stay ticked.
+	let selected = $state<string[]>(
+		untrack(() => (assets.some((a) => a.id === currentId) ? [currentId] : []))
+	);
 	let waive = $state(false);
 	let waiveReason = $state('');
 	let pending = $state(false);

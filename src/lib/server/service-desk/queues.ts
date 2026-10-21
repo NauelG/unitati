@@ -69,7 +69,11 @@ export async function renameQueue(
 	}
 }
 
-/** A queue with tickets cannot go: the foreign key is `restrict` and says so. */
+/**
+ * A queue with tickets cannot go: the foreign key is `restrict` and says so. The
+ * same key keeps a queue that a request form targets (#271), active or not: an
+ * inactive form can be switched back on, and it must still have somewhere to land.
+ */
 export async function deleteQueue(
 	actor: SessionUser,
 	queueId: string

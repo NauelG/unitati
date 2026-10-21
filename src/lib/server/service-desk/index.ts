@@ -11,6 +11,8 @@
 
 export {
 	queues,
+	requestForms,
+	requestFormKind,
 	tickets,
 	ticketComments,
 	attachments,
@@ -20,7 +22,7 @@ export {
 	commentVisibility,
 	ticketCodeSequence
 } from './schema';
-export type { Queue, Ticket, TicketComment, Attachment } from './schema';
+export type { Queue, RequestForm, Ticket, TicketComment, Attachment } from './schema';
 
 export {
 	listTickets,
@@ -73,6 +75,23 @@ export type {
 export { listQueues, defaultQueue, createQueue, renameQueue, deleteQueue } from './queues';
 export type { QueueFailure, QueueEditFailure, QueueDeleteFailure } from './queues';
 
+export {
+	listRequestForms,
+	listActiveRequestForms,
+	getActiveRequestForm,
+	createRequestForm,
+	updateRequestForm,
+	deleteRequestForm,
+	submitEquipmentRequest
+} from './request-forms';
+export type {
+	RequestFormEntry,
+	RequestFormFailure,
+	RequestFormEditFailure,
+	RequestFormDeleteFailure,
+	SubmitRequestFailure
+} from './request-forms';
+
 export { canTransition, nextStatuses, TRANSITIONS } from './transitions';
 
 export {
@@ -81,13 +100,24 @@ export {
 	editCommentInput,
 	subjectInput,
 	queueInput,
+	requestFormInput,
+	requestFormEditInput,
+	equipmentRequestInput,
 	attachmentProblem,
 	MAX_AFFECTED_ASSETS,
 	MAX_ATTACHMENTS_PER_COMMENT,
 	MAX_ATTACHMENT_BYTES,
 	RESERVED_TICKET_TAGS
 } from './validation';
-export type { CreateTicketInput, AddCommentInput, QueueInput, UploadedFile } from './validation';
+export type {
+	CreateTicketInput,
+	AddCommentInput,
+	QueueInput,
+	RequestFormInput,
+	RequestFormEditInput,
+	EquipmentRequestInput,
+	UploadedFile
+} from './validation';
 
 export { readTicketForm } from './form-data';
 

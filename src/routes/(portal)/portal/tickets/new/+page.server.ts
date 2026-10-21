@@ -1,14 +1,29 @@
 import { fail, redirect } from '@sveltejs/kit';
+import { renderMarkdown } from '#lib/server/shared/markdown.js';
 import { m } from '#lib/paraglide/messages.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
 import {
 	createTicket,
 	createTicketInput,
 	defaultQueue,
+	listActiveRequestForms,
 	readTicketForm
 } from '#lib/server/service-desk/index.js';
 import { failureMessage } from '#lib/ticket-errors.js';
-import type { Actions } from './$types';
+import type { Actions, PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async ({ locals }) => {
+	const user = requirePermission(locals.user, 'tickets.create');
+	const forms = await listActiveRequestForms(user);
+	return {
+		// Sanitised on the server (ADR 0030): the only thing the page may `{@html}`.
+		requestForms: forms.map(({ id, name, description }) => ({
+			id,
+			name,
+			descriptionHtml: renderMarkdown(description)
+		}))
+	};
+};
 
 export const actions: Actions = {
 	default: async ({ locals, request }) => {

@@ -6,6 +6,7 @@ import { escalateFailureMessage } from '#lib/escalation-errors.js';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import { requireAnyPermission, requirePermission } from '#lib/server/auth/guards.js';
+import { listDeliverableAssets } from '#lib/server/assets/index.js';
 import { listPeople, personLocation } from '#lib/server/directory/index.js';
 import {
 	escalateTicket,
@@ -15,6 +16,7 @@ import {
 	linkTicketAssets,
 	parseEscalation,
 	relatedTo,
+	requestedCategory,
 	unlinkAsset,
 	unlinkHandover,
 	unlinkProject,
@@ -66,8 +68,21 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		? await personLocation(user.organisationId, found.value.requesterPersonId)
 		: undefined;
 
+	// What an equipment request asked for, and the stock that could answer it (#271).
+	const requested = found.value.requestFormId
+		? await requestedCategory(user.organisationId, found.value.id)
+		: null;
+	const canDeliver = canManage && can(user, 'assets.checkout');
+	const inStock =
+		canDeliver && requested
+			? await listDeliverableAssets(user.organisationId, undefined, { categoryId: requested.id })
+			: [];
+
 	return {
 		ticket: found.value,
+		requestedCategory: requested,
+		// A short list is enough to start a delivery from; the dialog filters the rest.
+		inStockForRequest: inStock.slice(0, 5).map(({ assetTag, name }) => ({ assetTag, name })),
 		// Thread stays awaited — it's the page's point (#89's streaming note).
 		thread: thread.value,
 		// Unawaited (#89): the viewer reached this ticket through a scoped
@@ -78,7 +93,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		related: relatedTo(user, { kind: 'ticket', id: found.value.id }),
 		canManage,
 		// Delivering equipment for this ticket sends the technician to the asset (#279).
-		canDeliver: canManage && can(user, 'assets.checkout'),
+		canDeliver,
 		...(requesterLocation === undefined
 			? {}
 			: { requesterLocation: requesterLocation && { path: requesterLocation.path } }),

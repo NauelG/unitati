@@ -136,10 +136,20 @@ export interface DeliverableAsset {
 	requiresHandover: boolean;
 }
 
+export interface DeliverableFilter {
+	/**
+	 * Only in-stock assets of this category: what an equipment request asked for
+	 * (#271). The technician is not bound to it; the filter narrows the picker,
+	 * and `deliver` itself accepts any asset nobody holds.
+	 */
+	categoryId?: string;
+}
+
 /** The assets nobody holds, for the delivery picker. Bounded: a picker is not a report. */
 export async function listDeliverableAssets(
 	organisationId: string,
-	executor: Executor = getDb()
+	executor: Executor = getDb(),
+	filter: DeliverableFilter = {}
 ): Promise<DeliverableAsset[]> {
 	return executor
 		.select({
@@ -151,7 +161,15 @@ export async function listDeliverableAssets(
 		.from(assets)
 		.innerJoin(assetModels, eq(assetModels.id, assets.assetModelId))
 		.innerJoin(categories, eq(categories.id, assetModels.categoryId))
-		.where(and(eq(assets.organisationId, organisationId), isNull(assets.custodianPersonId)))
+		.where(
+			and(
+				eq(assets.organisationId, organisationId),
+				isNull(assets.custodianPersonId),
+				filter.categoryId
+					? and(eq(categories.id, filter.categoryId), eq(assets.state, 'in_stock'))
+					: undefined
+			)
+		)
 		.orderBy(asc(assets.assetTag))
 		.limit(500);
 }

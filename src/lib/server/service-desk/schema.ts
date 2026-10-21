@@ -1,5 +1,6 @@
 import { sql, type SQL } from 'drizzle-orm';
 import {
+	boolean,
 	index,
 	integer,
 	pgEnum,
@@ -11,6 +12,7 @@ import {
 	uuid
 } from 'drizzle-orm/pg-core';
 import { DEFAULT_QUEUE_COLOR, QUEUE_COLORS } from '#lib/domain/queue-color.js';
+import { REQUEST_FORM_KINDS } from '#lib/domain/request-form.js';
 import { PRIORITIES, TICKET_STATUSES } from '#lib/domain/status.js';
 import { timestamps } from '../shared/columns';
 import { searchVector, tsvector } from '../shared/search-vector';
@@ -40,6 +42,9 @@ export const ticketChannel = pgEnum('ticket_channel', ['portal', 'agent']);
 
 export const commentVisibility = pgEnum('comment_visibility', ['public', 'internal']);
 
+/** Built from the shared vocabulary, never restated (ADR 0011). */
+export const requestFormKind = pgEnum('request_form_kind', REQUEST_FORM_KINDS);
+
 export const queues = pgTable(
 	'queues',
 	{
@@ -53,6 +58,32 @@ export const queues = pgTable(
 		...timestamps
 	},
 	(table) => [unique('queues_org_name').on(table.organisationId, table.name)]
+);
+
+/**
+ * What an employee picks in the portal to say what they are asking for
+ * (ADR 0037, #271). The queue is only where the ticket starts: it is still who
+ * works it. Deactivated, never deleted, once a ticket came from it.
+ */
+export const requestForms = pgTable(
+	'request_forms',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		/** Markdown, short; shown under the form's name in the portal. */
+		description: text('description').notNull().default(''),
+		kind: requestFormKind('kind').notNull(),
+		/** `restrict`: a queue a form routes to cannot be deleted from under it. */
+		queueId: uuid('queue_id')
+			.notNull()
+			.references(() => queues.id, { onDelete: 'restrict' }),
+		active: boolean('active').notNull().default(true),
+		...timestamps
+	},
+	(table) => [unique('request_forms_org_name').on(table.organisationId, table.name)]
 );
 
 export const tickets = pgTable(
@@ -82,6 +113,10 @@ export const tickets = pgTable(
 		/** `normal` is the default and renders without a badge. */
 		priority: ticketPriority('priority').notNull().default('normal'),
 		channel: ticketChannel('channel').notNull(),
+		/** The form it came from; null for free-text and staff tickets. `restrict`: a form with tickets is deactivated, never deleted. */
+		requestFormId: uuid('request_form_id').references(() => requestForms.id, {
+			onDelete: 'restrict'
+		}),
 		search: tsvector('search')
 			.notNull()
 			.generatedAlwaysAs((): SQL => searchVector('spanish', `coalesce("subject", '')`)),
@@ -94,6 +129,7 @@ export const tickets = pgTable(
 		/** The employee scope filters on this column on every list request. */
 		index('tickets_requester_idx').on(table.requesterPersonId),
 		index('tickets_assignee_idx').on(table.assigneePersonId),
+		index('tickets_request_form_idx').on(table.requestFormId),
 		index('tickets_search_gin').using('gin', table.search)
 	]
 );
@@ -150,6 +186,7 @@ export const attachments = pgTable(
 );
 
 export type Queue = typeof queues.$inferSelect;
+export type RequestForm = typeof requestForms.$inferSelect;
 export type Ticket = typeof tickets.$inferSelect;
 export type TicketComment = typeof ticketComments.$inferSelect;
 export type Attachment = typeof attachments.$inferSelect;

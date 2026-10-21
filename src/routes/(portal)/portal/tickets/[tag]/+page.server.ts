@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import { z } from 'zod';
 import { m } from '#lib/paraglide/messages.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
-import { relatedTo } from '#lib/server/links/index.js';
+import { relatedTo, requestedCategory } from '#lib/server/links/index.js';
 import {
 	addComment,
 	addCommentInput,
@@ -32,7 +32,11 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	// even outside the employee's scope (ADR 0007), with no link when restricted.
 	const related = await relatedTo(user, { kind: 'ticket', id: found.value.id });
 
-	return { ticket: found.value, thread: thread.value, related };
+	const requested = found.value.requestFormId
+		? await requestedCategory(user.organisationId, found.value.id)
+		: null;
+
+	return { ticket: found.value, requestedCategory: requested, thread: thread.value, related };
 };
 
 export const actions: Actions = {

@@ -8,6 +8,7 @@ Typed relations between records of different domains (ticket → asset, ticket �
 | `ticket-asset.ts`            | `linkAsset` (inside the caller's transaction) and `unlinkAsset` (behind `tickets.manage`)                                  |
 | `ticket-work.ts`             | `linkTask`/`linkProject` (inside the caller's transaction), their `linkTicketTo…` wrappers, `unlinkTask`/`unlinkProject`   |
 | `ticket-handover.ts`         | `linkHandover` (inside the caller's transaction), `linkHandoverByCode`, `unlinkHandover` (#279)                            |
+| `ticket-category.ts`         | `categoryInOrganisation`, `linkCategory` (inside the caller's transaction), `requestedCategory` (#271)                     |
 | `notify-handover-decided.ts` | The `handover.accepted`/`handover.rejected` subscriber: one internal system note per linked ticket (#279)                  |
 | `escalate.ts`                | `escalateTicket`: link an existing task or project, or create one and link it, in one transaction                          |
 | `escalation-draft.ts`        | `escalationDraft(ticket)`: the title and description an escalation form pre-fills                                          |
@@ -47,3 +48,5 @@ Two more relations, `ticket_task` (`resolved_in`) and `ticket_project` (`handled
 - **`assets` never imports `links`.** `deliver` and `takeBack` take an `afterIssue(tx, handover)` hook that runs in their transaction; the route passes `linkHandover` through it, so the link and the custody commit together and a throw rolls both back.
 - **A decision leaves a note, nothing more.** `notifyHandoverDecided` writes one internal, authorless comment per linked ticket through `service-desk`'s `addSystemNote`. Status, assignee and queue are never touched (ADR 0035). A handover with no link finds no rows and does nothing.
 - **No `activity` entry.** The panel shows the link and the note shows the outcome; a third record would only repeat them.
+
+`ticket_category` (`requests`) records the asset category an equipment request form asked for, written in the ticket's opening transaction. It has no related-panel entry: the ticket page reads it through `requestedCategory` and shows it as a detail, and Deliver filters on it.

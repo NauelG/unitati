@@ -1,7 +1,7 @@
 import { index, pgTable, unique, uuid } from 'drizzle-orm/pg-core';
 import { timestamps } from '../shared/columns';
 import { organisations, people } from '../directory/schema';
-import { assets, handovers } from '../assets/schema';
+import { assets, categories, handovers } from '../assets/schema';
 import { projects, tasks } from '../projects/schema';
 import { tickets } from '../service-desk/schema';
 
@@ -139,3 +139,36 @@ export const ticketHandover = pgTable(
 );
 
 export type TicketHandover = typeof ticketHandover.$inferSelect;
+
+/**
+ * A ticket asks for this asset category (`requests`, #271). Written by an
+ * equipment request form; the technician's Deliver filters on it. Many to many
+ * by shape, one row today.
+ */
+export const ticketCategory = pgTable(
+	'ticket_category',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		ticketId: uuid('ticket_id')
+			.notNull()
+			.references(() => tickets.id, { onDelete: 'cascade' }),
+		/** `restrict`: a category somebody asked for cannot vanish from under the request. */
+		categoryId: uuid('category_id')
+			.notNull()
+			.references(() => categories.id, { onDelete: 'restrict' }),
+		createdByPersonId: uuid('created_by_person_id').references(() => people.id, {
+			onDelete: 'set null'
+		}),
+		...timestamps
+	},
+	(table) => [
+		unique('ticket_category_pair').on(table.ticketId, table.categoryId),
+		/** The category catalogue asks "is this in use". */
+		index('ticket_category_category_idx').on(table.categoryId)
+	]
+);
+
+export type TicketCategory = typeof ticketCategory.$inferSelect;
