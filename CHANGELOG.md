@@ -41,6 +41,7 @@ minor bumps carry features and patch bumps carry fixes.
 
 - The signing page's reject toggle reads "Información incorrecta: rechazar la entrega" instead of
   "¿Algo no cuadra? Rechazar la entrega", a neutral wording for the person signing (#275).
+  ||||||| parent of f9d6d38 (feat(assets): take back assets with condition, return handover and QR for signing)
 
 ## [0.90.0] - 2026-10-20
 

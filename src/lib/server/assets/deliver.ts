@@ -1,26 +1,20 @@
-import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import { can } from '../access/permissions';
-import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Executor } from '../db';
-import { organisations, people } from '../directory/schema';
+import { people } from '../directory/schema';
 import { sendQuietly, type Mailer } from '../shared/mail';
 import { failure, success, type Outcome } from '../shared/outcome';
-import { runtimeMailer, runtimeOrigin } from '../shared/runtime';
+import { runtimeMailer } from '../shared/runtime';
 import { recordCustodyAssigned } from './custody';
-import { handoverLinkMail } from './handover-mail';
-import { renderHandoverTemplate, resolveHandoverTemplate } from './handover-template';
-import { getHandoverSettings } from './handover-templates';
-import { generateHandoverToken, hashHandoverToken } from './handover-token';
 import {
-	assetModels,
-	assets,
-	categories,
-	handoverAssets,
-	handoverTemplates,
-	handoverTemplateVersions,
-	handovers
-} from './schema';
+	issueHandover,
+	lockOperationAssets,
+	prepareHandover,
+	type IssueDeps,
+	type IssuedHandover
+} from './handover-issue';
+import { assetModels, assets, categories } from './schema';
 
 /**
  * Delivering assets to a person: the operation a technician performs (ADR 0035).
@@ -31,10 +25,8 @@ import {
  * when the actor waives it, a `waived` one with the reason and nothing to sign.
  */
 
-export interface DeliverDeps {
+export interface DeliverDeps extends IssueDeps {
 	mailer?: Mailer | null;
-	/** Builds the absolute link a mail points at from the plain token. */
-	linkTo?: (token: string) => string;
 	now?: () => Date;
 }
 
@@ -62,19 +54,7 @@ export type DeliverFailure =
 /** The bounds of a waiver's reason, after trimming. */
 export const WAIVE_REASON_MAX = 500;
 
-export type DeliveredHandover =
-	| {
-			status: 'pending';
-			id: string;
-			code: string;
-			/** The plain token, shown to the technician once. Only its sha256 is stored. */
-			token: string;
-			link: string;
-			expiresAt: Date;
-	  }
-	| { status: 'waived'; id: string; code: string };
-
-const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' });
+export type DeliveredHandover = IssuedHandover;
 
 export async function deliver(
 	actor: SessionUser,
@@ -82,7 +62,6 @@ export async function deliver(
 	deps: DeliverDeps = {}
 ): Promise<Outcome<{ handover: DeliveredHandover | null }, DeliverFailure>> {
 	const mailer = deps.mailer === undefined ? runtimeMailer() : deps.mailer;
-	const linkTo = deps.linkTo ?? ((token: string) => `${runtimeOrigin()}/handover/${token}`);
 	const now = (deps.now ?? (() => new Date()))();
 
 	const ids = [...new Set(request.assetIds)];
@@ -107,25 +86,7 @@ export async function deliver(
 			.limit(1);
 		if (!person) return failure('person_not_found' as const);
 
-		// Locked in id order, so two deliveries of overlapping sets queue instead of deadlocking.
-		const rows = await tx
-			.select({
-				id: assets.id,
-				assetTag: assets.assetTag,
-				name: assets.name,
-				serial: assets.serial,
-				custodianPersonId: assets.custodianPersonId,
-				modelName: assetModels.name,
-				categoryId: categories.id,
-				requiresHandover: categories.requiresHandover
-			})
-			.from(assets)
-			.innerJoin(assetModels, eq(assetModels.id, assets.assetModelId))
-			.innerJoin(categories, eq(categories.id, assetModels.categoryId))
-			.where(and(inArray(assets.id, ids), eq(assets.organisationId, actor.organisationId)))
-			.orderBy(asc(assets.id))
-			.for('update', { of: assets });
-
+		const rows = await lockOperationAssets(tx, actor.organisationId, ids);
 		if (rows.length !== ids.length) return failure('asset_not_found' as const);
 		if (rows.some((row) => row.custodianPersonId !== null)) {
 			return failure('already_in_custody' as const);
@@ -137,167 +98,26 @@ export async function deliver(
 
 		// Resolved before anything is written: a refusal must leave no custody behind.
 		// A waiver has nothing to render, so it needs no template.
-		let issuing: {
-			templateVersionId: string;
-			body: string;
-			organisationName: string;
-			linkValidDays: number;
-		} | null = null;
-		if (required && waiveReason === null) {
-			const templates = await tx
-				.select({
-					id: handoverTemplates.id,
-					direction: handoverTemplates.direction,
-					categoryId: handoverTemplates.categoryId
-				})
-				.from(handoverTemplates)
-				.where(
-					and(
-						eq(handoverTemplates.organisationId, actor.organisationId),
-						eq(handoverTemplates.direction, 'delivery')
-					)
-				);
-			const template = resolveHandoverTemplate(
-				templates,
-				rows.map((row) => ({ id: row.categoryId, requiresHandover: row.requiresHandover })),
-				'delivery'
-			);
-			if (!template) return failure('no_delivery_template' as const);
-
-			const [version] = await tx
-				.select({ id: handoverTemplateVersions.id, body: handoverTemplateVersions.body })
-				.from(handoverTemplateVersions)
-				.where(eq(handoverTemplateVersions.templateId, template.id))
-				.orderBy(desc(handoverTemplateVersions.version))
-				.limit(1);
-			if (!version) return failure('no_delivery_template' as const);
-
-			const [organisation] = await tx
-				.select({ name: organisations.name })
-				.from(organisations)
-				.where(eq(organisations.id, actor.organisationId))
-				.limit(1);
-			const settings = await getHandoverSettings(actor.organisationId, tx);
-			issuing = {
-				templateVersionId: version.id,
-				body: version.body,
-				organisationName: organisation?.name ?? '',
-				linkValidDays: settings.linkValidDays
-			};
-		}
+		const prepared =
+			waiveReason === null
+				? await prepareHandover(tx, actor.organisationId, 'delivery', rows)
+				: null;
+		if (prepared === 'no_template') return failure('no_delivery_template' as const);
 
 		for (const row of rows) await recordCustodyAssigned(tx, actor, row.id, person);
 
 		if (!required) return success({ handover: null, mail: null });
-
-		const handoverBase = {
-			organisationId: actor.organisationId,
-			direction: 'delivery' as const,
-			personId: person.id,
-			personNameSnapshot: person.fullName,
-			recipientEmailSnapshot: person.email,
-			issuedByPersonId: actor.serviceAccountId ? null : actor.personId,
-			issuedByServiceAccountId: actor.serviceAccountId ?? null,
-			issuedAt: now
-		};
-
-		let pending: { token: string; expiresAt: Date; organisationName: string } | null = null;
-		let handover: { id: string; code: string };
-		if (issuing) {
-			const rendered = renderHandoverTemplate(issuing.body, {
-				personName: person.fullName,
-				organisationName: issuing.organisationName,
-				date: dateFormat.format(now)
-			});
-			const token = generateHandoverToken();
-			const expiresAt = new Date(now.getTime() + issuing.linkValidDays * 24 * 60 * 60 * 1000);
-			pending = { token, expiresAt, organisationName: issuing.organisationName };
-			[handover] = await tx
-				.insert(handovers)
-				.values({
-					...handoverBase,
-					status: 'pending',
-					templateVersionId: issuing.templateVersionId,
-					bodySnapshot: rendered.text,
-					bodySha256: rendered.sha256,
-					tokenHash: hashHandoverToken(token),
-					expiresAt
-				})
-				.returning({ id: handovers.id, code: handovers.code });
-		} else {
-			// No token, no text, no template, no mail: the reason is the record.
-			[handover] = await tx
-				.insert(handovers)
-				.values({ ...handoverBase, status: 'waived', waiveReason })
-				.returning({ id: handovers.id, code: handovers.code });
-		}
-
-		const snapshots = rows.map((asset) => ({
-			assetId: asset.id,
-			assetTag: asset.assetTag,
-			assetName: asset.name,
-			serial: asset.serial,
-			model: asset.modelName
-		}));
-		await tx.insert(handoverAssets).values(
-			snapshots.map((snapshot) => ({
-				handoverId: handover.id,
-				assetId: snapshot.assetId,
-				assetTagSnapshot: snapshot.assetTag,
-				assetNameSnapshot: snapshot.assetName,
-				serialSnapshot: snapshot.serial,
-				modelSnapshot: snapshot.model
-			}))
+		return success(
+			await issueHandover(
+				tx,
+				actor,
+				{ direction: 'delivery', prepared, waiveReason },
+				person,
+				rows,
+				now,
+				deps
+			)
 		);
-
-		const payload = {
-			handoverId: handover.id,
-			code: handover.code,
-			personId: person.id,
-			personName: person.fullName,
-			assets: snapshots
-		};
-		const entry =
-			waiveReason === null
-				? { verb: 'handover.issued' as const, payload }
-				: { verb: 'handover.waived' as const, payload: { ...payload, reason: waiveReason } };
-		for (const target of [...ids.map((assetId) => ({ assetId })), { personId: person.id }]) {
-			await recordActivity(tx, {
-				organisationId: actor.organisationId,
-				...actorColumns(actor),
-				target,
-				...entry
-			});
-		}
-
-		if (!pending) {
-			return success({
-				handover: { status: 'waived' as const, id: handover.id, code: handover.code },
-				mail: null
-			});
-		}
-
-		const link = linkTo(pending.token);
-		return success({
-			handover: {
-				status: 'pending' as const,
-				id: handover.id,
-				code: handover.code,
-				token: pending.token,
-				link,
-				expiresAt: pending.expiresAt
-			},
-			mail: {
-				to: person.email,
-				...handoverLinkMail({
-					personName: person.fullName,
-					organisationName: pending.organisationName,
-					code: handover.code,
-					link,
-					expiresOn: dateFormat.format(pending.expiresAt)
-				})
-			}
-		});
 	});
 
 	if (!outcome.ok) return outcome;

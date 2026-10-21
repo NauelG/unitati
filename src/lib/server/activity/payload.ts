@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { HANDOVER_CONDITIONS } from '#lib/domain/handover.js';
 import { ASSET_STATES, PRIORITIES, TICKET_STATUSES } from '#lib/domain/status.js';
 import type { ActivityVerb } from './verbs';
 
@@ -21,6 +22,7 @@ import type { ActivityVerb } from './verbs';
 const assetState = z.enum(ASSET_STATES);
 const ticketStatus = z.enum(TICKET_STATUSES);
 const ticketPriority = z.enum(PRIORITIES);
+const handoverCondition = z.enum(HANDOVER_CONDITIONS);
 
 /** A name that is present is a real name; a name that is absent is `null`. */
 const presentName = z.string().min(1);
@@ -57,13 +59,18 @@ const handoverAsset = z.object({
 	assetTag: presentName,
 	assetName: presentName,
 	serial: z.string().nullable(),
-	model: presentName
+	model: presentName,
+	// Only a return records how each asset came back (#278).
+	condition: handoverCondition.optional(),
+	conditionNotes: z.string().nullable().optional()
 });
 
 /** A handover operation: which one, for whom, and every asset it lists. */
 const handoverOperation = z.object({
 	handoverId: z.uuid(),
 	code: presentName,
+	// Absent on entries written before returns existed (#278): those are deliveries.
+	direction: z.enum(['delivery', 'return']).optional(),
 	personId: z.uuid(),
 	personName: presentName,
 	assets: z.array(handoverAsset)
@@ -99,9 +106,13 @@ export const PAYLOAD_SCHEMAS = {
 		toPersonName: presentName
 	}),
 
+	// A take-back (#278) records how the asset came back; the low-level
+	// `returnCustody` and every entry written before it carry no condition.
 	'custody.returned': z.object({
 		fromPersonId: z.uuid(),
-		fromPersonName: presentName
+		fromPersonName: presentName,
+		condition: handoverCondition.optional(),
+		conditionNotes: z.string().nullable().optional()
 	}),
 
 	// One entry on every asset of the operation and one on the person. The assets

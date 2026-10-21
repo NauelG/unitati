@@ -7,7 +7,8 @@ import { getDb } from '#lib/server/db/index.js';
 import {
 	deliver,
 	ensureDefaultHandoverTemplates,
-	setCategoryRequiresHandover
+	setCategoryRequiresHandover,
+	takeBack
 } from '#lib/server/assets/index.js';
 import { handovers } from '#lib/server/assets/schema.js';
 import {
@@ -58,7 +59,7 @@ async function issued() {
 	if (!delivered.ok || delivered.value.handover?.status !== 'pending') {
 		throw new Error('setup: no pending handover');
 	}
-	return { technician, handover: delivered.value.handover };
+	return { technician, ada, laptop, handover: delivered.value.handover };
 }
 
 function loadEvent(token: string) {
@@ -102,12 +103,42 @@ describe('/handover/[token]', () => {
 		if (data.signing.state !== 'pending') throw new Error('expected pending');
 		expect(data.signing.bodyHtml).toContain('<strong>Ada Lovelace</strong>');
 		expect(data.signing.assets).toEqual([
-			{ assetTag: expect.any(String), name: 'Laptop', serial: 'SN-42', model: 'MacBook Pró' }
+			{
+				assetTag: expect.any(String),
+				name: 'Laptop',
+				serial: 'SN-42',
+				model: 'MacBook Pró',
+				condition: null,
+				conditionNotes: null
+			}
 		]);
 		expect(headers).toMatchObject({
 			'Cache-Control': 'no-store',
 			'Referrer-Policy': 'no-referrer'
 		});
+	});
+
+	it('shows a return with the condition and notes the technician recorded for each asset', async () => {
+		const { technician, ada, laptop } = await issued();
+		const returned = await takeBack(
+			technician,
+			ada.id,
+			[{ assetId: laptop.id, condition: 'incomplete', notes: 'Sin cargador' }],
+			{ mailer: null }
+		);
+		if (!returned.ok || !returned.value.handover) throw new Error('setup: no return handover');
+
+		const data = (await load(loadEvent(returned.value.handover.token).event)) as Loaded;
+
+		if (data.signing.state !== 'pending') throw new Error('expected pending');
+		expect(data.signing.direction).toBe('return');
+		expect(data.signing.assets).toEqual([
+			expect.objectContaining({
+				name: 'Laptop',
+				condition: 'incomplete',
+				conditionNotes: 'Sin cargador'
+			})
+		]);
 	});
 
 	it('answers an unknown link with the state alone', async () => {

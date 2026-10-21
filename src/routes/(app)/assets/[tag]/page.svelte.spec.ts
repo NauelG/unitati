@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import Page from './+page.svelte';
@@ -66,6 +66,7 @@ function pageData(permissions: { canManage: boolean; canCheckout: boolean }) {
 		],
 		locations: [],
 		deliverable: [],
+		heldAssets: [],
 		editModels: [],
 		manufacturers: [],
 		categories: [],
@@ -79,11 +80,14 @@ const renderPage = (permissions: { canManage: boolean; canCheckout: boolean }) =
 	render(Page, { data: pageData(permissions), form: null } as never);
 
 describe('asset record in-place editing', () => {
-	it('returns custody when "Nadie" is picked', async () => {
-		renderPage({ canManage: true, canCheckout: true });
-		await fireEvent.click(screen.getByRole('button', { name: /^Custodia/ }));
-		await fireEvent.click(await screen.findByRole('option', { name: 'Nadie', hidden: true }));
-		await waitFor(() => expect(submitted.actions).toEqual(['?/returnCustody']));
+	it('opens the take-back dialog, listing what the custodian holds', async () => {
+		const data = pageData({ canManage: true, canCheckout: true }) as Record<string, unknown>;
+		data.heldAssets = [{ id: 'a-1', assetTag: 'AST-1', name: 'Laptop', requiresHandover: true }];
+		render(Page, { data, form: null } as never);
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Recuperar…' }));
+		expect(await screen.findByText(/Se emitirá una devolución pendiente de firma/)).toBeTruthy();
+		expect(screen.queryByRole('button', { name: /^Custodia/ })).toBeNull();
 	});
 
 	it('offers the delivery dialog instead of a select when nobody holds the asset', async () => {
@@ -155,7 +159,7 @@ describe('asset record in-place editing', () => {
 
 	it('lets a custodian-only user change custody but not state, location or notes', () => {
 		renderPage({ canManage: false, canCheckout: true });
-		expect(screen.getByRole('button', { name: /^Custodia/ })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Recuperar…' })).toBeTruthy();
 		expect(screen.queryByRole('button', { name: /^Estado/ })).toBeNull();
 		expect(screen.queryByRole('button', { name: /^Ubicación/ })).toBeNull();
 		expect(screen.queryByRole('button', { name: 'Añadir nota' })).toBeNull();

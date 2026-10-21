@@ -32,8 +32,19 @@ export function activitySentence(entry: ActivityEntry): string {
 		case 'custody.assigned':
 			return m.activity_custody_assigned({ personName: entry.payload.toPersonName });
 
-		case 'custody.returned':
-			return m.activity_custody_returned({ personName: entry.payload.fromPersonName });
+		case 'custody.returned': {
+			const { fromPersonName: personName, condition, conditionNotes: notes } = entry.payload;
+			// Only a take-back (#278) records a condition; the plain return reads as before.
+			if (!condition) return m.activity_custody_returned({ personName });
+			const word = {
+				good: m.activity_condition_good,
+				damaged: m.activity_condition_damaged,
+				incomplete: m.activity_condition_incomplete
+			}[condition]();
+			return notes
+				? m.activity_custody_returned_condition_notes({ personName, condition: word, notes })
+				: m.activity_custody_returned_condition({ personName, condition: word });
+		}
 
 		case 'handover.issued':
 			return m.activity_handover_issued({ code: entry.payload.code });

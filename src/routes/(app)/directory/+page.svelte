@@ -21,6 +21,7 @@
 	import Dialog from '#lib/components/unitati/Dialog.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import FormError from '#lib/components/unitati/FormError.svelte';
+	import TakeBackDialog from '../assets/TakeBackDialog.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SearchSelectField from '#lib/components/unitati/SearchSelectField.svelte';
@@ -126,6 +127,9 @@
 		failure === m.directory_error_duplicate_email() ? failure : undefined
 	);
 	const dialogFailure = $derived(emailFailure ? null : failure);
+	const takeBackError = $derived(
+		form?.action === 'takeBack' && 'message' in form ? form.message : undefined
+	);
 
 	/** The state of the toggle and the confirmation live in the URL, so a link reaches them. */
 	function search(changes: Record<string, string | null>) {
@@ -196,6 +200,13 @@
 
 {#snippet name(person: Person)}
 	{person.fullName}
+	{#if data.canCheckout}
+		<a
+			href={search({ takeBack: person.id })}
+			class="ml-[var(--space-2)] text-xs font-medium text-[var(--action)] hover:underline"
+			data-sveltekit-noscroll>{m.take_back_button()}</a
+		>
+	{/if}
 	{#if !person.active}
 		<span
 			class="ml-[var(--space-2)] rounded-[var(--radius-sm)] bg-[var(--surface-2)] px-[var(--space-2)] py-0.5 text-xs text-[var(--ink-muted)]"
@@ -563,3 +574,16 @@
 		</ConfirmDialog>
 	{/if}
 </PageLayout>
+
+{#if data.canCheckout && data.takeBackPerson}
+	<TakeBackDialog
+		open={true}
+		onOpenChange={(next) => {
+			if (!next) goto(search({ takeBack: null }));
+		}}
+		person={data.takeBackPerson}
+		assets={data.heldAssets}
+		action="?/takeBack"
+		error={takeBackError}
+	/>
+{/if}

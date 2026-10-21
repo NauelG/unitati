@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
-import { countAssetsInCustodyOf } from '#lib/server/assets/index.js';
+import { countAssetsInCustodyOf, listAssetsHeldBy } from '#lib/server/assets/index.js';
 import {
 	changeAccessEmail,
 	changeRole,
@@ -25,11 +25,13 @@ import {
 import { countOpenTicketsAssignedTo } from '#lib/server/service-desk/index.js';
 import { fieldsOf, rejected, withId } from '../assets/form-data';
 import { locationOptions, options } from '../assets/options';
+import { takeBackAction } from '../assets/take-back-action';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const user = requirePermission(locals.user, 'people.view');
 	const canManagePeople = can(user, 'people.manage');
+	const canCheckout = can(user, 'assets.checkout');
 	const showInactive = url.searchParams.get('inactive') === '1';
 
 	const [people, teams, locations, departments] = await Promise.all([
@@ -55,6 +57,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	// The actions refuse these too; the menu just does not offer them (#230).
 	const activeAdmins = people.filter((person) => person.active && person.role === 'admin');
+	const takeBackId = canCheckout
+		? z.uuid().safeParse(url.searchParams.get('takeBack')).data
+		: undefined;
+	const takeBackPerson = takeBackId ? people.find((person) => person.id === takeBackId) : undefined;
+	const heldAssets = takeBackPerson
+		? await listAssetsHeldBy(user.organisationId, takeBackPerson.id)
+		: [];
 
 	return {
 		people,
@@ -62,6 +71,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		selfPersonId: user.personId,
 		lastAdminId: activeAdmins.length === 1 ? activeAdmins[0].id : null,
 		canManagePeople,
+		canCheckout,
+		takeBackPerson: takeBackPerson
+			? { id: takeBackPerson.id, fullName: takeBackPerson.fullName }
+			: null,
+		heldAssets,
 		showInactive,
 		openCreate: canManagePeople && url.searchParams.get('new') === '1',
 		deactivating,
@@ -101,6 +115,10 @@ const failureMessage = {
 } as const;
 
 export const actions: Actions = {
+	takeBack: async ({ locals, request }) => {
+		const actor = requirePermission(locals.user, 'assets.checkout');
+		return takeBackAction(actor, await request.formData());
+	},
 	createPerson: async ({ locals, request }) => {
 		const user = requirePermission(locals.user, 'people.manage');
 		const fields = await fieldsOf(request);

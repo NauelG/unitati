@@ -266,6 +266,7 @@ function copiesOf(row: HandoverRow, evidence: Evidence, attachment: MailAttachme
 						direction: row.direction
 					})
 				: handoverRejectedMail({
+						direction: row.direction,
 						issuerName: issuerPerson.name,
 						personName: row.personName,
 						code: row.code,

@@ -24,6 +24,22 @@ describe('activitySentence', () => {
 		expect(activitySentence(entry)).toContain('Ada Byron');
 	});
 
+	it('says how a taken-back asset came back, with its notes', () => {
+		const entry: ActivityEntry = {
+			verb: 'custody.returned',
+			payload: {
+				fromPersonId: PERSON,
+				fromPersonName: 'Ada Lovelace',
+				condition: 'incomplete',
+				conditionNotes: 'Sin cargador'
+			}
+		};
+
+		expect(activitySentence(entry)).toBe(
+			'Recuperó la custodia de Ada Lovelace: incompleto (Sin cargador)'
+		);
+	});
+
 	it('names both states through their labels, not their keys', () => {
 		const entry: ActivityEntry = {
 			verb: 'state.changed',
