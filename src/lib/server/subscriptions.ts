@@ -1,4 +1,5 @@
 import { BETTER_AUTH_URL } from '$app/env/private';
+import { notifyHandoverDecided } from './links/notify-handover-decided';
 import { notifyTaskCompleted } from './links/notify-task-completed';
 import { runtimeMailer } from './shared/runtime';
 import { on } from './shared/events';
@@ -21,5 +22,13 @@ export function registerSubscriptions(): void {
 
 	on('task.completed', function notifyTechniciansOfCompletedTask(event) {
 		return notifyTaskCompleted(event, { mailer: runtimeMailer(), origin: BETTER_AUTH_URL });
+	});
+
+	on('handover.accepted', function noteAcceptedHandoverOnTickets(event) {
+		return notifyHandoverDecided(event);
+	});
+
+	on('handover.rejected', function noteRejectedHandoverOnTickets(event) {
+		return notifyHandoverDecided(event);
 	});
 }

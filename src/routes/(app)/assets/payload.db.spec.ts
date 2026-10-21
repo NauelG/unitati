@@ -60,7 +60,9 @@ const listEvent = (user: SessionUser | null, query = ''): Event<typeof loadList>
 	({ locals: { user }, url: new URL(`http://localhost/assets${query}`) }) as Event<typeof loadList>;
 
 const detailEvent = (user: SessionUser | null, tag: string): Event<typeof loadDetail> =>
-	({ locals: { user }, params: { tag } }) as Event<typeof loadDetail>;
+	({ locals: { user }, params: { tag }, url: new URL(`http://localhost/assets/${tag}`) }) as Event<
+		typeof loadDetail
+	>;
 
 /** An organisation with: a shared printer, Eva's laptop, and somebody else's laptop. */
 async function floor() {

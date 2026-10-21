@@ -2,17 +2,19 @@
 
 Typed relations between records of different domains (ticket → asset, ticket → task, ticket → project). Owns the cross-domain graph so no domain has to know another domain's tables. See `docs/domain-model.md` and ADR 0005.
 
-| File                       | Owns                                                                                                                       |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `schema.ts`                | One join table per pair, each with real foreign keys: `ticket_asset`, `ticket_task`, `ticket_project`                      |
-| `ticket-asset.ts`          | `linkAsset` (inside the caller's transaction) and `unlinkAsset` (behind `tickets.manage`)                                  |
-| `ticket-work.ts`           | `linkTask`/`linkProject` (inside the caller's transaction), their `linkTicketTo…` wrappers, `unlinkTask`/`unlinkProject`   |
-| `escalate.ts`              | `escalateTicket`: link an existing task or project, or create one and link it, in one transaction                          |
-| `escalation-draft.ts`      | `escalationDraft(ticket)`: the title and description an escalation form pre-fills                                          |
-| `related.ts`               | `relatedTo(viewer, record)`: the uniform read facade over every relation                                                   |
-| `timeline.ts`              | `mergeAssetTimeline`/`mergeTaskTimeline`/`mergeProjectTimeline` (activity + live tickets on one rail), `recentTicketCount` |
-| `notify-task-completed.ts` | The `task.completed` subscriber: one mail per assigned technician (#152, ADR 0024)                                         |
-| `index.ts`                 | The public surface: callers import from here and never from a file inside                                                  |
+| File                         | Owns                                                                                                                       |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `schema.ts`                  | One join table per pair, each with real foreign keys: `ticket_asset`, `ticket_task`, `ticket_project`                      |
+| `ticket-asset.ts`            | `linkAsset` (inside the caller's transaction) and `unlinkAsset` (behind `tickets.manage`)                                  |
+| `ticket-work.ts`             | `linkTask`/`linkProject` (inside the caller's transaction), their `linkTicketTo…` wrappers, `unlinkTask`/`unlinkProject`   |
+| `ticket-handover.ts`         | `linkHandover` (inside the caller's transaction), `linkHandoverByCode`, `unlinkHandover` (#279)                            |
+| `notify-handover-decided.ts` | The `handover.accepted`/`handover.rejected` subscriber: one internal system note per linked ticket (#279)                  |
+| `escalate.ts`                | `escalateTicket`: link an existing task or project, or create one and link it, in one transaction                          |
+| `escalation-draft.ts`        | `escalationDraft(ticket)`: the title and description an escalation form pre-fills                                          |
+| `related.ts`                 | `relatedTo(viewer, record)`: the uniform read facade over every relation                                                   |
+| `timeline.ts`                | `mergeAssetTimeline`/`mergeTaskTimeline`/`mergeProjectTimeline` (activity + live tickets on one rail), `recentTicketCount` |
+| `notify-task-completed.ts`   | The `task.completed` subscriber: one mail per assigned technician (#152, ADR 0024)                                         |
+| `index.ts`                   | The public surface: callers import from here and never from a file inside                                                  |
 
 ## Decisions worth knowing before changing this
 
@@ -37,3 +39,11 @@ Two more relations, `ticket_task` (`resolved_in`) and `ticket_project` (`handled
 - **The requester's restricted view.** A viewer holding only `tickets.view.own`, on their own ticket, also gets the tasks and projects it was escalated to that are _outside_ their scope, reduced to tag, title and state, with `restricted: true` and `href: null` (ADR 0007, amendment 2026-10-15). Targets inside their scope come back whole, with their link. For any other viewer, items are filtered by the scope of their own kind.
 - **A project's status is `{ archived, progress }`**, where `progress` is `projects`' own `projectProgress` for staff and `null` on a restricted item or for the requester (who never gets it, nor a task's `projectTag`, in the payload either), since the counts of a project you cannot open would describe tasks you cannot see. `resolves_via_tasks` goes only through tasks the viewer may open, because its `via` reference is a record in its own right.
 - **`assetRelations` narrows `relatedTo`'s answer** to the asset relations the existing panels know how to draw; the ticket's panel (#150) draws the task and project groups itself; the task's and project's own panels arrive with #151.
+
+## Ticket → handover (#279)
+
+`ticket_handover` (`fulfilled-by`) relates a ticket to the handover that answers it, built like `ticket_asset`. Seen from the ticket it reads `fulfilled_by` (staff only: a handover is signature evidence), from the handover `fulfils`. A handover has no page yet, so its item has `href: null` and the constellation leaves it out.
+
+- **`assets` never imports `links`.** `deliver` and `takeBack` take an `afterIssue(tx, handover)` hook that runs in their transaction; the route passes `linkHandover` through it, so the link and the custody commit together and a throw rolls both back.
+- **A decision leaves a note, nothing more.** `notifyHandoverDecided` writes one internal, authorless comment per linked ticket through `service-desk`'s `addSystemNote`. Status, assignee and queue are never touched (ADR 0035). A handover with no link finds no rows and does nothing.
+- **No `activity` entry.** The panel shows the link and the note shows the outcome; a third record would only repeat them.

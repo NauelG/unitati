@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import DescriptionList from '#lib/components/unitati/DescriptionList.svelte';
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 	import EscalateSheet from '#lib/components/unitati/EscalateSheet.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
+	import Field from '#lib/components/unitati/Field.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import QueueLabel from '#lib/components/unitati/QueueLabel.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
@@ -163,10 +165,17 @@
 		};
 	}
 
+	const linkHandoverError = $derived(
+		form && 'action' in form && form.action === 'linkHandover' && 'message' in form
+			? form.message
+			: undefined
+	);
+
 	const unlinkError = $derived(
 		form &&
 			'action' in form &&
 			(form.action === 'unlinkAsset' ||
+				form.action === 'unlinkHandover' ||
 				form.action === 'unlinkTask' ||
 				form.action === 'unlinkProject') &&
 			'message' in form
@@ -401,7 +410,12 @@
 			<RelatedRecords
 				groups={relatedGroups}
 				unlinkActions={data.canManage
-					? { asset: '?/unlinkAsset', task: '?/unlinkTask', project: '?/unlinkProject' }
+					? {
+							asset: '?/unlinkAsset',
+							task: '?/unlinkTask',
+							project: '?/unlinkProject',
+							handover: '?/unlinkHandover'
+						}
 					: {}}
 				error={unlinkError}
 				linkAction={data.canManage ? '?/linkAssets' : undefined}
@@ -419,6 +433,46 @@
 				linkedIds={assetGroups.flatMap((group) => group.items.map((item) => item.ref.id))}
 				bind:linkOpen
 			/>
+			{#if data.canManage}
+				<WorkPanel heading={m.ticket_handover_title()}>
+					<div class="space-y-[var(--space-3)]">
+						{#if data.canDeliver}
+							<ul class="m-0 list-none space-y-[var(--space-1)] p-0 text-sm">
+								{#each assetGroups.flatMap((group) => group.items) as item (item.ref.id)}
+									<li>
+										<a
+											class="text-[var(--brand)] hover:underline"
+											href="/assets/{encodeURIComponent(item.ref.tag)}?ticket={encodeURIComponent(
+												ticket.ticketTag
+											)}#action-custody"
+										>
+											{m.ticket_handover_deliver({ asset: item.ref.tag })}
+										</a>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+						<form
+							method="POST"
+							action="?/linkHandover"
+							use:enhance
+							class="space-y-[var(--space-2)]"
+						>
+							<Field
+								label={m.ticket_handover_link_label()}
+								name="code"
+								placeholder={m.ticket_handover_link_placeholder()}
+								autocomplete="off"
+								error={linkHandoverError}
+								required
+							/>
+							<Button type="submit" size="sm" variant="secondary">
+								{m.ticket_handover_link_submit()}
+							</Button>
+						</form>
+					</div>
+				</WorkPanel>
+			{/if}
 		{/await}
 	{/snippet}
 </PageLayout>

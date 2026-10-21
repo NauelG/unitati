@@ -11,10 +11,12 @@ import {
 	escalateTicket,
 	escalationDraft,
 	invalidField,
+	linkHandoverByCode,
 	linkTicketAssets,
 	parseEscalation,
 	relatedTo,
 	unlinkAsset,
+	unlinkHandover,
 	unlinkProject,
 	unlinkTask
 } from '#lib/server/links/index.js';
@@ -75,6 +77,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		// The whole of it: the constellation draws every relation, the panel lists them.
 		related: relatedTo(user, { kind: 'ticket', id: found.value.id }),
 		canManage,
+		// Delivering equipment for this ticket sends the technician to the asset (#279).
+		canDeliver: canManage && can(user, 'assets.checkout'),
 		...(requesterLocation === undefined
 			? {}
 			: { requesterLocation: requesterLocation && { path: requesterLocation.path } }),
@@ -256,6 +260,44 @@ export const actions: Actions = {
 			return rejected('unlinkAsset', m.related_unlink_failed());
 		}
 		return { action: 'unlinkAsset' as const };
+	},
+
+	linkHandover: async ({ locals, request, params }) => {
+		const user = requirePermission(locals.user, 'tickets.manage');
+		const parsed = z.object({ code: z.string().trim().min(1) }).safeParse(await fieldsOf(request));
+		if (!parsed.success) return rejected('linkHandover', m.ticket_handover_error_invalid());
+
+		const found = await getTicketByTag(user, params.tag);
+		if (!found.ok) error(404, 'Not found');
+
+		const outcome = await linkHandoverByCode(user, {
+			ticketId: found.value.id,
+			code: parsed.data.code
+		});
+		if (!outcome.ok) {
+			if (outcome.error === 'forbidden') error(403, 'Forbidden');
+			return rejected('linkHandover', m.ticket_handover_error_not_found());
+		}
+		return { action: 'linkHandover' as const };
+	},
+
+	unlinkHandover: async ({ locals, request, params }) => {
+		const user = requirePermission(locals.user, 'tickets.manage');
+		const parsed = z.object({ recordId: z.uuid() }).safeParse(await fieldsOf(request));
+		if (!parsed.success) return rejected('unlinkHandover', m.related_unlink_failed());
+
+		const found = await getTicketByTag(user, params.tag);
+		if (!found.ok) error(404, 'Not found');
+
+		const outcome = await unlinkHandover(user, {
+			ticketId: found.value.id,
+			handoverId: parsed.data.recordId
+		});
+		// Already gone, e.g. a second tab removed it first: the page reloads and shows the truth.
+		if (!outcome.ok && outcome.error !== 'not_linked') {
+			return rejected('unlinkHandover', m.related_unlink_failed());
+		}
+		return { action: 'unlinkHandover' as const };
 	},
 
 	unlinkTask: (event) => unlinkWork(event, 'task'),

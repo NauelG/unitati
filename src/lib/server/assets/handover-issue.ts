@@ -37,6 +37,13 @@ import {
 export interface IssueDeps {
 	/** Builds the absolute link a mail points at from the plain token. */
 	linkTo?: (token: string) => string;
+	/**
+	 * Runs in the operation's own transaction, right after the handover is
+	 * written and only when there is one. It lets another domain attach to the
+	 * handover atomically (the ticket link, #279) without `assets` importing it;
+	 * a throw rolls the whole operation back.
+	 */
+	afterIssue?: (tx: Transaction, handover: { id: string }) => Promise<void>;
 }
 
 export interface PendingHandover {

@@ -6,6 +6,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Dialog from '#lib/components/unitati/Dialog.svelte';
+	import Field from '#lib/components/unitati/Field.svelte';
 	import FormError from '#lib/components/unitati/FormError.svelte';
 	import SigningLinkPanel from './SigningLinkPanel.svelte';
 
@@ -18,9 +19,21 @@
 		action: string;
 		/** The asset page preselects the asset whose page was opened. */
 		currentId?: string;
+		/** Coming from a ticket (#279): its code is preset. */
+		ticket?: { tag: string } | null;
 		error?: string;
 	}
-	let { open, onOpenChange, person, assets, action, currentId, error }: Props = $props();
+	let {
+		open,
+		onOpenChange,
+		person,
+		assets,
+		action,
+		currentId,
+		ticket = null,
+		error
+	}: Props = $props();
+	let ticketTag = $state(untrack(() => ticket?.tag ?? ''));
 	let selected = $state<string[]>(untrack(() => (currentId ? [currentId] : [])));
 	let conditions = $state<Record<string, HandoverCondition>>({});
 	let pending = $state(false);
@@ -81,6 +94,13 @@
 				<span class="font-medium">{m.take_back_person()}:</span>
 				{person.fullName}
 			</p>
+			<Field
+				label={m.handover_ticket_field()}
+				name="ticketTag"
+				hint={m.handover_ticket_hint()}
+				bind:value={ticketTag}
+				autocomplete="off"
+			/>
 			<fieldset class="space-y-[var(--space-2)]">
 				<legend class="text-sm font-medium">{m.take_back_assets()}</legend>
 				{#if assets.length === 0}

@@ -49,7 +49,11 @@
 	let deliverOpen = $state(false);
 	let takeBackOpen = $state(false);
 	$effect(() => {
-		if (data.canCheckout && location.hash === '#action-custody' && data.deliverable.length > 0) {
+		if (
+			data.canCheckout &&
+			(location.hash === '#action-custody' || data.fromTicket) &&
+			data.deliverable.length > 0
+		) {
 			deliverOpen = true;
 		}
 	});
@@ -513,6 +517,7 @@
 		currentId={asset.id}
 		canWaive={data.canWaiveHandover}
 		waiveReasonMax={data.waiveReasonMax}
+		ticket={data.fromTicket}
 		error={deliverError}
 	/>
 {/if}
@@ -525,6 +530,7 @@
 		assets={data.heldAssets}
 		currentId={asset.id}
 		action="?/takeBack"
+		ticket={data.fromTicket}
 		error={takeBackError}
 	/>
 {/if}

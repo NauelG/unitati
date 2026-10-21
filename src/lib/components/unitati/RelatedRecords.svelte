@@ -36,6 +36,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { relatedRows } from '#lib/related-rows.js';
 	import type {
+		HandoverState,
 		RecordKind,
 		RelatedGroup,
 		RelatedItem,
@@ -156,7 +157,12 @@
 		handled_in: [() => m.related_handled_in(), () => m.related_handled_in()],
 		resolves: [() => m.related_resolves(), () => m.related_resolves()],
 		handles: [() => m.related_handles(), () => m.related_handles()],
-		resolves_via_tasks: [() => m.related_resolves_via_tasks(), () => m.related_resolves_via_tasks()]
+		resolves_via_tasks: [
+			() => m.related_resolves_via_tasks(),
+			() => m.related_resolves_via_tasks()
+		],
+		fulfilled_by: [() => m.related_fulfilled_by(), () => m.related_fulfilled_by()],
+		fulfils: [() => m.related_fulfils(), () => m.related_fulfils()]
 	} as const satisfies Record<RelationName, readonly [() => string, () => string]>;
 
 	function label(group: RelatedGroup, count: number): string {
@@ -201,9 +207,25 @@
 
 	/** The question the confirmation asks: losing an asset's context is not losing a task's. */
 	function ask(group: RelatedGroup, tag: string): string {
+		if (group.relation === 'fulfilled_by') return m.related_unlink_ask_handover({ tag });
 		return group.relation === 'affects' || group.relation === 'affected_by'
 			? m.related_unlink_ask({ tag })
 			: m.related_unlink_ask_work({ tag });
+	}
+
+	/** A handover's state is not a status key either: its own words and tone (ADR 0035). */
+	const HANDOVER_BADGES = {
+		pending: ['warning', () => m.related_handover_pending()],
+		accepted: ['success', () => m.related_handover_accepted()],
+		rejected: ['danger', () => m.related_handover_rejected()],
+		waived: ['neutral', () => m.related_handover_waived()],
+		expired: ['neutral', () => m.related_handover_expired()]
+	} as const;
+
+	function isHandover(
+		item: RelatedItem
+	): item is Extract<RelatedItem, { status: HandoverState; ref: { kind: 'handover' } }> {
+		return item.ref.kind === 'handover';
 	}
 
 	/** A task or a project is not a status key: the badge takes the state's own name. */
@@ -297,7 +319,10 @@
 							<RecordRef record={{ ...item.ref, href: item.ref.href }} />
 						{/if}
 
-						{#if typeof item.status === 'string'}
+						{#if isHandover(item)}
+							{@const [tone, text] = HANDOVER_BADGES[item.status]}
+							<span class={badge({ tone })}>{text()}</span>
+						{:else if typeof item.status === 'string'}
 							<StatusBadge status={item.status} />
 						{:else if 'group' in item.status}
 							<StatusBadge status={item.status.group} label={item.status.name} />

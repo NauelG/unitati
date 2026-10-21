@@ -190,6 +190,13 @@
       "when": 1792566259113,
       "tag": "0026_handover_conditions",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1792571187373,
+      "tag": "0027_ticket_handover",
+      "breakpoints": true
     }
   ]
 }

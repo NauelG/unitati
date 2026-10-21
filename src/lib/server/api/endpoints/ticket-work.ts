@@ -274,7 +274,11 @@ const relatedResponse = z.object({
 	)
 });
 
-function itemToWire(item: RelatedItem): z.input<typeof relatedItemSchema> {
+/** What this API answers for: handovers have no wire shape yet (#279). */
+type WireItem = Exclude<RelatedItem, { ref: { kind: 'handover' } }>;
+type WireRelation = Exclude<RelationName, 'fulfilled_by' | 'fulfils'>;
+
+function itemToWire(item: WireItem): z.input<typeof relatedItemSchema> {
 	return {
 		kind: item.ref.kind === 'asset' ? 'ticket' : item.ref.kind,
 		tag: item.ref.tag,
@@ -299,11 +303,20 @@ function itemToWire(item: RelatedItem): z.input<typeof relatedItemSchema> {
 }
 
 /** Only the groups the endpoint answers for: `relatedTo` also reports the asset side of a ticket. */
-function groupsToWire(groups: readonly RelatedGroup[], relations: readonly RelationName[]) {
+function groupsToWire(groups: readonly RelatedGroup[], relations: readonly WireRelation[]) {
 	return {
-		data: groups
-			.filter((group) => relations.includes(group.relation))
-			.map((group) => ({ relation: group.relation, items: group.items.map(itemToWire) }))
+		data: groups.flatMap((group) =>
+			(relations as readonly RelationName[]).includes(group.relation)
+				? [
+						{
+							relation: group.relation as WireRelation,
+							items: group.items
+								.filter((item): item is WireItem => item.ref.kind !== 'handover')
+								.map(itemToWire)
+						}
+					]
+				: []
+		)
 	};
 }
 
