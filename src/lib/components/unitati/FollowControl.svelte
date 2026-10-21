@@ -22,7 +22,12 @@
 {#if follow.canFollow}
 	<div class="flex items-center gap-[var(--space-3)]">
 		{#if follow.participant}
-			<Button variant="secondary" disabled aria-describedby={hintId}>
+			<Button
+				variant="secondary"
+				disabled
+				title={m.follow_participant_hint()}
+				aria-describedby={hintId}
+			>
 				{m.follow_participant()}
 			</Button>
 			<span id={hintId} class="sr-only">{m.follow_participant_hint()}</span>

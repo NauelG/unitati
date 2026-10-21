@@ -98,7 +98,12 @@ followers table is decoration.
    project is, not every card that moves; the one task fact that reaches them is a task reaching a
    completed state, as a notification about the project whose summary names the task. A task's own
    due date, state and assignees reach only the followers of that task.
-7. **Unfollow is one click from the record and from each `followed.activity` notification** (panel
+7. **What reaches followers:** on a ticket a public or internal comment, a status change, an assignment
+   or unassignment; on a task a state change, a change of assignees or of due date; on a project its
+   archiving or unarchiving, a change of owner or due date, and one of its tasks reaching a completed
+   state. The producer says what happened in `followerSummary`, which only the `followed.activity`
+   row carries, so participants' notifications read as they always did.
+8. **Unfollow is one click from the record and from each `followed.activity` notification** (panel
    and inbox), and the mail of a followed record ends with a link to it for the same purpose.
 
 ## Consequences

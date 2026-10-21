@@ -476,12 +476,8 @@ async function announceAssignment(
 		organisationId: actor.organisationId,
 		actorPersonId: actor.personId,
 		target: { taskId: task.id },
-		snapshot: {
-			code: task.taskTag,
-			title: task.title,
-			actorName: actor.name,
-			summary: m.follow_summary_task_assignees()
-		},
+		snapshot: { code: task.taskTag, title: task.title, actorName: actor.name },
+		followerSummary: m.follow_summary_task_assignees(),
 		recipients: added.map((personId) => ({ personId, type: 'task.assigned' as const })),
 		followers: true,
 		audience: await notificationAudience(tx, project)

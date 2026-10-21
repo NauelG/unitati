@@ -82,13 +82,14 @@ export async function follow(
 	viewer: FollowViewer,
 	target: FollowTarget
 ): Promise<Outcome<void, 'forbidden'>> {
-	if (!mayFollow(viewer, target) || viewer.personId === null) return failure('forbidden');
+	const personId = viewer.personId;
+	if (!mayFollow(viewer, target) || personId === null) return failure('forbidden');
 
 	await getDb().transaction(async (tx) => {
-		if (await isParticipant(tx, viewer.personId!, target)) return;
+		if (await isParticipant(tx, personId, target)) return;
 		await tx
 			.insert(follows)
-			.values({ organisationId: viewer.organisationId, personId: viewer.personId!, ...target })
+			.values({ organisationId: viewer.organisationId, personId, ...target })
 			.onConflictDoNothing();
 	});
 	return success(undefined);

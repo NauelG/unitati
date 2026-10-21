@@ -274,13 +274,11 @@ export async function addComment(
 				actorPersonId: actor.personId,
 				target: { ticketId: ticket.id },
 				visibility: values.visibility,
-				snapshot: {
-					...commentSnapshot(ticket, actor, values.body),
-					summary:
-						values.visibility === 'internal'
-							? m.follow_summary_internal_comment()
-							: m.follow_summary_comment()
-				},
+				snapshot: commentSnapshot(ticket, actor, values.body),
+				followerSummary:
+					values.visibility === 'internal'
+						? m.follow_summary_internal_comment()
+						: m.follow_summary_comment(),
 				recipients: [
 					...commentRecipients(ticket, values.visibility),
 					...mentioned.map((personId) => ({ personId, type: 'mention' as const }))

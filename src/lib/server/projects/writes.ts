@@ -186,7 +186,8 @@ export async function tellFollowers(
 		organisationId: actor.organisationId,
 		actorPersonId: actor.personId,
 		target,
-		snapshot: { ...record, actorName: actor.name, summary },
+		snapshot: { ...record, actorName: actor.name },
+		followerSummary: summary,
 		recipients: [],
 		followers: true,
 		audience: await notificationAudience(tx, project)

@@ -32,6 +32,12 @@ export type NotifyInput = {
 	 * default: only the facts listed in ADR 0040 reach followers.
 	 */
 	followers?: boolean;
+	/**
+	 * What happened, for the followers only (#57): "Pasó a En curso". Participants
+	 * and mentioned people keep the snapshot as it is, because it already says why
+	 * they were told.
+	 */
+	followerSummary?: string;
 };
 
 /** A mail the caller sends after commit, with `sendNotificationEmails` (#302). */
@@ -97,6 +103,9 @@ async function addFollowers(
  */
 export async function notify(tx: Transaction, input: NotifyInput): Promise<PendingEmail[]> {
 	const snapshot = snapshotSchema.parse(input.snapshot);
+	const followerSnapshot = input.followerSummary
+		? snapshotSchema.parse({ ...snapshot, summary: input.followerSummary })
+		: snapshot;
 
 	// 1. The actor never notifies themself.
 	const others = input.recipients.filter(({ personId }) => personId !== input.actorPersonId);
@@ -164,7 +173,7 @@ export async function notify(tx: Transaction, input: NotifyInput): Promise<Pendi
 				recipientPersonId: person.id,
 				actorPersonId: input.actorPersonId,
 				type,
-				snapshot,
+				snapshot: type === 'followed.activity' ? followerSnapshot : snapshot,
 				...input.target
 			});
 		}
@@ -176,7 +185,7 @@ export async function notify(tx: Transaction, input: NotifyInput): Promise<Pendi
 				type,
 				personId: person.id,
 				role: person.role,
-				snapshot,
+				snapshot: type === 'followed.activity' ? followerSnapshot : snapshot,
 				target: input.target
 			});
 		}

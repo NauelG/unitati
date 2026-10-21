@@ -636,12 +636,8 @@ export async function changeTicketStatus(
 			organisationId: actor.organisationId,
 			actorPersonId: actor.personId,
 			target: { ticketId: ticket.id },
-			snapshot: {
-				code: ticket.ticketTag,
-				title: ticket.subject,
-				actorName: actor.name,
-				summary: m.follow_summary_ticket_status({ status: STATUS_LABEL[to]() })
-			},
+			snapshot: { code: ticket.ticketTag, title: ticket.subject, actorName: actor.name },
+			followerSummary: m.follow_summary_ticket_status({ status: STATUS_LABEL[to]() }),
 			recipients:
 				to === 'resolved' ? [{ personId: ticket.requesterPersonId, type: 'ticket.resolved' }] : [],
 			followers: true
@@ -762,12 +758,8 @@ export async function assignTicket(
 				organisationId: actor.organisationId,
 				actorPersonId: actor.personId,
 				target: { ticketId: ticket.id },
-				snapshot: {
-					code: ticket.ticketTag,
-					title: ticket.subject,
-					actorName: actor.name,
-					summary: m.follow_summary_ticket_assigned({ person: next.fullName })
-				},
+				snapshot: { code: ticket.ticketTag, title: ticket.subject, actorName: actor.name },
+				followerSummary: m.follow_summary_ticket_assigned({ person: next.fullName }),
 				recipients: [{ personId: next.id, type: 'ticket.assigned' }],
 				followers: true
 			});
@@ -783,12 +775,8 @@ export async function assignTicket(
 			organisationId: actor.organisationId,
 			actorPersonId: actor.personId,
 			target: { ticketId: ticket.id },
-			snapshot: {
-				code: ticket.ticketTag,
-				title: ticket.subject,
-				actorName: actor.name,
-				summary: m.follow_summary_ticket_unassigned()
-			},
+			snapshot: { code: ticket.ticketTag, title: ticket.subject, actorName: actor.name },
+			followerSummary: m.follow_summary_ticket_unassigned(),
 			recipients: [],
 			followers: true
 		});

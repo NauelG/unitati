@@ -35,7 +35,7 @@ export interface Preference {
 
 export type PreferenceFailure = 'locked' | 'not_available';
 
-/** Staff can receive every type (`followed.activity` too, ready for #57); anybody else, three. */
+/** Staff can receive every type (`followed.activity` too); anybody else, three. */
 export function receivableTypes(viewer: Pick<Viewer, 'role' | 'scopes'>): NotificationType[] {
 	const staff = can(viewer, 'tickets.view') || can(viewer, 'projects.view');
 	return staff ? [...NOTIFICATION_TYPES] : [...REQUESTER_TYPES];

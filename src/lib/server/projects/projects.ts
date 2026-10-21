@@ -351,7 +351,7 @@ export async function updateProject(
 			}
 
 			const dueChanges = values.dueDate !== undefined && values.dueDate !== project.dueDate;
-			if (values.dueDate !== undefined && values.dueDate !== project.dueDate) {
+			if (values.dueDate !== undefined && dueChanges) {
 				await recordActivity(tx, {
 					...base,
 					verb: 'project.due.changed',
