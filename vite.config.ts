@@ -35,7 +35,7 @@ export default defineConfig({
 				test: {
 					name: 'server',
 					environment: 'node',
-					include: ['src/**/*.{test,spec}.{js,ts}'],
+					include: ['src/**/*.{test,spec}.{js,ts}', 'scripts/**/*.spec.{js,ts}'],
 					// `*.db.spec.ts` needs Postgres; this project is the loop that must
 					// stay fast and run with Docker stopped.
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}', 'src/**/*.db.spec.ts']

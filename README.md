@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.99.0-1d5cf0" alt="Version 0.99.0" />
+  <img src="https://img.shields.io/badge/version-0.99.1-1d5cf0" alt="Version 0.99.1" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
 </p>
@@ -131,7 +131,7 @@ Planned, added with their slices: [shadcn-svelte](https://shadcn-svelte.com/), [
 
 ## Development
 
-Requires **Node 24** (see `.nvmrc`) and **Docker with the Compose v2 plugin**. The `db:*` scripts call `docker compose` (a Docker subcommand), not the standalone `docker-compose` v1, which reached end of life in July 2023. On Debian or Ubuntu, install it with `apt install docker-compose-plugin`; verify with `docker compose version`.
+Requires **Node 24** (see `.nvmrc`) and **Docker with Compose v2 or later**, either as the plugin (`docker compose`) or the standalone binary (`docker-compose`). The `db:*` scripts use whichever is installed.
 
 ```sh
 npm install
@@ -142,7 +142,7 @@ npm run db:migrate   # create the schema
 npm run db:seed      # 200 assets, people, history and a few tickets; prints demo logins (localhost only)
 npm run db:stop      # stop it
 
-# Outbound mail is optional. To see it locally: docker compose up -d mailpit, set
+# Outbound mail is optional. To see it locally: npm run mail:start, set
 # SMTP_HOST=localhost and SMTP_PORT=1025 in .env, read it at http://localhost:8025
 
 npm run dev          # dev server on http://localhost:5173
@@ -172,15 +172,15 @@ the organisation and the first administrator. After that, [`/login`](http://loca
 
 ### Environment
 
-| Variable             | Required      | Purpose                                                    |
-| -------------------- | ------------- | ---------------------------------------------------------- |
-| `DATABASE_URL`       | to run        | Postgres connection string                                 |
-| `BETTER_AUTH_SECRET` | to run        | Signs session cookies and tokens                           |
-| `BETTER_AUTH_URL`    | in production | Public origin; defaults to `http://localhost:5173`         |
-| `BODY_SIZE_LIMIT`    | no            | Largest request body; `512K` by default, `6M` in the image |
+| Variable             | Required      | Purpose                                                     |
+| -------------------- | ------------- | ----------------------------------------------------------- |
+| `DATABASE_URL`       | to run        | Postgres connection string                                  |
+| `BETTER_AUTH_SECRET` | to run        | Signs session cookies and tokens                            |
+| `BETTER_AUTH_URL`    | in production | Public origin; defaults to `http://localhost:5173`          |
+| `BODY_SIZE_LIMIT`    | no            | Largest request body; `512K` by default, `56M` in the image |
 
-`BODY_SIZE_LIMIT` is read by `adapter-node`. The image sets it to `6M` so a 5 MB CSV import fits
-with its multipart overhead; lowering it breaks imports and logo uploads.
+`BODY_SIZE_LIMIT` is read by `adapter-node`. The image sets it to `56M`: a comment or task carries
+up to 5 attachments of 10 MB, and the CSV import and logos are 5 MB; lowering it breaks those uploads.
 
 None of them is needed to `build`: building analyses the app without opening a connection
 (see `src/env.ts`).
