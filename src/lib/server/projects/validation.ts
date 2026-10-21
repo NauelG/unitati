@@ -23,6 +23,8 @@ import { STATE_GROUPS } from '#lib/domain/status.js';
 export const RESERVED_PROJECT_TAGS: ReadonlySet<string> = new Set(['new']);
 export const RESERVED_TASK_TAGS: ReadonlySet<string> = new Set(['new']);
 
+export const PROJECT_VISIBILITIES = ['organisation', 'members'] as const;
+
 const nonEmpty = z.string().trim().min(1);
 
 /** The longest task title the product accepts; an escalation draft is cut to it. */
@@ -46,6 +48,8 @@ export const createProjectInput = z.object({
 	description: optionalText,
 	ownerPersonId: z.uuid().nullish(),
 	dueDate: dueDate.optional(),
+	/** Omitted: `organisation`. `members` makes the owner and the creator its first members. */
+	visibility: z.enum(PROJECT_VISIBILITIES).optional(),
 	projectTag: tagOf(RESERVED_PROJECT_TAGS).optional()
 });
 

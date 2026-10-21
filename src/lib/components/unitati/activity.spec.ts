@@ -105,6 +105,12 @@ describe('activitySentence', () => {
 				}
 			},
 			{ verb: 'project.due.changed', payload: { from: null, to: '2026-12-01' } },
+			{ verb: 'project.visibility.changed', payload: { from: 'organisation', to: 'members' } },
+			{ verb: 'project.member.added', payload: { personId: PERSON, personName: 'Ada' } },
+			{
+				verb: 'project.member.removed',
+				payload: { personId: PERSON, personName: 'Ada', unassignedTaskCount: 2 }
+			},
 			{ verb: 'project.attachment.added', payload: { filename: 'plan.pdf' } },
 			{ verb: 'project.attachment.removed', payload: { filename: 'plan.pdf' } },
 			{ verb: 'task.attachment.added', payload: { filename: 'plan.pdf' } },

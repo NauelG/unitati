@@ -8,6 +8,12 @@ function priorityWord(priority: Priority): string {
 	return priority === 'normal' ? m.priority_normal() : statusLabel(priority);
 }
 
+function projectVisibilityLabel(visibility: 'organisation' | 'members'): string {
+	return visibility === 'members'
+		? m.activity_project_visibility_members()
+		: m.activity_project_visibility_organisation();
+}
+
 /**
  * Turns an activity entry into the sentence a reader sees (ADR 0009). It lives
  * with the components, not with the table: the row stores a verb and a payload,
@@ -168,6 +174,26 @@ export function activitySentence(entry: ActivityEntry): string {
 				from: entry.payload.from ?? m.activity_due_none(),
 				to: entry.payload.to ?? m.activity_due_none()
 			});
+
+		case 'project.visibility.changed':
+			return m.activity_project_visibility_changed({
+				from: projectVisibilityLabel(entry.payload.from),
+				to: projectVisibilityLabel(entry.payload.to)
+			});
+
+		case 'project.member.added':
+			return m.activity_project_member_added({ personName: entry.payload.personName });
+
+		case 'project.member.removed':
+			if (entry.payload.unassignedTaskCount === 0) {
+				return m.activity_project_member_removed_none({ personName: entry.payload.personName });
+			}
+			return entry.payload.unassignedTaskCount === 1
+				? m.activity_project_member_removed_one({ personName: entry.payload.personName })
+				: m.activity_project_member_removed_other({
+						personName: entry.payload.personName,
+						count: entry.payload.unassignedTaskCount
+					});
 
 		case 'project.attachment.added':
 			return m.activity_project_attachment_added({ filename: entry.payload.filename });

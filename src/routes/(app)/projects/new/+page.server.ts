@@ -45,7 +45,8 @@ export const actions: Actions = {
 			name: fields.get('name'),
 			description: orNull(fields.get('description')),
 			ownerPersonId: orNull(fields.get('ownerPersonId')),
-			dueDate: orNull(fields.get('dueDate'))
+			dueDate: orNull(fields.get('dueDate')),
+			visibility: orNull(fields.get('visibility')) ?? undefined
 		});
 		if (!parsed.success) {
 			const field = firstField(parsed.error);
