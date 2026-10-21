@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import {
 	assignRow,
@@ -12,7 +13,9 @@ import { actionEvent, outcomeOf } from '#lib/server/projects/testing/action-even
 import { listActivity } from '#lib/server/activity/index.js';
 import { linkTicketToTask, relatedTo } from '#lib/server/links/index.js';
 import { createQueue, createTicket } from '#lib/server/service-desk/testing/fixtures.js';
-import { actions } from './+page.server';
+import { getDb } from '#lib/server/db/index.js';
+import { projectMembers, projects } from '#lib/server/projects/index.js';
+import { actions, load } from './+page.server';
 
 async function setup() {
 	const workspace = await createWorkspace();
@@ -251,5 +254,63 @@ describe('unlinking a ticket from a task record', () => {
 		const groups = await relatedTo(employee, { kind: 'task', id: task.id });
 
 		expect(groups.flatMap((group) => group.items.map((item) => item.ref.id))).toEqual([ticket.id]);
+	});
+});
+
+describe('a task of a members-only project', () => {
+	async function closedSetup() {
+		const base = await setup();
+		const { organisation, project, technician } = base;
+		const member = await createViewer(organisation.id, 'technician', 'Mia Member');
+		const outsider = await createViewer(organisation.id, 'technician', 'Otto Outsider');
+		await getDb()
+			.update(projects)
+			.set({ visibility: 'members' })
+			.where(eq(projects.id, project.id));
+		await getDb()
+			.insert(projectMembers)
+			.values(
+				[technician, member].map((viewer) => ({
+					projectId: project.id,
+					personId: viewer.personId!,
+					organisationId: organisation.id
+				}))
+			);
+		return { ...base, member, outsider };
+	}
+
+	it('refuses to assign a non-member with a message that points at membership', async () => {
+		const { technician, outsider, params } = await closedSetup();
+
+		const { returned } = await outcomeOf(() =>
+			actions.setAssignees(actionEvent(technician, { personIds: [outsider.personId!] }, params))
+		);
+
+		expect(returned?.status).toBe(400);
+		expect(returned?.data).toMatchObject({
+			action: 'setAssignees',
+			message: expect.stringContaining('miembro')
+		});
+	});
+
+	it('offers only the members in the assignee picker', async () => {
+		const { technician, member, outsider, params } = await closedSetup();
+
+		const data = (await load({
+			locals: { user: technician },
+			params
+		} as never)) as { people: { id: string }[] };
+
+		const ids = data.people.map((person) => person.id);
+		expect(ids).toContain(member.personId);
+		expect(ids).not.toContain(outsider.personId);
+	});
+
+	it('answers 404 to a technician who is not a member', async () => {
+		const { outsider, params } = await closedSetup();
+
+		const { thrown } = await outcomeOf(() => load({ locals: { user: outsider }, params } as never));
+
+		expect(thrown?.status).toBe(404);
 	});
 });
