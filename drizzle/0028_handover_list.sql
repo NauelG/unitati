@@ -1,0 +1,2 @@
+ALTER TYPE "public"."activity_verb" ADD VALUE 'handover.resent' BEFORE 'state.changed';--> statement-breakpoint
+CREATE INDEX "handovers_org_status_expires_idx" ON "handovers" USING btree ("organisation_id","status","expires_at");

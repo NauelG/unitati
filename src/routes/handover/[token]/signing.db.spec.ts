@@ -7,6 +7,7 @@ import { getDb } from '#lib/server/db/index.js';
 import {
 	deliver,
 	ensureDefaultHandoverTemplates,
+	resendHandover,
 	setCategoryRequiresHandover,
 	takeBack
 } from '#lib/server/assets/index.js';
@@ -116,6 +117,22 @@ describe('/handover/[token]', () => {
 			'Cache-Control': 'no-store',
 			'Referrer-Policy': 'no-referrer'
 		});
+	});
+
+	it('stops answering the old link after a resend, and the new link signs', async () => {
+		const { technician, handover } = await issued();
+		const resent = await resendHandover(technician, handover.code, { mailer: null });
+		if (!resent.ok) throw new Error('setup: not resent');
+
+		const old = (await load(loadEvent(handover.token).event)) as Loaded;
+		expect(old.signing).toEqual({ state: 'unknown' });
+		const refused = await actions.accept(
+			postEvent(handover.token, { confirm: 'on', signature: dataUrl(drawnSignature()) })
+		);
+		expect(refused).toMatchObject({ status: 409, data: { state: 'unknown' } });
+
+		const fresh = (await load(loadEvent(resent.value.token).event)) as Loaded;
+		expect(fresh.signing).toMatchObject({ state: 'pending', code: handover.code });
 	});
 
 	it('shows a return with the condition and notes the technician recorded for each asset', async () => {

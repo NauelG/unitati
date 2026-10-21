@@ -10,6 +10,12 @@ PDF bytes. `/handover-documents/[id]` serves those stored bytes to staff with `a
 to the signer with `assets.view.own`. The installation's `ORGANISATION_TIME_ZONE` supplies the
 local decision time alongside UTC; no database row or attachment row is created for the file.
 
+Reading handovers back is `handover-list.ts`: `listHandovers`, `getHandover`, `listOwnHandovers`
+and `custodyHandover`. A handover's state comes only from `deriveHandoverState`
+(`src/lib/domain/handover.ts`): `expired` is a pending handover past `expires_at`, never stored.
+`resendHandover` (`handover-resend.ts`) swaps the token hash and the expiry on a pending or
+expired handover and writes `handover.resent`.
+
 ## The shape of it
 
 The catalogue hangs off the **model**, not off each asset: `manufacturers` and `categories` point

@@ -434,7 +434,13 @@ export const handovers = pgTable(
 				and ${table.templateVersionId} is null
 			)`
 		),
-		index('handovers_person_idx').on(table.personId)
+		index('handovers_person_idx').on(table.personId),
+		/** The handover list filters on state and expiry within an organisation (#280). */
+		index('handovers_org_status_expires_idx').on(
+			table.organisationId,
+			table.status,
+			table.expiresAt
+		)
 	]
 );
 

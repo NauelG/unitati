@@ -14,6 +14,35 @@ export const MAX_DECISION_REASON = 1000;
 export const HANDOVER_CONDITIONS = ['good', 'damaged', 'incomplete'] as const;
 export type HandoverCondition = (typeof HANDOVER_CONDITIONS)[number];
 
+/** What the database stores of a handover's outcome (ADR 0035, decision 3). */
+export type StoredHandoverStatus = 'pending' | 'accepted' | 'rejected' | 'waived';
+
+/** What a reader sees: `expired` is never stored, it is a pending handover past its date. */
+export const HANDOVER_STATES = ['pending', 'expired', 'accepted', 'rejected', 'waived'] as const;
+export type HandoverState = (typeof HANDOVER_STATES)[number];
+
+/** What the list shows before anyone filters: the handovers that still need someone. */
+export const DEFAULT_HANDOVER_STATES: readonly HandoverState[] = ['pending', 'rejected', 'expired'];
+
+/**
+ * The one place a handover's state is derived (ADR 0035, decision 3): there is
+ * no scheduler, so nothing ever writes `expired`. Every list, panel and signing
+ * route asks here, never a component.
+ */
+export function deriveHandoverState(
+	handover: { status: StoredHandoverStatus; expiresAt: Date | null },
+	now: Date
+): HandoverState {
+	if (
+		handover.status === 'pending' &&
+		handover.expiresAt !== null &&
+		handover.expiresAt.getTime() <= now.getTime()
+	) {
+		return 'expired';
+	}
+	return handover.status;
+}
+
 /** Condition notes are optional for `good`, required otherwise, and this long at most. */
 export const MAX_CONDITION_NOTES = 500;
 

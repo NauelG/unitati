@@ -3,6 +3,7 @@
 	import FileCheck from '@lucide/svelte/icons/file-check';
 	import FileX from '@lucide/svelte/icons/file-x';
 	import PenOff from '@lucide/svelte/icons/pen-off';
+	import Send from '@lucide/svelte/icons/send';
 	import Archive from '@lucide/svelte/icons/archive';
 	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
@@ -77,6 +78,7 @@
 		'handover.accepted': FileCheck,
 		'handover.rejected': FileX,
 		'handover.waived': PenOff,
+		'handover.resent': Send,
 		'state.changed': RefreshCw,
 		'location.changed': MapPin,
 		'note.added': MessageSquare,

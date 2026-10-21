@@ -5,6 +5,30 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.95.0] - 2026-10-21
+
+### Added
+
+- A **Handovers** list under Assets (#25, #280) for staff with `assets.view`, filterable by derived
+  state (`pending`, `expired`, `accepted`, `rejected`, `waived`), direction and person. It defaults
+  to what still needs someone: pending, rejected and expired. There is no scheduler, so a pending
+  handover past its date is read as expired and nothing is stored.
+- A handover detail page (`/assets/handovers/HND-####`) with the frozen text, the assets as
+  snapshotted with their conditions, the evidence, the activity, the tickets it fulfils
+  and the document download, or a **generate document** action when a decided handover has none.
+- **Resend** on pending and expired handovers (`assets.manage`): a new single-use link and a new
+  expiry on the same handover, mailed when mail is on and shown with copy and QR. The previous link
+  stops working. New activity verb `handover.resent`.
+- The asset page shows the state of the handover covering its current custody and a list of every
+  handover that named it. The directory gets a person page (`/directory/{id}`) with their holdings
+  and handovers.
+- Employees with `assets.view.own` get **My handovers** in the portal and can download the documents
+  of their decided handovers.
+
+### Changed
+
+- Index `handovers (organisation_id, status, expires_at)` for the list.
+
 ## [0.94.0] - 2026-10-21
 
 ### Added
