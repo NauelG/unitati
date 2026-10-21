@@ -96,7 +96,7 @@ export interface CompletedTask {
  */
 export function linkedTaskMail(
 	task: CompletedTask,
-	emails: readonly PendingEmail[],
+	emails: readonly [PendingEmail, ...PendingEmail[]],
 	origin: string
 ): MailMessage {
 	const list = emails
@@ -104,7 +104,7 @@ export function linkedTaskMail(
 		.join('\n');
 
 	return {
-		to: emails[0]?.to ?? '',
+		to: emails[0].to,
 		subject: m.notifications_mail_linked_subject({ code: task.taskTag, title: task.taskTitle }),
 		text: [
 			m.notifications_mail_linked_intro({
@@ -129,6 +129,11 @@ export function sendLinkedTaskEmails(
 	if (!mailer || emails.length === 0) return Promise.resolve();
 	const byPerson = Map.groupBy(emails, (email) => email.personId);
 	return Promise.all(
-		[...byPerson.values()].map((own) => sendQuietly(mailer, linkedTaskMail(task, own, origin)))
+		[...byPerson.values()].map((personEmails) =>
+			sendQuietly(
+				mailer,
+				linkedTaskMail(task, personEmails as [PendingEmail, ...PendingEmail[]], origin)
+			)
+		)
 	).then(() => undefined);
 }
