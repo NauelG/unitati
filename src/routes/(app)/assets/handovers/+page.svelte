@@ -12,7 +12,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 
 	const selectClass =
 		'h-9 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-1)] px-2 text-sm';
@@ -30,6 +30,84 @@
 	<PageHeader title={m.handovers_title()}>
 		{#snippet summary()}{m.handovers_lede()}{/snippet}
 	</PageHeader>
+
+	{#if data.canManage}
+		<details
+			class="mt-[var(--space-6)] rounded-[var(--radius-md)] border border-[var(--border)] p-3"
+		>
+			<summary class="cursor-pointer text-sm font-medium">{m.handovers_regularise_title()}</summary>
+			<form
+				method="POST"
+				action="?/regularise"
+				class="mt-[var(--space-3)] space-y-[var(--space-3)]"
+			>
+				<p class="text-small text-[var(--ink-muted)]">{m.handovers_regularise_lede()}</p>
+				<div class="flex flex-wrap items-end gap-[var(--space-3)]">
+					<label class="space-y-1 text-sm">
+						<span class="block text-label text-[var(--ink-muted)]"
+							>{m.handovers_regularise_person()}</span
+						>
+						<select name="personId" class={selectClass}>
+							<option value="">{m.handovers_regularise_any_person()}</option>
+							{#each data.people as person (person.id)}
+								<option value={person.id}>{person.fullName}</option>
+							{/each}
+						</select>
+					</label>
+					<label class="space-y-1 text-sm">
+						<span class="block text-label text-[var(--ink-muted)]"
+							>{m.handovers_regularise_category()}</span
+						>
+						<select name="categoryId" class={selectClass}>
+							<option value="">{m.handovers_regularise_any_category()}</option>
+							{#each data.categories as category (category.id)}
+								<option value={category.id}>{category.name}</option>
+							{/each}
+						</select>
+					</label>
+					<Button type="submit">{m.handovers_regularise_submit()}</Button>
+				</div>
+			</form>
+		</details>
+
+		{#if form?.action === 'regularise'}
+			<div class="mt-[var(--space-3)] space-y-2 text-sm" role="status">
+				{#if 'message' in form}
+					<p class="text-[var(--danger)]">{form.message}</p>
+				{:else}
+					<p>{m.handovers_regularise_done({ count: form.issued.length })}</p>
+					{#if form.issued.length > 0}
+						<ul class="list-disc pl-5">
+							{#each form.issued as item (item.code)}
+								<li>
+									<a class="underline" href="/assets/handovers/{item.code}">
+										{m.handovers_regularise_issued({
+											person: item.personName,
+											code: item.code,
+											count: item.assetCount
+										})}
+									</a>
+								</li>
+							{/each}
+						</ul>
+						<p class="text-small text-[var(--ink-muted)]">{m.handovers_regularise_links()}</p>
+					{/if}
+					{#if form.skipped.length > 0}
+						<p class="font-medium">{m.handovers_regularise_skipped_title()}</p>
+						<ul class="list-disc pl-5">
+							{#each form.skipped as item (item.personId)}
+								<li>
+									{item.reason === 'no_template'
+										? m.handovers_regularise_skipped_no_template({ person: item.personName })
+										: m.handovers_regularise_skipped_no_requirement({ person: item.personName })}
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				{/if}
+			</div>
+		{/if}
+	{/if}
 
 	<div class="mt-[var(--space-6)]">
 		<ListToolbar>

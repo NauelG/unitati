@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.97.0] - 2026-10-21
+
+### Added
+
+- **Regularise existing custody** (#25, #281): from the Handovers list, staff with `assets.manage`
+  issue pending delivery handovers for equipment people already hold with nobody having signed,
+  for one person or as a campaign by category. One handover per person, mailed when mail is on.
+  Custody already covered by a pending, accepted or waived delivery handover is skipped, so running
+  it twice sends one link; a rejected handover covers nothing. People whose equipment requires no
+  handover, or whose delivery template is missing, are reported instead.
+
 ## [0.96.0] - 2026-10-21
 
 ### Added
