@@ -16,6 +16,7 @@
 
 	let ownerPersonId = $state<string | null>(data.defaultOwnerId);
 	let submitting = $state(false);
+	let visibility = $state<'organisation' | 'members'>('organisation');
 
 	const ownerOptions = $derived(
 		data.people.map((person) => ({ value: person.id, label: person.fullName }))
@@ -78,6 +79,21 @@
 			/>
 			<DateField label={m.project_field_due()} name="dueDate" error={errorFor('dueDate')} />
 		</div>
+
+		<fieldset class="space-y-[var(--space-2)]">
+			<legend class="text-sm font-medium text-[var(--ink)]">{m.project_visibility_title()}</legend>
+			<label class="flex items-center gap-[var(--space-2)] text-sm text-[var(--ink)]">
+				<input type="radio" name="visibility" value="organisation" bind:group={visibility} />
+				{m.project_visibility_organisation()}
+			</label>
+			<label class="flex items-center gap-[var(--space-2)] text-sm text-[var(--ink)]">
+				<input type="radio" name="visibility" value="members" bind:group={visibility} />
+				{m.project_visibility_members()}
+			</label>
+			{#if visibility === 'members'}
+				<p class="text-small text-[var(--ink-muted)]">{m.project_visibility_hint_new()}</p>
+			{/if}
+		</fieldset>
 
 		<div class="flex items-center gap-[var(--space-3)]">
 			<Button type="submit" size="lg" busy={submitting}>

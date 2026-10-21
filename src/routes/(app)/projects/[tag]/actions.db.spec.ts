@@ -1,4 +1,7 @@
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { createViewer } from '#lib/server/assets/testing/fixtures.js';
+import { getDb } from '#lib/server/db/index.js';
 import { assignRow } from '#lib/server/projects/testing/fixtures.js';
 import {
 	createProjectRow,
@@ -7,7 +10,7 @@ import {
 	statesByGroup
 } from '#lib/server/projects/testing/fixtures.js';
 import { listActivity } from '#lib/server/activity/index.js';
-import { getProject, listTasks } from '#lib/server/projects/index.js';
+import { getProject, listTasks, projectMembers, projects } from '#lib/server/projects/index.js';
 import { actionEvent, outcomeOf } from '#lib/server/projects/testing/action-event.js';
 import { linkTicketToProject, linkTicketToTask, relatedTo } from '#lib/server/links/index.js';
 import { createQueue, createTicket } from '#lib/server/service-desk/testing/fixtures.js';
@@ -507,5 +510,62 @@ describe('the tickets behind a project record', () => {
 		const tickets = (await data.timeline).filter((item) => item.kind === 'ticket');
 
 		expect(tickets.map((item) => item.record?.tag)).toEqual([direct.ticketTag]);
+	});
+});
+
+describe('members-only projects', () => {
+	const loadEvent = (user: unknown, params: Record<string, string>) =>
+		({
+			locals: { user },
+			params,
+			url: new URL('http://localhost/projects/x'),
+			cookies: { get: () => undefined, set: () => undefined }
+		}) as never;
+
+	async function closedSetup() {
+		const base = await setup();
+		const { organisation, technician, admin } = base;
+		const member = await createViewer(organisation.id, 'technician', 'Mia Member');
+		await getDb()
+			.update(projects)
+			.set({ visibility: 'members' })
+			.where(eq(projects.id, base.project.id));
+		await getDb().insert(projectMembers).values({
+			projectId: base.project.id,
+			personId: member.personId!,
+			organisationId: organisation.id
+		});
+		return { ...base, member, technician, admin };
+	}
+
+	it('answers 404 to the record and to every action for a technician who is not a member', async () => {
+		const { technician, params } = await closedSetup();
+
+		expect((await outcomeOf(() => load(loadEvent(technician, params)))).thrown?.status).toBe(404);
+		for (const run of [
+			() => actions.update(actionEvent(technician, { name: 'Nope' }, params)),
+			() => actions.setVisibility(actionEvent(technician, { visibility: 'organisation' }, params)),
+			() => actions.addMember(actionEvent(technician, { personId: technician.personId! }, params))
+		]) {
+			expect((await outcomeOf(run)).thrown?.status).toBe(404);
+		}
+	});
+
+	it('refuses a member who is not the owner the membership actions, and lets an admin through', async () => {
+		const { member, admin, params, project } = await closedSetup();
+
+		const refused = await outcomeOf(() =>
+			actions.setVisibility(actionEvent(member, { visibility: 'organisation' }, params))
+		);
+		expect(refused.returned).toMatchObject({
+			data: { action: 'setVisibility', message: expect.stringContaining('responsable') }
+		});
+
+		const allowed = await outcomeOf(() =>
+			actions.setVisibility(actionEvent(admin, { visibility: 'organisation' }, params))
+		);
+		expect(allowed.returned).toEqual({ action: 'setVisibility' });
+		const found = await getProject(admin, project.projectTag);
+		expect(found.ok && found.value.visibility).toBe('organisation');
 	});
 });

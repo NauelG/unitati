@@ -4,6 +4,7 @@ import {
 	getProject,
 	getTask,
 	listStates,
+	PROJECT_VISIBILITIES,
 	projectProgress,
 	type ProjectView,
 	type TaskView
@@ -61,6 +62,8 @@ export const projectSchema = named(
 		/** `YYYY-MM-DD`. */
 		dueDate: z.string().nullable(),
 		archived: z.boolean(),
+		/** `members`: only the project's members and admins can see it (ADR 0042). */
+		visibility: z.enum(PROJECT_VISIBILITIES),
 		progress: progressSchema
 	})
 );
@@ -111,6 +114,7 @@ export function projectToWire(
 			view.ownerPersonId === null ? null : { id: view.ownerPersonId, name: view.ownerName ?? '' },
 		dueDate: view.dueDate,
 		archived: view.archivedAt !== null,
+		visibility: view.visibility,
 		progress: progressToWire(counts)
 	};
 }

@@ -257,6 +257,7 @@ describe('reads', () => {
 				owner: null,
 				dueDate: null,
 				archived: false,
+				visibility: 'organisation',
 				progress: { backlog: 0, unstarted: 0, started: 1, completed: 1, cancelled: 1, percent: 50 }
 			}
 		]);
@@ -625,6 +626,73 @@ describe('refusals', () => {
 		});
 		expect(history.map((e) => e.verb)).toEqual(['task.created']);
 		expect(states.backlog.id).toBeDefined();
+	});
+});
+
+describe('members-only projects (#309)', () => {
+	async function closedScene() {
+		const base = await scene();
+		const { organisation, admin, technician, states } = base;
+		const closed = await createProjectRow(organisation.id, {
+			name: 'Secret',
+			projectTag: 'PRJ-0001',
+			visibility: 'members'
+		});
+		await createTaskRow(organisation.id, closed.id, states.started.id, { taskTag: 'TSK-0001' });
+		await createPerson(organisation.id, 'Somebody');
+		return {
+			...base,
+			adminKey: await keyFor(admin, ['projects.view', 'projects.manage']),
+			techKey: await keyFor(technician, ['projects.view', 'projects.manage'])
+		};
+	}
+
+	it('answers 404 for the project and its tasks to a key whose owner is not a member', async () => {
+		const { techKey } = await closedScene();
+
+		expect((await send('GET', api('/projects/PRJ-0001'), techKey)).response.status).toBe(404);
+		expect((await send('GET', api('/tasks/TSK-0001'), techKey)).response.status).toBe(404);
+		expect((await send('GET', api('/projects'), techKey)).body.data).toEqual([]);
+		expect(
+			(await send('PATCH', api('/projects/PRJ-0001'), techKey, { name: 'Mine' })).response.status
+		).toBe(404);
+	});
+
+	it('shows an admin key the project, with its visibility on the wire', async () => {
+		const { adminKey } = await closedScene();
+
+		const { response, body } = await send('GET', api('/projects/PRJ-0001'), adminKey);
+
+		expect(response.status).toBe(200);
+		expect(body.data.visibility).toBe('members');
+	});
+
+	it('creates members-only and switches visibility through PATCH', async () => {
+		const { adminKey } = await closedScene();
+
+		const created = await send('POST', api('/projects'), adminKey, {
+			name: 'Born closed',
+			visibility: 'members'
+		});
+		expect(created.response.status).toBe(201);
+		expect(created.body.data.visibility).toBe('members');
+
+		const reopened = await send('PATCH', api(`/projects/${created.body.data.tag}`), adminKey, {
+			visibility: 'organisation'
+		});
+		expect(reopened.body.data.visibility).toBe('organisation');
+	});
+
+	it('answers 409 not_a_member when assigning a non-member', async () => {
+		const { adminKey, organisation } = await closedScene();
+		const outsider = await createPerson(organisation.id, 'Outsider');
+
+		const { response, body } = await send('POST', api('/tasks/TSK-0001/assignees'), adminKey, {
+			personId: outsider.id
+		});
+
+		expect(response.status).toBe(409);
+		expect(body.error.code).toBe('not_a_member');
 	});
 });
 

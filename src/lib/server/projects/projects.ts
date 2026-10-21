@@ -8,9 +8,10 @@ import { uniqueConstraintName } from '../db/errors';
 import { people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
+import { insertMember, type ProjectVisibility } from './members';
 import { matchesQuery } from './search';
 import { projects, states, tasks } from './schema';
-import { requireManage, requireProjectScope, requireTaskScope } from './scope';
+import { requireManage, requireProjectScope, requireTaskScope, writableProject } from './scope';
 import {
 	createProjectInput,
 	updateProjectInput,
@@ -45,6 +46,7 @@ const projectColumns = {
 	ownerPersonId: projects.ownerPersonId,
 	ownerName: owner.fullName,
 	dueDate: projects.dueDate,
+	visibility: projects.visibility,
 	archivedAt: projects.archivedAt,
 	createdAt: projects.createdAt,
 	updatedAt: projects.updatedAt
@@ -59,6 +61,7 @@ export type ProjectView = {
 	ownerName: string | null;
 	/** `YYYY-MM-DD`. */
 	dueDate: string | null;
+	visibility: ProjectVisibility;
 	archivedAt: Date | null;
 	createdAt: Date;
 	updatedAt: Date;
@@ -242,6 +245,7 @@ export async function openProject(
 			description: values.description,
 			ownerPersonId: values.ownerPersonId ?? null,
 			dueDate: values.dueDate ?? null,
+			visibility: values.visibility ?? 'organisation',
 			projectTag: values.projectTag
 		})
 		.returning({ id: projects.id, projectTag: projects.projectTag, name: projects.name });
@@ -253,6 +257,16 @@ export async function openProject(
 		verb: 'project.created',
 		payload: { projectTag: project.projectTag, name: project.name }
 	});
+
+	// A members-only project starts with the two people who certainly need it: the
+	// owner it is handed to, and the one who made it.
+	if (values.visibility === 'members') {
+		const first = [values.ownerPersonId, actor.personId].filter((id): id is string => !!id);
+		for (const personId of [...new Set(first)]) {
+			const person = await findPerson(tx, actor.organisationId, personId);
+			if (person) await insertMember(tx, actor, project.id, person);
+		}
+	}
 
 	return success({ id: project.id, projectTag: project.projectTag });
 }
@@ -318,6 +332,11 @@ export async function updateProject(
 						toPersonName: next?.fullName ?? null
 					}
 				});
+
+				// The new owner manages the list, so they cannot be outside it.
+				if (next && project.visibility === 'members') {
+					await insertMember(tx, actor, projectId, next);
+				}
 			}
 
 			if (values.dueDate !== undefined && values.dueDate !== project.dueDate) {
@@ -390,7 +409,13 @@ export async function unarchiveProject(
 		const [project] = await tx
 			.select({ archivedAt: projects.archivedAt })
 			.from(projects)
-			.where(and(eq(projects.id, projectId), eq(projects.organisationId, actor.organisationId)))
+			.where(
+				and(
+					eq(projects.id, projectId),
+					eq(projects.organisationId, actor.organisationId),
+					writableProject(actor)
+				)
+			)
 			.for('update');
 		if (!project) return failure('project_not_found' as const);
 		if (!project.archivedAt) return success(undefined);

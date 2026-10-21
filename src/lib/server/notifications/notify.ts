@@ -19,6 +19,13 @@ export type NotifyInput = {
 	recipients: { personId: string; type: NotificationType }[];
 	/** For a ticket comment; internal reaches only holders of `tickets.comment.internal`. */
 	visibility?: 'public' | 'internal';
+	/**
+	 * When the target is restricted (a members-only project, ADR 0042), the people
+	 * allowed to hear about it. Everybody else is dropped, followers included
+	 * (#57); admins always pass, because they can open every record. The producing
+	 * domain computes it, so this module never reads another domain's tables.
+	 */
+	audience?: ReadonlySet<string>;
 };
 
 /** A mail the caller sends after commit, with `sendNotificationEmails` (#302). */
@@ -91,6 +98,7 @@ export async function notify(tx: Transaction, input: NotifyInput): Promise<Pendi
 
 	const eligible = rows.filter((person) => {
 		if (!person.active) return false;
+		if (input.audience && person.role !== 'admin' && !input.audience.has(person.id)) return false;
 		if (input.visibility === 'internal') {
 			return person.role !== null && can({ role: person.role }, 'tickets.comment.internal');
 		}

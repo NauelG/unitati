@@ -14,6 +14,7 @@ import {
 	orNull,
 	rejected,
 	getTask,
+	listProjectMembers,
 	listProjects,
 	listTaskAttachments,
 	listStates,
@@ -50,13 +51,24 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		? await Promise.all([listStates(user), listPeople(user.organisationId), listProjects(user)])
 		: [[], [], []];
 
+	// On a members-only project only its members can be put on the task (ADR 0042),
+	// so the picker offers nobody else; the domain refuses the rest regardless.
+	const members =
+		canManage && task.projectVisibility === 'members'
+			? await listProjectMembers(user, task.projectId)
+			: null;
+	const listed = members?.ok ? new Set(members.value.map((member) => member.personId)) : null;
+	const assignable = listed ? people.filter((person) => listed.has(person.id)) : people;
+
 	return {
 		task,
 		descriptionHtml: renderMarkdown(task.description ?? ''),
 		canManage,
 		attachments: attachments.value,
 		states: states.map(({ id, name, group }) => ({ id, name, group })),
-		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
+		people: assignable
+			.filter((person) => person.active)
+			.map(({ id, fullName }) => ({ id, fullName })),
 		// The destinations of "Mover a proyecto": active, in scope, and not this one.
 		projects: projects
 			.filter((project) => project.id !== task.projectId)
@@ -119,7 +131,8 @@ const moveToProjectFailures: Record<
 
 const assignFailures: Record<Exclude<AssignFailure, 'task_not_found'>, () => string> = {
 	project_archived: m.project_error_archived,
-	person_not_found: m.action_error_person_missing
+	person_not_found: m.action_error_person_missing,
+	not_a_member: m.project_members_error_not_a_member
 };
 
 export const actions: Actions = {

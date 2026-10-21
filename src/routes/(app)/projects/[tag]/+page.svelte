@@ -2,6 +2,7 @@
 	import FormError from '#lib/components/unitati/FormError.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Archive from '@lucide/svelte/icons/archive';
+	import Lock from '@lucide/svelte/icons/lock';
 	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
 	import Plus from '@lucide/svelte/icons/plus';
 	import { enhance } from '$app/forms';
@@ -28,7 +29,9 @@
 	import SegmentedControl from '#lib/components/unitati/SegmentedControl.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
+	import ProjectVisibilityPanel from '#lib/components/unitati/ProjectVisibilityPanel.svelte';
 	import ProjectProgress from '#lib/components/unitati/ProjectProgress.svelte';
+	import Tooltip from '#lib/components/unitati/Tooltip.svelte';
 	import RecordAttachments from '#lib/components/unitati/RecordAttachments.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
@@ -270,6 +273,18 @@
 				)}
 				error={fieldError('name')}
 			/>
+			{#if project.visibility === 'members'}
+				<Tooltip content={m.project_visibility_locked()} side="bottom">
+					{#snippet child({ props })}
+						<span
+							{...props}
+							class="ml-[var(--space-2)] inline-flex align-middle text-[var(--ink-muted)]"
+						>
+							<Lock class="size-5" aria-label={m.project_visibility_locked()} />
+						</span>
+					{/snippet}
+				</Tooltip>
+			{/if}
 		{/snippet}
 		{#snippet summary()}
 			<span
@@ -460,6 +475,18 @@
 				]}
 			/>
 		</WorkPanel>
+
+		<ProjectVisibilityPanel
+			visibility={project.visibility}
+			members={data.members}
+			candidates={data.memberCandidates}
+			editable={data.canEditMembers}
+			errors={{
+				setVisibility: failureFor('setVisibility'),
+				addMember: failureFor('addMember'),
+				removeMember: failureFor('removeMember')
+			}}
+		/>
 
 		<WorkPanel heading={m.project_detail_progress()}>
 			<ProjectProgress counts={data.progress.counts} />

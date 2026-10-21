@@ -2,12 +2,15 @@ import { z } from 'zod';
 import { projectTimeline } from '../../links';
 import {
 	archiveProject,
+	canManageMembers,
 	createProject,
 	createProjectInput,
 	getProject,
 	listProjects,
 	projectProgress,
 	projectProgressMany,
+	PROJECT_VISIBILITIES,
+	setProjectVisibility,
 	unarchiveProject,
 	updateProject,
 	updateProjectInput
@@ -120,7 +123,7 @@ export const createProjectEndpoint = defineEndpoint({
 	path: '/projects',
 	summary: 'Create a project.',
 	description:
-		'Creates a project. `projectTag` is optional: when omitted the next `PRJ-####` is generated, and an explicit one is accepted (ADR 0010). `ownerPersonId` and `dueDate` (`YYYY-MM-DD`) are optional. Answers `201` with the project and a `Location` header. A tag already in use is `409` (`duplicate_project_tag`); an unknown `ownerPersonId` is a `400` on that field.',
+		'Creates a project. `projectTag` is optional: when omitted the next `PRJ-####` is generated, and an explicit one is accepted (ADR 0010). `ownerPersonId` and `dueDate` (`YYYY-MM-DD`) are optional. `visibility` is `organisation` (the default) or `members`; a members-only project starts with the owner and the creator as its members, and an API key with no person has no member to add, so only an admin key sees it afterwards. Answers `201` with the project and a `Location` header. A tag already in use is `409` (`duplicate_project_tag`); an unknown `ownerPersonId` is a `400` on that field.',
 	example: { name: 'Office move', description: 'Floor 2 to floor 4', dueDate: '2026-12-01' },
 	status: 201,
 	permissions: PROJECT_MANAGE,
@@ -144,18 +147,28 @@ export const updateProjectEndpoint = defineEndpoint({
 	path: '/projects/{tag}',
 	summary: "Edit a project's details.",
 	description:
-		'Edits `name`, `description`, `ownerPersonId`, `dueDate` and `projectTag`; every field is optional, and `null` clears the owner, the description or the due date. A change of owner or due date is recorded in the history. Archiving has its own endpoint. If `projectTag` changes, the response carries the new tag and a `Location` header; the old URL is `404` from then on, with no redirect. A tag already in use is `409`; an archived project is `409 project_archived`.',
+		"Edits `name`, `description`, `ownerPersonId`, `dueDate`, `projectTag` and `visibility`; every field is optional, and `null` clears the owner, the description or the due date. A change of owner, due date or visibility is recorded in the history. Switching `visibility` to `members` adds the owner, the key's owner and everyone assigned to a task as members; only the project's owner and admins may change it (anybody else gets `404`). Changing the owner of a members-only project adds the new owner as a member. Archiving has its own endpoint. If `projectTag` changes, the response carries the new tag and a `Location` header; the old URL is `404` from then on, with no redirect. A tag already in use is `409`; an archived project is `409 project_archived`.",
 	example: { name: 'Office move (phase 2)', dueDate: '2027-01-15' },
 	permissions: PROJECT_MANAGE,
-	input: updateProjectInput.extend({ tag }),
+	input: updateProjectInput.extend({ tag, visibility: z.enum(PROJECT_VISIBILITIES).optional() }),
 	output: projectResponse,
 	handler: async ({ principal, input }) => {
 		const actor = withReads(principal);
-		const { tag: currentTag, ...changes } = input;
+		const { tag: currentTag, visibility, ...changes } = input;
 		const target = await projectOf(actor, currentTag);
+
+		// Authorise before writing anything, so a refusal leaves nothing half-applied.
+		// The fields go first because they are what can fail on their own (a tag in
+		// use, an unknown owner); once they are in, switching visibility cannot fail.
+		if (visibility !== undefined && !canManageMembers(actor, target)) throw refusal('forbidden');
 
 		const outcome = await updateProject(actor, target.id, changes);
 		if (!outcome.ok) throw bodyRefusal(outcome.error);
+
+		if (visibility !== undefined) {
+			const changed = await setProjectVisibility(actor, target.id, visibility);
+			if (!changed.ok) throw refusal(changed.error);
+		}
 
 		const newTag = changes.projectTag ?? currentTag;
 		const body = await writtenProject(actor, newTag);

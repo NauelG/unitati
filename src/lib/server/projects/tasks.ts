@@ -11,6 +11,7 @@ import type { Mailer } from '../shared/mail';
 import { runtimeMailer, runtimeOrigin } from '../shared/runtime';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
+import type { ProjectVisibility } from './members';
 import { placeBetween, spread } from './position';
 import { matchesQuery } from './search';
 import { projects, states, taskAssignees, tasks } from './schema';
@@ -23,7 +24,9 @@ import {
 	type UpdateTaskInput
 } from './validation';
 import {
+	canBeAssigned,
 	findPerson,
+	notificationAudience,
 	lockProject,
 	lockTask,
 	type ProjectWriteFailure,
@@ -52,6 +55,8 @@ export type TaskView = {
 	projectName: string;
 	/** The project is archived, so the task is read-only. */
 	projectArchived: boolean;
+	/** Members-only: assignees must be members of the project (ADR 0042). */
+	projectVisibility: ProjectVisibility;
 	title: string;
 	description: string | null;
 	stateId: string;
@@ -73,6 +78,7 @@ const taskColumns = {
 	projectTag: projects.projectTag,
 	projectName: projects.name,
 	projectArchived: sql<boolean>`${projects.archivedAt} is not null`,
+	projectVisibility: projects.visibility,
 	title: tasks.title,
 	description: tasks.description,
 	stateId: tasks.stateId,
@@ -253,7 +259,7 @@ export async function getTask(
 
 export type CreateTaskFailure = ProjectWriteFailure | 'state_not_found' | 'duplicate_task_tag';
 export type UpdateTaskFailure = TaskWriteFailure | 'duplicate_task_tag';
-export type AssignFailure = TaskWriteFailure | 'person_not_found';
+export type AssignFailure = TaskWriteFailure | 'person_not_found' | 'not_a_member';
 export type MoveTaskFailure = TaskWriteFailure | 'state_not_found' | 'invalid_neighbours';
 
 /** The tasks of one board column in order, optionally leaving one out. */
@@ -429,6 +435,7 @@ async function addAssignee(
 	tx: Transaction,
 	actor: SessionUser,
 	task: { id: string; taskTag: string; title: string },
+	project: typeof projects.$inferSelect,
 	person: { id: string; fullName: string }
 ): Promise<PendingEmail[]> {
 	const taskId = task.id;
@@ -454,11 +461,13 @@ async function addAssignee(
 		actorPersonId: actor.personId,
 		target: { taskId },
 		snapshot: { code: task.taskTag, title: task.title, actorName: actor.name },
-		recipients: [{ personId: person.id, type: 'task.assigned' }]
+		recipients: [{ personId: person.id, type: 'task.assigned' }],
+		audience: await notificationAudience(tx, project)
 	});
 }
 
-async function removeAssignee(
+/** Also used by `members.ts` when a member leaves a project. */
+export async function removeAssignee(
 	tx: Transaction,
 	actor: SessionUser,
 	taskId: string,
@@ -495,8 +504,11 @@ export async function assign(
 
 		const person = await findPerson(tx, actor.organisationId, personId);
 		if (!person) return failure('person_not_found' as const);
+		if (!(await canBeAssigned(tx, locked.value.project, person.id))) {
+			return failure('not_a_member' as const);
+		}
 
-		emails = await addAssignee(tx, actor, locked.value.task, person);
+		emails = await addAssignee(tx, actor, locked.value.task, locked.value.project, person);
 		return success(undefined);
 	});
 
@@ -542,12 +554,15 @@ export async function setAssignees(
 	const outcome = await getDb().transaction(async (tx) => {
 		const locked = await lockTask(tx, actor, taskId);
 		if (!locked.ok) return locked;
-		const { task } = locked.value;
+		const { task, project } = locked.value;
 
 		const incoming = [];
 		for (const personId of wanted) {
 			const person = await findPerson(tx, actor.organisationId, personId);
 			if (!person) return failure('person_not_found' as const);
+			if (!(await canBeAssigned(tx, project, person.id))) {
+				return failure('not_a_member' as const);
+			}
 			incoming.push(person);
 		}
 
@@ -561,7 +576,8 @@ export async function setAssignees(
 		for (const leaving of current.filter((entry) => !keep.has(entry.personId))) {
 			await removeAssignee(tx, actor, taskId, { id: leaving.personId, fullName: leaving.fullName });
 		}
-		for (const person of incoming) emails.push(...(await addAssignee(tx, actor, task, person)));
+		for (const person of incoming)
+			emails.push(...(await addAssignee(tx, actor, task, project, person)));
 
 		return success(undefined);
 	});

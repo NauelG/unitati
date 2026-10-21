@@ -24,13 +24,19 @@ import {
 	orNull,
 	rejected,
 	addProjectAttachments,
+	addProjectMember,
 	archiveProject,
+	canManageMembers,
 	createTask,
 	createTaskInput,
 	getProject,
 	listProjectAttachments,
+	listProjectMembers,
+	PROJECT_VISIBILITIES,
 	readAttachmentForm,
 	removeProjectAttachment,
+	removeProjectMember,
+	setProjectVisibility,
 	listStates,
 	listTasks,
 	moveTask,
@@ -41,8 +47,11 @@ import {
 	unarchiveProject,
 	updateProject,
 	updateProjectInput,
+	type AddMemberFailure,
 	type CreateTaskFailure,
+	type MembershipFailure,
 	type MoveTaskFailure,
+	type RemoveMemberFailure,
 	type UpdateProjectFailure
 } from '#lib/server/projects/index.js';
 import type { Actions, PageServerLoad } from './$types';
@@ -55,10 +64,14 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 	const project = found.value;
 
 	const canManage = can(user, 'projects.manage');
+	// Owner and admins change visibility and members (ADR 0042); an archived
+	// project is read-only like the rest of it.
+	const canEditMembers =
+		canManage && canManageMembers(user, project) && project.archivedAt === null;
 
 	// What the viewer can see of the project: an employee gets their own tasks
 	// and counts of exactly those (the domain scopes both from the same viewer).
-	const [tasks, states, progress, people, related, attachments] = await Promise.all([
+	const [tasks, states, progress, people, related, attachments, members] = await Promise.all([
 		listTasks(user, { projectId: project.id }),
 		listStates(user),
 		projectProgress(user, project.id),
@@ -68,9 +81,11 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 		// The tickets behind this project, already scoped to what the viewer may
 		// see: an employee gets their own, and every count below follows suit.
 		relatedTo(user, { kind: 'project', id: project.id }),
-		listProjectAttachments(user, project.id)
+		listProjectAttachments(user, project.id),
+		listProjectMembers(user, project.id)
 	]);
-	if (!progress.ok || !attachments.ok) error(404, 'Not found');
+	if (!progress.ok || !attachments.ok || !members.ok) error(404, 'Not found');
+	const listed = new Set(members.value.map((member) => member.personId));
 
 	// The person's board preference (#127), cleaned of anything the cookie should
 	// not carry. An explicit ?view= wins over it, and is never stored: opening
@@ -104,6 +119,15 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 		// not disabled ones.
 		canManage,
 		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
+		members: members.value,
+		canEditMembers,
+		// Who can still be added: an active person who is not on the list yet.
+		memberCandidates: canEditMembers
+			? people
+					.filter((person) => person.active)
+					.filter((person) => !listed.has(person.id))
+					.map(({ id, fullName }) => ({ id, fullName }))
+			: [],
 		related,
 		attachments: attachments.value,
 		// The header's summary value: direct plus via tasks, resolved and closed left out.
@@ -127,6 +151,16 @@ const updateFailures: Record<
 	duplicate_project_tag: ['projectTag', m.project_error_duplicate_tag]
 };
 
+const membershipFailures: Record<Exclude<MembershipFailure, 'project_not_found'>, () => string> = {
+	project_archived: m.project_error_archived,
+	forbidden: m.project_members_error_forbidden
+};
+
+const addMemberFailures: Record<Exclude<AddMemberFailure, 'project_not_found'>, () => string> = {
+	...membershipFailures,
+	person_not_found: m.project_members_error_person_missing
+};
+
 const taskFailures: Record<
 	Exclude<CreateTaskFailure, 'project_not_found'>,
 	readonly [string | null, () => string]
@@ -141,6 +175,14 @@ const moveFailures: Record<Exclude<MoveTaskFailure, 'task_not_found'>, () => str
 	state_not_found: m.task_error_state_missing,
 	invalid_neighbours: m.action_error_invalid
 };
+
+function removeMemberMessage(failure: RemoveMemberFailure): string {
+	if (typeof failure === 'object') return m.project_members_error_has_assignments();
+	if (failure === 'project_not_found') error(404, 'Not found');
+	if (failure === 'is_owner') return m.project_members_error_is_owner();
+	if (failure === 'person_not_found') return m.project_members_error_person_missing();
+	return membershipFailures[failure]();
+}
 
 /** What the board sends for a move: a task, a column and, for a drop, the cards around it. */
 const moveInput = z.object({
@@ -264,6 +306,57 @@ export const actions: Actions = {
 		}
 
 		return { action: 'removeAttachment' as const };
+	},
+
+	// The three membership actions re-check on the server who may change them: the
+	// panel hides its controls from everybody else, but a hidden control is not a rule.
+	setVisibility: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const parsed = z
+			.enum(PROJECT_VISIBILITIES)
+			.safeParse((await fieldsOf(request)).get('visibility'));
+		if (!parsed.success) return rejected('setVisibility', m.action_error_invalid());
+
+		const project = await targetOf(user, params.tag);
+		const outcome = await setProjectVisibility(user, project.id, parsed.data);
+		if (!outcome.ok) {
+			if (outcome.error === 'project_not_found') error(404, 'Not found');
+			return rejected('setVisibility', membershipFailures[outcome.error]());
+		}
+
+		return { action: 'setVisibility' as const };
+	},
+
+	addMember: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const parsed = z.uuid().safeParse((await fieldsOf(request)).get('personId'));
+		if (!parsed.success) return rejected('addMember', m.action_error_invalid());
+
+		const project = await targetOf(user, params.tag);
+		const outcome = await addProjectMember(user, project.id, parsed.data);
+		if (!outcome.ok) {
+			if (outcome.error === 'project_not_found') error(404, 'Not found');
+			return rejected('addMember', addMemberFailures[outcome.error]());
+		}
+
+		return { action: 'addMember' as const };
+	},
+
+	removeMember: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const fields = await fieldsOf(request);
+		const parsed = z.uuid().safeParse(fields.get('personId'));
+		if (!parsed.success) return rejected('removeMember', m.action_error_invalid());
+
+		const project = await targetOf(user, params.tag);
+		const outcome = await removeProjectMember(user, project.id, parsed.data, {
+			confirm: fields.get('confirm') === '1'
+		});
+		if (!outcome.ok) {
+			return rejected('removeMember', removeMemberMessage(outcome.error));
+		}
+
+		return { action: 'removeMember' as const };
 	},
 
 	unarchive: async ({ locals, params }) => {
