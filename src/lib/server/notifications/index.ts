@@ -19,6 +19,19 @@ export { notify } from './notify';
 export type { NotifyInput, NotifyTarget, PendingEmail } from './notify';
 
 export {
+	notificationMail,
+	sendNotificationEmails,
+	linkedTaskMail,
+	sendLinkedTaskEmails,
+	emailConfigured,
+	PREFERENCES_PATH
+} from './mail';
+export type { CompletedTask } from './mail';
+
+export { getPreferences, setPreference, receivableTypes } from './preferences';
+export type { Preference, PreferenceFailure } from './preferences';
+
+export {
 	unreadCount,
 	listInbox,
 	markRead,

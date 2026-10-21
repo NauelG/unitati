@@ -3,7 +3,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import type { QueueColor } from '#lib/domain/queue-color.js';
 import type { Priority, TicketStatus } from '#lib/domain/status.js';
 import { actorColumns, recordActivity } from '../activity';
-import { notify } from '../notifications';
+import { notify, sendNotificationEmails, type PendingEmail } from '../notifications';
 import { linkAsset, type LinkCategoryFailure } from '../links';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
@@ -12,9 +12,8 @@ import { uniqueConstraintName } from '../db/errors';
 import { people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
-import { runtimeMailer, runtimeStorage } from '../shared/runtime';
-import { sendQuietly, type Mailer } from '../shared/mail';
-import { resolvedMail } from './mail';
+import { runtimeMailer, runtimeOrigin, runtimeStorage } from '../shared/runtime';
+import type { Mailer } from '../shared/mail';
 import { queues, requestForms, ticketComments, tickets, attachments } from './schema';
 import type { Transaction } from '../db';
 import { requireTicketScope, seesInternal } from './scope';
@@ -42,15 +41,15 @@ import {
 export interface Deps {
 	storage?: Storage;
 	mailer?: Mailer | null;
-	/** Builds the absolute link a mail points at; defaults to a relative path. */
-	linkTo?: (ticketTag: string) => string;
+	/** The public origin mail links are built from; defaults to `BETTER_AUTH_URL`. */
+	origin?: string;
 }
 
 export function resolveDeps(deps: Deps) {
 	return {
 		storage: deps.storage ?? runtimeStorage(),
 		mailer: deps.mailer === undefined ? runtimeMailer() : deps.mailer,
-		linkTo: deps.linkTo ?? ((tag: string) => `/portal/tickets/${encodeURIComponent(tag)}`)
+		origin: deps.origin ?? runtimeOrigin()
 	};
 }
 
@@ -584,14 +583,14 @@ export async function changeTicketStatus(
 	to: TicketStatus,
 	deps: Deps = {}
 ): Promise<Outcome<void, ChangeFailure | 'invalid_transition'>> {
-	const { mailer, linkTo } = resolveDeps(deps);
+	const { mailer, origin } = resolveDeps(deps);
 	const ticket = await findTicket(actor, ticketTag);
 	if (!ticket) return failure('ticket_not_found');
 
 	// A typed failure, not an exception: skipping a step is a business outcome.
 	if (!canTransition(ticket.status, to)) return failure('invalid_transition');
 
-	const requesterEmail = await getDb().transaction(async (tx) => {
+	const emails = await getDb().transaction(async (tx) => {
 		await tx
 			.update(tickets)
 			.set({ status: to, updatedAt: new Date() })
@@ -605,20 +604,19 @@ export async function changeTicketStatus(
 			payload: { from: ticket.status, to }
 		});
 
-		const [person] = await tx
-			.select({ email: people.email })
-			.from(people)
-			.where(eq(people.id, ticket.requesterPersonId));
-		return person?.email ?? null;
+		// Only `resolved` tells the requester; other moves reach followers (#57).
+		if (to !== 'resolved') return [];
+		return notify(tx, {
+			organisationId: actor.organisationId,
+			actorPersonId: actor.personId,
+			target: { ticketId: ticket.id },
+			snapshot: { code: ticket.ticketTag, title: ticket.subject, actorName: actor.name },
+			recipients: [{ personId: ticket.requesterPersonId, type: 'ticket.resolved' }]
+		});
 	});
 
 	// After commit, not awaited: mail degrades, it never blocks (ADR 0006).
-	if (to === 'resolved' && requesterEmail) {
-		void sendQuietly(mailer, {
-			to: requesterEmail,
-			...resolvedMail(ticket, linkTo(ticket.ticketTag))
-		});
-	}
+	void sendNotificationEmails(mailer, emails, origin);
 
 	return success(undefined);
 }
@@ -688,8 +686,10 @@ export async function setTicketPriority(
 export async function assignTicket(
 	actor: SessionUser,
 	ticketTag: string,
-	personId: string | null
+	personId: string | null,
+	deps: Deps = {}
 ): Promise<Outcome<void, ChangeFailure | 'assignee_not_found'>> {
+	const { mailer, origin } = resolveDeps(deps);
 	const ticket = await findTicket(actor, ticketTag);
 	if (!ticket) return failure('ticket_not_found');
 	if (ticket.assigneePersonId === personId) return success(undefined);
@@ -706,7 +706,7 @@ export async function assignTicket(
 	if (personId !== null && !next) return failure('assignee_not_found');
 	const previous = ticket.assigneePersonId ? await named(ticket.assigneePersonId) : null;
 
-	await getDb().transaction(async (tx) => {
+	const emails = await getDb().transaction(async (tx): Promise<PendingEmail[]> => {
 		await tx
 			.update(tickets)
 			.set({ assigneePersonId: personId, updatedAt: new Date() })
@@ -725,22 +725,27 @@ export async function assignTicket(
 				payload: { toPersonId: next.id, toPersonName: next.fullName }
 			});
 
-			// Unassigning notifies nobody. Mail is #302's; the pending list is ignored.
-			await notify(tx, {
+			// Unassigning notifies nobody.
+			return notify(tx, {
 				organisationId: actor.organisationId,
 				actorPersonId: actor.personId,
 				target: { ticketId: ticket.id },
 				snapshot: { code: ticket.ticketTag, title: ticket.subject, actorName: actor.name },
 				recipients: [{ personId: next.id, type: 'ticket.assigned' }]
 			});
-		} else if (previous) {
+		}
+		if (previous) {
 			await recordActivity(tx, {
 				...base,
 				verb: 'ticket.unassigned',
 				payload: { fromPersonId: previous.id, fromPersonName: previous.fullName }
 			});
 		}
+		return [];
 	});
+
+	// After commit, not awaited (ADR 0006).
+	void sendNotificationEmails(mailer, emails, origin);
 
 	return success(undefined);
 }

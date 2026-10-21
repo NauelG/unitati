@@ -5,6 +5,30 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.101.0] - 2026-10-21
+
+### Added
+
+- **Notifications for comments and resolved tickets** (#33, #302): a public comment notifies the
+  requester ("ha respondido") and the assignee; an internal comment notifies only the assignee and
+  never reaches the requester. Resolving a ticket notifies the requester. The author of a change is
+  never notified of it. Inbox rows now show the comment's excerpt or the completed task.
+- **Email per notification**: every notification can also arrive by email, with the record's code
+  first in the subject, the excerpt of the comment (up to 280 characters, plain text), a link to the
+  record (the portal for requesters) and a link to the preferences. Assignments are emailed by
+  default; comments on your tickets as assignee are not.
+- **Notification preferences** at `/account/notifications`, linked from the user menu (app and
+  portal) and from the bell: per type, "En la aplicación" and "Por correo". Assignments and mentions
+  always show in-app. An employee sees only the types that can reach them. A note says when the
+  server has no SMTP configured.
+
+### Changed
+
+- The reply, resolved and linked-task emails are now notifications and follow each person's
+  preferences (all three stay on by default, with the same subjects). The linked-task email no
+  longer reaches the technician who completed the task, and its in-app notification arrives even
+  without SMTP.
+
 ## [0.100.0] - 2026-10-21
 
 ### Added

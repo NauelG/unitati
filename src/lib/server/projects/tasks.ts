@@ -2,11 +2,13 @@ import { and, asc, desc, eq, exists, inArray, ne, sql, type SQL } from 'drizzle-
 import type { StateGroup } from '#lib/domain/status.js';
 import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
-import { notify } from '../notifications';
+import { notify, sendNotificationEmails, type PendingEmail } from '../notifications';
 import { getDb, type Transaction } from '../db';
 import { constraintViolation, uniqueConstraintName } from '../db/errors';
 import { people } from '../directory/schema';
 import { emit, type DomainEvents } from '../shared/events';
+import type { Mailer } from '../shared/mail';
+import { runtimeMailer, runtimeOrigin } from '../shared/runtime';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
 import { placeBetween, spread } from './position';
@@ -411,19 +413,31 @@ export async function updateTask(
 
 /* ----------------------------- assignees ----------------------------------- */
 
+/** Mail collaborators, injectable so specs need no SMTP; default to the runtime's. */
+export interface TaskMailDeps {
+	mailer?: Mailer | null;
+	origin?: string;
+}
+
+function sendAfterCommit(emails: PendingEmail[], deps: TaskMailDeps): void {
+	const mailer = deps.mailer === undefined ? runtimeMailer() : deps.mailer;
+	void sendNotificationEmails(mailer, emails, deps.origin ?? runtimeOrigin());
+}
+
+/** Returns the mails to send once the caller's transaction has committed. */
 async function addAssignee(
 	tx: Transaction,
 	actor: SessionUser,
 	task: { id: string; taskTag: string; title: string },
 	person: { id: string; fullName: string }
-): Promise<void> {
+): Promise<PendingEmail[]> {
 	const taskId = task.id;
 	const inserted = await tx
 		.insert(taskAssignees)
 		.values({ organisationId: actor.organisationId, taskId, personId: person.id })
 		.onConflictDoNothing()
 		.returning({ personId: taskAssignees.personId });
-	if (inserted.length === 0) return;
+	if (inserted.length === 0) return [];
 
 	await recordActivity(tx, {
 		organisationId: actor.organisationId,
@@ -435,8 +449,7 @@ async function addAssignee(
 
 	// Only a person newly added is told: `onConflictDoNothing` above returned early
 	// for anyone already on the task, so setting the same set again notifies nobody.
-	// Mail is #302's; the pending list is ignored here.
-	await notify(tx, {
+	return notify(tx, {
 		organisationId: actor.organisationId,
 		actorPersonId: actor.personId,
 		target: { taskId },
@@ -470,20 +483,25 @@ async function removeAssignee(
 export async function assign(
 	actor: SessionUser,
 	taskId: string,
-	personId: string
+	personId: string,
+	deps: TaskMailDeps = {}
 ): Promise<Outcome<void, AssignFailure>> {
 	requireManage(actor);
 
-	return getDb().transaction(async (tx) => {
+	let emails: PendingEmail[] = [];
+	const outcome = await getDb().transaction(async (tx) => {
 		const locked = await lockTask(tx, actor, taskId);
 		if (!locked.ok) return locked;
 
 		const person = await findPerson(tx, actor.organisationId, personId);
 		if (!person) return failure('person_not_found' as const);
 
-		await addAssignee(tx, actor, locked.value.task, person);
+		emails = await addAssignee(tx, actor, locked.value.task, person);
 		return success(undefined);
 	});
+
+	sendAfterCommit(emails, deps);
+	return outcome;
 }
 
 /** Idempotent: removing somebody who is not on the task writes nothing. */
@@ -514,12 +532,14 @@ export async function unassign(
 export async function setAssignees(
 	actor: SessionUser,
 	taskId: string,
-	personIds: readonly string[]
+	personIds: readonly string[],
+	deps: TaskMailDeps = {}
 ): Promise<Outcome<void, AssignFailure>> {
 	requireManage(actor);
 	const wanted = [...new Set(personIds)];
 
-	return getDb().transaction(async (tx) => {
+	const emails: PendingEmail[] = [];
+	const outcome = await getDb().transaction(async (tx) => {
 		const locked = await lockTask(tx, actor, taskId);
 		if (!locked.ok) return locked;
 		const { task } = locked.value;
@@ -541,10 +561,14 @@ export async function setAssignees(
 		for (const leaving of current.filter((entry) => !keep.has(entry.personId))) {
 			await removeAssignee(tx, actor, taskId, { id: leaving.personId, fullName: leaving.fullName });
 		}
-		for (const person of incoming) await addAssignee(tx, actor, task, person);
+		for (const person of incoming) emails.push(...(await addAssignee(tx, actor, task, person)));
 
 		return success(undefined);
 	});
+
+	// A failure rolled everything back, so there is nothing to announce.
+	if (outcome.ok) sendAfterCommit(emails, deps);
+	return outcome;
 }
 
 /* -------------------------------- moving ----------------------------------- */

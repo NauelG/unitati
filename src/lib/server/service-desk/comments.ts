@@ -4,10 +4,14 @@ import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { people } from '../directory/schema';
-import { renderMarkdown } from '../shared/markdown';
+import {
+	notify,
+	sendNotificationEmails,
+	type NotifyInput,
+	type PendingEmail
+} from '../notifications';
+import { plainExcerpt, renderMarkdown } from '../shared/markdown';
 import { failure, success, type Outcome } from '../shared/outcome';
-import { sendQuietly } from '../shared/mail';
-import { newReplyMail } from './mail';
 import { attachments, ticketComments, tickets } from './schema';
 import { requireTicketScope, seesInternal } from './scope';
 import { compareThreadItems } from './thread-order';
@@ -162,14 +166,36 @@ export type AddCommentFailure =
 	| 'attachments_too_large'
 	| 'body_too_long';
 
+/** The longest excerpt a notification carries (ADR 0040). */
+const EXCERPT_LENGTH = 280;
+
+/**
+ * Who a new comment concerns (#302): a public one, the requester (`ticket.replied`)
+ * and the assignee (`ticket.commented`); an internal one, only the assignee.
+ * `notify` drops the author and anybody an internal note may not reach.
+ */
+function commentRecipients(
+	ticket: { requesterPersonId: string; assigneePersonId: string | null },
+	visibility: 'public' | 'internal'
+): NotifyInput['recipients'] {
+	const recipients: NotifyInput['recipients'] = [];
+	if (visibility === 'public') {
+		recipients.push({ personId: ticket.requesterPersonId, type: 'ticket.replied' });
+	}
+	if (ticket.assigneePersonId) {
+		recipients.push({ personId: ticket.assigneePersonId, type: 'ticket.commented' });
+	}
+	return recipients;
+}
+
 /**
  * Adds a reply or an internal note. The ticket is looked up through the
  * viewer's scope, so an employee can only answer their own; an internal note
  * additionally needs `tickets.comment.internal`.
  *
- * Mail goes to the requester only, for a **public** comment written by someone
- * else, and **after commit, unawaited**: with SMTP down the comment is still
- * saved and the response still returns (ADR 0006).
+ * Notifies the requester and the assignee inside the same transaction
+ * (ADR 0040); their mails go out **after commit, unawaited**: with SMTP down the
+ * comment is still saved and the response still returns (ADR 0006).
  */
 export async function addComment(
 	actor: SessionUser,
@@ -183,7 +209,7 @@ export async function addComment(
 	if (input.body.trim().length > MAX_COMMENT_LENGTH) return failure('body_too_long');
 
 	const values = addCommentInput.parse(input);
-	const { storage, mailer, linkTo } = resolveDeps(deps);
+	const { storage, mailer, origin } = resolveDeps(deps);
 
 	if (values.visibility === 'internal' && !seesInternal(actor)) {
 		return failure('internal_not_allowed');
@@ -197,7 +223,8 @@ export async function addComment(
 			id: tickets.id,
 			ticketTag: tickets.ticketTag,
 			subject: tickets.subject,
-			requesterPersonId: tickets.requesterPersonId
+			requesterPersonId: tickets.requesterPersonId,
+			assigneePersonId: tickets.assigneePersonId
 		})
 		.from(tickets)
 		.where(and(requireTicketScope(actor), eq(tickets.ticketTag, ticketTag)) as SQL)
@@ -207,8 +234,9 @@ export async function addComment(
 	const stored = await storeFiles(storage, actor.organisationId, files);
 
 	let commentId: string;
+	let emails: PendingEmail[];
 	try {
-		commentId = await getDb().transaction(async (tx) => {
+		({ commentId, emails } = await getDb().transaction(async (tx) => {
 			const [comment] = await tx
 				.insert(ticketComments)
 				.values({
@@ -231,26 +259,30 @@ export async function addComment(
 			}
 
 			await tx.update(tickets).set({ updatedAt: new Date() }).where(eq(tickets.id, ticket.id));
-			return comment.id;
-		});
+
+			const pending = await notify(tx, {
+				organisationId: actor.organisationId,
+				actorPersonId: actor.personId,
+				target: { ticketId: ticket.id },
+				visibility: values.visibility,
+				snapshot: {
+					code: ticket.ticketTag,
+					title: ticket.subject,
+					actorName: actor.name,
+					excerpt: plainExcerpt(values.body, EXCERPT_LENGTH) || undefined
+				},
+				recipients: commentRecipients(ticket, values.visibility)
+			});
+
+			return { commentId: comment.id, emails: pending };
+		}));
 	} catch (error) {
 		await Promise.all(stored.map((file) => storage.delete(file.row.storageKey)));
 		throw error;
 	}
 
-	if (values.visibility === 'public' && actor.personId !== ticket.requesterPersonId) {
-		const [requester] = await getDb()
-			.select({ email: people.email })
-			.from(people)
-			.where(eq(people.id, ticket.requesterPersonId));
-
-		if (requester?.email) {
-			void sendQuietly(mailer, {
-				to: requester.email,
-				...newReplyMail(ticket, linkTo(ticket.ticketTag))
-			});
-		}
-	}
+	// After commit, not awaited: with SMTP down the comment is still saved (ADR 0006).
+	void sendNotificationEmails(mailer, emails, origin);
 
 	return success({ commentId });
 }

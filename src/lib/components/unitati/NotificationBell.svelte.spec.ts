@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import NotificationBell from './NotificationBell.svelte';
 
@@ -40,5 +40,19 @@ describe('NotificationBell', () => {
 		fetchMock.mockClear();
 		await vi.advanceTimersByTimeAsync(180_000);
 		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('links the panel to the notification preferences', async () => {
+		// The popover opens on its own schedule; `findBy` polls on real timers.
+		vi.useRealTimers();
+		fetchMock.mockImplementation(async (url: string) =>
+			url === '/notifications/recent' ? Response.json({ items: [] }) : Response.json({ count: 0 })
+		);
+		render(NotificationBell, { count: 0, inboxHref: '/notifications' });
+
+		await fireEvent.click(screen.getByRole('button', { name: 'Notificaciones, 0 sin leer' }));
+
+		const link = await screen.findByRole('link', { name: 'Preferencias de notificaciones' });
+		expect(link.getAttribute('href')).toBe('/account/notifications');
 	});
 });

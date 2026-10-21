@@ -1,6 +1,6 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { can } from '../access/permissions';
-import { users } from '../auth/schema';
+import { users, type UserRole } from '../auth/schema';
 import type { Transaction } from '../db';
 import { people } from '../directory/schema';
 import { notificationPreferences, notifications } from './schema';
@@ -21,11 +21,13 @@ export type NotifyInput = {
 	visibility?: 'public' | 'internal';
 };
 
-/** A mail the caller sends after commit. #302 sends them; today every caller ignores them. */
+/** A mail the caller sends after commit, with `sendNotificationEmails` (#302). */
 export type PendingEmail = {
 	to: string;
 	type: NotificationType;
 	personId: string;
+	/** The recipient's role, so the link leads where they read the record; null without a user. */
+	role: UserRole | null;
 	snapshot: Snapshot;
 	target: NotifyTarget;
 };
@@ -139,6 +141,7 @@ export async function notify(tx: Transaction, input: NotifyInput): Promise<Pendi
 				to: person.email,
 				type,
 				personId: person.id,
+				role: person.role,
 				snapshot,
 				target: input.target
 			});

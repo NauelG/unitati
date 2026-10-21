@@ -1,7 +1,8 @@
 # service-desk
 
-Tickets, queues, public and internal comments, attachments, and the outbound mail that tells a
-requester somebody answered. Later: canned responses, SLAs, inbound email.
+Tickets, queues, public and internal comments, attachments. Comments, assignment and resolution
+notify the people concerned through `notify` (ADR 0040); mail is the notifications module's.
+Later: canned responses, SLAs, inbound email.
 
 | File               | Owns                                                                                                                                                                                     |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -13,7 +14,6 @@ requester somebody answered. Later: canned responses, SLAs, inbound email.
 | `queues.ts`        | Queue CRUD and the default queue a portal ticket lands in                                                                                                                                |
 | `transitions.ts`   | The status workflow, as data                                                                                                                                                             |
 | `scope.ts`         | Which tickets a viewer sees; who sees internal notes                                                                                                                                     |
-| `mail.ts`          | The ticket mail templates, including `taskCompletedMail`; exported for domains that react to events (ADR 0023). Sending lives in `shared/mail.ts`                                        |
 | `summaries.ts`     | Reads other domains draw on: `ticketSummaries`, `assignedOpenTickets`                                                                                                                    |
 
 ## Decisions worth knowing before changing this
@@ -24,8 +24,9 @@ requester somebody answered. Later: canned responses, SLAs, inbound email.
   from transitions; if any jump were allowed they would measure noise.
 - **An internal note is filtered in the query.** `ticketThread` and `getAttachment` take the
   viewer, and a viewer without `tickets.comment.internal` never receives the row.
-- **Mail degrades.** It is sent after commit and not awaited; with SMTP down the comment is still
-  saved (ADR 0006). With `SMTP_HOST` unset it is off.
+- **Mail degrades.** `notify` runs inside the write's transaction and returns the mails, which are
+  sent after commit and not awaited; with SMTP down the comment is still saved (ADR 0006). With
+  `SMTP_HOST` unset it is off.
 - **A portal ticket has no queue picker.** It lands in the organisation's first queue
   (`defaultQueue`); staff choose.
 - **A ticket tag is a URL segment.** `RESERVED_TICKET_TAGS` names the static routes beside it

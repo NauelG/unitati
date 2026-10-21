@@ -14,7 +14,7 @@ Typed relations between records of different domains (ticket â†’ asset, ticket â
 | `escalation-draft.ts`        | `escalationDraft(ticket)`: the title and description an escalation form pre-fills                                          |
 | `related.ts`                 | `relatedTo(viewer, record)`: the uniform read facade over every relation                                                   |
 | `timeline.ts`                | `mergeAssetTimeline`/`mergeTaskTimeline`/`mergeProjectTimeline` (activity + live tickets on one rail), `recentTicketCount` |
-| `notify-task-completed.ts`   | The `task.completed` subscriber: one mail per assigned technician (#152, ADR 0024)                                         |
+| `notify-task-completed.ts`   | The `task.completed` subscriber: a `task.linked_completed` notification per ticket, one mail per technician (#152, #302)   |
 | `index.ts`                   | The public surface: callers import from here and never from a file inside                                                  |
 
 ## Decisions worth knowing before changing this

@@ -14,11 +14,14 @@ import type { Mailer, MailMessage } from '../shared/mail';
 import { tickets } from '../service-desk/schema';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
 import { flushEvents, on, resetSubscriptions, setDispatchMode } from '../shared/events';
+import { setPreference } from '../notifications';
+import { notifications } from '../notifications/schema';
 import { notifyTaskCompleted } from './notify-task-completed';
 import { ticketTask } from './schema';
 
 /**
- * `task.completed` → mail, from the move to the outbox (#152). The handler is
+ * `task.completed` → `task.linked_completed` notifications and mail, from the
+ * move to the outbox (#152, #302). The handler is
  * wired the way `subscriptions.ts` wires it, with a fake mailer, and driven
  * through `moveTask`, which is the only emitter and the call every entry point
  * (the project board's menu and drag, the task record) ends in.
@@ -78,8 +81,11 @@ async function scene() {
 	return { ...base, states, task, second, ticketFor };
 }
 
-describe('task completed → mail', () => {
-	it('sends one mail per technician, listing all their tickets', async () => {
+const linkedRows = () =>
+	getDb().select().from(notifications).where(eq(notifications.type, 'task.linked_completed'));
+
+describe('task completed → notification and mail', () => {
+	it('writes one in-app row per ticket and sends one mail per technician, listing them', async () => {
 		const { admin, states, task, technician, second, ticketFor } = await scene();
 		const a = await ticketFor(technician.personId, { subject: 'No network' });
 		const b = await ticketFor(technician.personId, { subject: 'Slow wifi' });
@@ -88,6 +94,17 @@ describe('task completed → mail', () => {
 
 		await moveTask(admin, task.id, states.completed.id);
 		await flushEvents();
+
+		const rows = await linkedRows();
+		expect(
+			rows
+				.filter((row) => row.recipientPersonId === technician.personId)
+				.map((row) => row.ticketId)
+				.sort()
+		).toEqual([a.id, b.id].sort());
+		expect(rows.filter((row) => row.recipientPersonId === second.personId)).toHaveLength(1);
+		expect(rows[0].snapshot.summary).toBe('TSK-0001 Replace the switch');
+		expect(rows.every((row) => row.actorPersonId === admin.personId)).toBe(true);
 
 		expect(sent).toHaveLength(2);
 		const toTom = sent.find((m) => m.to === technician.email)!;
@@ -100,6 +117,32 @@ describe('task completed → mail', () => {
 		expect(toTom.text).not.toContain(c.ticketTag);
 		expect(toTessa.text).toContain(`${c.ticketTag} Port dead`);
 		expect(toTessa.text).not.toContain(a.ticketTag);
+		expect(toTom.text).toContain(`${origin}/account/notifications`);
+	});
+
+	it('follows the technician’s preference: no mail, the in-app rows still arrive', async () => {
+		const { admin, states, task, technician, ticketFor } = await scene();
+		await ticketFor(technician.personId);
+		await setPreference(technician, 'task.linked_completed', 'email', false);
+		subscribe(fakeMailer());
+
+		await moveTask(admin, task.id, states.completed.id);
+		await flushEvents();
+
+		expect(sent).toEqual([]);
+		expect(await linkedRows()).toHaveLength(1);
+	});
+
+	it('does not tell the technician who completed the task themself', async () => {
+		const { states, task, technician, ticketFor } = await scene();
+		await ticketFor(technician.personId);
+		subscribe(fakeMailer());
+
+		await moveTask(technician, task.id, states.completed.id);
+		await flushEvents();
+
+		expect(sent).toEqual([]);
+		expect(await linkedRows()).toEqual([]);
 	});
 
 	it('mails again when the task leaves completed and re-enters it', async () => {
@@ -127,9 +170,10 @@ describe('task completed → mail', () => {
 
 		expect(completed.ok).toBe(true);
 		expect(sent).toEqual([]);
+		expect(await linkedRows()).toEqual([]);
 	});
 
-	it('does nothing, and does not fail, when SMTP is not configured', async () => {
+	it('mails nothing, and does not fail, when SMTP is not configured; the inbox still hears', async () => {
 		const { admin, states, task, technician, ticketFor } = await scene();
 		await ticketFor(technician.personId);
 		subscribe(null);
@@ -139,13 +183,13 @@ describe('task completed → mail', () => {
 
 		expect(moved.ok).toBe(true);
 		expect(sent).toEqual([]);
+		expect(await linkedRows()).toHaveLength(1);
 	});
 
 	it('skips a technician with no address', async () => {
 		const { admin, states, task, technician, ticketFor } = await scene();
 		await ticketFor(technician.personId);
 		await getDb().update(people).set({ email: '' }).where(eq(people.id, technician.personId!));
-		vi.spyOn(console, 'debug').mockImplementation(() => {});
 		subscribe(fakeMailer());
 
 		await moveTask(admin, task.id, states.completed.id);

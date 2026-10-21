@@ -61,9 +61,6 @@ export {
 } from './summaries';
 export type { TicketRow, AssignedOpenTicket } from './summaries';
 
-/** Ticket mail templates, for the domains that react to events with a message (ADR 0024). */
-export { taskCompletedMail } from './mail';
-
 export { addSystemNote, handoverDecidedNote } from './system-note';
 export { ticketThread, addComment, editComment, getAttachment } from './comments';
 export type {

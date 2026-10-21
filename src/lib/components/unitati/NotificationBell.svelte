@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import BellIcon from '@lucide/svelte/icons/bell';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import * as Popover from '#lib/components/ui/popover/index.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { InboxItem } from '#lib/server/notifications/index.js';
-	import Button from './Button.svelte';
+	import Button, { button } from './Button.svelte';
 	import { startUnreadPolling } from './notification-poll.js';
 	import NotificationRow from './NotificationRow.svelte';
 
@@ -112,14 +113,25 @@
 			class="flex items-center justify-between gap-[var(--space-3)] border-b border-[var(--border)] px-[var(--space-4)] py-[var(--space-3)]"
 		>
 			<h2 class="text-sm font-semibold text-[var(--ink)]">{m.notifications_title()}</h2>
-			<button
-				type="button"
-				class="text-xs font-medium text-[var(--action)] hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-45"
-				disabled={count === 0}
-				onclick={markAll}
-			>
-				{m.notifications_mark_all_read()}
-			</button>
+			<div class="flex items-center gap-[var(--space-2)]">
+				<button
+					type="button"
+					class="text-xs font-medium text-[var(--action)] hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-45"
+					disabled={count === 0}
+					onclick={markAll}
+				>
+					{m.notifications_mark_all_read()}
+				</button>
+				<a
+					href="/account/notifications"
+					class={button({ variant: 'ghost', size: 'sm', iconOnly: true })}
+					aria-label={m.notifications_settings_link()}
+					title={m.notifications_settings_link()}
+					onclick={() => (open = false)}
+				>
+					<SettingsIcon class="size-4" aria-hidden="true" />
+				</a>
+			</div>
 		</header>
 
 		<div class="max-h-96 overflow-y-auto">

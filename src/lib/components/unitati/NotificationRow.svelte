@@ -2,7 +2,7 @@
 	import { formatRelative } from '#lib/format-date.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { NotificationType, Snapshot } from '#lib/server/notifications/index.js';
-	import { notificationSentence } from './notification-sentence.js';
+	import { notificationSentence } from '#lib/notification-sentence.js';
 
 	interface Props {
 		type: NotificationType;
@@ -15,11 +15,14 @@
 	let { type, snapshot, read, createdAt }: Props = $props();
 
 	const when = $derived(formatRelative(new Date(createdAt)));
+	/** The completed task, or the words of the comment (#302): plain text, never markup. */
+	const detail = $derived(snapshot.summary ?? snapshot.excerpt);
 </script>
 
 <!--
 	What one notification looks like, in the bell and on the inbox page: the unread
-	dot, the sentence, then the record code and how long ago. The dot is decorative;
+	dot, the sentence, the excerpt or summary when there is one, then the record
+	code and how long ago. The dot is decorative;
 	"Sin leer" is read out instead, so unread is not conveyed by colour alone.
 -->
 <span class="flex items-start gap-[var(--space-3)]">
@@ -34,6 +37,9 @@
 		<span class="block text-sm text-pretty text-[var(--ink)] {read ? '' : 'font-medium'}">
 			{notificationSentence(type, snapshot)}
 		</span>
+		{#if detail}
+			<span class="mt-0.5 line-clamp-2 text-xs text-[var(--ink-muted)]">{detail}</span>
+		{/if}
 		<span class="mt-0.5 flex items-center gap-[var(--space-2)] text-xs text-[var(--ink-muted)]">
 			<span class="font-mono">{snapshot.code}</span>
 			<span aria-hidden="true">·</span>

@@ -50,7 +50,12 @@
 		{/if}
 		<ThemeMenuItems />
 		<DropdownMenu.Separator />
-		<!-- A real link: it works without script and opens in a new tab on demand. -->
+		<!-- Real links: they work without script and open in a new tab on demand. -->
+		<DropdownMenu.Item>
+			{#snippet child({ props })}
+				<a href="/account/notifications" {...props}>{m.nav_notification_preferences()}</a>
+			{/snippet}
+		</DropdownMenu.Item>
 		<DropdownMenu.Item>
 			{#snippet child({ props })}
 				<a href="/account/password" {...props}>{m.nav_change_password()}</a>

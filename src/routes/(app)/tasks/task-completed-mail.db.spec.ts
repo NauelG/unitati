@@ -16,11 +16,14 @@ import { actions as boardActions } from '../projects/[tag]/+page.server';
 import { actions as recordActions } from './[taskTag]/+page.server';
 
 /**
- * The same mail from every way a person moves a task into a completed state
+ * The same notification from every way a person moves a task into a completed state
  * (#152): the record's state selector, the board's "Move to…" menu and a drop
  * on the board. All three end in `moveTask`, which is what emits; these specs
  * hold the entry points to that, so a fourth one that bypassed it would show.
  * The API has no task endpoint yet; it will get its case with the endpoint.
+ *
+ * The person who moves the task is an admin, not the assigned technician: the
+ * actor is never notified of their own action (ADR 0040).
  */
 
 let sent: MailMessage[];
@@ -69,10 +72,10 @@ function expectOneMailAbout(ticketTag: string, to: string) {
 
 describe('moving a task to a completed state mails the technician', () => {
 	it('from the task record', async () => {
-		const { technician, states, task, ticket } = await setup();
+		const { admin, technician, states, task, ticket } = await setup();
 
 		await recordActions.changeState(
-			actionEvent(technician, { stateId: states.completed.id }, { taskTag: task.taskTag })
+			actionEvent(admin, { stateId: states.completed.id }, { taskTag: task.taskTag })
 		);
 		await flushEvents();
 
@@ -80,11 +83,11 @@ describe('moving a task to a completed state mails the technician', () => {
 	});
 
 	it('from the board menu', async () => {
-		const { technician, states, task, project, ticket } = await setup();
+		const { admin, technician, states, task, project, ticket } = await setup();
 
 		await boardActions.moveTask(
 			actionEvent(
-				technician,
+				admin,
 				{ taskId: task.id, stateId: states.completed.id },
 				{ tag: project.projectTag }
 			)
@@ -95,7 +98,7 @@ describe('moving a task to a completed state mails the technician', () => {
 	});
 
 	it('from a drop between two cards of the completed column', async () => {
-		const { technician, organisation, states, task, project, ticket } = await setup();
+		const { admin, technician, organisation, states, task, project, ticket } = await setup();
 		const above = await createTaskRow(organisation.id, project.id, states.completed.id, {
 			position: '1000'
 		});
@@ -105,7 +108,7 @@ describe('moving a task to a completed state mails the technician', () => {
 
 		await boardActions.moveTask(
 			actionEvent(
-				technician,
+				admin,
 				{ taskId: task.id, stateId: states.completed.id, after: above.id, before: below.id },
 				{ tag: project.projectTag }
 			)
