@@ -5,6 +5,14 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.97.1] - 2026-10-21
+
+### Fixed
+
+- Granting access to a person from the directory now refreshes the table and shows the temporary
+  password. The dialog's submit callback read the person's name after closing the dialog, threw,
+  and never reached the page refresh, so the row kept saying "No access" until a reload.
+
 ## [0.97.0] - 2026-10-21
 
 ### Added
