@@ -44,3 +44,52 @@ export function handoverRejectedMail(input: {
 		].join('\n')
 	};
 }
+
+const ACTS: Record<'delivery' | 'return', string> = {
+	delivery: 'entrega',
+	return: 'devolución'
+};
+
+/**
+ * The person's own copy of the document (ADR 0036, decision 3). Receiving it
+ * at the moment of signing is evidence on its own, so it goes out whether they
+ * accepted or rejected.
+ */
+export function handoverCopyMail(input: {
+	personName: string;
+	organisationName: string;
+	code: string;
+	direction: 'delivery' | 'return';
+	status: 'accepted' | 'rejected';
+}): { subject: string; text: string } {
+	const act = ACTS[input.direction];
+	const verb = input.status === 'accepted' ? 'aceptado' : 'rechazado';
+	return {
+		subject: `[${input.code}] ${input.organisationName}: tu copia del acta de ${act}`,
+		text: [
+			`Hola ${input.personName},`,
+			'',
+			`Has ${verb} el acta de ${act} ${input.code} de ${input.organisationName}. Te adjuntamos tu copia en PDF.`,
+			'',
+			'Guárdala: es el documento que recoge lo que firmaste, cuándo y desde dónde.'
+		].join('\n')
+	};
+}
+
+/** To the technician who issued a handover, when the person accepts it (#276). */
+export function handoverAcceptedMail(input: {
+	issuerName: string;
+	personName: string;
+	code: string;
+	direction: 'delivery' | 'return';
+}): { subject: string; text: string } {
+	const act = ACTS[input.direction];
+	return {
+		subject: `[${input.code}] ${input.personName} ha firmado la ${act}`,
+		text: [
+			`Hola ${input.issuerName},`,
+			'',
+			`${input.personName} ha aceptado y firmado la ${act} ${input.code}. Te adjuntamos el acta en PDF.`
+		].join('\n')
+	};
+}

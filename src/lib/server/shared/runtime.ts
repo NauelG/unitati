@@ -1,6 +1,7 @@
 import {
 	BETTER_AUTH_URL,
 	MAIL_FROM,
+	ORGANISATION_TIME_ZONE,
 	SMTP_HOST,
 	SMTP_PASSWORD,
 	SMTP_PORT,
@@ -60,4 +61,13 @@ export function resetRuntime(): void {
 /** The public origin of this installation, for links that leave the app (a mailed signing link). */
 export function runtimeOrigin(): string {
 	return BETTER_AUTH_URL.replace(/\/+$/, '');
+}
+
+/**
+ * The IANA zone the organisation works in, for times written into a document
+ * that outlives the screen (a signed handover). Installation-wide for now: the
+ * same single-organisation assumption the public brand makes (ADR 0026).
+ */
+export function runtimeTimeZone(): string {
+	return ORGANISATION_TIME_ZONE;
 }

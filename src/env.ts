@@ -13,6 +13,16 @@ const requiredAtRuntime = (name: string) => (value: string | undefined) => {
 	return value ?? '';
 };
 
+/** `Intl` is the authority on IANA names: it throws a RangeError for an unknown zone. */
+function isTimeZone(zone: string): boolean {
+	try {
+		new Intl.DateTimeFormat('en', { timeZone: zone });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 export const variables = defineEnvVars({
 	APP_ENV: {
 		description:
@@ -63,5 +73,14 @@ export const variables = defineEnvVars({
 	MAIL_FROM: {
 		description: 'Sender address of outbound mail, e.g. "Unitati <desk@example.com>".',
 		schema: (value) => value || 'Unitati <no-reply@localhost>'
+	},
+	ORGANISATION_TIME_ZONE: {
+		description:
+			'IANA time zone the organisation works in, e.g. Europe/Madrid. A signed handover document states its decision time in this zone and in UTC. Defaults to Europe/Madrid.',
+		schema: (value) => {
+			const zone = value || 'Europe/Madrid';
+			if (!isTimeZone(zone)) throw new Error(`ORGANISATION_TIME_ZONE is not a time zone: ${zone}`);
+			return zone;
+		}
 	}
 });

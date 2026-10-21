@@ -58,6 +58,12 @@ export type {
 } from './handover-templates';
 export { deliver, listDeliverableAssets, WAIVE_REASON_MAX } from './deliver';
 export { decideHandover, openHandover } from './handover-decision';
+export { ensureHandoverDocument, getHandoverDocument } from './handover-documents';
+export type {
+	DocumentDeps,
+	EnsureDocumentFailure,
+	StoredHandoverDocument
+} from './handover-documents';
 export type {
 	DecideFailure,
 	DecidedStatus,

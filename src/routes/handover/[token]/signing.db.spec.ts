@@ -164,9 +164,10 @@ describe('/handover/[token]', () => {
 			postEvent(handover.token, { reason: 'The laptop is not mine' })
 		);
 		expect(rejected).toEqual({ action: 'reject', decided: 'rejected' });
-		await vi.waitFor(() => expect(sent).toHaveLength(1));
-		expect(sent[0]).toMatchObject({ to: technician.email });
-		expect(sent[0].text).toContain('The laptop is not mine');
+		await vi.waitFor(() => expect(sent).toHaveLength(2));
+		const issuerMail = sent.find((message) => message.to === technician.email)!;
+		expect(issuerMail.text).toContain('The laptop is not mine');
+		expect(issuerMail.attachments?.[0].contentType).toBe('application/pdf');
 	});
 
 	it('refuses to decide an expired link', async () => {

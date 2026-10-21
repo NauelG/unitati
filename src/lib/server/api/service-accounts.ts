@@ -85,6 +85,23 @@ export async function createServiceAccount(
 	}
 }
 
+/**
+ * The name of one service account, for a record that names who acted (a
+ * handover document's issuer). Ungated: it is a label, read by the domain that
+ * already holds the id, never a way to list accounts.
+ */
+export async function serviceAccountName(
+	organisationId: string,
+	id: string
+): Promise<string | null> {
+	const [row] = await getDb()
+		.select({ name: serviceAccounts.name })
+		.from(serviceAccounts)
+		.where(and(eq(serviceAccounts.id, id), eq(serviceAccounts.organisationId, organisationId)))
+		.limit(1);
+	return row?.name ?? null;
+}
+
 /** Every service account in the organisation, enabled ones first. */
 export async function listServiceAccounts(
 	viewer: SessionUser,

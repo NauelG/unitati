@@ -9,6 +9,7 @@ import { failure, success, type Outcome } from '../shared/outcome';
 import { runtimeMailer, runtimeStorage } from '../shared/runtime';
 import { MAX_DECISION_REASON } from '#lib/domain/handover.js';
 import type { Storage } from '../shared/storage';
+import { ensureHandoverDocument, type DocumentDeps } from './handover-documents';
 import { handoverRejectedMail } from './handover-mail';
 import type { HandoverDirection } from './handover-template';
 import { hashHandoverToken } from './handover-token';
@@ -55,7 +56,7 @@ export type SigningView =
 			assets: SigningAsset[];
 	  };
 
-export interface DecisionDeps {
+export interface DecisionDeps extends Pick<DocumentDeps, 'timeZone' | 'render'> {
 	storage?: Storage;
 	mailer?: Mailer | null;
 	now?: () => Date;
@@ -289,9 +290,27 @@ export async function decideHandover(
 	};
 	if (decided.status === 'accepted') emit('handover.accepted', event);
 	else emit('handover.rejected', { ...event, reason: decided.reason });
-	if (mail) void sendQuietly(mailer, mail);
+
+	// The certified copy (ADR 0036). It mails the person and the issuer itself, the
+	// rejection notice included; only if it fails does that notice go out alone.
+	const documented = await tryEnsureDocument(row.id, { ...deps, storage, mailer });
+	if (!documented && mail) void sendQuietly(mailer, mail);
 
 	return success({ status: decided.status });
+}
+
+/**
+ * Generates the document of a just-decided handover. A failure never undoes the
+ * decision: it is logged, the handover is left without a document, and
+ * `ensureHandoverDocument` generates it later.
+ */
+async function tryEnsureDocument(handoverId: string, deps: DocumentDeps): Promise<boolean> {
+	try {
+		return (await ensureHandoverDocument(handoverId, deps)).ok;
+	} catch (error) {
+		console.error(`could not generate the document of handover ${handoverId}`, error);
+		return false;
+	}
 }
 
 /** Trimmed and 1 to 1000 characters, or `null`. */

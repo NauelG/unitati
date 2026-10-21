@@ -48,6 +48,10 @@ ticket attachments. So does the mailer, which only sends plain text. The runtime
 - Generation runs after the decision commits. If it fails, the decision stands and the handover
   shows that its document is missing. It can be generated later from the frozen evidence, once,
   and that document is the one stored. The evidence is the fact; the document is its certified copy.
+- The decision timestamp is printed both in UTC and in the installation's IANA time zone. Until
+  organisations have their own time-zone setting, `ORGANISATION_TIME_ZONE` supplies that zone
+  (default `Europe/Madrid`), matching the current single-organisation installation model. It is
+  read when the document is first generated; a saved PDF never changes if the setting changes.
 - A pending, expired or waived handover has no document, because nobody decided anything.
 - Moving `Storage` and the mailer to `shared/` is a prefactor that touches `service-desk` imports and
   nothing else.
