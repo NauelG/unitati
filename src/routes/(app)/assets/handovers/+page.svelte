@@ -95,7 +95,7 @@
 					{#if form.skipped.length > 0}
 						<p class="font-medium">{m.handovers_regularise_skipped_title()}</p>
 						<ul class="list-disc pl-5">
-							{#each form.skipped as item (item.personName)}
+							{#each form.skipped as item (item.personId)}
 								<li>
 									{item.reason === 'no_template'
 										? m.handovers_regularise_skipped_no_template({ person: item.personName })

@@ -65,7 +65,7 @@ export const actions: Actions = {
 		return {
 			action: 'regularise' as const,
 			issued: issued.map(({ code, personName, assetCount }) => ({ code, personName, assetCount })),
-			skipped: skipped.map(({ personName, reason }) => ({ personName, reason }))
+			skipped: skipped.map(({ personId, personName, reason }) => ({ personId, personName, reason }))
 		};
 	}
 };
