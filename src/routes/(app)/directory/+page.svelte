@@ -443,12 +443,14 @@
 					action={target.mode === 'grant' ? '?/grantAccess' : '?/changeRole'}
 					use:enhance={() => {
 						accessPending = true;
+						// `target` is a lazy `{@const}`: once `granting` is cleared it reads null.
+						const { fullName } = target.person;
 						return async ({ result, update }) => {
 							accessPending = false;
 							if (result.type === 'success') {
 								granting = null;
 								if (typeof result.data?.temporaryPassword === 'string') {
-									reveal(target.person.fullName, result.data.temporaryPassword);
+									reveal(fullName, result.data.temporaryPassword);
 								}
 							}
 							await update({ reset: false });
