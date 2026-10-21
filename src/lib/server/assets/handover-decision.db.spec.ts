@@ -273,11 +273,12 @@ describe('decideHandover', () => {
 			tokenHash: null
 		});
 
-		await vi.waitFor(() => expect(sent).toHaveLength(1));
-		expect(sent[0].to).toBe(technician.email);
-		expect(sent[0].subject).toContain(handover.code);
-		expect(sent[0].text).toContain('Ada Lovelace');
-		expect(sent[0].text).toContain('The serial does not match');
+		await vi.waitFor(() => expect(sent).toHaveLength(2));
+		const issuerMail = sent.find((message) => message.to === technician.email)!;
+		expect(issuerMail.subject).toContain(handover.code);
+		expect(issuerMail.text).toContain('Ada Lovelace');
+		expect(issuerMail.text).toContain('The serial does not match');
+		expect(issuerMail.attachments?.[0].contentType).toBe('application/pdf');
 
 		await flushEvents();
 		expect(events).toMatchObject([

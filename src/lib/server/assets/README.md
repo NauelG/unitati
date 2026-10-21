@@ -3,6 +3,13 @@
 IT asset management: assets, models, categories, custody (check-out / check-in). Later: kits,
 licences and consumables.
 
+A decided handover has one stored PDF (`handover-documents.ts`, ADR 0036). `decideHandover`
+generates it after the decision commits; `ensureHandoverDocument(id)` repairs a missing one and
+never replaces an existing file. `renderHandoverDocument` takes only frozen evidence and returns
+PDF bytes. `/handover-documents/[id]` serves those stored bytes to staff with `assets.view` and
+to the signer with `assets.view.own`. The installation's `ORGANISATION_TIME_ZONE` supplies the
+local decision time alongside UTC; no database row or attachment row is created for the file.
+
 ## The shape of it
 
 The catalogue hangs off the **model**, not off each asset: `manufacturers` and `categories` point

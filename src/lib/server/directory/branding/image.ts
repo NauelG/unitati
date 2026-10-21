@@ -297,3 +297,28 @@ export async function deriveIcons(
 		apple_touch: processed('image/png', apple, APPLE_TOUCH_SIZE, APPLE_TOUCH_SIZE)
 	};
 }
+
+/** Printed lockups are at most this many pixels tall: a 34pt logo at 300 dpi. */
+const PRINT_LOCKUP_HEIGHT = 142;
+
+/**
+ * A stored lockup as a PNG for print (a handover document): PDF engines embed
+ * PNG and JPEG, not WebP or SVG. A vector is rasterised tall enough to stay
+ * sharp at print resolution; a raster is only ever scaled down.
+ */
+export async function lockupForPrint(lockup: {
+	contentType: string;
+	data: Uint8Array;
+}): Promise<Uint8Array> {
+	let source = sharp(lockup.data);
+	if (lockup.contentType === 'image/svg+xml') {
+		const probe = await sharp(lockup.data).metadata();
+		const density = Math.min(2400, Math.max(72, (72 * PRINT_LOCKUP_HEIGHT) / (probe.height ?? 1)));
+		source = sharp(lockup.data, { density });
+	}
+	const png = await source
+		.resize({ height: PRINT_LOCKUP_HEIGHT, withoutEnlargement: true })
+		.png()
+		.toBuffer();
+	return new Uint8Array(png);
+}

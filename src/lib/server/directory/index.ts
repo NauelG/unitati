@@ -57,6 +57,7 @@ export type { Organisation, Person, Department, Location, Team } from './schema'
 export {
 	getBrand,
 	getBrandAsset,
+	getBrandLockupForPrint,
 	removeBrandAsset,
 	resetBranding,
 	resetBrandCache,

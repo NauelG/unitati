@@ -5,6 +5,21 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.92.0] - 2026-10-21
+
+### Added
+
+- A decided handover, whether accepted or rejected, now has a PDF generated once from its frozen
+  evidence (#276, ADR 0036). The file includes the rendered agreement and its SHA-256, asset and
+  person snapshots, decision, signature when accepted, signer IP and user agent, issuer, and the
+  decision time in UTC and the organisation's time zone. The PDF uses an embedded Noto Sans font
+  for accented names and agreements. Its own SHA-256 is stored with its unique storage key; it is
+  never replaced or regenerated. A failure leaves the decision in place and can be repaired with
+  `ensureHandoverDocument`. When mail is enabled, the person and a person issuer each receive a
+  copy attached to their message. The signer and staff with `assets.view` can download the same
+  stored bytes at `/handover-documents/<id>`; other employees get 404. The installation-wide
+  `ORGANISATION_TIME_ZONE` defaults to `Europe/Madrid` and accepts any IANA zone.
+
 ## [0.91.0] - 2026-10-20
 
 ### Added

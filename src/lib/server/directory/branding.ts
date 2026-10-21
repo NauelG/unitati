@@ -17,7 +17,7 @@ import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { failure, success, type Outcome } from '../shared/outcome';
-import { deriveIcons, processUpload, type ImageFailure } from './branding/image';
+import { deriveIcons, lockupForPrint, processUpload, type ImageFailure } from './branding/image';
 import { organisationBrandAssets, organisationBranding, organisations } from './schema';
 
 /**
@@ -297,4 +297,14 @@ export async function getBrandAsset(
 		.limit(1);
 
 	return row ?? null;
+}
+
+/**
+ * The organisation's light lockup as a PNG for print, or `null` when it has
+ * none (the document then prints the product name). For documents that leave
+ * the app, such as a signed handover (ADR 0036).
+ */
+export async function getBrandLockupForPrint(organisationId: string): Promise<Uint8Array | null> {
+	const lockup = await getBrandAsset(organisationId, 'lockup');
+	return lockup ? lockupForPrint(lockup) : null;
 }
