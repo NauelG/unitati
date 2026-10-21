@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.99.1] - 2026-10-21
+
+### Fixed
+
+- `db:start` and `db:stop` work with the standalone `docker-compose` binary (v2 or later), not only
+  the `docker compose` plugin (#68). A new `mail:start` script starts Mailpit the same way.
+- README prerequisites no longer claim the standalone binary means Compose v1, and
+  `BODY_SIZE_LIMIT` is documented as `56M` in the image, with the reason.
+
 ## [0.99.0] - 2026-10-21
 
 ### Added

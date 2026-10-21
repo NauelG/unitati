@@ -1,7 +1,7 @@
 {
 	"name": "unitati",
 	"private": true,
-	"version": "0.99.0",
+	"version": "0.99.1",
 	"type": "module",
 	"engines": {
 		"node": ">=24"
@@ -20,13 +20,14 @@
 		"test": "npm run test:unit -- --run",
 		"test:db": "vitest --run --project db",
 		"test:db:watch": "vitest --project db",
-		"db:start": "docker compose up -d --wait",
+		"db:start": "node scripts/compose.mjs up -d --wait",
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:seed": "node scripts/seed.mjs",
 		"db:studio": "drizzle-kit studio",
-		"db:stop": "docker compose down",
+		"db:stop": "node scripts/compose.mjs down",
+		"mail:start": "node scripts/compose.mjs up -d mailpit",
 		"check:version-bump": "node scripts/check-version-bump.mjs"
 	},
 	"devDependencies": {
