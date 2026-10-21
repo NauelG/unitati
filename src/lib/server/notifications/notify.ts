@@ -3,6 +3,7 @@ import { can } from '../access/permissions';
 import { users, type UserRole } from '../auth/schema';
 import type { Transaction } from '../db';
 import { people } from '../directory/schema';
+import { followerIds } from './follows';
 import { notificationPreferences, notifications } from './schema';
 import type { Snapshot } from './snapshot';
 import { snapshotSchema } from './snapshot';
@@ -26,6 +27,11 @@ export type NotifyInput = {
 	 * domain computes it, so this module never reads another domain's tables.
 	 */
 	audience?: ReadonlySet<string>;
+	/**
+	 * Also tell whoever follows the target (#57), as `followed.activity`. Off by
+	 * default: only the facts listed in ADR 0040 reach followers.
+	 */
+	followers?: boolean;
 };
 
 /** A mail the caller sends after commit, with `sendNotificationEmails` (#302). */
@@ -50,16 +56,36 @@ function collapse(recipients: NotifyInput['recipients']): Map<string, Notificati
 }
 
 /**
- * Step 3 of `notify`, left empty on purpose: #57 adds the followers of the target
- * here, as candidates of type `followed.activity`, before the dedupe's result is
- * read. Named so that slice has one place to land and no other step moves.
+ * Step 3 of `notify` (#57): the followers of the target, as candidates of type
+ * `followed.activity`. Weaker than any participant or mention type, so
+ * `strongerType` keeps the stronger one when a follower is also named. Followers
+ * are filtered by their **current** role, so a demoted follower stops hearing
+ * about what they can no longer read; the row stays, so a promotion brings them back.
  */
-function addFollowers(
-	_tx: Transaction,
-	_input: NotifyInput,
+async function addFollowers(
+	tx: Transaction,
+	input: NotifyInput,
 	candidates: Map<string, NotificationType>
 ): Promise<Map<string, NotificationType>> {
-	return Promise.resolve(candidates);
+	if (!input.followers) return candidates;
+
+	const ids = await followerIds(tx, input.target);
+	if (ids.length === 0) return candidates;
+
+	const permission = 'ticketId' in input.target ? 'tickets.view' : 'projects.view';
+	const rows = await tx
+		.select({ id: people.id, role: users.role })
+		.from(people)
+		.innerJoin(users, eq(people.userId, users.id))
+		.where(and(eq(people.organisationId, input.organisationId), inArray(people.id, ids)));
+
+	const merged = new Map(candidates);
+	for (const { id, role } of rows) {
+		if (id === input.actorPersonId || !can({ role }, permission)) continue;
+		const known = merged.get(id);
+		merged.set(id, known ? strongerType(known, 'followed.activity') : 'followed.activity');
+	}
+	return merged;
 }
 
 /**

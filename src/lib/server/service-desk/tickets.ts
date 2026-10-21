@@ -2,6 +2,7 @@ import { and, asc, desc, eq, exists, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { QueueColor } from '#lib/domain/queue-color.js';
 import type { Priority, TicketStatus } from '#lib/domain/status.js';
+import { m } from '#lib/paraglide/messages.js';
 import { actorColumns, recordActivity } from '../activity';
 import { notify, sendNotificationEmails, type PendingEmail } from '../notifications';
 import { linkAsset, type LinkCategoryFailure } from '../links';
@@ -584,6 +585,15 @@ export async function openTicket(
 
 type ChangeFailure = 'ticket_not_found';
 
+/** The status as a reader of a notification knows it. */
+const STATUS_LABEL: Record<TicketStatus, () => string> = {
+	new: m.status_new,
+	in_progress: m.status_in_progress,
+	waiting_on_user: m.status_waiting_on_user,
+	resolved: m.status_resolved,
+	closed: m.status_closed
+};
+
 /** The ticket row a staff write operates on, org-scoped. */
 async function findTicket(actor: SessionUser, ticketTag: string) {
 	const [row] = await getDb()
@@ -621,14 +631,20 @@ export async function changeTicketStatus(
 			payload: { from: ticket.status, to }
 		});
 
-		// Only `resolved` tells the requester; other moves reach followers (#57).
-		if (to !== 'resolved') return [];
+		// Only `resolved` tells the requester; every move reaches the followers (#57).
 		return notify(tx, {
 			organisationId: actor.organisationId,
 			actorPersonId: actor.personId,
 			target: { ticketId: ticket.id },
-			snapshot: { code: ticket.ticketTag, title: ticket.subject, actorName: actor.name },
-			recipients: [{ personId: ticket.requesterPersonId, type: 'ticket.resolved' }]
+			snapshot: {
+				code: ticket.ticketTag,
+				title: ticket.subject,
+				actorName: actor.name,
+				summary: m.follow_summary_ticket_status({ status: STATUS_LABEL[to]() })
+			},
+			recipients:
+				to === 'resolved' ? [{ personId: ticket.requesterPersonId, type: 'ticket.resolved' }] : [],
+			followers: true
 		});
 	});
 
@@ -742,23 +758,40 @@ export async function assignTicket(
 				payload: { toPersonId: next.id, toPersonName: next.fullName }
 			});
 
-			// Unassigning notifies nobody.
 			return notify(tx, {
 				organisationId: actor.organisationId,
 				actorPersonId: actor.personId,
 				target: { ticketId: ticket.id },
-				snapshot: { code: ticket.ticketTag, title: ticket.subject, actorName: actor.name },
-				recipients: [{ personId: next.id, type: 'ticket.assigned' }]
+				snapshot: {
+					code: ticket.ticketTag,
+					title: ticket.subject,
+					actorName: actor.name,
+					summary: m.follow_summary_ticket_assigned({ person: next.fullName })
+				},
+				recipients: [{ personId: next.id, type: 'ticket.assigned' }],
+				followers: true
 			});
 		}
-		if (previous) {
-			await recordActivity(tx, {
-				...base,
-				verb: 'ticket.unassigned',
-				payload: { fromPersonId: previous.id, fromPersonName: previous.fullName }
-			});
-		}
-		return [];
+		// Unassigning tells the followers only: the person who lost it is not told.
+		if (!previous) return [];
+		await recordActivity(tx, {
+			...base,
+			verb: 'ticket.unassigned',
+			payload: { fromPersonId: previous.id, fromPersonName: previous.fullName }
+		});
+		return notify(tx, {
+			organisationId: actor.organisationId,
+			actorPersonId: actor.personId,
+			target: { ticketId: ticket.id },
+			snapshot: {
+				code: ticket.ticketTag,
+				title: ticket.subject,
+				actorName: actor.name,
+				summary: m.follow_summary_ticket_unassigned()
+			},
+			recipients: [],
+			followers: true
+		});
 	});
 
 	// After commit, not awaited (ADR 0006).

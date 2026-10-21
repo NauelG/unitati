@@ -6,6 +6,7 @@
 	import { goto } from '$app/navigation';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
+	import FollowControl from '#lib/components/unitati/FollowControl.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import DescriptionList from '#lib/components/unitati/DescriptionList.svelte';
 	import EditableChip from '#lib/components/unitati/EditableChip.svelte';
@@ -267,14 +268,15 @@
 			</div>
 		</div>
 
-		{#if data.canManage}
-			<div class={styles.actions()}>
+		<div class={styles.actions()}>
+			<FollowControl follow={data.follow} />
+			{#if data.canManage}
 				<Button variant="secondary" onclick={() => (moveOpen = true)}>
 					<ArrowRightLeft class="size-4" aria-hidden="true" />
 					{m.task_move_action()}
 				</Button>
-			</div>
-		{/if}
+			{/if}
+		</div>
 	</header>
 
 	{#if task.projectArchived}

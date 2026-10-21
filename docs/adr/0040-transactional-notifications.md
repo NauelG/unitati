@@ -68,6 +68,39 @@ Added with #302. Mail is a channel of the same notification, not a second system
 8. **An internal comment only reaches staff**, by mail as in-app: `notify` drops anybody without
    `tickets.comment.internal` before preferences are read, so no preference can widen it.
 
+## Followers
+
+Added with #57. Following is how staff opt in to a record they are neither the requester nor the
+assignee of; without it a notification centre is a firehose, and without a notification centre a
+followers table is decoration.
+
+1. **Participants are derived, followers are stored.** A ticket's requester and assignee and a task's
+   assignees hear about the record because of what they are to it; they are never rows in `follows`.
+   `follow` for a participant stores nothing, and `unfollow` refuses them (`participant`): they tune
+   their notifications in the preferences instead.
+2. **Who may follow:** whoever holds the staff read permission for the kind of record, `tickets.view`
+   for tickets and `projects.view` for tasks and projects. An employee never follows (`forbidden`);
+   `projects.view.assigned` and `tickets.view.own` do not count, because those are the participant's
+   own scope. The route has already read the record through the viewer's scope, so one they cannot
+   see is a 404 before the domain is asked.
+3. **Auto-follow:** commenting on a ticket and being mentioned (#303) follow it, unless the person is
+   a participant. Creating a ticket, task or project follows nothing.
+4. **Delivery is one more step of `notify`.** A producer passes `followers: true` and the followers
+   become candidates of type `followed.activity`, the weakest type, so a follower who is also named
+   as a participant or mentioned in the same call keeps the stronger notification and gets one, not
+   two. A fact with nobody to tell but followers (a status change) calls `notify` with no recipients.
+5. **Permissions are checked at notify time, not at follow time.** A follower's role is read when the
+   notification is written: demoted to an employee they stop hearing, the row stays, and a promotion
+   brings them back. Inactive people are dropped as for everybody, an internal comment reaches only
+   `tickets.comment.internal`, and a members-only project's `audience` filters followers like
+   anybody else (ADR 0042).
+6. **Following a project does not follow its tasks.** A project's followers want to know where the
+   project is, not every card that moves; the one task fact that reaches them is a task reaching a
+   completed state, as a notification about the project whose summary names the task. A task's own
+   due date, state and assignees reach only the followers of that task.
+7. **Unfollow is one click from the record and from each `followed.activity` notification** (panel
+   and inbox), and the mail of a followed record ends with a link to it for the same purpose.
+
 ## Consequences
 
 - Every producer pays one small write inside its transaction.

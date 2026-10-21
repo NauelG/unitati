@@ -2,13 +2,12 @@ import { and, asc, desc, eq, exists, inArray, ne, sql, type SQL } from 'drizzle-
 import type { StateGroup } from '#lib/domain/status.js';
 import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
-import { notify, sendNotificationEmails, type PendingEmail } from '../notifications';
+import { m } from '#lib/paraglide/messages.js';
+import { notify, type PendingEmail } from '../notifications';
 import { getDb, type Transaction } from '../db';
 import { constraintViolation, uniqueConstraintName } from '../db/errors';
 import { people } from '../directory/schema';
 import { emit, type DomainEvents } from '../shared/events';
-import type { Mailer } from '../shared/mail';
-import { runtimeMailer, runtimeOrigin } from '../shared/runtime';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
 import type { ProjectVisibility } from './members';
@@ -27,6 +26,9 @@ import {
 	canBeAssigned,
 	findPerson,
 	notificationAudience,
+	sendAfterCommit,
+	tellFollowers,
+	type MailDeps,
 	lockProject,
 	lockTask,
 	type ProjectWriteFailure,
@@ -377,16 +379,18 @@ export async function createTask(
 export async function updateTask(
 	actor: SessionUser,
 	taskId: string,
-	input: UpdateTaskInput
+	input: UpdateTaskInput,
+	deps: TaskMailDeps = {}
 ): Promise<Outcome<void, UpdateTaskFailure>> {
 	requireManage(actor);
 	const values = updateTaskInput.parse(input);
 
+	let emails: PendingEmail[] = [];
 	try {
-		return await getDb().transaction(async (tx) => {
+		const outcome = await getDb().transaction(async (tx) => {
 			const locked = await lockTask(tx, actor, taskId);
 			if (!locked.ok) return locked;
-			const { task } = locked.value;
+			const { task, project } = locked.value;
 
 			if (values.dueDate !== undefined && values.dueDate !== task.dueDate) {
 				await recordActivity(tx, {
@@ -396,6 +400,14 @@ export async function updateTask(
 					verb: 'task.due.changed',
 					payload: { from: task.dueDate, to: values.dueDate }
 				});
+				emails = await tellFollowers(
+					tx,
+					actor,
+					project,
+					{ taskId },
+					{ code: values.taskTag ?? task.taskTag, title: values.title ?? task.title },
+					m.follow_summary_task_due()
+				);
 			}
 
 			await tx
@@ -411,6 +423,8 @@ export async function updateTask(
 
 			return success(undefined);
 		});
+		if (outcome.ok) sendAfterCommit(emails, deps);
+		return outcome;
 	} catch (error) {
 		if (uniqueConstraintName(error) === 'tasks_org_tag') return failure('duplicate_task_tag');
 		throw error;
@@ -419,32 +433,21 @@ export async function updateTask(
 
 /* ----------------------------- assignees ----------------------------------- */
 
-/** Mail collaborators, injectable so specs need no SMTP; default to the runtime's. */
-export interface TaskMailDeps {
-	mailer?: Mailer | null;
-	origin?: string;
-}
+export type TaskMailDeps = MailDeps;
 
-function sendAfterCommit(emails: PendingEmail[], deps: TaskMailDeps): void {
-	const mailer = deps.mailer === undefined ? runtimeMailer() : deps.mailer;
-	void sendNotificationEmails(mailer, emails, deps.origin ?? runtimeOrigin());
-}
-
-/** Returns the mails to send once the caller's transaction has committed. */
+/** Adds one assignee; whether they were new. Nothing is announced here, see `announceAssignment`. */
 async function addAssignee(
 	tx: Transaction,
 	actor: SessionUser,
-	task: { id: string; taskTag: string; title: string },
-	project: typeof projects.$inferSelect,
+	taskId: string,
 	person: { id: string; fullName: string }
-): Promise<PendingEmail[]> {
-	const taskId = task.id;
+): Promise<boolean> {
 	const inserted = await tx
 		.insert(taskAssignees)
 		.values({ organisationId: actor.organisationId, taskId, personId: person.id })
 		.onConflictDoNothing()
 		.returning({ personId: taskAssignees.personId });
-	if (inserted.length === 0) return [];
+	if (inserted.length === 0) return false;
 
 	await recordActivity(tx, {
 		organisationId: actor.organisationId,
@@ -453,31 +456,50 @@ async function addAssignee(
 		verb: 'task.assigned',
 		payload: { toPersonId: person.id, toPersonName: person.fullName }
 	});
+	return true;
+}
 
-	// Only a person newly added is told: `onConflictDoNothing` above returned early
-	// for anyone already on the task, so setting the same set again notifies nobody.
+/**
+ * One notification for one assignment change: the people newly added hear
+ * `task.assigned`, and the followers hear that the assignees changed. Together,
+ * so a follower who is also assigned gets the one that says most (#57). Only
+ * people newly added are told: setting the same set again announces nothing.
+ */
+async function announceAssignment(
+	tx: Transaction,
+	actor: SessionUser,
+	task: { id: string; taskTag: string; title: string },
+	project: typeof projects.$inferSelect,
+	added: readonly string[]
+): Promise<PendingEmail[]> {
 	return notify(tx, {
 		organisationId: actor.organisationId,
 		actorPersonId: actor.personId,
-		target: { taskId },
-		snapshot: { code: task.taskTag, title: task.title, actorName: actor.name },
-		recipients: [{ personId: person.id, type: 'task.assigned' }],
+		target: { taskId: task.id },
+		snapshot: {
+			code: task.taskTag,
+			title: task.title,
+			actorName: actor.name,
+			summary: m.follow_summary_task_assignees()
+		},
+		recipients: added.map((personId) => ({ personId, type: 'task.assigned' as const })),
+		followers: true,
 		audience: await notificationAudience(tx, project)
 	});
 }
 
-/** Also used by `members.ts` when a member leaves a project. */
+/** Also used by `members.ts` when a member leaves a project. Whether they were on the task. */
 export async function removeAssignee(
 	tx: Transaction,
 	actor: SessionUser,
 	taskId: string,
 	person: { id: string; fullName: string }
-): Promise<void> {
+): Promise<boolean> {
 	const removed = await tx
 		.delete(taskAssignees)
 		.where(and(eq(taskAssignees.taskId, taskId), eq(taskAssignees.personId, person.id)))
 		.returning({ personId: taskAssignees.personId });
-	if (removed.length === 0) return;
+	if (removed.length === 0) return false;
 
 	await recordActivity(tx, {
 		organisationId: actor.organisationId,
@@ -486,6 +508,7 @@ export async function removeAssignee(
 		verb: 'task.unassigned',
 		payload: { fromPersonId: person.id, fromPersonName: person.fullName }
 	});
+	return true;
 }
 
 /** Idempotent: assigning somebody already on the task writes nothing. */
@@ -508,7 +531,10 @@ export async function assign(
 			return failure('not_a_member' as const);
 		}
 
-		emails = await addAssignee(tx, actor, locked.value.task, locked.value.project, person);
+		if (await addAssignee(tx, actor, taskId, person)) {
+			const { task, project } = locked.value;
+			emails = await announceAssignment(tx, actor, task, project, [person.id]);
+		}
 		return success(undefined);
 	});
 
@@ -520,20 +546,28 @@ export async function assign(
 export async function unassign(
 	actor: SessionUser,
 	taskId: string,
-	personId: string
+	personId: string,
+	deps: TaskMailDeps = {}
 ): Promise<Outcome<void, AssignFailure>> {
 	requireManage(actor);
 
-	return getDb().transaction(async (tx) => {
+	let emails: PendingEmail[] = [];
+	const outcome = await getDb().transaction(async (tx) => {
 		const locked = await lockTask(tx, actor, taskId);
 		if (!locked.ok) return locked;
 
 		const person = await findPerson(tx, actor.organisationId, personId);
 		if (!person) return failure('person_not_found' as const);
 
-		await removeAssignee(tx, actor, taskId, person);
+		if (await removeAssignee(tx, actor, taskId, person)) {
+			const { task, project } = locked.value;
+			emails = await announceAssignment(tx, actor, task, project, []);
+		}
 		return success(undefined);
 	});
+
+	sendAfterCommit(emails, deps);
+	return outcome;
 }
 
 /**
@@ -573,11 +607,21 @@ export async function setAssignees(
 			.where(eq(taskAssignees.taskId, taskId));
 
 		const keep = new Set(wanted);
+		let changed = false;
 		for (const leaving of current.filter((entry) => !keep.has(entry.personId))) {
-			await removeAssignee(tx, actor, taskId, { id: leaving.personId, fullName: leaving.fullName });
+			const removed = await removeAssignee(tx, actor, taskId, {
+				id: leaving.personId,
+				fullName: leaving.fullName
+			});
+			changed ||= removed;
 		}
-		for (const person of incoming)
-			emails.push(...(await addAssignee(tx, actor, task, project, person)));
+		const added: string[] = [];
+		for (const person of incoming) {
+			if (await addAssignee(tx, actor, taskId, person)) added.push(person.id);
+		}
+		if (changed || added.length > 0) {
+			emails.push(...(await announceAssignment(tx, actor, task, project, added)));
+		}
 
 		return success(undefined);
 	});
@@ -616,16 +660,18 @@ export async function moveTask(
 	actor: SessionUser,
 	taskId: string,
 	toStateId: string,
-	neighbours: MoveNeighbours = {}
+	neighbours: MoveNeighbours = {},
+	deps: TaskMailDeps = {}
 ): Promise<Outcome<void, MoveTaskFailure>> {
 	requireManage(actor);
 
 	let completedEvent: DomainEvents['task.completed'] | null = null;
+	const emails: PendingEmail[] = [];
 
 	const outcome = await getDb().transaction(async (tx) => {
 		const locked = await lockTask(tx, actor, taskId);
 		if (!locked.ok) return locked;
-		const { task } = locked.value;
+		const { task, project } = locked.value;
 
 		const [target] = await tx
 			.select()
@@ -709,7 +755,30 @@ export async function moveTask(
 				}
 			});
 
+			// Followers of the task hear every change of state (#57); those of the
+			// project only hear that one of its tasks was completed.
+			emails.push(
+				...(await tellFollowers(
+					tx,
+					actor,
+					project,
+					{ taskId: task.id },
+					{ code: task.taskTag, title: task.title },
+					m.follow_summary_task_state({ state: target.name })
+				))
+			);
+
 			if (from.group !== 'completed' && target.group === 'completed') {
+				emails.push(
+					...(await tellFollowers(
+						tx,
+						actor,
+						project,
+						{ projectId: project.id },
+						{ code: project.projectTag, title: project.name },
+						m.follow_summary_project_task_completed({ code: task.taskTag, title: task.title })
+					))
+				);
 				completedEvent = {
 					organisationId: actor.organisationId,
 					taskId: task.id,
@@ -727,6 +796,7 @@ export async function moveTask(
 	});
 
 	// After commit, never inside the transaction: a rolled-back move emits nothing.
+	if (outcome.ok) sendAfterCommit(emails, deps);
 	if (outcome.ok && completedEvent) emit('task.completed', completedEvent);
 
 	return outcome;

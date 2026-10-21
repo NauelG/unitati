@@ -15,8 +15,8 @@
 	let { type, snapshot, read, createdAt }: Props = $props();
 
 	const when = $derived(formatRelative(new Date(createdAt)));
-	/** The completed task, or the words of the comment (#302): plain text, never markup. */
-	const detail = $derived(snapshot.summary ?? snapshot.excerpt);
+	/** What happened, then the words of the comment (#302, #57): plain text, never markup. */
+	const detail = $derived([snapshot.summary, snapshot.excerpt].filter(Boolean).join(' · '));
 </script>
 
 <!--

@@ -5,6 +5,7 @@
 	import EscalateSheet from '#lib/components/unitati/EscalateSheet.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
+	import FollowControl from '#lib/components/unitati/FollowControl.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
@@ -327,6 +328,7 @@
 				/>
 			{/snippet}
 			{#snippet actions()}
+				<FollowControl follow={data.follow} />
 				{#if escalation}
 					<Button variant="secondary" onclick={() => (escalateOpen = true)}>
 						<ArrowUpRight class="size-4" aria-hidden="true" />

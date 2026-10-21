@@ -21,6 +21,7 @@
 	import RichTextEditor from '#lib/components/unitati/RichTextEditor.svelte';
 	import { prose } from '#lib/components/unitati/prose.js';
 	import Alert from '#lib/components/unitati/Alert.svelte';
+	import FollowControl from '#lib/components/unitati/FollowControl.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Dialog from '#lib/components/unitati/Dialog.svelte';
 	import EmptyState from '#lib/components/unitati/EmptyState.svelte';
@@ -310,6 +311,7 @@
 			</span>
 		{/snippet}
 		{#snippet actions()}
+			<FollowControl follow={data.follow} />
 			{#if writable}
 				<Button onclick={() => openTask(null)}>
 					<Plus class="size-4" aria-hidden="true" />

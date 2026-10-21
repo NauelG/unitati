@@ -54,6 +54,10 @@ export function notificationMail(email: PendingEmail, origin: string): MailMessa
 		snapshot.summary,
 		snapshot.excerpt ? `«${snapshot.excerpt}»` : undefined,
 		recordUrl(email, origin),
+		// A follower stops following from the record itself (#57).
+		email.type === 'followed.activity'
+			? m.follow_mail_unfollow({ link: recordUrl(email, origin) })
+			: undefined,
 		footer(origin)
 	]
 		.filter((paragraph): paragraph is string => Boolean(paragraph))

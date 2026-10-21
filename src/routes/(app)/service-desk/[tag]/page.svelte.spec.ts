@@ -55,6 +55,7 @@ function pageData(canManage: boolean) {
 		thread: [],
 		related: Promise.resolve([]),
 		canManage,
+		follow: { canFollow: false as const },
 		escalation: null,
 		canInternal: false,
 		nextStatuses: ['in_progress', 'closed'],

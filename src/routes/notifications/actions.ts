@@ -6,7 +6,8 @@ import {
 	INBOX_PAGE_SIZE,
 	listInbox,
 	markAllRead,
-	markRead
+	markRead,
+	unfollowFromNotification
 } from '#lib/server/notifications/index.js';
 
 /**
@@ -35,6 +36,20 @@ export const inboxActions = {
 		// The target comes back from the browser, so it is only followed when it is a
 		// local path; anything else lands on the inbox.
 		redirect(303, parsed.data.href ? safeRedirectTarget(parsed.data.href) : '.');
+	},
+
+	/** Stops following the record a `followed.activity` notification was about. */
+	unfollow: async ({ locals, request }: { locals: App.Locals; request: Request }) => {
+		const user = requireUser(locals.user);
+		const parsed = z
+			.object({ id: z.uuid() })
+			.safeParse(Object.fromEntries(await request.formData()));
+		if (!parsed.success) return fail(400, { error: 'invalid' });
+
+		const outcome = await unfollowFromNotification(user, parsed.data.id);
+		if (!outcome.ok)
+			return fail(outcome.error === 'not_found' ? 404 : 409, { error: outcome.error });
+		return { ok: true };
 	},
 
 	readAll: async ({ locals }: { locals: App.Locals }) => {

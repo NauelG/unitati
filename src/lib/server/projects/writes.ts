@@ -1,8 +1,11 @@
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import type { SessionUser } from '../auth/guards';
 import type { Database, Transaction } from '../db';
+import { notify, sendNotificationEmails, type PendingEmail } from '../notifications';
 import { people } from '../directory/schema';
+import type { Mailer } from '../shared/mail';
 import { failure, success, type Outcome } from '../shared/outcome';
+import { runtimeMailer, runtimeOrigin } from '../shared/runtime';
 import { projectMembers, projects, tasks, type Task } from './schema';
 import { writableProject } from './scope';
 
@@ -154,4 +157,38 @@ export async function notificationAudience(
 		.from(projectMembers)
 		.where(eq(projectMembers.projectId, project.id));
 	return new Set(rows.map((row) => row.personId));
+}
+
+/** Mail collaborators, injectable so specs need no SMTP; default to the runtime's. */
+export interface MailDeps {
+	mailer?: Mailer | null;
+	origin?: string;
+}
+
+export function sendAfterCommit(emails: PendingEmail[], deps: MailDeps): void {
+	const mailer = deps.mailer === undefined ? runtimeMailer() : deps.mailer;
+	void sendNotificationEmails(mailer, emails, deps.origin ?? runtimeOrigin());
+}
+
+/**
+ * Tells the followers of a task or project about one fact (#57), and nobody else.
+ * Returns the mails to send once the caller's transaction has committed.
+ */
+export async function tellFollowers(
+	tx: Transaction,
+	actor: SessionUser,
+	project: typeof projects.$inferSelect,
+	target: { taskId: string } | { projectId: string },
+	record: { code: string; title: string },
+	summary: string
+): Promise<PendingEmail[]> {
+	return notify(tx, {
+		organisationId: actor.organisationId,
+		actorPersonId: actor.personId,
+		target,
+		snapshot: { ...record, actorName: actor.name, summary },
+		recipients: [],
+		followers: true,
+		audience: await notificationAudience(tx, project)
+	});
 }

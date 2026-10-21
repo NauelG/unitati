@@ -54,6 +54,8 @@ import {
 	type RemoveMemberFailure,
 	type UpdateProjectFailure
 } from '#lib/server/projects/index.js';
+import { followState } from '#lib/server/notifications/index.js';
+import { followActions } from '../../follow-actions';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params, url, cookies }) => {
@@ -106,6 +108,7 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 
 	return {
 		project,
+		follow: await followState(user, { projectId: project.id }),
 		descriptionHtml: renderMarkdown(project.description ?? ''),
 		tasks,
 		// Every column of the board, including the empty ones.
@@ -200,6 +203,10 @@ async function targetOf(user: SessionUser, tag: string) {
 }
 
 export const actions: Actions = {
+	...followActions(requireProjectRead, async (user, { params }) => {
+		const found = await getProject(user, params.tag);
+		return found.ok ? { projectId: found.value.id } : null;
+	}),
 	update: async ({ request, locals, params }) => {
 		const user = requireProjectWrite(locals.user);
 		const fields = await fieldsOf(request);

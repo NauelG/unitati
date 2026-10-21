@@ -77,6 +77,20 @@
 		void invalidateAll();
 	}
 
+	async function unfollow(item: { id: string }) {
+		try {
+			const response = await fetch('/notifications/unfollow', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ id: item.id })
+			});
+			// Gone from the list is the confirmation: this notification is no longer about anything they follow.
+			if (response.ok) items = items?.filter((entry) => entry.id !== item.id) ?? null;
+		} catch {
+			// The notification stays; they can try again.
+		}
+	}
+
 	async function markAll() {
 		if (!(await post({ all: true }))) return;
 		count = 0;
@@ -163,6 +177,15 @@
 									createdAt={item.createdAt}
 								/>
 							</a>
+							{#if item.type === 'followed.activity'}
+								<button
+									type="button"
+									class="mr-[var(--space-4)] mb-[var(--space-2)] ml-[calc(var(--space-4)+20px)] text-xs font-medium text-[var(--action)] hover:underline"
+									onclick={() => unfollow(item)}
+								>
+									{m.follow_unfollow()}
+								</button>
+							{/if}
 						</li>
 					{/each}
 				</ul>
