@@ -37,6 +37,10 @@ Keep the bump in its own `chore: release X.Y.Z` commit. Versions are assigned in
 
 Changes that only touch `docs/`, `.github/`, `.agents/`, `AGENTS.md`, `README.md`, `CHANGELOG.md` or `.gitignore` ship no app behaviour and need no bump. Write `sense canvi` on the version line. `scripts/check-version-bump.mjs` enforces this on every pull request.
 
+## Sign-off
+
+Every commit carries a `Signed-off-by:` trailer matching its author: commit with `git commit -s`. It certifies the [Developer Certificate of Origin](https://developercertificate.org/) for a project licensed AGPL-3.0-only ([ADR 0041](../adr/0041-license-agpl-3.0-only.md)). The `DCO sign-off` job in CI fails the pull request otherwise; `git rebase --signoff origin/main` repairs a branch. This is a human's certification, not an AI attribution: it names the person who authored and stands behind the commit.
+
 ## Checks before pushing
 
 Run `npm run check`, `npm run lint` and `npm test` after the last edit — `vitest` does not type-check, so the test run alone proves nothing about types. With several open pull requests, merge them locally in the intended order and run the same three commands: a clean textual merge can still fail type-checking.

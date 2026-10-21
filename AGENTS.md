@@ -9,7 +9,8 @@ Unitati: projects, service desk and ITAM on one data model. Start with `README.m
 - Code, comments and docs in English. Pull request descriptions are the one exception: they are written in Catalan, see `docs/agents/pull-requests.md`.
 - Cross-domain reactions go through `shared/events.ts` (ADR 0024): emit after commit from the owning domain, subscribe in `subscriptions.ts`; never import another domain's tables to react.
 - Configurable catalogues live under `/settings/{module}`, registered in the settings section registry; never as a route inside the module.
-- Commits: Conventional Commits.
+- Commits: Conventional Commits, signed off with `git commit -s` (DCO; CI rejects a pull request with an unsigned commit). See `docs/adr/0041-license-agpl-3.0-only.md`.
+- License: AGPL-3.0-only. The "Código fuente" link in `AppVersion` is a license obligation: never hide or remove it.
 - Before finishing a change: `npm run check`, `npm run lint`, `npm test`.
 
 ## Versioning & changelog
@@ -18,7 +19,7 @@ SemVer in `package.json`; `CHANGELOG.md` follows Keep a Changelog. Every change 
 
 The running version is injected at build time (`__APP_VERSION__`, read via `src/lib/version.ts`) and shown in the app shell and on the login screen.
 
-Every version bump that lands on `main` is released as a `vX.Y.Z` git tag and a private image `ghcr.io/nauelg/unitati:X.Y.Z`. Do not tag or push images by hand: `.github/workflows/publish-image.yml` does both, once CI is green, for any version that has no tag yet (`docs/adr/0023-container-image-on-ghcr.md`). A PR that does not bump the version releases nothing.
+Every version bump that lands on `main` is released as a `vX.Y.Z` git tag and a public image `ghcr.io/nauelg/unitati:X.Y.Z`. Do not tag or push images by hand: `.github/workflows/publish-image.yml` does both, once CI is green, for any version that has no tag yet (`docs/adr/0023-container-image-on-ghcr.md`). A PR that does not bump the version releases nothing.
 
 CI enforces all of this with `scripts/check-version-bump.mjs`. See `docs/adr/0003-semver-and-changelog.md` for the full policy and the paths exempt from bumping.
 
