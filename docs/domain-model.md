@@ -13,7 +13,7 @@ Draft. Names here become folder names in `src/lib/server/<domain>/` (see [ADR 00
 | `knowledge`    | `Space`, `Page`, `PageRevision`                                                                                      |
 | `links`        | the pairwise join tables and the uniform read facade over them                                                       |
 | `api`          | `ApiKey`, `ServiceAccount`; the `/api/v1` endpoint registry                                                          |
-| cross-cutting  | `ActivityLog`, `Attachment`, global search                                                                           |
+| cross-cutting  | `ActivityLog`, `Notification`, `Follow`, `Attachment`, global search                                                 |
 
 `directory` is the only domain everyone depends on. The other domains do not import each other's tables; they relate through `links`.
 
@@ -46,6 +46,8 @@ A **service account** is an organisation-owned API principal with the technician
 An **import** is a bulk entry of records from a CSV file (#21, [ADR 0034](adr/0034-csv-import.md)). It is not an entity: nothing is stored about the import itself, and the records it creates are ordinary records, marked `via: 'import'` in their activity.
 
 `CustomField` is deliberately absent: it is post-v1 in the [roadmap](roadmap-v1.md).
+
+A **notification** is a line in one person's inbox saying that something concerns them: an assignment, a reply, a mention ([ADR 0040](adr/0040-transactional-notifications.md)). It targets a _person_, points at exactly one ticket, task or project, and freezes a snapshot of the code and title when it is written. It is written inside the transaction of the change that caused it. A **follow** is a person's standing interest in a record; it is stored from #301 but written from #57.
 
 ## Core entities
 

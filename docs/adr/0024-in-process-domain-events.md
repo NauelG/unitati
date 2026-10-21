@@ -58,3 +58,4 @@ mails each assigned technician once, listing their unresolved tickets.
   when a subscriber needs them, not speculatively.
 - #57 (notification preferences and followers) must absorb the completion mail, and #33 will
   subscribe here too.
+- Notifications are narrower: they are written in the owning transaction, not via events, so they cannot be lost ([ADR 0040](0040-transactional-notifications.md)).

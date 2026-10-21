@@ -6,6 +6,13 @@ import { defineConfig, includeIgnoreFile } from 'eslint/config';
 import globals from 'globals';
 import ts from 'typescript-eslint';
 
+/** Shared by every domain's block: they reach notifications through its index only (ADR 0040). */
+const NOTIFICATIONS_TABLES = {
+	regex: '(^|/)notifications/(schema|reader|notify)',
+	message:
+		'Domains call notify() from the notifications index and never read its tables (ADR 0040).'
+};
+
 const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
 export default defineConfig(
@@ -48,6 +55,48 @@ export default defineConfig(
 						{
 							regex: '(^|/)(links|service-desk)(/|$)',
 							message: 'projects must not import links or service-desk (ADR 0002, ADR 0024).'
+						},
+						NOTIFICATIONS_TABLES
+					]
+				}
+			]
+		}
+	},
+	{
+		// The notifications tables belong to `notifications` (ADR 0040). A domain
+		// writes through `notify(tx, …)` from the module's index and never touches
+		// its tables, as with `activity`. (`projects` carries the same pattern in its
+		// own block above: a later block for the same files would replace it.)
+		files: [
+			'src/lib/server/assets/**/*.ts',
+			'src/lib/server/directory/**/*.ts',
+			'src/lib/server/service-desk/**/*.ts',
+			'src/lib/server/links/**/*.ts'
+		],
+		ignores: ['**/*.spec.ts', '**/testing/**'],
+		rules: {
+			'no-restricted-imports': ['error', { patterns: [NOTIFICATIONS_TABLES] }]
+		}
+	},
+	{
+		// `notifications` reads the tables of the records it points at, like `activity`,
+		// but calls none of the domains' functions (ADR 0040).
+		files: ['src/lib/server/notifications/**/*.ts'],
+		ignores: ['**/*.spec.ts', '**/testing/**'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					patterns: [
+						{
+							regex: '(^|/)(assets|directory|service-desk|projects|links)/(?!schema)',
+							message:
+								'notifications may import a domain\u2019s tables, never its functions (ADR 0040).'
+						},
+						{
+							regex: '(^|/)(assets|directory|service-desk|projects|links)$',
+							message:
+								'notifications may import a domain\u2019s tables, never its functions (ADR 0040).'
 						}
 					]
 				}

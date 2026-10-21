@@ -2,6 +2,7 @@ import { and, asc, desc, eq, exists, inArray, ne, sql, type SQL } from 'drizzle-
 import type { StateGroup } from '#lib/domain/status.js';
 import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
+import { notify } from '../notifications';
 import { getDb, type Transaction } from '../db';
 import { constraintViolation, uniqueConstraintName } from '../db/errors';
 import { people } from '../directory/schema';
@@ -413,9 +414,10 @@ export async function updateTask(
 async function addAssignee(
 	tx: Transaction,
 	actor: SessionUser,
-	taskId: string,
+	task: { id: string; taskTag: string; title: string },
 	person: { id: string; fullName: string }
 ): Promise<void> {
+	const taskId = task.id;
 	const inserted = await tx
 		.insert(taskAssignees)
 		.values({ organisationId: actor.organisationId, taskId, personId: person.id })
@@ -429,6 +431,17 @@ async function addAssignee(
 		target: { taskId },
 		verb: 'task.assigned',
 		payload: { toPersonId: person.id, toPersonName: person.fullName }
+	});
+
+	// Only a person newly added is told: `onConflictDoNothing` above returned early
+	// for anyone already on the task, so setting the same set again notifies nobody.
+	// Mail is #302's; the pending list is ignored here.
+	await notify(tx, {
+		organisationId: actor.organisationId,
+		actorPersonId: actor.personId,
+		target: { taskId },
+		snapshot: { code: task.taskTag, title: task.title, actorName: actor.name },
+		recipients: [{ personId: person.id, type: 'task.assigned' }]
 	});
 }
 
@@ -468,7 +481,7 @@ export async function assign(
 		const person = await findPerson(tx, actor.organisationId, personId);
 		if (!person) return failure('person_not_found' as const);
 
-		await addAssignee(tx, actor, taskId, person);
+		await addAssignee(tx, actor, locked.value.task, person);
 		return success(undefined);
 	});
 }
@@ -509,6 +522,7 @@ export async function setAssignees(
 	return getDb().transaction(async (tx) => {
 		const locked = await lockTask(tx, actor, taskId);
 		if (!locked.ok) return locked;
+		const { task } = locked.value;
 
 		const incoming = [];
 		for (const personId of wanted) {
@@ -527,7 +541,7 @@ export async function setAssignees(
 		for (const leaving of current.filter((entry) => !keep.has(entry.personId))) {
 			await removeAssignee(tx, actor, taskId, { id: leaving.personId, fullName: leaving.fullName });
 		}
-		for (const person of incoming) await addAssignee(tx, actor, taskId, person);
+		for (const person of incoming) await addAssignee(tx, actor, task, person);
 
 		return success(undefined);
 	});

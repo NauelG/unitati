@@ -3,6 +3,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import type { QueueColor } from '#lib/domain/queue-color.js';
 import type { Priority, TicketStatus } from '#lib/domain/status.js';
 import { actorColumns, recordActivity } from '../activity';
+import { notify } from '../notifications';
 import { linkAsset, type LinkCategoryFailure } from '../links';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
@@ -697,6 +698,15 @@ export async function assignTicket(
 				...base,
 				verb: 'ticket.assigned',
 				payload: { toPersonId: next.id, toPersonName: next.fullName }
+			});
+
+			// Unassigning notifies nobody. Mail is #302's; the pending list is ignored.
+			await notify(tx, {
+				organisationId: actor.organisationId,
+				actorPersonId: actor.personId,
+				target: { ticketId: ticket.id },
+				snapshot: { code: ticket.ticketTag, title: ticket.subject, actorName: actor.name },
+				recipients: [{ personId: next.id, type: 'ticket.assigned' }]
 			});
 		} else if (previous) {
 			await recordActivity(tx, {

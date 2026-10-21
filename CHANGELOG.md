@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.98.0] - 2026-10-21
+
+### Added
+
+- In-app notifications for ticket and task assignments (#33, #301): a bell in the topbar of the app
+  and of the portal with the unread count, a panel with the latest 20, and an inbox page
+  (`/notifications`, `/portal/notifications`) with unread filter and pagination. The count refreshes
+  every minute while the tab is visible. Assigning yourself, unassigning, or re-setting the same
+  assignees notifies nobody. No email yet.
+- `notifications`, `notification_preferences` and `follows` tables, ready for later producers.
+
 ## [0.97.1] - 2026-10-21
 
 ### Fixed
