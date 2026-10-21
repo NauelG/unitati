@@ -1037,6 +1037,7 @@
 	"branding_logo_error_output_too_large": "Incluso optimizada, la imagen ocupa más de 256 KB. Prueba con un SVG más simple o un PNG más pequeño.",
 	"branding_logo_error_missing": "Elige un archivo.",
 	"powered_by": "Con tecnología de {product}",
+	"source_code": "Código fuente",
 	"branding_restore": "Restaurar marca de Unitati",
 	"branding_restore_title": "¿Restaurar la marca de Unitati?",
 	"branding_restore_body": "Se borrarán el nombre, el color y los logotipos que hayas subido. No se puede deshacer.",

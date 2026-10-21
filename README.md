@@ -15,7 +15,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-0.99.1-1d5cf0" alt="Version 0.99.1" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
-  <img src="https://img.shields.io/badge/license-TBD-lightgrey" alt="License: to be decided" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0--only-1d5cf0" alt="License: AGPL-3.0-only" /></a>
 </p>
 
 ---
@@ -225,18 +225,15 @@ needs isolation gets its own hostname, port or Tailscale Service, never a subpat
 
 ### Container image
 
-Every version on `main` is published as a **private** image on GitHub Container Registry,
+Every version on `main` is published as a **public** image on GitHub Container Registry,
 `ghcr.io/nauelg/unitati`, tagged `X.Y.Z` and `latest`
 ([ADR 0023](docs/adr/0023-container-image-on-ghcr.md)). The same build runs in every environment;
-configuration is environment variables only (see `.env.example`).
+configuration is environment variables only (see `.env.example`). Pulling needs no login.
 
 ```sh
-# once per host: a classic PAT with read:packages
-echo "$GHCR_TOKEN" | docker login ghcr.io -u NauelG --password-stdin
-
-docker pull ghcr.io/nauelg/unitati:0.51.0
+docker pull ghcr.io/nauelg/unitati:latest
 docker run -d --name unitati --env-file unitati.env -p 3000:3000 \
-  -v unitati-uploads:/data/uploads ghcr.io/nauelg/unitati:0.51.0
+  -v unitati-uploads:/data/uploads ghcr.io/nauelg/unitati:latest
 ```
 
 The container applies pending migrations on every start, then serves; with nothing pending that
@@ -245,11 +242,16 @@ is a no-op, and a failed migration stops the container. Ticket attachments live 
 
 ## Contributing
 
-- [Conventional Commits](https://www.conventionalcommits.org/).
+- [Conventional Commits](https://www.conventionalcommits.org/), each **signed off** with `git commit -s` ([DCO](https://developercertificate.org/), see [CONTRIBUTING](.github/CONTRIBUTING.md)).
 - One pull request per change. It bumps the version and updates `CHANGELOG.md` and the README badge (see [Versioning](#versioning)).
 - Before opening a PR: `npm run check && npm run lint && npm test`, plus `npm run db:start && npm run test:db` when the change touches the database.
 - Architectural decisions go in a new `docs/adr/NNNN-title.md`.
 
 ## License
 
-To be decided before the first public release (AGPLv3 vs MIT). See [internal vs open source](docs/decision-internal-vs-oss.md).
+Copyright © 2026 Nauel Gómez and contributors.
+
+Unitati is free software: you can redistribute it and/or modify it under the terms of the
+[GNU Affero General Public License, version 3 only](LICENSE). If you modify it and let people use
+it over a network, you must offer them the source of your version; every screen that shows the
+version links to the source for that reason. See [ADR 0041](docs/adr/0041-license-agpl-3.0-only.md).

@@ -48,7 +48,11 @@ Concretely, from day one:
   - **AGPLv3** protects against closed SaaS forks; companies are wary of it.
   - **MIT** maximises adoption; anyone can make a closed SaaS fork.
   - Reference points: Zammad, Snipe-IT and Plane are AGPLv3; FreeITSM is MIT.
+  - _(Resolved 2026-10-21 by [ADR 0041](adr/0041-license-agpl-3.0-only.md): AGPL-3.0-only, with a
+    DCO sign-off on contributions.)_
 - **Repository visibility:** private until the MVP is usable.
+  - _(Resolved: the MVP is complete ([MVP scope](mvp-scope.md)); the repository has been public
+    since 2026-10-06 and the container image since 2026-10-21.)_
 
 ## Risk to check now
 
