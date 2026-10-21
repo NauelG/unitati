@@ -64,6 +64,12 @@ describe('permissions', () => {
 		});
 	});
 
+	it('lets an admin alone waive a required handover (ADR 0035, decision 8)', () => {
+		expect(roleCan('admin', 'assets.handover.waive')).toBe(true);
+		expect(roleCan('technician', 'assets.handover.waive')).toBe(false);
+		expect(roleCan('employee', 'assets.handover.waive')).toBe(false);
+	});
+
 	it('accepts a user shaped object', () => {
 		expect(can({ role: 'technician' }, 'assets.manage')).toBe(true);
 		expect(can({ role: 'employee' }, 'assets.manage')).toBe(false);

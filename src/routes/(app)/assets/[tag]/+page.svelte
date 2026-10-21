@@ -487,6 +487,8 @@
 			people={personOptions}
 			assets={data.deliverable}
 			currentId={asset.id}
+			canWaive={data.canWaiveHandover}
+			waiveReasonMax={data.waiveReasonMax}
 			error={deliverError}
 		/>
 	{/if}

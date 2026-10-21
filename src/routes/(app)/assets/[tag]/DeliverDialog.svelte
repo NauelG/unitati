@@ -6,6 +6,7 @@
 	import Dialog from '#lib/components/unitati/Dialog.svelte';
 	import FormError from '#lib/components/unitati/FormError.svelte';
 	import SelectField, { type SelectOption } from '#lib/components/unitati/SelectField.svelte';
+	import TextAreaField from '#lib/components/unitati/TextAreaField.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 
 	interface Props {
@@ -16,21 +17,42 @@
 		assets: { id: string; assetTag: string; name: string; requiresHandover: boolean }[];
 		/** Preselected: the asset whose page this was opened from. */
 		currentId: string;
+		/** Holds `assets.handover.waive` (ADR 0035, decision 8): only then is waiving offered. */
+		canWaive?: boolean;
+		/** The longest waive reason the server accepts; from the server, so the two cannot drift. */
+		waiveReasonMax: number;
 		error?: string;
 	}
 
-	let { open, onOpenChange, people, assets, currentId, error }: Props = $props();
+	let {
+		open,
+		onOpenChange,
+		people,
+		assets,
+		currentId,
+		canWaive = false,
+		waiveReasonMax,
+		error
+	}: Props = $props();
 
 	// No reset effect: the page mounts this dialog afresh on every open, and an
 	// effect here would re-run when a reload swaps `currentId`'s source object,
 	// wiping the success view (the link is shown once).
 	let personId = $state<string | null>(null);
 	let selected = $state<string[]>([untrack(() => currentId)]);
+	let waive = $state(false);
+	let waiveReason = $state('');
 	let pending = $state(false);
-	let done = $state<{ code: string | null; link: string | null } | null>(null);
+	let done = $state<{ code: string | null; link: string | null; waived: boolean } | null>(null);
 	let copied = $state(false);
 
 	const issuing = $derived(assets.some((a) => selected.includes(a.id) && a.requiresHandover));
+	// Waiving is only offered when there is a handover to waive; unticking the
+	// asset that required one takes the option, and the choice, away.
+	const waiving = $derived(canWaive && issuing && waive);
+	const reasonValid = $derived(
+		waiveReason.trim().length > 0 && waiveReason.trim().length <= waiveReasonMax
+	);
 
 	function toggle(id: string, checked: boolean) {
 		selected = checked ? [...selected, id] : selected.filter((other) => other !== id);
@@ -66,6 +88,8 @@
 				<Button type="button" variant="secondary" onclick={() => copy(done!.link!)}>
 					{copied ? m.deliver_copied() : m.deliver_copy()}
 				</Button>
+			{:else if done.waived && done.code}
+				<p class="text-sm">{m.deliver_done_waived({ code: done.code })}</p>
 			{:else}
 				<p class="text-sm">{m.deliver_done_plain()}</p>
 			{/if}
@@ -85,7 +109,8 @@
 					if (result.type === 'success' && result.data?.action === 'deliver') {
 						done = {
 							code: (result.data.handoverCode as string | null) ?? null,
-							link: (result.data.handoverLink as string | null) ?? null
+							link: (result.data.handoverLink as string | null) ?? null,
+							waived: result.data.handoverWaived === true
 						};
 						await invalidateAll();
 					} else {
@@ -125,8 +150,29 @@
 				</div>
 			</fieldset>
 
+			{#if canWaive && issuing}
+				<label class="flex items-center gap-[var(--space-2)] text-sm">
+					<input type="checkbox" name="waive" bind:checked={waive} />
+					<span>{m.deliver_waive()}</span>
+				</label>
+				{#if waive}
+					<TextAreaField
+						label={m.deliver_waive_reason()}
+						name="waiveReason"
+						hint={m.deliver_waive_reason_hint()}
+						bind:value={waiveReason}
+						maxlength={waiveReasonMax}
+						required
+					/>
+				{/if}
+			{/if}
+
 			<p class="text-sm text-[var(--ink-muted)]" role="status">
-				{issuing ? m.deliver_will_issue() : m.deliver_no_handover()}
+				{waiving
+					? m.deliver_will_waive()
+					: issuing
+						? m.deliver_will_issue()
+						: m.deliver_no_handover()}
 			</p>
 
 			{#if error}<FormError>{error}</FormError>{/if}
@@ -135,7 +181,10 @@
 				<Button type="button" variant="secondary" onclick={() => onOpenChange(false)}>
 					{m.deliver_cancel()}
 				</Button>
-				<Button type="submit" disabled={pending || !personId || selected.length === 0}>
+				<Button
+					type="submit"
+					disabled={pending || !personId || selected.length === 0 || (waiving && !reasonValid)}
+				>
 					{m.deliver_submit()}
 				</Button>
 			</div>

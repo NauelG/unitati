@@ -50,8 +50,14 @@ async function issued() {
 		name: 'Laptop',
 		serial: 'SN-42'
 	});
-	const delivered = await deliver(technician, ada.id, [laptop.id], { mailer: null });
-	if (!delivered.ok || !delivered.value.handover) throw new Error('setup: no handover');
+	const delivered = await deliver(
+		technician,
+		{ personId: ada.id, assetIds: [laptop.id] },
+		{ mailer: null }
+	);
+	if (!delivered.ok || delivered.value.handover?.status !== 'pending') {
+		throw new Error('setup: no pending handover');
+	}
 	return { technician, handover: delivered.value.handover };
 }
 

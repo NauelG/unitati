@@ -22,6 +22,12 @@ export const PERMISSIONS = [
 	'assets.view.own',
 	'assets.manage',
 	'assets.checkout',
+	/**
+	 * Recording custody without the signature a category requires (ADR 0035,
+	 * decision 8). Admins only: a waiver every technician can apply ends up
+	 * applied to everything.
+	 */
+	'assets.handover.waive',
 
 	// Service desk
 	'tickets.view',

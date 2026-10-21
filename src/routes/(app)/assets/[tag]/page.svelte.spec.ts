@@ -56,6 +56,8 @@ function pageData(permissions: { canManage: boolean; canCheckout: boolean }) {
 	return {
 		asset,
 		...permissions,
+		canWaiveHandover: false,
+		waiveReasonMax: 500,
 		canLinkTickets: false,
 		recentMonths: 6,
 		people: [
@@ -93,6 +95,49 @@ describe('asset record in-place editing', () => {
 		await fireEvent.click(screen.getByRole('button', { name: 'Entregar…' }));
 		expect(await screen.findByText(/Se emitirá una entrega pendiente de firma/)).toBeTruthy();
 		expect(screen.queryByRole('button', { name: /^Custodia/ })).toBeNull();
+	});
+
+	describe('waiving the handover (ADR 0035, decision 8)', () => {
+		function openDelivery(options: { canWaiveHandover: boolean; requiresHandover: boolean }) {
+			const data = pageData({ canManage: true, canCheckout: true }) as Record<string, unknown>;
+			data.asset = { ...asset, custodianPersonId: null, custodianName: null };
+			data.canWaiveHandover = options.canWaiveHandover;
+			data.deliverable = [
+				{
+					id: 'a-1',
+					assetTag: 'AST-1',
+					name: 'Laptop',
+					requiresHandover: options.requiresHandover
+				}
+			];
+			render(Page, { data, form: null } as never);
+			return fireEvent.click(screen.getByRole('button', { name: 'Entregar…' }));
+		}
+
+		it('hides the option from someone without the permission', async () => {
+			await openDelivery({ canWaiveHandover: false, requiresHandover: true });
+			expect(await screen.findByText(/Se emitirá una entrega pendiente de firma/)).toBeTruthy();
+			expect(screen.queryByRole('checkbox', { name: 'Dispensar la firma' })).toBeNull();
+		});
+
+		it('hides it when no handover is required, since there is nothing to waive', async () => {
+			await openDelivery({ canWaiveHandover: true, requiresHandover: false });
+			expect(await screen.findByText(/Ningún activo requiere firma/)).toBeTruthy();
+			expect(screen.queryByRole('checkbox', { name: 'Dispensar la firma' })).toBeNull();
+		});
+
+		it('asks an admin for a reason once they choose to waive', async () => {
+			await openDelivery({ canWaiveHandover: true, requiresHandover: true });
+			const option = await screen.findByRole('checkbox', { name: 'Dispensar la firma' });
+			expect(screen.queryByLabelText('Motivo de la dispensa')).toBeNull();
+
+			await fireEvent.click(option);
+
+			const reason = screen.getByLabelText('Motivo de la dispensa');
+			expect(reason.hasAttribute('required')).toBe(true);
+			expect(reason.getAttribute('maxlength')).toBe('500');
+			expect(screen.getByText(/dispensada: no se pedirá firma/)).toBeTruthy();
+		});
 	});
 
 	it('shows no Custodia, Estado, Ubicación or Nota panels', () => {

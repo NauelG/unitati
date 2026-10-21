@@ -314,7 +314,8 @@ export const assignCustodyEndpoint = defineEndpoint({
 		const actor = withReads(principal);
 		const target = await targetOf(actor, input.tag);
 		// The one door to custody for a person's action, so a required handover cannot be skipped.
-		const outcome = await deliver(actor, input.personId, [target.id]);
+		// No waive option here: a service account never waives a handover (#277).
+		const outcome = await deliver(actor, { personId: input.personId, assetIds: [target.id] });
 		if (!outcome.ok) throw assetRefusal(outcome.error);
 		return {
 			...(await written(actor, input.tag)),

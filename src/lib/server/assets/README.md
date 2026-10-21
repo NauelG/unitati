@@ -76,7 +76,8 @@ Three rules the screens keep, each of which cost a bug to learn:
   `forms.ts` deliberately omits `custodianPersonId`.
 - **A denial is a 404.** `requireAnyPermission` reaches `/assets` for any of the three read
   permissions; the catalogue and every write need `assets.manage` (custody needs
-  `assets.checkout`).
+  `assets.checkout`, and waiving the handover a delivery requires needs `assets.handover.waive`,
+  admins only).
 
 ## Seed
 

@@ -2,6 +2,7 @@
 	import FileSignature from '@lucide/svelte/icons/file-signature';
 	import FileCheck from '@lucide/svelte/icons/file-check';
 	import FileX from '@lucide/svelte/icons/file-x';
+	import PenOff from '@lucide/svelte/icons/pen-off';
 	import Archive from '@lucide/svelte/icons/archive';
 	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
@@ -75,6 +76,7 @@
 		'handover.issued': FileSignature,
 		'handover.accepted': FileCheck,
 		'handover.rejected': FileX,
+		'handover.waived': PenOff,
 		'state.changed': RefreshCw,
 		'location.changed': MapPin,
 		'note.added': MessageSquare,

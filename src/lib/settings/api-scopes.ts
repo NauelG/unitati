@@ -7,7 +7,8 @@ import type { Permission } from '#lib/server/access/permissions.js';
  *
  * The API's own permissions (`api.keys.*`) are deliberately absent. v1 serves no
  * endpoint that manages keys, so offering them as scopes would be a checkbox
- * that grants nothing.
+ * that grants nothing. `assets.handover.waive` is absent for the same reason:
+ * the API has no waive option, so a service account never waives (#277).
  */
 
 export interface ScopeGroup {

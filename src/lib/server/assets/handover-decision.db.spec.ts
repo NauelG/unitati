@@ -67,12 +67,14 @@ async function pending() {
 	const mouse = await createAsset(organisation.id, mice.modelId, { name: 'Mouse' });
 
 	const now = new Date('2026-10-20T10:00:00Z');
-	const delivered = await deliver(technician, ada.id, [laptop.id, mouse.id], {
-		mailer: null,
-		linkTo: (token) => token,
-		now: () => now
-	});
-	if (!delivered.ok || !delivered.value.handover) throw new Error('setup: no handover');
+	const delivered = await deliver(
+		technician,
+		{ personId: ada.id, assetIds: [laptop.id, mouse.id] },
+		{ mailer: null, linkTo: (token) => token, now: () => now }
+	);
+	if (!delivered.ok || delivered.value.handover?.status !== 'pending') {
+		throw new Error('setup: no pending handover');
+	}
 	const storage = new InMemoryStorage();
 
 	return {
