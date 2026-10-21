@@ -223,4 +223,18 @@ describe('request form catalogue', () => {
 		});
 		expect((await deleteQueue(technician, first.id)).ok).toBe(true);
 	});
+
+	it('keeps a deactivated form routable: its queue still cannot be deleted', async () => {
+		const { technician, hardware, formId } = await desk();
+		await updateRequestForm(technician, formId, {
+			name: 'Request a laptop',
+			queueId: hardware.id,
+			active: false
+		});
+
+		expect(await deleteQueue(technician, hardware.id)).toEqual({
+			ok: false,
+			error: 'queue_in_use'
+		});
+	});
 });
