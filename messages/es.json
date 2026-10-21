@@ -1561,7 +1561,7 @@
 	"handover_resend_error_not_resendable": "Solo se puede reenviar un acta pendiente o caducada.",
 	"handover_resend_error_not_found": "Esa acta ya no existe.",
 	"handover_resend_done": "Enlace reenviado",
-	"handover_resend_mailed": "Se ha enviado por correo a la persona. También puedes copiarlo o mostrar el QR.",
+	"handover_resend_mailed": "Se envía por correo a la persona. También puedes copiarlo o mostrar el QR.",
 	"handover_resend_not_mailed": "El correo está desactivado: entrega el enlace en persona.",
 	"handover_resend_expires": "Caduca el {date}.",
 	"handover_custody_label": "Acta de la custodia actual",

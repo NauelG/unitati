@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, gt, inArray, lte, or, sql, type SQL } from '
 import {
 	DEFAULT_HANDOVER_STATES,
 	deriveHandoverState,
+	HANDOVER_STATES,
 	type HandoverCondition,
 	type HandoverState
 } from '#lib/domain/handover.js';
@@ -225,6 +226,7 @@ export async function getHandover(
 	const [row] = await getDb()
 		.select({
 			id: handovers.id,
+			personId: handovers.personId,
 			recipientEmail: handovers.recipientEmailSnapshot,
 			body: handovers.bodySnapshot,
 			bodySha256: handovers.bodySha256,
@@ -258,7 +260,7 @@ export async function getHandover(
 			.leftJoin(assets, eq(assets.id, handoverAssets.assetId))
 			.where(eq(handoverAssets.handoverId, row.id))
 			.orderBy(asc(handoverAssets.assetTagSnapshot)),
-		personEntries(viewer.organisationId, row.id)
+		personEntries(viewer.organisationId, row.personId, row.id)
 	]);
 
 	return success({
@@ -283,15 +285,14 @@ export async function getHandover(
  * the person's log holds each exactly once. Filtering on the payload's id keeps
  * only this handover's.
  */
-async function personEntries(organisationId: string, handoverId: string): Promise<TimelineEntry[]> {
-	const [person] = await getDb()
-		.select({ personId: handovers.personId })
-		.from(handovers)
-		.where(eq(handovers.id, handoverId))
-		.limit(1);
+async function personEntries(
+	organisationId: string,
+	personId: string,
+	handoverId: string
+): Promise<TimelineEntry[]> {
 	const entries = await listActivity({
 		organisationId,
-		target: { personId: person.personId },
+		target: { personId },
 		limit: 500
 	});
 	return entries.filter(
@@ -318,7 +319,7 @@ export async function custodyHandover(
 	const [latest] = await listHandovers(
 		viewer,
 		{
-			states: ['pending', 'expired', 'accepted', 'rejected', 'waived'],
+			states: HANDOVER_STATES,
 			assetId: asset.id,
 			personId: asset.custodianPersonId,
 			direction: 'delivery'

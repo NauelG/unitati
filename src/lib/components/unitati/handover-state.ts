@@ -1,4 +1,5 @@
 import type { HandoverState } from '#lib/domain/handover.js';
+import type { HandoverDirection } from '#lib/server/assets/index.js';
 import { m } from '#lib/paraglide/messages.js';
 import type { Tone } from './status.js';
 
@@ -27,6 +28,6 @@ export function handoverStateBadge(state: HandoverState): { tone: Tone; label: s
 	return { tone: TONES[state], label: LABELS[state]() };
 }
 
-export function handoverDirectionLabel(direction: 'delivery' | 'return'): string {
+export function handoverDirectionLabel(direction: HandoverDirection): string {
 	return direction === 'delivery' ? m.handover_direction_delivery() : m.handover_direction_return();
 }
