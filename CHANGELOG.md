@@ -5,6 +5,13 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.93.1] - 2026-10-21
+
+### Fixed
+
+- The signing-link QR code was shown shifted off the left edge of the screen. It now opens in the
+  dialog's own centred box, sized to fit its width and the viewport height (#278).
+
 ## [0.93.0] - 2026-10-21
 
 ### Added
