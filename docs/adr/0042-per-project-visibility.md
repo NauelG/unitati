@@ -55,6 +55,43 @@ that model (#58, #309).
 
 - Admins see every project, including those they are not a member of; there is no way to hide a
   project from an admin.
-- Leaks through other domains (restricted link references, escalation targets, moving a task into
-  a hidden project, counters) are closed separately in #310; the scope already covers the counters.
+- Leaks through other domains are closed in #310, see [Leaks](#leaks).
 - Members rows are kept on a switch back to `organisation`, so the old list returns.
+
+## Leaks
+
+The scope hides a record from the queries that go through it. A record also leaves its own domain
+in other forms: a reference on another record, a sentence in a history, a picker, a count. Each of
+those was a place where a members-only project could still be named. #310 closes them, and
+`projects/members-visibility.db.spec.ts` is the contract: one fixture (a members-only project with
+a task, linked to a ticket every technician can open) asserted for a non-member technician, a
+member, an admin and the requester, on serialised page data and API bodies rather than on rendered
+text.
+
+1. **A reference to a record the viewer cannot see carries no code and no title.** `relatedTo`
+   returns, per group, the records the viewer can open and `restricted`: a number. No `id` either,
+   since an id is enough to build a URL or probe the API, and no state or project, which describe
+   the record. The panel draws "1 elemento restringido" with a lock, and nothing to click. The rule
+   is the same everywhere, so it also changes what an employee sees of a task they are not assigned
+   to (ADR 0007's amendment of 2026-10-15 showed its code, title and state; that exception is
+   withdrawn). Handover references keep their shape: they are not scoped records.
+2. **History is redacted at read time.** `link.task.*` and `link.project.*` snapshot the code and
+   the title when the link is made, so the scope that hides the record cannot hide the words
+   already copied. The ticket thread passes its entries through `redactLinkEvents`, which blanks
+   the payload of those about work the viewer cannot see; the sentence reads "Vinculó un elemento
+   restringido". The Overview feed drops, through `visibleFeed`, entries whose target is a task or
+   project the viewer cannot see. The stored rows are untouched: access can be granted later and the
+   history then reads whole.
+3. **Escalation follows the scope.** The pickers list through the projects domain's scoped lists,
+   and linking resolves the target through the same scope, so escalating to a hidden project or
+   task fails as `project_not_found` / `task_not_found`.
+4. **Moving follows reads, and does not grant access.** Both projects must be visible to the actor
+   (`lockProjects` only returns those), and into a members-only target every assignee must already
+   be a member (`assignees_not_members`, listing them), the same rule as assigning. The helper that
+   merging projects (#61) will reuse validates nothing, as before, so #61's own entry point must
+   apply both checks.
+5. **Counters** are built on the scope and need nothing more; the battery asserts it.
+
+Not covered: notifications and followers (decision 8 and #301/#57), and the activity of people and
+of tasks that moved between projects, which can name a project the viewer cannot see in
+`task.project.changed` payloads.

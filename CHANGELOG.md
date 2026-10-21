@@ -5,6 +5,28 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.104.0] - 2026-10-21
+
+### Added
+
+- Moving a task into a members-only project now checks its assignees (#58, #310): every assignee
+  must already be a member, otherwise the move fails (`assignees_not_members`, `409` in the API)
+  and the task page says "Antes de moverla, añade como miembros o desasigna a: …" naming them.
+- `members-visibility.db.spec.ts`, the contract of members-only projects: for a technician who is
+  not a member, the project and its tasks are absent from every list, page, board, search, API
+  response, counter, escalation picker and move picker, while members and admins see them.
+
+### Changed
+
+- Links to records you cannot see no longer show their code or title. A task or project of a
+  ticket's relations that is outside your scope (a members-only project you are not in, or, for
+  an employee, a task not assigned to you) is now a lock row, "1 elemento restringido" /
+  "{n} elementos restringidos", with no code, title, state, id or link. The `restricted` flag of
+  `GET /tickets/{tag}/work` items becomes a `restricted` count on each group.
+- A ticket's history and the Overview feed also keep work you cannot see out: a `link.task.*` or
+  `link.project.*` entry reads "Vinculó un elemento restringido", and entries about a task or
+  project you cannot open are not listed on the Overview.
+
 ## [0.103.0] - 2026-10-21
 
 ### Added

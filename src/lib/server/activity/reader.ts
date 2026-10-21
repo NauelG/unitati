@@ -93,6 +93,13 @@ export async function listActivity(query: ActivityQuery): Promise<TimelineEntry[
 /** What a feed item links to, in `RecordRef`'s own shape. Absent for the handful of verbs with no asset or ticket to point at. */
 export type OrgActivityEntry = TimelineEntry & {
 	record: { kind: 'asset' | 'ticket'; tag: string; title: string; href: string } | null;
+	/**
+	 * The task or project the entry is about, when it is about one: what a caller
+	 * needs to drop entries of work the viewer cannot see (ADR 0042). The feed
+	 * itself is not scoped by role, and these let its caller do it.
+	 */
+	taskId: string | null;
+	projectId: string | null;
 };
 
 /**
@@ -128,7 +135,9 @@ export async function listRecentActivity(
 			assetTag: assets.assetTag,
 			assetName: assets.name,
 			ticketTag: tickets.ticketTag,
-			ticketSubject: tickets.subject
+			ticketSubject: tickets.subject,
+			taskId: activity.taskId,
+			projectId: activity.projectId
 		})
 		.from(activity)
 		.leftJoin(people, eq(activity.actorPersonId, people.id))

@@ -5,6 +5,7 @@ import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { people } from '../directory/schema';
 import { extractMentions } from '#lib/domain/mentions.js';
+import { redactLinkEvents } from '../links';
 import {
 	notify,
 	sendNotificationEmails,
@@ -138,11 +139,14 @@ export async function ticketThread(
 				.orderBy(asc(attachments.createdAt))
 		: [];
 
-	const events = (
-		await listActivity({ organisationId: viewer.organisationId, target: { ticketId: ticket.id } })
-	).filter(
-		(entry) =>
-			!EVENTS_NOT_LISTED.has(entry.verb) && (staff || EVENTS_FOR_REQUESTERS.has(entry.verb))
+	const events = await redactLinkEvents(
+		viewer,
+		(
+			await listActivity({ organisationId: viewer.organisationId, target: { ticketId: ticket.id } })
+		).filter(
+			(entry) =>
+				!EVENTS_NOT_LISTED.has(entry.verb) && (staff || EVENTS_FOR_REQUESTERS.has(entry.verb))
+		)
 	);
 
 	const items: ThreadItem[] = [

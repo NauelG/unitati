@@ -132,23 +132,29 @@ export function activitySentence(entry: ActivityEntry): string {
 		case 'link.asset.removed':
 			return m.activity_link_asset_removed();
 
-		// The snapshot, not today's name: the task may have been renamed since.
+		// The snapshot, not today's name: the task may have been renamed since. An
+		// empty tag is a link to work the viewer cannot see, redacted by the server
+		// (ADR 0042): there is no code or title to put in the sentence.
 		case 'link.task.added':
+			if (entry.payload.taskTag === '') return m.activity_link_restricted_added();
 			return m.activity_link_task_added({
 				task: `${entry.payload.taskTag} ${entry.payload.taskTitle}`
 			});
 
 		case 'link.task.removed':
+			if (entry.payload.taskTag === '') return m.activity_link_restricted_removed();
 			return m.activity_link_task_removed({
 				task: `${entry.payload.taskTag} ${entry.payload.taskTitle}`
 			});
 
 		case 'link.project.added':
+			if (entry.payload.projectTag === '') return m.activity_link_restricted_added();
 			return m.activity_link_project_added({
 				project: `${entry.payload.projectTag} ${entry.payload.projectName}`
 			});
 
 		case 'link.project.removed':
+			if (entry.payload.projectTag === '') return m.activity_link_restricted_removed();
 			return m.activity_link_project_removed({
 				project: `${entry.payload.projectTag} ${entry.payload.projectName}`
 			});

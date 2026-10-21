@@ -64,8 +64,10 @@ async function setup() {
 	return { ...workspace, project, task, storage, deps: { storage } };
 }
 
-const unwrap = <T>(outcome: { ok: true; value: T } | { ok: false; error: string }): T => {
-	if (!outcome.ok) throw new Error(outcome.error);
+const unwrap = <T>(
+	outcome: { ok: true; value: T } | { ok: false; error: string | { kind: string } }
+): T => {
+	if (!outcome.ok) throw new Error(JSON.stringify(outcome.error));
 	return outcome.value;
 };
 

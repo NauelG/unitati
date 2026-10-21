@@ -6,6 +6,8 @@
   [Amendment](#amendment-2026-10-14-employees-see-their-assigned-tasks).
 - **Amended:** 2026-10-15 — requesters see where their ticket was escalated. See
   [Amendment](#amendment-2026-10-15-requesters-see-where-their-ticket-was-escalated).
+  Narrowed by [ADR 0042](0042-per-project-visibility.md#leaks): outside their scope they get a
+  count, no longer the code, title and state.
 
 ## Context
 

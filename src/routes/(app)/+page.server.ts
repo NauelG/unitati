@@ -9,6 +9,7 @@ import { requireUser } from '#lib/server/auth/guards.js';
 import { assetRegistrationsSparkline, assetSummary } from '#lib/server/assets/index.js';
 import { countPeople, countTeams } from '#lib/server/directory/index.js';
 import { listRecentActivity } from '#lib/server/activity/index.js';
+import { visibleFeed } from '#lib/server/links/index.js';
 import { myOpenTasks } from '#lib/server/projects/index.js';
 import {
 	hasPortalActivity,
@@ -84,7 +85,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 		seesPeople ? countPeople(user.organisationId) : undefined,
 		seesPeople ? countTeams(user.organisationId) : undefined,
 		seesTickets ? myOpenTickets(user, 5) : undefined,
-		seesAssets || seesTickets ? listRecentActivity(user.organisationId, 8) : undefined,
+		// Work the viewer cannot see (a members-only project) is dropped from the
+		// feed: its sentences are made of its title (ADR 0042).
+		seesAssets || seesTickets
+			? listRecentActivity(user.organisationId, 8).then((entries) => visibleFeed(user, entries))
+			: undefined,
 		// Gated on the same permission as the card each one sits inside, so no
 		// viewer triggers a query whose result they could not be shown (#90).
 		seesTickets ? ticketOpeningsSparkline(user, TICKET_SPARKLINE_DAYS) : undefined,

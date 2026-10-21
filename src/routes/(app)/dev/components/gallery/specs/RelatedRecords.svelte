@@ -145,14 +145,14 @@
 		total: 8,
 		ratio: 0.5
 	};
-	const taskRef = (id: string, tag: string, title: string, href: string | null) => ({
+	const taskRef = (id: string, tag: string, title: string, href: string) => ({
 		kind: 'task' as const,
 		id,
 		tag,
 		title,
 		href
 	});
-	const projectRef = (id: string, tag: string, title: string, href: string | null) => ({
+	const projectRef = (id: string, tag: string, title: string, href: string) => ({
 		kind: 'project' as const,
 		id,
 		tag,
@@ -192,7 +192,7 @@
 		}
 	];
 
-	/** What the requesting employee gets: an out-of-scope target comes back without a link or a project. */
+	/** What the requesting employee gets: an out-of-scope target comes back as a count, nothing else. */
 	const forRequester: RelatedGroup[] = [
 		{
 			relation: 'resolved_in',
@@ -202,26 +202,15 @@
 					linkedAt,
 					ref: taskRef('10', 'TSK-0042', 'Cambiar tóner', '#'),
 					status: { group: 'completed', name: 'Hecho' }
-				},
-				{
-					linkedAt: new Date('2026-01-02T10:00:00Z'),
-					restricted: true,
-					ref: taskRef('13', 'TSK-0050', 'Revisar cableado', null),
-					status: { group: 'started', name: 'En curso' }
 				}
-			]
+			],
+			restricted: 1
 		},
 		{
 			relation: 'handled_in',
 			icon: 'project',
-			items: [
-				{
-					linkedAt: new Date('2026-01-03T10:00:00Z'),
-					restricted: true,
-					ref: projectRef('14', 'PRJ-009', 'Obra planta 2', null),
-					status: { archived: false, progress: null }
-				}
-			]
+			items: [],
+			restricted: 2
 		}
 	];
 	/** The asset record (#168): the tickets raised on this machine, closed ones included, each with its status. */

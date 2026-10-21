@@ -1,10 +1,11 @@
-import { eq } from 'drizzle-orm';
+import { and, asc, eq, notInArray } from 'drizzle-orm';
 import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
+import { people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { placeBetween } from './position';
-import { projects, tasks, type Task } from './schema';
+import { projectMembers, projects, taskAssignees, tasks, type Task } from './schema';
 import { requireManage } from './scope';
 import { columnOf } from './tasks';
 import { lockProjects } from './writes';
@@ -16,7 +17,11 @@ import { lockProjects } from './writes';
  */
 
 export type MoveTaskToProjectFailure =
-	'task_not_found' | 'project_not_found' | 'project_archived' | 'same_project';
+	| 'task_not_found'
+	| 'project_not_found'
+	| 'project_archived'
+	| 'same_project'
+	| { kind: 'assignees_not_members'; people: { personId: string; fullName: string }[] };
 
 /**
  * Puts `task` in `target`, at the end of its state's column there, and records
@@ -67,8 +72,45 @@ export async function reparentTask(
 }
 
 /**
+ * The assignees of a task who are not members of `target`, when it is members-only
+ * (ADR 0042: an assignment never widens access, and neither does a move). Empty
+ * for an open project, which anybody may be assigned in.
+ */
+export async function assigneesOutside(
+	tx: Transaction,
+	taskId: string,
+	target: Pick<typeof projects.$inferSelect, 'id' | 'visibility'>
+): Promise<{ personId: string; fullName: string }[]> {
+	if (target.visibility === 'organisation') return [];
+
+	return tx
+		.select({ personId: people.id, fullName: people.fullName })
+		.from(taskAssignees)
+		.innerJoin(people, eq(taskAssignees.personId, people.id))
+		.where(
+			and(
+				eq(taskAssignees.taskId, taskId),
+				notInArray(
+					taskAssignees.personId,
+					tx
+						.select({ personId: projectMembers.personId })
+						.from(projectMembers)
+						.where(eq(projectMembers.projectId, target.id))
+				)
+			)
+		)
+		.orderBy(asc(people.fullName), asc(people.id));
+}
+
+/**
  * Moves a task to another project of the organisation, to the end of its column
  * there. Archived is read-only in both directions.
+ *
+ * **Both projects must be visible to the actor** (ADR 0042): `lockProjects` only
+ * returns what the actor can see, so a hidden source reads as `task_not_found`
+ * and a hidden target as `project_not_found`, indistinguishable from one that
+ * does not exist. Into a members-only target the task's assignees must already
+ * be members (`assignees_not_members`, listing them): moving never grants access.
  *
  * Both project rows are locked in one statement ordered by `id`, so two opposite
  * moves cannot deadlock. The task is re-read after the locks: if a concurrent
@@ -104,6 +146,11 @@ export async function moveTaskToProject(
 			if (!target) return failure('project_not_found' as const);
 			if (source.archivedAt || target.archivedAt) return failure('project_archived' as const);
 			if (source.id === target.id) return failure('same_project' as const);
+
+			const outside = await assigneesOutside(tx, task.id, target);
+			if (outside.length > 0) {
+				return failure({ kind: 'assignees_not_members' as const, people: outside });
+			}
 
 			await reparentTask(tx, actor, task, target);
 			return success(undefined);

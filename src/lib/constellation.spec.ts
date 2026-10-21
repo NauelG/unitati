@@ -254,14 +254,13 @@ describe('constellationItems', () => {
 		expect(
 			constellationItems([
 				{
-					relation: 'resolved_in',
-					icon: 'task',
+					relation: 'fulfilled_by',
+					icon: 'handover',
 					items: [
 						{
 							linkedAt,
-							restricted: true,
-							ref: { kind: 'task', id: 't', tag: 'TSK-0001', title: 'x', href: null },
-							status: { group: 'started', name: 'En curso' }
+							ref: { kind: 'handover', id: 'h', tag: 'HND-0001', title: 'x', href: null },
+							status: 'pending'
 						}
 					]
 				}
