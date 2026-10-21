@@ -18,6 +18,7 @@
 		AppShellNavLink
 	} from '#lib/components/unitati/app-shell-nav.js';
 	import Tooltip from '#lib/components/unitati/Tooltip.svelte';
+	import NotificationBell from '#lib/components/unitati/NotificationBell.svelte';
 	import UserMenu from '#lib/components/unitati/UserMenu.svelte';
 	import { Toaster } from '#lib/components/ui/sonner/index.js';
 	import {
@@ -156,6 +157,7 @@
 	settings={showSettings ? settingsLink : undefined}
 >
 	{#snippet topbarEnd()}
+		<NotificationBell count={data.unreadNotifications} inboxHref="/notifications" />
 		<UserMenu name={data.user.name} email={data.user.email} />
 	{/snippet}
 

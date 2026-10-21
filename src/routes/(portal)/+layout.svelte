@@ -2,6 +2,7 @@
 	import { productName } from '#lib/brand.svelte.js';
 	import AppVersion from '#lib/components/AppVersion.svelte';
 	import Logo from '#lib/components/unitati/Logo.svelte';
+	import NotificationBell from '#lib/components/unitati/NotificationBell.svelte';
 	import UserMenu from '#lib/components/unitati/UserMenu.svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { LayoutProps } from './$types';
@@ -29,6 +30,7 @@
 				{m.portal_assets_link()}
 			</a>
 			<AppVersion />
+			<NotificationBell count={data.unreadNotifications} inboxHref="/portal/notifications" />
 			<UserMenu name={data.user.name} email={data.user.email} />
 		</div>
 	</header>

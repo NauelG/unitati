@@ -1,6 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import { can } from '#lib/server/access/permissions.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
+import { unreadCount } from '#lib/server/notifications/index.js';
 import type { LayoutServerLoad } from './$types';
 
 /**
@@ -9,12 +10,13 @@ import type { LayoutServerLoad } from './$types';
  * service desk, and showing a technician the portal would hand them a thread
  * with its internal notes inside a screen built to never have any.
  */
-export const load: LayoutServerLoad = ({ locals, url }) => {
+export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const user = requirePermission(locals.user, 'tickets.view.own', url);
 	if (can(user, 'tickets.view')) redirect(303, '/service-desk');
 
 	return {
 		user: { name: user.name, email: user.email },
+		unreadNotifications: await unreadCount(user),
 		canSeeHandovers: can(user, 'assets.view.own')
 	};
 };

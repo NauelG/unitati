@@ -1641,5 +1641,26 @@
 	"ticket_request_deliver_asset": "Entregar {asset}",
 	"ticket_request_deliver_none": "No hay equipos en stock de la categoría {category}.",
 	"ticket_filter_request_form": "Formulario",
-	"ticket_filter_request_form_all": "Todos los formularios"
+	"ticket_filter_request_form_all": "Todos los formularios",
+
+	"notifications_title": "Notificaciones",
+	"notifications_bell_label": "Notificaciones, {n} sin leer",
+	"notifications_mark_all_read": "Marcar todas como leídas",
+	"notifications_view_all": "Ver todas",
+	"notifications_unread_only": "Solo no leídas",
+	"notifications_empty": "No tienes notificaciones",
+	"notifications_load_more": "Cargar más",
+	"notifications_unread_item": "Sin leer",
+	"notifications_loading": "Cargando…",
+	"notifications_lede": "Lo que ha pasado en los tickets y tareas que te afectan.",
+	"notifications_actor_unknown": "Alguien",
+	"notifications_sentence_ticket_assigned": "{actor} te ha asignado {code} · {title}",
+	"notifications_sentence_task_assigned": "{actor} te ha asignado la tarea {code} · {title}",
+	"notifications_sentence_ticket_replied": "{actor} ha respondido en {code} · {title}",
+	"notifications_sentence_ticket_commented": "{actor} ha añadido una nota interna en {code} · {title}",
+	"notifications_sentence_ticket_resolved": "{code} · {title} se ha resuelto",
+	"notifications_sentence_task_linked_completed": "Se ha completado la tarea vinculada a {code} · {title}",
+	"notifications_sentence_mention": "{actor} te ha mencionado en {code} · {title}",
+	"notifications_sentence_followed_activity": "Hay novedades en {code} · {title}"
+
 }

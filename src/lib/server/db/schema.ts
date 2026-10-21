@@ -9,3 +9,4 @@ export * from '../service-desk/schema';
 export * from '../projects/schema';
 export * from '../links/schema';
 export * from '../api/schema';
+export * from '../notifications/schema';

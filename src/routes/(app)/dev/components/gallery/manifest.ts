@@ -610,6 +610,21 @@ export interface GalleryException {
  */
 export const GALLERY_EXCEPTIONS: GalleryException[] = [
 	{
+		sourceFile: 'NotificationBell.svelte',
+		reason:
+			'Bound to the session: it polls and posts to /notifications/*, which answer 401 without a user, so it cannot render working in the gallery. It sits in both topbars.'
+	},
+	{
+		sourceFile: 'NotificationInbox.svelte',
+		reason:
+			'Bound to the inbox pages: its read and read-all forms post to the page actions of /notifications and /portal/notifications.'
+	},
+	{
+		sourceFile: 'NotificationRow.svelte',
+		reason:
+			'A fragment of the bell and the inbox page, which always render it inside a link or a form; it has no use on its own.'
+	},
+	{
 		sourceFile: 'ThemeMenuItems.svelte',
 		reason:
 			'Not a standalone component: the theme radio group is the body of a dropdown menu and renders only inside one. It is shown, working, in the UserMenu entry.'
