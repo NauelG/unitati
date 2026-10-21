@@ -69,7 +69,7 @@ describe('applyEscalations', () => {
 		});
 	});
 
-	it("shows the employee's own ticket its out-of-scope task in the restricted form", async () => {
+	it("shows the employee's own ticket its out-of-scope task as a restricted count", async () => {
 		const { organisation, admin } = await seeded();
 		await applyEscalations(admin, buildEscalationsPlan());
 
@@ -95,10 +95,8 @@ describe('applyEscalations', () => {
 		const [group] = await relatedTo(viewer, { kind: 'ticket', id: own.id });
 
 		expect(group.relation).toBe('resolved_in');
-		expect(group.items[0]).toMatchObject({
-			restricted: true,
-			ref: { title: 'Inventariar el mobiliario', href: null }
-		});
+		expect(group).toMatchObject({ items: [], restricted: 1 });
+		expect(JSON.stringify(group)).not.toContain('Inventariar el mobiliario');
 	});
 
 	it('creates no duplicate task, link or entry when it runs twice', async () => {

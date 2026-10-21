@@ -15,7 +15,7 @@ import {
 	updateTaskInput
 } from '../../projects';
 import { page, pageWindow } from '../../shared/pagination';
-import { created, defineEndpoint, notFound, Reply, type Endpoint } from '../registry';
+import { conflict, created, defineEndpoint, notFound, Reply, type Endpoint } from '../registry';
 import { paginationMetaSchema, toMeta } from '../shared-schemas';
 import {
 	bodyRefusal,
@@ -202,7 +202,7 @@ export const reparentTaskEndpoint = defineEndpoint({
 	path: '/tasks/{tag}/project',
 	summary: 'Move a task to another project.',
 	description:
-		"Moves the task to the project `projectTag`, at the end of its state's column there; tag, state, assignees and history stay. A project that does not exist, or that the key cannot see, is a `400` on `projectTag`. The same project is `409 same_project`; an archived source or target is `409 project_archived`.",
+		"Moves the task to the project `projectTag`, at the end of its state's column there; tag, state, assignees and history stay. A project that does not exist, or that the key cannot see, is a `400` on `projectTag`. The same project is `409 same_project`; an archived source or target is `409 project_archived`. Into a members-only project every assignee of the task must already be a member, otherwise `409 assignees_not_members`.",
 	example: { projectTag: 'PRJ-0008' },
 	permissions: PROJECT_MANAGE,
 	input: z.object({ tag, projectTag: z.string().min(1) }),
@@ -214,7 +214,17 @@ export const reparentTaskEndpoint = defineEndpoint({
 		if (!target.ok) throw invalidField('projectTag', 'Project not found.');
 
 		const outcome = await moveTaskToProject(actor, task.id, target.value.id);
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) {
+			if (typeof outcome.error === 'object') {
+				// Moving never grants access (ADR 0042): say who is in the way.
+				const names = outcome.error.people.map((person) => person.fullName).join(', ');
+				throw conflict(
+					'assignees_not_members',
+					`Add as members or unassign before moving the task: ${names}.`
+				);
+			}
+			throw refusal(outcome.error);
+		}
 		return writtenTask(actor, input.tag);
 	}
 });

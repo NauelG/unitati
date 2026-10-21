@@ -237,9 +237,7 @@ const relatedItemSchema = named(
 		kind: z.enum(['ticket', 'task', 'project']),
 		tag: z.string(),
 		title: z.string(),
-		/** `null` on a restricted item: the viewer may know it exists, not open it. */
 		href: z.string().nullable(),
-		restricted: z.boolean(),
 		/** A ticket's status, a task's `{ group, name }`, or a project's `{ archived, progress }`. */
 		status: z.union([z.string(), taskStatus, projectStatus]),
 		priority: z.enum(PRIORITIES).optional(),
@@ -269,7 +267,9 @@ const relatedResponse = z.object({
 				'handles',
 				'resolves_via_tasks'
 			]),
-			items: z.array(relatedItemSchema)
+			items: z.array(relatedItemSchema),
+			/** Tasks or projects of this group the key cannot see: a count, never a code or a title (ADR 0042). */
+			restricted: z.number().int().min(0)
 		})
 	)
 });
@@ -284,7 +284,6 @@ function itemToWire(item: WireItem): z.input<typeof relatedItemSchema> {
 		tag: item.ref.tag,
 		title: item.ref.title,
 		href: item.ref.href,
-		restricted: item.restricted === true,
 		status: item.status,
 		...('priority' in item && item.priority ? { priority: item.priority } : {}),
 		...('assignee' in item && item.assignee !== undefined ? { assignee: item.assignee } : {}),
@@ -312,7 +311,8 @@ function groupsToWire(groups: readonly RelatedGroup[], relations: readonly WireR
 							relation: group.relation as WireRelation,
 							items: group.items
 								.filter((item): item is WireItem => item.ref.kind !== 'handover')
-								.map(itemToWire)
+								.map(itemToWire),
+							restricted: group.restricted ?? 0
 						}
 					]
 				: []
@@ -326,7 +326,7 @@ export const ticketWorkEndpoint = defineEndpoint({
 	path: '/tickets/{tag}/work',
 	summary: 'List the tasks and projects a ticket was escalated to.',
 	description:
-		"Returns the groups `resolved_in` (tasks) and `handled_in` (projects), each with the item's status as it is today. A requester reading their own ticket also gets the work outside their scope, as restricted items: `restricted: true` and `href: null`. A ticket the key cannot see is a `404`.",
+		"Returns the groups `resolved_in` (tasks) and `handled_in` (projects), each with the item's status as it is today. Work the key cannot see (outside its scope, or in a members-only project it is not a member of) is not listed: each group carries only `restricted`, how many such records there are. A ticket the key cannot see is a `404`.",
 	permissions: TICKET_READS,
 	input: z.object({ tag }),
 	output: relatedResponse,

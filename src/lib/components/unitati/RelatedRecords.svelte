@@ -28,6 +28,7 @@
 </script>
 
 <script lang="ts">
+	import Lock from '@lucide/svelte/icons/lock';
 	import Plus from '@lucide/svelte/icons/plus';
 	import Unlink from '@lucide/svelte/icons/unlink';
 	import { toast } from 'svelte-sonner';
@@ -170,9 +171,9 @@
 		return count === 1 ? one() : other();
 	}
 
-	/** The action that unlinks this item, or nothing: the requester, a restricted item or a kind without one cannot. */
+	/** The action that unlinks this item, or nothing: the requester, or a kind without one cannot. */
 	function actionFor(group: RelatedGroup, item: RelatedItem): string | undefined {
-		if (requester || item.restricted) return undefined;
+		if (requester) return undefined;
 		if (unlinkActions) return unlinkActions[item.ref.kind];
 		return unlinkAction && (!unlinkable || unlinkable.includes(group.relation))
 			? unlinkAction
@@ -191,19 +192,34 @@
 			.flatMap((group) => group.items)
 			.sort((a, b) => a.linkedAt.getTime() - b.linkedAt.getTime());
 
+		const hidden = groups
+			.filter(isWork)
+			.reduce((total, group) => total + (group.restricted ?? 0), 0);
+
 		return [
 			...groups.filter((group) => !isWork(group)).map(plain),
-			...(merged.length > 0
+			...(merged.length > 0 || hidden > 0
 				? [
 						{
 							key: 'followed_in',
 							label: m.related_followed_in(),
-							group: { relation: 'resolved_in' as const, icon: 'task' as const, items: merged }
+							group: {
+								relation: 'resolved_in' as const,
+								icon: 'task' as const,
+								items: merged,
+								restricted: hidden
+							}
 						}
 					]
 				: [])
 		];
 	});
+
+	function restrictedLabel(count: number): string {
+		return count === 1
+			? m.related_restricted_one({ count })
+			: m.related_restricted_other({ count });
+	}
 
 	/** The question the confirmation asks: losing an asset's context is not losing a task's. */
 	function ask(group: RelatedGroup, tag: string): string {
@@ -310,7 +326,7 @@
 					{@const unlinkHere = actionFor(group, item)}
 					<li class={styles.item()}>
 						{#if item.ref.href === null}
-							<!-- The requester's reduced view (ADR 0007): the code and the state, nowhere to go. -->
+							<!-- A handover has no page yet: its code, nowhere to go. -->
 							<span class="inline-flex min-w-0 items-center gap-[var(--space-1)] text-small">
 								<span class="shrink-0 font-mono text-xs font-semibold">{item.ref.tag}</span>
 								<span class="min-w-0 truncate text-[var(--ink)]">{item.ref.title}</span>
@@ -400,6 +416,18 @@
 						{/if}
 					</li>
 				{/each}
+
+				{#if group.restricted}
+					<!-- Records the viewer cannot see (ADR 0042): a count, never a code, a title or a link. -->
+					<li class={styles.item()}>
+						<span
+							class="inline-flex items-center gap-[var(--space-1)] text-small text-[var(--ink-muted)]"
+						>
+							<Lock class="size-3.5" aria-hidden="true" />
+							{restrictedLabel(group.restricted)}
+						</span>
+					</li>
+				{/if}
 			</ul>
 		</div>
 	{/each}

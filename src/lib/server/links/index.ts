@@ -78,6 +78,8 @@ export type { AssetTimelineItem } from './timeline';
 
 export { taskTimeline, projectTimeline } from './record-timelines';
 
+export { redactLinkEvents, visibleFeed } from './work-events';
+
 export { escalateTicket } from './escalate';
 export type { EscalationTarget, EscalateFailure, Escalated } from './escalate';
 

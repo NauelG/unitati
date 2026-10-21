@@ -121,7 +121,7 @@ const moveFailures: Record<Exclude<MoveTaskFailure, 'task_not_found'>, () => str
 };
 
 const moveToProjectFailures: Record<
-	Exclude<MoveTaskToProjectFailure, 'task_not_found'>,
+	Exclude<MoveTaskToProjectFailure, 'task_not_found' | { kind: string }>,
 	() => string
 > = {
 	project_archived: m.project_error_archived,
@@ -194,6 +194,15 @@ export const actions: Actions = {
 		const outcome = await moveTaskToProject(user, task.id, projectId.data);
 		if (!outcome.ok) {
 			if (outcome.error === 'task_not_found') error(404, 'Not found');
+			if (typeof outcome.error === 'object') {
+				return rejected(
+					'moveToProject',
+					m.task_error_assignees_not_members({
+						people: outcome.error.people.map((person) => person.fullName).join(', ')
+					}),
+					'projectId'
+				);
+			}
 			return rejected('moveToProject', moveToProjectFailures[outcome.error](), 'projectId');
 		}
 

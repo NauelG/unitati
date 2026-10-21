@@ -334,7 +334,6 @@ describe('reading the work of a ticket and the tickets of work', () => {
 		]);
 		expect(body.data[0].items[0]).toMatchObject({
 			kind: 'task',
-			restricted: false,
 			status: { group: 'unstarted' }
 		});
 	});
@@ -361,7 +360,7 @@ describe('reading the work of a ticket and the tickets of work', () => {
 		expect(missing.response.status).toBe(404);
 	});
 
-	it('shows a requester their own ticket’s work as restricted items, and nobody else’s', async () => {
+	it('shows a requester their own ticket’s work outside their scope as a count only, and nobody else’s', async () => {
 		const s = await escalated();
 		const employee = await createViewer(s.organisation.id, 'employee', 'Eve Employee');
 		const principal: ApiPrincipal = {
@@ -378,12 +377,9 @@ describe('reading the work of a ticket and the tickets of work', () => {
 
 		const own = await sendAs(principal, 'GET', `/api/v1/tickets/${mine.ticketTag}/work`);
 		expect(own.response.status).toBe(200);
-		expect(own.body.data[0].items[0]).toMatchObject({
-			tag: 'TSK-0001',
-			title: 'Book the van',
-			href: null,
-			restricted: true
-		});
+		expect(own.body.data[0]).toMatchObject({ relation: 'resolved_in', items: [], restricted: 1 });
+		expect(JSON.stringify(own.body)).not.toContain('TSK-0001');
+		expect(JSON.stringify(own.body)).not.toContain('Book the van');
 
 		const theirs = await sendAs(principal, 'GET', `${s.base}/work`);
 		expect(theirs.response.status).toBe(404);

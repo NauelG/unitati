@@ -28,8 +28,8 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 
 	// For an employee `relatedTo` narrows to the equipment they could have
 	// attached themselves, so a colleague's laptop added by staff stays out.
-	// The work it was escalated to comes back reduced to code, title and state
-	// even outside the employee's scope (ADR 0007), with no link when restricted.
+	// The work it was escalated to comes back whole when it is in the employee's
+	// scope, and as a bare count when it is not (ADR 0042): never a code or a title.
 	const related = await relatedTo(user, { kind: 'ticket', id: found.value.id });
 
 	const requested = found.value.requestFormId

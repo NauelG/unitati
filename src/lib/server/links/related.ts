@@ -50,8 +50,9 @@ export interface RecordRef<K extends RecordKind = RecordKind> {
 }
 
 /**
- * A record the viewer may know exists but may not open: the requester's view of
- * the work done for them (ADR 0007). Same fields, no place to go.
+ * A handover: there is no page for it yet, so it is drawn by its code and goes
+ * nowhere. Not a stand-in for a record the viewer cannot see: those are never
+ * given a reference at all (see `RelatedGroup.restricted`).
  */
 export type RestrictedRecordRef<K extends RecordKind = RecordKind> = Omit<RecordRef<K>, 'href'> & {
 	href: null;
@@ -88,11 +89,6 @@ export type RelatedItem = {
 	 * relation is read without it.
 	 */
 	actorName?: string | null;
-	/**
-	 * Set only on the requester's reduced view of a task or project outside
-	 * their scope: draw the code, the title and the state, and no link.
-	 */
-	restricted?: true;
 	/** On `resolves_via_tasks`: the task of the project the ticket is linked to. */
 	via?: ViaTask;
 	/** On a task the staff viewer may open: the code of its project, as secondary text. Never for the requester. */
@@ -108,8 +104,8 @@ export type RelatedItem = {
 			priority?: Priority;
 			assignee?: string | null;
 	  }
-	| { ref: RecordRef<'task'> | RestrictedRecordRef<'task'>; status: TaskStatus }
-	| { ref: RecordRef<'project'> | RestrictedRecordRef<'project'>; status: ProjectStatus }
+	| { ref: RecordRef<'task'>; status: TaskStatus }
+	| { ref: RecordRef<'project'>; status: ProjectStatus }
 );
 
 /**
@@ -133,6 +129,13 @@ export interface RelatedGroup {
 	/** The kind of record the items are, which picks the group's icon. */
 	icon: RecordKind;
 	items: RelatedItem[];
+	/**
+	 * How many tasks or projects of this group the viewer cannot see (ADR 0042):
+	 * a number and nothing else. No code, no title, no id, no state — an id is
+	 * enough to build a URL or probe the API, and a title can be the secret
+	 * itself. Absent when there are none.
+	 */
+	restricted?: number;
 }
 
 /**
@@ -286,11 +289,17 @@ async function standingOn(
 	return (await isRequester(viewer, ticketId)) ? 'requester' : null;
 }
 
+/** What a ticket's work comes to for a viewer: the records they can open, and how many they cannot. */
+interface WorkItems {
+	items: RelatedItem[];
+	restricted: number;
+}
+
 async function tasksResolving(
 	viewer: SessionUser,
 	ticketId: string,
 	standing: 'staff' | 'requester'
-): Promise<RelatedItem[]> {
+): Promise<WorkItems> {
 	const links = await getDb()
 		.select({ taskId: ticketTask.taskId, linkedAt: ticketTask.createdAt })
 		.from(ticketTask)
@@ -308,33 +317,34 @@ async function tasksResolving(
 		).map((task) => [task.id, task])
 	);
 
-	return links.flatMap((link): RelatedItem[] => {
-		const task = byId.get(link.taskId);
-		if (!task || (standing === 'staff' && !task.inScope)) return [];
+	const items: RelatedItem[] = [];
+	let restricted = 0;
 
-		return [
-			{
-				ref: task.inScope
-					? taskRef(task)
-					: { kind: 'task', id: task.id, tag: task.taskTag, title: task.title, href: null },
-				status: { group: task.stateGroup, name: task.stateName },
-				linkedAt: link.linkedAt,
-				// The project of a task is staff business: the requester's payload never carries it.
-				...(task.inScope
-					? standing === 'staff'
-						? { projectTag: task.projectTag }
-						: {}
-					: { restricted: true as const })
-			}
-		];
-	});
+	for (const link of links) {
+		const task = byId.get(link.taskId);
+		if (!task) continue;
+		if (!task.inScope) {
+			restricted += 1;
+			continue;
+		}
+
+		items.push({
+			ref: taskRef(task),
+			status: { group: task.stateGroup, name: task.stateName },
+			linkedAt: link.linkedAt,
+			// The project of a task is staff business: the requester's payload never carries it.
+			...(standing === 'staff' ? { projectTag: task.projectTag } : {})
+		});
+	}
+
+	return { items, restricted };
 }
 
 async function projectsHandling(
 	viewer: SessionUser,
 	ticketId: string,
 	standing: 'staff' | 'requester'
-): Promise<RelatedItem[]> {
+): Promise<WorkItems> {
 	const links = await getDb()
 		.select({ projectId: ticketProject.projectId, linkedAt: ticketProject.createdAt })
 		.from(ticketProject)
@@ -355,41 +365,35 @@ async function projectsHandling(
 		).map((project) => [project.id, project])
 	);
 
-	return Promise.all(
-		links.map(async (link): Promise<RelatedItem[]> => {
-			const project = byId.get(link.projectId);
-			if (!project || (standing === 'staff' && !project.inScope)) return [];
+	const items: RelatedItem[] = [];
+	let restricted = 0;
 
-			// Reused from the projects domain rather than recomputed. Only for what
-			// the viewer can open: the counts of a project they cannot see would be
-			// a window onto it.
-			const progress =
-				project.inScope && standing === 'staff' ? await projectProgress(viewer, project.id) : null;
+	for (const link of links) {
+		const project = byId.get(link.projectId);
+		if (!project) continue;
+		if (!project.inScope) {
+			restricted += 1;
+			continue;
+		}
 
-			return [
-				{
-					ref: project.inScope
-						? {
-								kind: 'project',
-								id: project.id,
-								tag: project.projectTag,
-								title: project.name,
-								href: projectHref(project.projectTag)
-							}
-						: {
-								kind: 'project',
-								id: project.id,
-								tag: project.projectTag,
-								title: project.name,
-								href: null
-							},
-					status: { archived: project.archived, progress: progress?.ok ? progress.value : null },
-					linkedAt: link.linkedAt,
-					...(project.inScope ? {} : { restricted: true as const })
-				}
-			];
-		})
-	).then((items) => items.flat());
+		// Reused from the projects domain rather than recomputed. The requester gets
+		// none: the counts are staff business.
+		const progress = standing === 'staff' ? await projectProgress(viewer, project.id) : null;
+
+		items.push({
+			ref: {
+				kind: 'project',
+				id: project.id,
+				tag: project.projectTag,
+				title: project.name,
+				href: projectHref(project.projectTag)
+			},
+			status: { archived: project.archived, progress: progress?.ok ? progress.value : null },
+			linkedAt: link.linkedAt
+		});
+	}
+
+	return { items, restricted };
 }
 
 /** The tickets of `links` the viewer may see, in the links' order. */
@@ -562,8 +566,11 @@ export async function relatedTo(
 	record: RecordLocator
 ): Promise<RelatedGroup[]> {
 	const groups: RelatedGroup[] = [];
-	const add = (relation: RelationName, icon: RecordKind, items: RelatedItem[]) => {
-		if (items.length > 0) groups.push({ relation, icon, items });
+	const add = (relation: RelationName, icon: RecordKind, found: RelatedItem[] | WorkItems) => {
+		const { items, restricted } = Array.isArray(found) ? { items: found, restricted: 0 } : found;
+		if (items.length > 0 || restricted > 0) {
+			groups.push({ relation, icon, items, ...(restricted > 0 ? { restricted } : {}) });
+		}
 	};
 
 	switch (record.kind) {

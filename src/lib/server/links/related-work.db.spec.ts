@@ -103,47 +103,29 @@ describe('relatedTo(ticket)', () => {
 		expect(await relatedTo(technician, { kind: 'ticket', id: mine.id })).toEqual([]);
 	});
 
-	it('lets the requester see the out-of-scope task reduced to code, title and state', async () => {
+	it('gives the requester only a count of the out-of-scope task and project', async () => {
 		const { technician, employee, mine, task, project } = await scene();
 		await linkTicketToTask(technician, { ticketId: mine.id, taskId: task.id });
 		await linkTicketToProject(technician, { ticketId: mine.id, projectId: project.id });
 
 		const groups = await relatedTo(employee, { kind: 'ticket', id: mine.id });
 
-		expect(
-			groups.map((group) => ({
-				relation: group.relation,
-				items: group.items.map((item) => ({
-					tag: item.ref.tag,
-					title: item.ref.title,
-					href: item.ref.href,
-					restricted: item.restricted === true,
-					hasStatus: item.status !== undefined
-				}))
-			}))
-		).toEqual([
-			{
-				relation: 'resolved_in',
-				items: [
-					{ tag: 'TSK-0001', title: 'Book the van', href: null, restricted: true, hasStatus: true }
-				]
-			},
-			{
-				relation: 'handled_in',
-				items: [{ tag: 'PRJ-0001', title: 'Move', href: null, restricted: true, hasStatus: true }]
-			}
+		expect(groups).toEqual([
+			{ relation: 'resolved_in', icon: 'task', items: [], restricted: 1 },
+			{ relation: 'handled_in', icon: 'project', items: [], restricted: 1 }
 		]);
 	});
 
-	it('never leaks the project, assignees or dates of a restricted task', async () => {
-		const { technician, employee, mine, task } = await scene();
+	it('never leaks the code, title, id, project or state of a restricted task or project', async () => {
+		const { technician, employee, mine, task, project } = await scene();
 		await linkTicketToTask(technician, { ticketId: mine.id, taskId: task.id });
+		await linkTicketToProject(technician, { ticketId: mine.id, projectId: project.id });
 
-		const [group] = await relatedTo(employee, { kind: 'ticket', id: mine.id });
-		const serialised = JSON.stringify(group.items);
+		const serialised = JSON.stringify(await relatedTo(employee, { kind: 'ticket', id: mine.id }));
 
-		expect(serialised).not.toContain('PRJ-0001');
-		expect(serialised).not.toContain('Move');
+		for (const secret of ['PRJ-0001', 'TSK-0001', 'Move', 'Book the van', task.id, project.id]) {
+			expect(serialised).not.toContain(secret);
+		}
 	});
 
 	it('keeps the link when the target is in the requester scope', async () => {
@@ -154,7 +136,7 @@ describe('relatedTo(ticket)', () => {
 		const [group] = await relatedTo(employee, { kind: 'ticket', id: mine.id });
 
 		expect(group.items[0]).toMatchObject({ ref: { href: '/tasks/TSK-0001' } });
-		expect(group.items[0].restricted).toBeUndefined();
+		expect(group.restricted).toBeUndefined();
 	});
 
 	it("returns nothing on another employee's ticket", async () => {
