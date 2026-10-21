@@ -4,10 +4,16 @@ import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import pkg from './package.json' with { type: 'json' };
+import { sourceUrl } from './src/lib/source-url.ts';
 
 export default defineConfig({
-	// Single source of truth for the running version: package.json, baked in at build time.
-	define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+	// Single source of truth for the running version and its source code: package.json, baked
+	// in at build time. A fork that changes `repository` points its users at its own code, which
+	// is what AGPL-3.0 section 13 asks of anyone who serves a modified Unitati (ADR 0041).
+	define: {
+		__APP_VERSION__: JSON.stringify(pkg.version),
+		__APP_SOURCE_URL__: JSON.stringify(sourceUrl(pkg.repository.url))
+	},
 	plugins: [
 		tailwindcss(),
 		paraglideVitePlugin({

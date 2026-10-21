@@ -15,7 +15,8 @@ deployment. There is no public release yet, so the image must not be public eith
 1. **The image is `ghcr.io/nauelg/unitati`, private**, under the owner's account. It is linked to
    the private repository through the `org.opencontainers.image.source` label, so it inherits the
    repository's visibility. Making it public later is a visibility switch on the package, not a
-   change of artefact.
+   change of artefact. _(Done on 2026-10-21: the image is public, see the note under
+   Consequences.)_
 2. **One image for every environment** (ADR 0012): no origin, base path or secret is baked in.
 3. **One image tag per version.** `.github/workflows/publish-image.yml` runs after CI succeeds on
    `main`. When `package.json` carries a version with no `vX.Y.Z` tag, it pushes `X.Y.Z` and
@@ -35,6 +36,9 @@ deployment. There is no public release yet, so the image must not be public eith
 - During fast iteration every bumped PR produces an image. That is deliberate and cheap; pruning old
   versions can wait until it matters.
 - Pulling needs a token with `read:packages` on the host.
+  _(Superseded on 2026-10-21: the repository and the package are public, so pulling needs no
+  login. The package was switched by hand, because it kept the private visibility it inherited
+  when it was created. See [ADR 0041](0041-license-agpl-3.0-only.md).)_
 - Staging keeps its source-checkout flow for now. Moving it onto the image is a separate decision.
   _(Resolved by [ADR 0025](0025-deployment-agnostic.md): the source-checkout staging is removed and
   the repository no longer prescribes any deployment.)_

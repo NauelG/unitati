@@ -7,6 +7,8 @@ import type { SessionUser } from '#lib/server/auth/guards.js';
 declare global {
 	/** package.json version, injected by Vite at build time. */
 	const __APP_VERSION__: string;
+	/** Browsable package.json `repository` URL, injected by Vite at build time (ADR 0041). */
+	const __APP_SOURCE_URL__: string;
 
 	namespace App {
 		// interface Error {}

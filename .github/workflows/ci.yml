@@ -9,7 +9,7 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Four jobs in parallel rather than one in sequence: a run lasts as long as its
+# Jobs in parallel rather than one in sequence: a run lasts as long as its
 # slowest job, not the sum of them. Each job repeats the checkout and `npm ci`,
 # which costs far less than it saves.
 jobs:
@@ -26,6 +26,18 @@ jobs:
         if: github.event_name == 'pull_request'
         run: BASE_REF="origin/${{ github.base_ref }}" npm run check:version-bump
       - run: npm run check
+
+  # Every commit of a pull request is signed off by its author (DCO, ADR 0041).
+  # No `npm ci`: the check is plain git and Node, so it reports in seconds.
+  dco:
+    name: DCO sign-off
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: BASE_REF="origin/${{ github.base_ref }}" node .github/scripts/check-dco.mjs
 
   lint:
     name: Lint
