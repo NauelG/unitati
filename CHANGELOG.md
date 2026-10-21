@@ -5,6 +5,28 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.93.0] - 2026-10-21
+
+### Added
+
+- Taking assets back from a person in one operation (#25, #278). A technician picks the assets the
+  person holds and records each one's condition (`good`, `damaged` or `incomplete`, with notes
+  required unless `good`). Custody is returned at once, whether or not the person signs; when any
+  asset requires a handover, a pending `return` handover is issued with the condition of every asset
+  and mailed after commit. The operation is all or nothing. It lives in the asset page's custodian
+  row and in the directory's person list.
+- After issuing a delivery or a return, the signing link can be shown as a full-screen QR code
+  beside the copy button, for signing on the person's own phone.
+- The signing page shows the condition and notes of each asset of a return, and the asset timeline
+  records the condition in `custody.returned`.
+
+### Changed
+
+- The custodian row on the asset page no longer offers a bare "Nadie" select: taking back goes
+  through the take-back dialog, so a category that requires a signature cannot be bypassed. The
+  API endpoint `assets.custody.return` keeps the low-level behaviour.
+- Return handovers use their own wording in the link and rejection mails.
+
 ## [0.92.0] - 2026-10-21
 
 ### Added
