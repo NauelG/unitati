@@ -49,7 +49,7 @@ An **import** is a bulk entry of records from a CSV file (#21, [ADR 0034](adr/00
 
 `CustomField` is deliberately absent: it is post-v1 in the [roadmap](roadmap-v1.md).
 
-A **notification** is a line in one person's inbox saying that something concerns them: an assignment, a reply, a mention ([ADR 0040](adr/0040-transactional-notifications.md)). It targets a _person_, points at exactly one ticket, task or project, and freezes a snapshot of the code and title when it is written. It is written inside the transaction of the change that caused it. A **follow** is a person's standing interest in a record; it is stored from #301 but written from #57.
+A **notification** is a line in one person's inbox saying that something concerns them: an assignment, a reply, a mention ([ADR 0040](adr/0040-transactional-notifications.md)). It targets a _person_, points at exactly one ticket, task or project, and freezes a snapshot of the code and title when it is written. It is written inside the transaction of the change that caused it, and may also be sent as an email; a person's **notification preferences** say, per type, whether it reaches them in-app and by email, and only choices that differ from the defaults are stored. A **follow** is a person's standing interest in a record; it is stored from #301 but written from #57.
 
 ## Core entities
 
@@ -158,15 +158,17 @@ sequenceDiagram
     SD->>L: link(ticket, resolved-by, task) or link(ticket, handled-in, project)
     Note over SD,L: The ticket keeps its status; escalating changes nothing else
     L-->>SD: relation renders live — the task shows today's state
-    P-->>SD: task reaches a completed state → email the assigned technician
+    P-->>SD: task reaches a completed state → notify the assigned technician
 ```
 
 The ticket is not moved, closed or reassigned by escalating: any automatic change would lie
 about who is waiting on whom. The technician sees the linked task's **current** state on the
 ticket, because relations render live while activity renders the past
 ([ADR 0009](adr/0009-activity-log.md)). When that state enters the `completed` group the
-assigned technician is emailed — the one staff-facing notification in the MVP, and one that
-[#33](../../issues/33) must make preferable once a notification centre exists.
+assigned technician is notified (`task.linked_completed`): one inbox line per ticket and, by default,
+one email listing them. Since [#302](../../issues/302) it is an ordinary notification, and each
+technician can switch its email off at `/account/notifications`
+([ADR 0040](adr/0040-transactional-notifications.md)).
 
 ### Refresh project from inventory
 

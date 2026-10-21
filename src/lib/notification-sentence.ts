@@ -2,9 +2,10 @@ import { m } from '#lib/paraglide/messages.js';
 import type { NotificationType, Snapshot } from '#lib/server/notifications/index.js';
 
 /**
- * Turns a notification into the sentence a reader sees (ADR 0040). It lives with
- * the components, not with the table, like `activity.ts`: the row stores a type
- * and a snapshot, and producing words from them is rendering.
+ * Turns a notification into the sentence a reader sees (ADR 0040). It is not
+ * with the table: the row stores a type and a snapshot, and producing words from
+ * them is rendering. It lives outside `components` because two renderers read it,
+ * the inbox and the mail (#302), so both say the same thing.
  *
  * The `switch` is exhaustive. A type added to `NOTIFICATION_TYPES` without a case
  * here fails `npm run check`, instead of shipping as a blank line in an inbox.

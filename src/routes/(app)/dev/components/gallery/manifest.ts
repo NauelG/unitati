@@ -83,6 +83,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/SegmentedControl.svelte')
 	},
 	{
+		id: 'switch',
+		name: 'Switch',
+		category: 'actions',
+		summary: 'Interruptor de encendido y apagado; puede ser el envío de un formulario.',
+		sourceFile: 'Switch.svelte',
+		load: () => import('./specs/Switch.svelte')
+	},
+	{
 		id: 'user-menu',
 		name: 'UserMenu',
 		category: 'actions',

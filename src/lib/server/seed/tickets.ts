@@ -203,7 +203,7 @@ export async function seedTickets(actor: SessionUser): Promise<number> {
 		created += 1;
 
 		if (planned.priority) await setTicketPriority(actor, ticketTag, planned.priority);
-		if (planned.steps.length > 0) await assignTicket(actor, ticketTag, actor.personId);
+		if (planned.steps.length > 0) await assignTicket(actor, ticketTag, actor.personId, deps);
 		if (planned.note) {
 			await addComment(actor, ticketTag, { body: planned.note, visibility: 'internal' }, [], deps);
 		}

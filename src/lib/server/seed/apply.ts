@@ -212,7 +212,10 @@ export async function applyProjects(actor: SessionUser, plan: ProjectsPlan): Pro
 			const moved = await moveTask(actor, opened.value.id, target);
 			if (!moved.ok) throw new Error(`Could not place ${task.title}: ${moved.error}`);
 
-			const assigned = await setAssignees(actor, opened.value.id, task.assigneeEmails.map(person));
+			// The demo data mails nobody, even with SMTP configured.
+			const assigned = await setAssignees(actor, opened.value.id, task.assigneeEmails.map(person), {
+				mailer: null
+			});
 			if (!assigned.ok) throw new Error(`Could not assign ${task.title}: ${assigned.error}`);
 		}
 

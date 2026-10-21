@@ -184,7 +184,7 @@ describe('moving a task to a completed state', () => {
 	});
 
 	it('mails the technicians of the tickets linked to the task (#152)', async () => {
-		const { organisation, technician, employee, states } = await scene();
+		const { organisation, admin, technician, employee, states } = await scene();
 		const queue = await createQueue(organisation.id);
 		const project = await createProjectRow(organisation.id);
 		const task = await createTaskRow(organisation.id, project.id, states.started.id, {
@@ -198,7 +198,8 @@ describe('moving a task to a completed state', () => {
 		await getDb()
 			.insert(ticketTask)
 			.values({ organisationId: organisation.id, ticketId: ticket.id, taskId: task.id });
-		const key = await keyFor(technician, ['projects.manage']);
+		// Completed by somebody else: the actor is never notified of their own action.
+		const key = await keyFor(admin, ['projects.manage']);
 
 		const { response } = await send('POST', api('/tasks/TSK-0900/state'), key, {
 			stateId: states.completed.id

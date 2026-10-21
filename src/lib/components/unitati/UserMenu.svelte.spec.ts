@@ -56,6 +56,13 @@ describe('UserMenu', () => {
 		expect(link.getAttribute('href')).toBe('/account/password');
 	});
 
+	it('links to the notification preferences', async () => {
+		await openMenu();
+
+		const link = screen.getByRole('menuitem', { name: 'Notificaciones' });
+		expect(link.getAttribute('href')).toBe('/account/notifications');
+	});
+
 	it('signs out with a real POST form submission', async () => {
 		await openMenu();
 		const form = document.querySelector<HTMLFormElement>('form[action="/sign-out"]');
