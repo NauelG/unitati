@@ -79,4 +79,121 @@ describe('RichTextEditor', () => {
 		await rerender({ value: 'abcdefghijk' });
 		expect(screen.getByRole('alert').textContent).toContain('10');
 	});
+
+	describe('@mentions (#303)', () => {
+		const ID = '6f1d0a39-2c4e-4d8b-9a77-1e2f3a4b5c6d';
+		const token = `@[Ana \\] Pérez](person:${ID})`;
+		const people = [
+			{ id: ID, label: 'Ana ] Pérez', hint: 'ana@acme.test' },
+			{ id: '7f1d0a39-2c4e-4d8b-9a77-1e2f3a4b5c6d', label: 'Anselmo', hint: 'ans@acme.test' }
+		];
+
+		async function type(text: string) {
+			surface().focus();
+			const paragraph = surface().querySelector('p')!;
+			const node = document.createTextNode(text);
+			paragraph.insertBefore(node, paragraph.firstChild);
+			const range = document.createRange();
+			range.setStart(node, text.length);
+			range.collapse(true);
+			const selection = window.getSelection()!;
+			selection.removeAllRanges();
+			selection.addRange(range);
+			document.dispatchEvent(new Event('selectionchange'));
+		}
+
+		it('round-trips the token through the editor', async () => {
+			const { container } = render(RichTextEditor, {
+				name: 'body',
+				label: 'Respuesta',
+				value: `Hola ${token}`,
+				mentionSource: async () => people
+			});
+			await waitFor(() => expect(surface().querySelector('.mention')).toBeTruthy());
+			expect(surface().querySelector('.mention')!.textContent).toBe('@Ana ] Pérez');
+
+			// Any edit re-serialises the document from the chip.
+			await type(' ');
+			await waitFor(() => expect(hidden(container).value).toContain(token));
+			expect(hidden(container).value).toMatch(/^.*Hola .*person:/);
+		});
+
+		it('offers the people the source returns as an accessible listbox, and inserts the chosen one', async () => {
+			const asked: string[] = [];
+			const { container } = render(RichTextEditor, {
+				name: 'body',
+				label: 'Respuesta',
+				mentionSource: async (query: string) => {
+					asked.push(query);
+					return people;
+				}
+			});
+			await waitFor(() => expect(surface().querySelector('p')).toBeTruthy());
+
+			await type('@an');
+
+			const list = await screen.findByRole('listbox', { name: 'Mencionar a una persona' });
+			expect(asked).toContain('an');
+			const options = screen.getAllByRole('option');
+			expect(options.map((option) => option.textContent)).toEqual([
+				'Ana ] Pérezana@acme.test',
+				'Anselmoans@acme.test'
+			]);
+			expect(surface().getAttribute('aria-controls')).toBe(list.id);
+			expect(surface().getAttribute('aria-activedescendant')).toBe(options[0].id);
+
+			await fireEvent.keyDown(surface(), { key: 'ArrowDown' });
+			await waitFor(() =>
+				expect(surface().getAttribute('aria-activedescendant')).toBe(options[1].id)
+			);
+			await fireEvent.keyDown(surface(), { key: 'ArrowUp' });
+			await waitFor(() =>
+				expect(surface().getAttribute('aria-activedescendant')).toBe(options[0].id)
+			);
+
+			await fireEvent.keyDown(surface(), { key: 'Enter' });
+
+			await waitFor(() => expect(hidden(container).value).toContain(token));
+			expect(screen.queryByRole('listbox')).toBeNull();
+		});
+
+		it('closes the list on Escape and says so when nobody matches', async () => {
+			render(RichTextEditor, {
+				name: 'body',
+				label: 'Respuesta',
+				mentionSource: async (query: string) => (query === 'zz' ? [] : people)
+			});
+			await waitFor(() => expect(surface().querySelector('p')).toBeTruthy());
+
+			await type('@zz');
+			await screen.findByText('Nadie coincide');
+			expect(screen.queryAllByRole('option')).toHaveLength(0);
+		});
+
+		it('lists at most 8 people', async () => {
+			const many = Array.from({ length: 12 }, (_, i) => ({
+				id: `00000000-0000-4000-8000-0000000000${String(i).padStart(2, '0')}`,
+				label: `Persona ${i}`
+			}));
+			render(RichTextEditor, {
+				name: 'body',
+				label: 'Respuesta',
+				mentionSource: async () => many
+			});
+			await waitFor(() => expect(surface().querySelector('p')).toBeTruthy());
+			await type('@p');
+			await screen.findByRole('listbox');
+			await waitFor(() => expect(screen.getAllByRole('option')).toHaveLength(8));
+		});
+
+		it('leaves @ alone without a source (task and project descriptions)', async () => {
+			const { container } = render(RichTextEditor, { name: 'body', label: 'Respuesta' });
+			await waitFor(() => expect(surface().querySelector('p')).toBeTruthy());
+
+			await type('@an');
+
+			await waitFor(() => expect(hidden(container).value).toBe('@an'));
+			expect(screen.queryByRole('listbox')).toBeNull();
+		});
+	});
 });

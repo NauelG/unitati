@@ -4,15 +4,23 @@
 	import Alert from '#lib/components/unitati/Alert.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
+	import RichTextEditor from '#lib/components/unitati/RichTextEditor.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SearchSelectField from '#lib/components/unitati/SearchSelectField.svelte';
 	import SelectField from '#lib/components/unitati/SelectField.svelte';
 	import { statusLabel } from '#lib/components/unitati/status.js';
+	import { fetchMentions } from '#lib/components/unitati/mention-source.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	// svelte-ignore state_referenced_locally
+	let body = $state(form && 'values' in form ? (form.values.body ?? '') : '');
+	/** Only staff can be @mentioned on a ticket that does not exist yet (#303). */
+	const staffMentions = (query: string) =>
+		fetchMentions('/service-desk/new/mentions', { q: query });
 
 	let affected = $state<string[]>([]);
 	let affectedLabels = $state<Record<string, string>>({});
@@ -53,18 +61,15 @@
 	>
 		<Field label={m.ticket_form_subject()} name="subject" value={values.subject} required />
 
-		<label class="flex flex-col gap-[var(--space-1)]">
-			<span class="text-label text-[var(--ink)]">
-				{m.ticket_form_body()}
-			</span>
-			<textarea
+		<div class="flex flex-col gap-[var(--space-1)]">
+			<span class="text-label text-[var(--ink)]">{m.ticket_form_body()}</span>
+			<RichTextEditor
 				name="body"
-				required
-				rows="6"
-				class="w-full rounded-[var(--radius-md)] border border-[var(--border-strong)] bg-[var(--surface-1)] p-[var(--space-3)] text-sm leading-5 text-[var(--ink)]"
-				>{values.body ?? ''}</textarea
-			>
-		</label>
+				label={m.ticket_form_body()}
+				bind:value={body}
+				mentionSource={staffMentions}
+			/>
+		</div>
 
 		<div class="grid gap-[var(--space-4)] sm:grid-cols-2">
 			<SelectField

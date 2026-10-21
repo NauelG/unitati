@@ -16,6 +16,7 @@ import { runtimeMailer, runtimeOrigin, runtimeStorage } from '../shared/runtime'
 import type { Mailer } from '../shared/mail';
 import { queues, requestForms, ticketComments, tickets, attachments } from './schema';
 import type { Transaction } from '../db';
+import { notifyMentioned } from './mentions';
 import { requireTicketScope, seesInternal } from './scope';
 import { storeFiles } from '../shared/attachments';
 import type { Storage } from '../shared/storage';
@@ -469,7 +470,7 @@ export async function openTicket(
 	origin?: TicketOrigin
 ): Promise<Outcome<{ id: string; ticketTag: string }, CreateTicketFailure>> {
 	const values = createTicketInput.parse(input);
-	const { storage } = resolveDeps(deps);
+	const { storage, mailer, origin: publicOrigin } = resolveDeps(deps);
 
 	const problem = attachmentProblem(files);
 	if (problem) return failure(`attachments_${problem}`);
@@ -484,7 +485,8 @@ export async function openTicket(
 	const stored = await storeFiles(storage, actor.organisationId, files);
 
 	try {
-		return await getDb().transaction(async (tx) => {
+		let emails: PendingEmail[] = [];
+		const opened = await getDb().transaction(async (tx) => {
 			const [ticket] = await tx
 				.insert(tickets)
 				.values({
@@ -501,7 +503,8 @@ export async function openTicket(
 					id: tickets.id,
 					ticketTag: tickets.ticketTag,
 					subject: tickets.subject,
-					channel: tickets.channel
+					channel: tickets.channel,
+					assigneePersonId: tickets.assigneePersonId
 				});
 
 			if (RESERVED_TICKET_TAGS.has(ticket.ticketTag.toLowerCase())) {
@@ -549,8 +552,22 @@ export async function openTicket(
 
 			await origin?.inTransaction?.(tx, ticket);
 
+			// The opening message may @mention staff (#303); whoever the actor may not
+			// reach is dropped by the same rule as in a comment.
+			emails = await notifyMentioned(
+				tx,
+				actor,
+				{ ...ticket, requesterPersonId: requesterId },
+				'public',
+				values.body
+			);
+
 			return success({ id: ticket.id, ticketTag: ticket.ticketTag });
 		});
+
+		// After commit, not awaited (ADR 0006).
+		void sendNotificationEmails(mailer, emails, publicOrigin);
+		return opened;
 	} catch (error) {
 		// The bytes were written before the transaction; do not orphan them.
 		await Promise.all(stored.map((file) => storage.delete(file.row.storageKey)));

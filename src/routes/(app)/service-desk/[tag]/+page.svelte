@@ -341,6 +341,7 @@
 				items={localThread}
 				attachmentHref={(id) => `/attachments/${id}`}
 				editAction="?/editComment"
+				mentionsUrl={`/service-desk/${ticket.ticketTag}/mentions`}
 				{editError}
 			/>
 		</div>
@@ -349,6 +350,7 @@
 	<TicketComposer
 		action="?/reply"
 		allowInternal={data.canInternal}
+		mentionsUrl={`/service-desk/${ticket.ticketTag}/mentions`}
 		error={replyError}
 		placeholder={m.composer_placeholder_reply({ name: ticket.requesterName })}
 		onOptimisticSend={(formData) => {
