@@ -62,6 +62,14 @@ export { signingLinkQr } from './handover-qr';
 export type { HeldAsset, TakeBackDeps, TakeBackFailure, TakeBackItem } from './take-back';
 export { decideHandover, openHandover } from './handover-decision';
 export { ensureHandoverDocument, getHandoverDocument } from './handover-documents';
+export { regulariseCustody } from './regularise-custody';
+export type {
+	RegularisationResult,
+	RegularisedHandover,
+	RegulariseDeps,
+	RegulariseFilter,
+	SkippedPerson
+} from './regularise-custody';
 export { resendHandover } from './handover-resend';
 export type { ResendDeps, ResendFailure, ResentHandover } from './handover-resend';
 export {
