@@ -5,6 +5,20 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.94.0] - 2026-10-21
+
+### Added
+
+- A handover can be linked to the ticket that asked for it (#279). The deliver and take-back dialogs
+  take an optional ticket code, written in the same transaction as the handover; opening the asset
+  from a ticket's "Entregar" link presets the ticket and its requester. Staff with `tickets.manage`
+  can also link an existing handover by its code, or unlink it, from the ticket page. The ticket's
+  related panel shows it as _Entrega_ with its live state (pending, accepted, rejected, waived or
+  expired), and `relatedTo` answers from the handover's side too.
+- When a linked handover is accepted or rejected, each of its tickets gets one internal note from the
+  system naming the code, the outcome and, on a rejection, the reason. The ticket's status, assignee
+  and queue are never changed: closing it is each organisation's policy (ADR 0035).
+
 ## [0.93.1] - 2026-10-21
 
 ### Fixed
