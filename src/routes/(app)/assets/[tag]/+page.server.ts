@@ -3,14 +3,17 @@ import { superValidate } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { z } from 'zod';
 import { ASSET_READ_PERMISSIONS } from '#lib/domain/access.js';
+import { HANDOVER_STATES } from '#lib/domain/handover.js';
 import { ASSET_STATES } from '#lib/domain/status.js';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import {
 	addNote,
 	assetTimeline,
+	custodyHandover,
 	deliver,
 	listAssetsHeldBy,
+	listHandovers,
 	listDeliverableAssets,
 	signingLinkQr,
 	changeLocation,
@@ -136,6 +139,14 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 					assetModelId: '',
 					shared: false
 				};
+	// Staff only: an employee holding the asset sees their own handovers in the portal.
+	const [handovers, custody] =
+		asset.visibility === 'full' && can(user, 'assets.view')
+			? await Promise.all([
+					listHandovers(user, { assetId: asset.id, states: [...HANDOVER_STATES] }),
+					custodyHandover(user, { id: asset.id, custodianPersonId: asset.custodianPersonId })
+				])
+			: [null, null];
 	const [editForm, editModels, modelForm, catalogues] = await Promise.all([
 		superValidate(editSeed, zod4(editAssetForm)),
 		editable ? listAssetModels(user.organisationId) : Promise.resolve([]),
@@ -177,6 +188,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 		locations,
 		deliverable,
 		heldAssets,
+		handovers,
+		custody,
 		editForm,
 		editModels,
 		modelForm,

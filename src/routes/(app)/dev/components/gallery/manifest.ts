@@ -623,6 +623,16 @@ export const GALLERY_EXCEPTIONS: GalleryException[] = [
 		sourceFile: 'RecordAttachments.svelte',
 		reason:
 			"Bound to one record: it posts to the project's or task's own `addAttachments` / `removeAttachment` actions (#285) and links to its download route, so it cannot render outside those pages. Its parts are in the gallery: ConfirmDialog, WorkPanel and Button."
+	},
+	{
+		sourceFile: 'HandoverStateBadge.svelte',
+		reason:
+			"A handover state drawn with StatusBadge's own `badge` variants: the tones are the StatusBadge entry's. Which state a handover is in comes from the domain's `deriveHandoverState`, so the component has no states of its own to show."
+	},
+	{
+		sourceFile: 'HandoversTable.svelte',
+		reason:
+			'Bound to the handover list rows the assets domain returns and to the staff detail route it links to (#280). Its parts are in the gallery: DataTable and the status badge.'
 	}
 ];
 

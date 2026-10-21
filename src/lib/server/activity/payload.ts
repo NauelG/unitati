@@ -139,6 +139,16 @@ export const PAYLOAD_SCHEMAS = {
 		reason: presentText
 	}),
 
+	// A new link and a new expiry on the same handover (#280). The old link stops
+	// working; the token itself, old or new, never appears here.
+	'handover.resent': z.object({
+		handoverId: z.uuid(),
+		code: presentName,
+		personId: z.uuid(),
+		personName: presentName,
+		expiresAt: z.iso.datetime()
+	}),
+
 	'state.changed': z.object({
 		from: assetState,
 		to: assetState

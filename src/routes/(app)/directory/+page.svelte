@@ -200,6 +200,11 @@
 
 {#snippet name(person: Person)}
 	{person.fullName}
+	<a
+		href="/directory/{person.id}"
+		class="ml-[var(--space-2)] text-xs font-medium text-[var(--action)] hover:underline"
+		>{m.person_view()}</a
+	>
 	{#if data.canCheckout}
 		<a
 			href={search({ takeBack: person.id })}

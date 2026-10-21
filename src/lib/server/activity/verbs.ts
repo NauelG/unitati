@@ -20,6 +20,7 @@ export const ACTIVITY_VERBS = [
 	'handover.accepted',
 	'handover.rejected',
 	'handover.waived',
+	'handover.resent',
 	'state.changed',
 	'location.changed',
 	'note.added',

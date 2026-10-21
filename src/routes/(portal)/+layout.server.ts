@@ -13,5 +13,8 @@ export const load: LayoutServerLoad = ({ locals, url }) => {
 	const user = requirePermission(locals.user, 'tickets.view.own', url);
 	if (can(user, 'tickets.view')) redirect(303, '/service-desk');
 
-	return { user: { name: user.name, email: user.email } };
+	return {
+		user: { name: user.name, email: user.email },
+		canSeeHandovers: can(user, 'assets.view.own')
+	};
 };

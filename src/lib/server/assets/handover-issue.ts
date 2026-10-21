@@ -80,7 +80,7 @@ export interface PreparedHandover {
 	linkValidDays: number;
 }
 
-const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' });
+export const dateFormat = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' });
 
 /**
  * The assets of one operation with what a handover snapshots of them, and who

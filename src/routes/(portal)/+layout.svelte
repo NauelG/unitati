@@ -20,6 +20,11 @@
 
 		<div class="flex items-center gap-4">
 			<a href="/portal" class="text-sm text-[var(--ink)]">{m.nav_portal()}</a>
+			{#if data.canSeeHandovers}
+				<a href="/portal/handovers" class="text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">
+					{m.portal_handovers_nav()}
+				</a>
+			{/if}
 			<a href="/assets" class="text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">
 				{m.portal_assets_link()}
 			</a>

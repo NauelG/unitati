@@ -64,6 +64,9 @@ export function activitySentence(entry: ActivityEntry): string {
 				reason: entry.payload.reason
 			});
 
+		case 'handover.resent':
+			return m.activity_handover_resent({ code: entry.payload.code });
+
 		case 'state.changed':
 			return m.activity_state_changed({
 				from: statusLabel(entry.payload.from),

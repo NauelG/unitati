@@ -62,6 +62,22 @@ export { signingLinkQr } from './handover-qr';
 export type { HeldAsset, TakeBackDeps, TakeBackFailure, TakeBackItem } from './take-back';
 export { decideHandover, openHandover } from './handover-decision';
 export { ensureHandoverDocument, getHandoverDocument } from './handover-documents';
+export { resendHandover } from './handover-resend';
+export type { ResendDeps, ResendFailure, ResentHandover } from './handover-resend';
+export {
+	custodyHandover,
+	getHandover,
+	HANDOVER_LIST_LIMIT,
+	listHandovers,
+	listOwnHandovers
+} from './handover-list';
+export type {
+	CustodyHandover,
+	HandoverDetail,
+	HandoverDetailAsset,
+	HandoverFilter,
+	HandoverListItem
+} from './handover-list';
 export type {
 	DocumentDeps,
 	EnsureDocumentFailure,

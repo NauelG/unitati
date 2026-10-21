@@ -7,7 +7,11 @@ import { emit } from '../shared/events';
 import { sendQuietly, type Mailer, type MailMessage } from '../shared/mail';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { runtimeMailer, runtimeStorage } from '../shared/runtime';
-import { MAX_DECISION_REASON, type HandoverCondition } from '#lib/domain/handover.js';
+import {
+	deriveHandoverState,
+	MAX_DECISION_REASON,
+	type HandoverCondition
+} from '#lib/domain/handover.js';
 import type { Storage } from '../shared/storage';
 import { ensureHandoverDocument, type DocumentDeps } from './handover-documents';
 import { handoverRejectedMail } from './handover-mail';
@@ -328,7 +332,7 @@ function validReason(raw: string | null | undefined): string | null {
 
 /** `expired` is never stored (ADR 0035, decision 3): it is a pending handover past its date. */
 function isExpired(expiresAt: Date | null, now: Date): boolean {
-	return expiresAt !== null && expiresAt.getTime() <= now.getTime();
+	return deriveHandoverState({ status: 'pending', expiresAt }, now) === 'expired';
 }
 
 /** The organisation of the handover whose decision consumed this hash, or `null`. */

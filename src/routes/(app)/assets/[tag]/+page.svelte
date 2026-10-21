@@ -20,6 +20,8 @@
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import Sheet from '#lib/components/unitati/Sheet.svelte';
+	import HandoversTable from '#lib/components/unitati/HandoversTable.svelte';
+	import HandoverStateBadge from '#lib/components/unitati/HandoverStateBadge.svelte';
 	import EditableChip from '#lib/components/unitati/EditableChip.svelte';
 	import EditableDetailRow from '#lib/components/unitati/EditableDetailRow.svelte';
 	import { statusBadge } from '#lib/components/unitati/status.js';
@@ -354,6 +356,24 @@
 				</p>
 			{/if}
 		</WorkPanel>
+
+		{#if data.handovers && data.custody}
+			<WorkPanel heading={m.asset_handovers_title()} id="handovers">
+				<p class="mb-[var(--space-3)] flex items-center gap-[var(--space-2)] text-sm">
+					<span class="text-[var(--ink-muted)]">{m.handover_custody_label()}</span>
+					{#if data.custody.kind === 'handover'}
+						<a
+							href="/assets/handovers/{encodeURIComponent(data.custody.code)}"
+							class="font-mono text-xs hover:underline">{data.custody.code}</a
+						>
+						<HandoverStateBadge state={data.custody.state} />
+					{:else}
+						<span>{m.handover_custody_none_required()}</span>
+					{/if}
+				</p>
+				<HandoversTable rows={data.handovers} emptyMessage={m.asset_handovers_empty()} />
+			</WorkPanel>
+		{/if}
 	</div>
 
 	{#snippet side()}
