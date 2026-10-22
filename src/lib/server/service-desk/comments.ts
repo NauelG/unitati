@@ -6,7 +6,9 @@ import { getDb } from '../db';
 import { people } from '../directory/schema';
 import { extractMentions } from '#lib/domain/mentions.js';
 import { redactLinkEvents } from '../links';
+import { m } from '#lib/paraglide/messages.js';
 import {
+	followTicket,
 	notify,
 	sendNotificationEmails,
 	type NotifyInput,
@@ -273,12 +275,28 @@ export async function addComment(
 				target: { ticketId: ticket.id },
 				visibility: values.visibility,
 				snapshot: commentSnapshot(ticket, actor, values.body),
+				followerSummary:
+					values.visibility === 'internal'
+						? m.follow_summary_internal_comment()
+						: m.follow_summary_comment(),
 				recipients: [
 					...commentRecipients(ticket, values.visibility),
 					...mentioned.map((personId) => ({ personId, type: 'mention' as const }))
-				]
+				],
+				followers: true
 			});
 			await followMentioned(tx, actor.organisationId, ticket, mentioned);
+
+			// Writing on a ticket follows it, unless the author is a participant already (#57).
+			const participant =
+				actor.personId === ticket.requesterPersonId || actor.personId === ticket.assigneePersonId;
+			if (actor.personId && !participant && can(actor, 'tickets.view')) {
+				await followTicket(tx, {
+					organisationId: actor.organisationId,
+					personId: actor.personId,
+					ticketId: ticket.id
+				});
+			}
 
 			return { commentId: comment.id, emails: pending };
 		}));

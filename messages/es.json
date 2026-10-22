@@ -1708,6 +1708,34 @@
 	"notifications_sentence_task_linked_completed": "Se ha completado la tarea vinculada a {code} · {title}",
 	"notifications_sentence_mention": "{actor} te ha mencionado en {code} · {title}",
 	"notifications_sentence_followed_activity": "Hay novedades en {code} · {title}",
+	"follow_mail_unfollow": "Dejar de seguir: {link}",
+	"follow_button": "Seguir",
+	"follow_following": "Siguiendo",
+	"follow_unfollow": "Dejar de seguir",
+	"follow_participant": "Participas",
+	"follow_participant_hint": "Te llegan sus avisos como participante",
+	"follow_count": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{count} persona sigue esto",
+				"countPlural=other": "{count} personas siguen esto"
+			}
+		}
+	],
+	"follow_summary_comment": "Comentario nuevo",
+	"follow_summary_internal_comment": "Nota interna nueva",
+	"follow_summary_ticket_status": "El estado ha pasado a {status}",
+	"follow_summary_ticket_assigned": "Asignado a {person}",
+	"follow_summary_ticket_unassigned": "Ya no tiene asignado",
+	"follow_summary_task_state": "La tarea ha pasado a {state}",
+	"follow_summary_task_assignees": "Han cambiado las personas asignadas",
+	"follow_summary_task_due": "Ha cambiado la fecha límite",
+	"follow_summary_project_archived": "El proyecto se ha archivado",
+	"follow_summary_project_unarchived": "El proyecto se ha reabierto",
+	"follow_summary_project_changed": "Han cambiado el responsable o la fecha límite",
+	"follow_summary_project_task_completed": "Se ha completado {code} · {title}",
 	"notifications_mention_label": "Mencionar a una persona",
 	"notifications_mention_empty": "Nadie coincide",
 	"notifications_settings_link": "Preferencias de notificaciones",

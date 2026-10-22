@@ -30,6 +30,20 @@ function recorder() {
 }
 
 describe('notificationMail', () => {
+	it('adds how to stop following to the mail of a followed record, and only to it', () => {
+		const followed = notificationMail(
+			pending({
+				type: 'followed.activity',
+				role: 'technician',
+				target: { projectId: 'p-1' },
+				snapshot: { code: 'PRJ-0001', title: 'Mudanza', summary: 'El proyecto se ha archivado' }
+			}),
+			origin
+		);
+		expect(followed.text).toContain('Dejar de seguir: https://unitati.test/projects/PRJ-0001');
+		expect(notificationMail(pending(), origin).text).not.toContain('Dejar de seguir');
+	});
+
 	it('subjects with the code first, so mail clients keep threading', () => {
 		expect(notificationMail(pending(), origin).subject).toBe('[TCK-0042] La impresora no responde');
 		expect(

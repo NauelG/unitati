@@ -18,7 +18,16 @@ export type { Snapshot } from './snapshot';
 export { notify } from './notify';
 export type { NotifyInput, NotifyTarget, PendingEmail } from './notify';
 
-export { followTicket } from './follow';
+export {
+	follow,
+	unfollow,
+	isFollowing,
+	followerIds,
+	followState,
+	followTicket,
+	unfollowFromNotification
+} from './follows';
+export type { FollowTarget, FollowState, FollowFailure } from './follows';
 
 export {
 	notificationMail,

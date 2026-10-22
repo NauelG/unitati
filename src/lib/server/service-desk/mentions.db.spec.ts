@@ -163,9 +163,10 @@ describe('notifying the people a comment names', () => {
 			actorName: 'Tess Tech',
 			excerpt: 'Mira esto @Theo Tech'
 		});
-		expect(await followers()).toMatchObject([
-			{ personId: w.colleague.personId, ticketId: w.ticketId }
-		]);
+		// The mentioned colleague follows, and so does the author (#57).
+		expect((await followers()).map((row) => row.personId).sort()).toEqual(
+			[w.colleague.personId, w.technician.personId].sort()
+		);
 	});
 
 	it('does not notify an employee named by a forged token in an internal comment', async () => {
@@ -174,7 +175,8 @@ describe('notifying the people a comment names', () => {
 		const id = await say(w, w.technician, `Psst ${mention(w.employee)}`, 'internal');
 
 		expect(await inbox()).toHaveLength(0);
-		expect(await followers()).toHaveLength(0);
+		// Nobody was mentioned in effect; only the author follows (#57).
+		expect((await followers()).map((row) => row.personId)).toEqual([w.technician.personId]);
 		const thread = await ticketThread(w.employee, w.tag);
 		expect(
 			thread.ok && thread.value.some((item) => item.kind === 'comment' && item.id === id)
@@ -213,7 +215,8 @@ describe('notifying the people a comment names', () => {
 		);
 
 		const people = (await followers()).map((row) => row.personId);
-		expect(people).toEqual([w.admin.personId]);
+		// The mentioned stranger, and the comment's author (#57); never the participants.
+		expect(people.sort()).toEqual([w.admin.personId, w.colleague.personId].sort());
 		// the requester is still told, as a mention
 		const toRequester = (await inbox()).filter(
 			(row) => row.recipientPersonId === w.employee.personId

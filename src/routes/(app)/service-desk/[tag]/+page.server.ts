@@ -41,7 +41,9 @@ import {
 	type ThreadItem
 } from '#lib/server/service-desk/index.js';
 import { failureMessage } from '#lib/ticket-errors.js';
+import { followState } from '#lib/server/notifications/index.js';
 import { fieldsOf, rejected } from '../../assets/form-data';
+import { followActions } from '../../follow-actions';
 import type { Actions, PageServerLoad } from './$types';
 
 /** The opening message is the thread's first comment: there is no `description` column. */
@@ -92,6 +94,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		// The whole of it: the constellation draws every relation, the panel lists them.
 		related: relatedTo(user, { kind: 'ticket', id: found.value.id }),
 		canManage,
+		follow: await followState(user, { ticketId: found.value.id }),
 		// Delivering equipment for this ticket sends the technician to the asset (#279).
 		canDeliver,
 		...(requesterLocation === undefined
@@ -153,6 +156,13 @@ async function unlinkWork(
 }
 
 export const actions: Actions = {
+	...followActions(
+		(user) => requirePermission(user, 'tickets.view'),
+		async (user, { params }) => {
+			const found = await getTicketByTag(user, params.tag);
+			return found.ok ? { ticketId: found.value.id } : null;
+		}
+	),
 	reply: async ({ locals, request, params }) => {
 		const user = requirePermission(locals.user, 'tickets.view');
 		const { fields, files } = await readTicketForm(request);

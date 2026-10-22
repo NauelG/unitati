@@ -5,6 +5,26 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.105.0] - 2026-10-21
+
+### Added
+
+- Follow tickets, tasks and projects (#57). Staff who are not a record's requester or assignee get a
+  "Seguir" / "Siguiendo" button and "n personas siguen esto" in its header; a participant sees a
+  disabled "Participas". Followers receive `followed.activity` for public and internal comments,
+  status changes and (un)assignments of a ticket; state, assignee and due-date changes of a task;
+  and archiving, owner or due-date changes of a project, plus the completion of one of its
+  tasks. Following a project does not follow its tasks.
+- Commenting on a ticket follows it, unless you are its requester or assignee.
+- "Dejar de seguir" on every `followed.activity` notification (bell and inbox), and in the footer of
+  its email, which stays off by default.
+
+### Changed
+
+- Followers are filtered by their current role and by a members-only project's membership when a
+  notification is written: a demoted follower stops hearing and a promoted one hears again, without
+  losing the follow.
+
 ## [0.104.0] - 2026-10-21
 
 ### Added

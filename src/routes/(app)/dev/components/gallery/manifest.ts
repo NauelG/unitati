@@ -618,6 +618,11 @@ export interface GalleryException {
  */
 export const GALLERY_EXCEPTIONS: GalleryException[] = [
 	{
+		sourceFile: 'FollowControl.svelte',
+		reason:
+			'Bound to the record: its Seguir / Siguiendo form posts to the ?/follow and ?/unfollow actions of /service-desk/[tag], /tasks/[taskTag] and /projects/[tag], which answer 404 without a record the viewer can see.'
+	},
+	{
 		sourceFile: 'ProjectVisibilityPanel.svelte',
 		reason:
 			'Bound to the project record: its radio, add and remove forms post to the ?/setVisibility, ?/addMember and ?/removeMember actions of /projects/[tag], which answer 404 without a project the viewer can see.'

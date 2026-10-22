@@ -1,7 +1,9 @@
 import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { STATE_GROUPS, type StateGroup } from '#lib/domain/status.js';
+import { m } from '#lib/paraglide/messages.js';
 import { actorColumns, recordActivity } from '../activity';
+import type { PendingEmail } from '../notifications';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { uniqueConstraintName } from '../db/errors';
@@ -18,7 +20,14 @@ import {
 	type CreateProjectInput,
 	type UpdateProjectInput
 } from './validation';
-import { findPerson, lockProject, type ProjectWriteFailure } from './writes';
+import {
+	findPerson,
+	lockProject,
+	sendAfterCommit,
+	tellFollowers,
+	type MailDeps,
+	type ProjectWriteFailure
+} from './writes';
 
 /**
  * Projects: reading them (scoped by who is asking) and the writes that change
@@ -293,13 +302,15 @@ export async function createProject(
 export async function updateProject(
 	actor: SessionUser,
 	projectId: string,
-	input: UpdateProjectInput
+	input: UpdateProjectInput,
+	deps: MailDeps = {}
 ): Promise<Outcome<void, UpdateProjectFailure>> {
 	requireManage(actor);
 	const values = updateProjectInput.parse(input);
 
+	let emails: PendingEmail[] = [];
 	try {
-		return await getDb().transaction(async (tx) => {
+		const outcome = await getDb().transaction(async (tx) => {
 			const locked = await lockProject(tx, actor, projectId);
 			if (!locked.ok) return locked;
 			const project = locked.value;
@@ -339,7 +350,8 @@ export async function updateProject(
 				}
 			}
 
-			if (values.dueDate !== undefined && values.dueDate !== project.dueDate) {
+			const dueChanges = values.dueDate !== undefined && values.dueDate !== project.dueDate;
+			if (values.dueDate !== undefined && dueChanges) {
 				await recordActivity(tx, {
 					...base,
 					verb: 'project.due.changed',
@@ -359,8 +371,21 @@ export async function updateProject(
 				})
 				.where(eq(projects.id, projectId));
 
+			if (ownerChanges || dueChanges) {
+				emails = await tellFollowers(
+					tx,
+					actor,
+					project,
+					{ projectId },
+					{ code: values.projectTag ?? project.projectTag, title: values.name ?? project.name },
+					m.follow_summary_project_changed()
+				);
+			}
+
 			return success(undefined);
 		});
+		if (outcome.ok) sendAfterCommit(emails, deps);
+		return outcome;
 	} catch (error) {
 		if (uniqueConstraintName(error) === 'projects_org_tag') return failure('duplicate_project_tag');
 		throw error;
@@ -370,16 +395,19 @@ export async function updateProject(
 /** Idempotent: archiving an archived project writes nothing. */
 export async function archiveProject(
 	actor: SessionUser,
-	projectId: string
+	projectId: string,
+	deps: MailDeps = {}
 ): Promise<Outcome<void, 'project_not_found'>> {
 	requireManage(actor);
 
-	return getDb().transaction(async (tx) => {
+	let emails: PendingEmail[] = [];
+	const outcome = await getDb().transaction(async (tx) => {
 		const locked = await lockProject(tx, actor, projectId);
 		if (!locked.ok) {
 			// Already archived is the state we were asked to reach.
 			return locked.error === 'project_archived' ? success(undefined) : failure(locked.error);
 		}
+		const project = locked.value;
 
 		await tx
 			.update(projects)
@@ -393,21 +421,33 @@ export async function archiveProject(
 			verb: 'project.archived',
 			payload: {}
 		});
+		emails = await tellFollowers(
+			tx,
+			actor,
+			project,
+			{ projectId },
+			{ code: project.projectTag, title: project.name },
+			m.follow_summary_project_archived()
+		);
 
 		return success(undefined);
 	});
+	sendAfterCommit(emails, deps);
+	return outcome;
 }
 
 /** The one write an archived project accepts. Idempotent on an active one. */
 export async function unarchiveProject(
 	actor: SessionUser,
-	projectId: string
+	projectId: string,
+	deps: MailDeps = {}
 ): Promise<Outcome<void, 'project_not_found'>> {
 	requireManage(actor);
 
-	return getDb().transaction(async (tx) => {
+	let emails: PendingEmail[] = [];
+	const outcome = await getDb().transaction(async (tx) => {
 		const [project] = await tx
-			.select({ archivedAt: projects.archivedAt })
+			.select()
 			.from(projects)
 			.where(
 				and(
@@ -432,7 +472,17 @@ export async function unarchiveProject(
 			verb: 'project.unarchived',
 			payload: {}
 		});
+		emails = await tellFollowers(
+			tx,
+			actor,
+			project,
+			{ projectId },
+			{ code: project.projectTag, title: project.name },
+			m.follow_summary_project_unarchived()
+		);
 
 		return success(undefined);
 	});
+	sendAfterCommit(emails, deps);
+	return outcome;
 }

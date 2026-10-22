@@ -93,6 +93,22 @@
 							/>
 						</button>
 					</form>
+					{#if item.type === 'followed.activity'}
+						<form
+							method="POST"
+							action="?/unfollow"
+							use:enhance
+							class="px-[var(--space-4)] pb-[var(--space-2)] pl-[calc(var(--space-4)+20px)]"
+						>
+							<input type="hidden" name="id" value={item.id} />
+							<button
+								type="submit"
+								class="text-xs font-medium text-[var(--action)] hover:underline"
+							>
+								{m.follow_unfollow()}
+							</button>
+						</form>
+					{/if}
 				</li>
 			{/each}
 		</ul>

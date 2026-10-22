@@ -32,6 +32,8 @@ import {
 	type MoveTaskToProjectFailure,
 	type UpdateTaskFailure
 } from '#lib/server/projects/index.js';
+import { followState } from '#lib/server/notifications/index.js';
+import { followActions } from '../../follow-actions';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
@@ -64,6 +66,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		task,
 		descriptionHtml: renderMarkdown(task.description ?? ''),
 		canManage,
+		follow: await followState(user, { taskId: task.id }),
 		attachments: attachments.value,
 		states: states.map(({ id, name, group }) => ({ id, name, group })),
 		people: assignable
@@ -136,6 +139,10 @@ const assignFailures: Record<Exclude<AssignFailure, 'task_not_found'>, () => str
 };
 
 export const actions: Actions = {
+	...followActions(requireProjectRead, async (user, { params }) => {
+		const found = await getTask(user, params.taskTag);
+		return found.ok ? { taskId: found.value.id } : null;
+	}),
 	update: async ({ request, locals, params }) => {
 		const user = requireProjectWrite(locals.user);
 		const fields = await fieldsOf(request);
