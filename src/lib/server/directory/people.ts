@@ -12,7 +12,7 @@ import type { PersonInput, PersonUpdateInput } from './validation';
 /**
  * The people directory's writes (#229).
  *
- * Whoever calls these has already been allowed to (`people.manage`); scoping to
+ * Whoever calls these has already been allowed to (`people.edit`); scoping to
  * the actor's organisation is this module's job. A person is a directory record,
  * not a credential: nothing here creates or touches a user (#230).
  */

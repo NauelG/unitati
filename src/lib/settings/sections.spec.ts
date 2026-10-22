@@ -70,6 +70,7 @@ describe('visibleSections', () => {
 		const administrator = ['organisation.manage', 'api.keys.manage'];
 
 		expect(visibleSections(administrator).map((section) => section.href)).toEqual([
+			'/settings/directory/permissions',
 			'/settings/platform/branding',
 			'/settings/api-keys'
 		]);
@@ -98,14 +99,25 @@ describe('visibleSections', () => {
 });
 
 describe('the directory module', () => {
-	it('lists departments under "Directorio" for whoever may manage people', () => {
+	it('lists departments under "Directorio" for whoever may edit people', () => {
 		expect(MODULE_ORDER).toContain('directory');
 		expect(MODULE_LABELS.directory()).toBe('Directorio');
 
-		const sections = visibleSections(['people.manage']);
+		const sections = visibleSections(['people.edit']);
 		expect(sections.map((section) => [section.module, section.href])).toEqual([
 			['directory', '/settings/directory/departments']
 		]);
+	});
+
+	it('keeps the directory permissions switch for whoever administers the organisation', () => {
+		expect(visibleSections(['organisation.manage']).map((section) => section.href)).toContain(
+			'/settings/directory/permissions'
+		);
+		expect(
+			visibleSections(['people.edit', 'people.manage']).some(
+				(section) => section.href === '/settings/directory/permissions'
+			)
+		).toBe(false);
 	});
 
 	it('hides departments from a technician and an employee', () => {

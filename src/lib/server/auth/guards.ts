@@ -31,6 +31,11 @@ export interface SessionUser {
 	 */
 	serviceAccountId?: string;
 	/**
+	 * Permissions the organisation lends to this role through a setting (ADR 0044),
+	 * resolved with the user on every request so a change applies at once.
+	 */
+	grants?: readonly Permission[];
+	/**
 	 * Present only for an API key (ADR 0022): the permissions the key was narrowed
 	 * to. `can()` intersects them with the role's; a session leaves it unset.
 	 */

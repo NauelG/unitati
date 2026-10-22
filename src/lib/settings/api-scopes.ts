@@ -19,7 +19,7 @@ export interface ScopeGroup {
 export const SCOPE_GROUPS: readonly ScopeGroup[] = [
 	{
 		label: m.api_scope_group_directory,
-		permissions: ['people.view', 'people.manage', 'organisation.manage']
+		permissions: ['people.view', 'people.edit', 'people.manage', 'organisation.manage']
 	},
 	{
 		label: m.api_scope_group_assets,
@@ -49,6 +49,7 @@ export const SCOPE_GROUPS: readonly ScopeGroup[] = [
 
 export const SCOPE_LABELS: Partial<Record<Permission, () => string>> = {
 	'people.view': m.permission_people_view,
+	'people.edit': m.permission_people_edit,
 	'people.manage': m.permission_people_manage,
 	'organisation.manage': m.permission_organisation_manage,
 	'assets.view': m.permission_assets_view,

@@ -7,6 +7,7 @@ import {
 import { recordActivity } from '#lib/server/activity/index.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 import { getDb } from '#lib/server/db/index.js';
+import { resolveSessionUser, setTechniciansEditDirectory } from '#lib/server/directory/index.js';
 import { createQueue, createTicket } from '#lib/server/service-desk/testing/fixtures.js';
 import { actions, load } from './+page.server';
 
@@ -58,6 +59,40 @@ describe('/directory/[id] actions', () => {
 			status?: number;
 		};
 		expect(reply.status).toBe(400);
+	});
+
+	it('lends a technician editing but never access, roles or the sign-in email', async () => {
+		const organisation = await createOrganisation();
+		const admin = await createViewer(organisation.id, 'admin');
+		const technician = await createViewer(organisation.id, 'technician', 'Tom Technician');
+		const person = await createPerson(organisation.id, 'Grace Hopper');
+		const holder = await createViewer(organisation.id, 'admin', 'Hal Holder');
+		await setTechniciansEditDirectory(admin, true);
+		const lent = (await resolveSessionUser(technician.id))!;
+
+		// Editing data works.
+		const edited = (await actions.updatePerson(
+			post(lent, { id: person.id, fullName: 'Grace M. Hopper', email: person.email })
+		)) as { status?: number; action?: string };
+		expect(edited.action).toBe('updatePerson');
+
+		// Moving a credential holder's email would be an account takeover.
+		const moved = (await actions.updatePerson(
+			post(lent, { id: holder.personId!, fullName: 'Hal Holder', email: 'attacker@evil.test' })
+		)) as { status?: number };
+		expect(moved.status).toBe(400);
+		expect((await resolveSessionUser(holder.id))?.email).toBe(holder.email);
+
+		for (const name of [
+			'deactivatePerson',
+			'reactivatePerson',
+			'grantAccess',
+			'changeRole',
+			'resetPassword',
+			'revokeAccess'
+		] as const) {
+			expect(await statusOf(() => actions[name](post(lent, { id: person.id })))).toBe(404);
+		}
 	});
 
 	it('refuses an employee take back', async () => {

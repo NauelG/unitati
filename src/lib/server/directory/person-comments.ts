@@ -8,7 +8,7 @@ import { failure, success, type Outcome } from '../shared/outcome';
 import { people, personComments } from './schema';
 
 /**
- * Comments on a person. Whoever calls this has already been allowed to (`people.manage` to
+ * Comments on a person. Whoever calls this has already been allowed to (`people.edit` to
  * write, `people.view` to read); scoping to the actor's organisation is this
  * file's job. Every comment also writes a `note.added` entry on the person's
  * timeline, in the same transaction.

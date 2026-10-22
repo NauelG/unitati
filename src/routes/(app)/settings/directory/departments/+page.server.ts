@@ -12,7 +12,7 @@ import { fieldsOf, rejected, withId } from '../../../assets/form-data';
 
 /**
  * Departments are a one-field catalogue: create and rename in a `Dialog`, delete
- * behind a confirmation (ADR 0020). `people.manage` is enforced in the page and
+ * behind a confirmation (ADR 0020). `people.edit` is enforced in the page and
  * in each action; a denial is a 404, as the issue asks, rather than the 403 the
  * other registry sections answer.
  */
@@ -24,13 +24,13 @@ const nameIssue = (name: string | undefined) =>
 		: m.validation_name_required();
 
 export const load = async ({ locals }: RequestEvent) => {
-	const user = requirePermission(locals.user, 'people.manage');
+	const user = requirePermission(locals.user, 'people.edit');
 	return { departments: await listDepartments(user.organisationId) };
 };
 
 export const actions = {
 	create: async ({ request, locals }: RequestEvent) => {
-		const user = requirePermission(locals.user, 'people.manage');
+		const user = requirePermission(locals.user, 'people.edit');
 		const fields = await fieldsOf(request);
 		const parsed = departmentInput.safeParse(fields);
 		if (!parsed.success) return rejected('create', nameIssue(fields.name));
@@ -41,7 +41,7 @@ export const actions = {
 	},
 
 	rename: async ({ request, locals }: RequestEvent) => {
-		const user = requirePermission(locals.user, 'people.manage');
+		const user = requirePermission(locals.user, 'people.edit');
 		const fields = await fieldsOf(request);
 		const target = withId.safeParse(fields);
 		if (!target.success) return rejected('rename', m.departments_error_not_found());
@@ -65,7 +65,7 @@ export const actions = {
 	},
 
 	delete: async ({ request, locals }: RequestEvent) => {
-		const user = requirePermission(locals.user, 'people.manage');
+		const user = requirePermission(locals.user, 'people.edit');
 		const target = withId.safeParse(await fieldsOf(request));
 		if (!target.success) return rejected('delete', m.departments_error_not_found());
 

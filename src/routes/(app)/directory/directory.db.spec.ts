@@ -5,6 +5,7 @@ import {
 	createViewer
 } from '#lib/server/assets/testing/fixtures.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
+import { resolveSessionUser, setTechniciansEditDirectory } from '#lib/server/directory/index.js';
 import { actions } from './+page.server';
 
 const event = (user: SessionUser | null, fields: Record<string, string> = {}) =>
@@ -40,6 +41,29 @@ describe('/directory writes', () => {
 			'reactivatePerson'
 		] as const) {
 			expect(await statusOf(() => actions[name](event(technician, { id: person.id })))).toBe(404);
+		}
+	});
+
+	it('lets a technician add a person once the organisation lends people.edit, but not deactivate', async () => {
+		const organisation = await createOrganisation();
+		const admin = await createViewer(organisation.id, 'admin');
+		const technician = await createViewer(organisation.id, 'technician', 'Tom Technician');
+		const person = await createPerson(organisation.id, 'Grace Hopper');
+		await setTechniciansEditDirectory(admin, true);
+		const lent = (await resolveSessionUser(technician.id))!;
+
+		const created = (await actions.createPerson(
+			event(lent, {
+				fullName: 'Ada Byron',
+				email: 'ada@acme.test',
+				departmentId: '',
+				locationId: ''
+			})
+		)) as Reply;
+		expect(created.action).toBe('createPerson');
+
+		for (const name of ['deactivatePerson', 'reactivatePerson'] as const) {
+			expect(await statusOf(() => actions[name](event(lent, { id: person.id })))).toBe(404);
 		}
 	});
 

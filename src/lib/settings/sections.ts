@@ -106,7 +106,13 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
 		module: 'directory',
 		href: '/settings/directory/departments',
 		label: m.settings_section_departments,
-		permission: 'people.manage'
+		permission: 'people.edit'
+	},
+	{
+		module: 'directory',
+		href: '/settings/directory/permissions',
+		label: m.settings_section_directory_permissions,
+		permission: 'organisation.manage'
 	},
 	{
 		module: 'platform',

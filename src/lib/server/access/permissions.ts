@@ -12,6 +12,13 @@ import type { UserRole } from '../auth/schema';
 export const PERMISSIONS = [
 	// Directory
 	'people.view',
+	/**
+	 * Editing the directory's data: create, update, import, comment, departments.
+	 * An admin always holds it; a technician only when the organisation turned it
+	 * on (`Grants` below).
+	 */
+	'people.edit',
+	/** Credentials, roles and (de)activation. Admin only: it is how privileges escalate. */
 	'people.manage',
 	'organisation.manage',
 
@@ -106,17 +113,35 @@ export function roleCan(role: UserRole, permission: Permission): boolean {
 }
 
 /**
- * A principal's `scopes` (an API key's, ADR 0022) only ever narrow its role:
- * `undefined` means unscoped, which is what a browser session is. An empty list
- * is a key that may do nothing, not a key that may do everything.
+ * Permissions an organisation setting lends to a role, beyond the fixed table
+ * above (ADR 0044). The session resolver fills them in; the role table stays a
+ * product constant, so roles are still not user-authored.
  */
-export function can(
-	user: { role: UserRole; scopes?: readonly Permission[] } | null | undefined,
-	permission: Permission
-): boolean {
+export const TECHNICIAN_DIRECTORY_GRANTS: readonly Permission[] = ['people.edit'];
+
+interface Principal {
+	role: UserRole;
+	grants?: readonly Permission[];
+	scopes?: readonly Permission[];
+}
+
+/** What the principal holds before any API-key scope narrows it: the role's, plus the organisation's grants. */
+export function permissionsOf(user: Pick<Principal, 'role' | 'grants'>): readonly Permission[] {
+	const grants = user.grants ?? [];
+	return grants.length === 0
+		? permissionsFor(user.role)
+		: [...permissionsFor(user.role), ...grants];
+}
+
+/**
+ * A principal's `scopes` (an API key's, ADR 0022) only ever narrow what it
+ * holds: `undefined` means unscoped, which is what a browser session is. An
+ * empty list is a key that may do nothing, not a key that may do everything.
+ */
+export function can(user: Principal | null | undefined, permission: Permission): boolean {
 	if (!user) return false;
 	return (
-		roleCan(user.role, permission) &&
+		(roleCan(user.role, permission) || (user.grants?.includes(permission) ?? false)) &&
 		(user.scopes === undefined || user.scopes.includes(permission))
 	);
 }

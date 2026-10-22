@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { getDb, type Executor } from '../db';
+import { TECHNICIAN_DIRECTORY_GRANTS } from '../access/permissions';
 import { users } from '../auth/schema';
 import type { SessionUser } from '../auth/guards';
 import { locationPaths } from './locations';
@@ -67,6 +68,7 @@ export {
 	updateBranding
 } from './branding';
 export type { SetBrandAssetFailure, UpdateBrandingFailure } from './branding';
+export { getTechniciansEditDirectory, setTechniciansEditDirectory } from './organisation-settings';
 
 /**
  * Resolves a signed-in credential into the person it belongs to, which is what
@@ -85,15 +87,21 @@ export async function resolveSessionUser(userId: string): Promise<SessionUser | 
 			role: users.role,
 			mustChangePassword: users.mustChangePassword,
 			organisationId: people.organisationId,
-			personId: people.id
+			personId: people.id,
+			techniciansEditDirectory: organisations.techniciansEditDirectory
 		})
 		.from(users)
 		.innerJoin(people, eq(people.userId, users.id))
+		.innerJoin(organisations, eq(organisations.id, people.organisationId))
 		// A deactivated person is signed out in effect, whatever sessions linger (#230).
 		.where(and(eq(users.id, userId), eq(people.active, true)))
 		.limit(1);
 
-	return row ?? null;
+	if (!row) return null;
+	const { techniciansEditDirectory, ...user } = row;
+	return techniciansEditDirectory && user.role === 'technician'
+		? { ...user, grants: TECHNICIAN_DIRECTORY_GRANTS }
+		: user;
 }
 
 /** True while no organisation exists: the installation still needs its first admin. */

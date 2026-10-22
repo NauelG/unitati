@@ -42,6 +42,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 	if (!person) error(404, 'Not found');
 
 	const canManagePeople = can(user, 'people.manage');
+	const canEditPeople = can(user, 'people.edit');
 	const canCheckout = can(user, 'assets.checkout');
 
 	// Assets are a module of their own: its permission decides what shows here.
@@ -53,9 +54,9 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 		seesTickets ? openTicketsRequestedBy(user, person.id, REQUESTED_TICKETS) : null,
 		listActivity({ organisationId: user.organisationId, target: { personId: person.id } }),
 		listPersonComments(user.organisationId, person.id),
-		// The pickers feed a form only a person who can manage people sees.
-		canManagePeople ? listLocations(user.organisationId) : [],
-		canManagePeople ? listDepartments(user.organisationId) : []
+		// The pickers feed a form only a person who can edit people sees.
+		canEditPeople ? listLocations(user.organisationId) : [],
+		canEditPeople ? listDepartments(user.organisationId) : []
 	]);
 
 	// The menu does not offer these; the actions refuse them too (#230).
@@ -85,6 +86,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 		})),
 		comments,
 		canManagePeople,
+		canEditPeople,
 		canCheckout,
 		selfPersonId: user.personId,
 		lastAdminId: activeAdmins.length === 1 ? activeAdmins[0].id : null,
@@ -103,7 +105,7 @@ const commentFailures = {
 export const actions: Actions = {
 	...personActions,
 	addComment: async ({ locals, request, params }) => {
-		const actor = requirePermission(locals.user, 'people.manage');
+		const actor = requirePermission(locals.user, 'people.edit');
 		const data = await request.formData();
 		const text = data.get('text');
 		const outcome = await addPersonComment(actor, params.id, typeof text === 'string' ? text : '');

@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { requireUser } from '#lib/server/auth/guards.js';
-import { permissionsFor } from '#lib/server/access/permissions.js';
+import { permissionsOf } from '#lib/server/access/permissions.js';
 import {
 	ASSET_READ_PERMISSIONS,
 	PROJECT_READ_PERMISSIONS,
@@ -18,7 +18,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	if (await needsSetup()) redirect(303, '/setup');
 
 	const user = requireUser(locals.user, url);
-	const permissions = permissionsFor(user.role);
+	const permissions = permissionsOf(user);
 	const hasAnyPermission = (list: readonly Permission[]) =>
 		list.some((permission) => permissions.includes(permission));
 

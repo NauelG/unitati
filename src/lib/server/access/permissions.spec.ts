@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { can, permissionsFor, PERMISSIONS, roleCan, type Permission } from './permissions';
+import {
+	can,
+	permissionsFor,
+	permissionsOf,
+	PERMISSIONS,
+	roleCan,
+	type Permission
+} from './permissions';
 
 describe('permissions', () => {
 	it('grants an admin every permission', () => {
@@ -60,7 +67,32 @@ describe('permissions', () => {
 
 		it('does not administer the organisation or the directory', () => {
 			expect(roleCan('technician', 'organisation.manage')).toBe(false);
+			expect(roleCan('technician', 'people.edit')).toBe(false);
 			expect(roleCan('technician', 'people.manage')).toBe(false);
+		});
+	});
+
+	describe('grants (ADR 0044: an organisation setting lends a role one permission)', () => {
+		const lent = { role: 'technician' as const, grants: ['people.edit'] as const };
+
+		it('lets a technician edit the directory only when the grant is present', () => {
+			expect(can({ role: 'technician' }, 'people.edit')).toBe(false);
+			expect(can(lent, 'people.edit')).toBe(true);
+		});
+
+		it('never lends credential, role or organisation administration', () => {
+			expect(can(lent, 'people.manage')).toBe(false);
+			expect(can(lent, 'organisation.manage')).toBe(false);
+		});
+
+		it('is narrowed by an API key scope like any role permission', () => {
+			expect(can({ ...lent, scopes: ['people.view'] }, 'people.edit')).toBe(false);
+			expect(can({ ...lent, scopes: ['people.edit'] }, 'people.edit')).toBe(true);
+		});
+
+		it('adds the grants to what the viewer holds, and nothing else', () => {
+			expect(permissionsOf({ role: 'technician' })).toEqual(permissionsFor('technician'));
+			expect(permissionsOf(lent)).toEqual([...permissionsFor('technician'), 'people.edit']);
 		});
 	});
 
