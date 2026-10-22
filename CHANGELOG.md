@@ -5,6 +5,22 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.109.0] - 2026-10-22
+
+### Added
+
+- Settings > Directorio > Permisos: an admin can let technicians edit the directory. When on, a
+  technician can create, edit and import people, comment on them and manage departments. Giving or
+  removing access, resetting passwords, changing roles, changing the email of a person who can sign
+  in, and deactivating people stay with admins. Off by default. See ADR 0044.
+- `people.edit` permission, selectable as an API key scope.
+
+### Changed
+
+- Creating, editing and importing people, person comments and departments now need `people.edit`
+  instead of `people.manage`. Admins hold both, so nothing changes for them; existing API keys scoped
+  to `people.manage` alone lose these writes and must also be granted `people.edit`.
+
 ## [0.108.0] - 2026-10-22
 
 ### Added
