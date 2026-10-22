@@ -10,3 +10,4 @@ export * from '../projects/schema';
 export * from '../links/schema';
 export * from '../api/schema';
 export * from '../notifications/schema';
+export * from '../knowledge/schema';

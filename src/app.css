@@ -71,6 +71,16 @@
 	--queue-green: #12733f;
 	--queue-teal: #0b7a84;
 
+	/* Knowledge-space colours (`domain/knowledge.ts`): a swatch beside a space name */
+	--kb-gray: #5b6675;
+	--kb-blue: #1d5cf0;
+	--kb-violet: #6544e8;
+	--kb-pink: #b8237a;
+	--kb-red: #c2261c;
+	--kb-amber: #995700;
+	--kb-green: #12733f;
+	--kb-teal: #0b7a84;
+
 	/* States */
 	--focus: #1d5cf0;
 	--success: #12733f;
@@ -230,6 +240,15 @@
 	--queue-amber: #f2b54a;
 	--queue-green: #5ccf8c;
 	--queue-teal: #4fd0da;
+
+	--kb-gray: #98a3b3;
+	--kb-blue: #78a2ff;
+	--kb-violet: #a890ff;
+	--kb-pink: #f28cc4;
+	--kb-red: #ff8173;
+	--kb-amber: #f2b54a;
+	--kb-green: #5ccf8c;
+	--kb-teal: #4fd0da;
 
 	/* States */
 	--focus: #78a2ff;

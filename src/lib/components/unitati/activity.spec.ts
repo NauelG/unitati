@@ -427,4 +427,49 @@ describe('activitySentence for locations', () => {
 			})
 		).toBe('Perdió la ubicación Barcelona office › Floor 1 al eliminarse');
 	});
+
+	it('renders the knowledge-base verbs, counting pages in the singular and the plural', () => {
+		expect(
+			activitySentence({ verb: 'space.created', payload: { name: 'Ayuda', audience: 'portal' } })
+		).toBe('Creó el espacio «Ayuda» (Portal)');
+		expect(
+			activitySentence({
+				verb: 'space.audience.changed',
+				payload: { from: 'staff', to: 'portal', pageCount: 1 }
+			})
+		).toBe('Cambió la audiencia del espacio de «Personal» a «Portal» (1 página)');
+		expect(activitySentence({ verb: 'space.archived', payload: { pageCount: 3 } })).toBe(
+			'Archivó el espacio y sus páginas (3 páginas)'
+		);
+		expect(activitySentence({ verb: 'page.created', payload: { title: 'VPN' } })).toBe(
+			'Creó la página «VPN»'
+		);
+		expect(activitySentence({ verb: 'page.published', payload: {} })).toBe('Publicó la página');
+		expect(
+			activitySentence({
+				verb: 'page.moved',
+				payload: {
+					fromSpace: 'Ayuda',
+					toSpace: 'Procedimientos',
+					fromParentTag: null,
+					toParentTag: 'DOC-0004'
+				}
+			})
+		).toBe('Movió la página de Ayuda a Procedimientos › DOC-0004');
+		expect(activitySentence({ verb: 'page.archived', payload: { subtreeCount: 1 } })).toBe(
+			'Archivó la página (1 página)'
+		);
+		expect(activitySentence({ verb: 'page.unarchived', payload: { subtreeCount: 2 } })).toBe(
+			'Restauró la página (2 páginas)'
+		);
+		expect(activitySentence({ verb: 'page.revision.restored', payload: { from: 2, to: 5 } })).toBe(
+			'Restauró la revisión 2 como revisión 5'
+		);
+		expect(
+			activitySentence({ verb: 'page.attachment.added', payload: { filename: 'a.pdf' } })
+		).toBe('Adjuntó «a.pdf»');
+		expect(
+			activitySentence({ verb: 'page.attachment.removed', payload: { filename: 'a.pdf' } })
+		).toBe('Quitó el adjunto «a.pdf»');
+	});
 });

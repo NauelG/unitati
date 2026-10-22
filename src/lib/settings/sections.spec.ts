@@ -53,6 +53,19 @@ describe('visibleSections', () => {
 		expect(visibleSections(employee)).toEqual([]);
 	});
 
+	it('shows the spaces catalogue to whoever holds knowledge.spaces.manage, and to nobody else', () => {
+		const administrator = ['knowledge.spaces.manage', 'api.keys.manage'];
+		const technician = ['knowledge.view', 'knowledge.manage', 'api.keys.manage'];
+
+		expect(visibleSections(administrator).map((section) => section.href)).toEqual([
+			'/settings/knowledge',
+			'/settings/api-keys'
+		]);
+		expect(visibleSections(technician).map((section) => section.href)).toEqual([
+			'/settings/api-keys'
+		]);
+	});
+
 	it('shows the branding section before API keys, to whoever may manage the organisation', () => {
 		const administrator = ['organisation.manage', 'api.keys.manage'];
 

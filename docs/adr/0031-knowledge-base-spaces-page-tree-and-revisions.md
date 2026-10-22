@@ -108,3 +108,58 @@ tree, history); it is not a component.
   cannot restore what a page used to say.
 - **Real-time collaborative editing (Yjs).** Rejected: a sync server and a document model of its
   own, for a team-sized write load that optimistic concurrency covers.
+
+## Addendum: decisions of the second design session (2026-10-22, #17)
+
+The design above holds. A second session, after `Storage` moved to `shared/`, notifications and
+members-only projects landed, and the editor shipped without profiles, settled what the first one
+left open. Each point amends or completes the numbered decision or consequence it names.
+
+1. **Page attachments are in; inline images stay out.** Amends the consequence that "images and
+   file attachments wait": the reason is gone, because `Storage` lives in `shared/` (#272) and
+   [ADR 0039](0039-attachments-per-owning-domain.md) fixes the pattern. `page_attachments` is the
+   knowledge domain's own table, written through `shared/attachments.ts` with the same limits
+   (5 files per submission, 10 MiB each), download only (#325). Images embedded in the body need
+   permission-checked serving, `<img>` in the sanitiser and paste and drop in the editor, which is
+   a separate change.
+2. **No mentions in page bodies.** The `document` profile has none, as descriptions have none
+   (#33). Mentions are allowed in page comments.
+3. **Page comments are staff-only, to write and to read**, in `staff` and `portal` spaces alike
+   (#326). They are an internal conversation about the document; an employee with a problem in a
+   guide opens a ticket. A mention notifies through the existing `mention` type, and
+   `notifications` gains a `page_id` target (the `CHECK` widens to four). Only active staff can be
+   mentioned. Comments write no activity and no revision.
+4. **No page following.** The only notification a page produces is a comment mention. Following
+   knowledge pages is a follow-up (#330).
+5. **A requester whose cited page is no longer readable sees its code and nothing else** (decision
+   8). This is deliberately not [#310](https://github.com/NauelG/unitati/issues/310)'s shape for
+   restricted tasks and projects, which carries no code, title or id: there the code was a
+   handle to something the viewer could not otherwise learn of, while here the code is already in
+   the text of the reply (`/knowledge/DOC-0012`), so hiding it from the ref protects nothing. Do
+   not align the two.
+6. **Members-only projects** ([ADR 0042](0042-per-project-visibility.md)): a page's "projects it
+   documents" list goes through the projects scope, and projects the viewer cannot see appear as
+   "N elementos restringidos", #310's shape. Linking a page to a project requires seeing the
+   project. The page itself is governed only by its space's audience.
+7. **One canonical link.** The page picker inserts `/knowledge/DOC-####`. An employee who opens it
+   is redirected to `/portal/knowledge/DOC-####`; a reader who cannot see the page gets the usual 404.
+8. **Portal suggestions appear only on the free-form ticket form**, while the subject is typed,
+   not on request forms ([ADR 0037](0037-request-forms-not-ticket-types.md)).
+9. **The editor profiles are this work.** [#209](https://github.com/NauelG/unitati/issues/209)
+   closed without shipping any: `renderMarkdown` has a single allow-list and `RichTextEditor`
+   takes no profile. The `document` profile of decision 10 is built with the editing change (#324)
+   and no longer depends on #209.
+
+### What the first sub-issue (#322) fixed in the schema
+
+- A space's `icon` and `colour` are **text keys** of closed sets in `domain/knowledge.ts`,
+  validated by the domain, not Postgres enums: both sets will grow, and Postgres cannot drop an
+  enum value. The colours are tokens (`--kb-<key>`) with a light and a dark value in `app.css`.
+- `page_tag` has **no update path**: nothing in the domain writes it after the insert, and a
+  spec asserts it.
+- The audience is applied **in the query** ([ADR 0028](0028-global-search-scope-in-the-query.md)):
+  `readableSpaces` and `readablePages` in `knowledge/scope.ts`. A viewer without `knowledge.view`
+  makes them throw rather than return an empty list.
+- Changing a space's audience takes the **count the admin confirmed** and refuses `count_changed`
+  if the number of non-archived pages (drafts included) is different when the space row is
+  locked. Creating a page must take the same lock (#323) for the guarantee to hold.

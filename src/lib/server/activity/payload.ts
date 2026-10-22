@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { HANDOVER_CONDITIONS } from '#lib/domain/handover.js';
+import { SPACE_AUDIENCES } from '#lib/domain/knowledge.js';
 import { ASSET_STATES, PRIORITIES, TICKET_STATUSES } from '#lib/domain/status.js';
 import type { ActivityVerb } from './verbs';
 
@@ -85,6 +86,9 @@ function fieldChange<T extends z.ZodType>(value: T) {
 }
 
 const nullableText = z.string().nullable();
+
+const spaceAudience = z.enum(SPACE_AUDIENCES);
+const pageCount = z.number().int().nonnegative();
 const nullableNumber = z.number().nullable();
 
 /**
@@ -373,7 +377,52 @@ export const PAYLOAD_SCHEMAS = {
 		name: presentName,
 		path: presentName,
 		code: nullableText
-	})
+	}),
+
+	// The knowledge base (ADR 0031). Spaces and pages are renamed and moved, so the
+	// entries snapshot what they name. A plain save of a page writes no entry: the
+	// revision list is its history.
+	'space.created': z.object({
+		name: presentName,
+		audience: spaceAudience
+	}),
+
+	// `pageCount` is the number of non-archived pages whose visibility changed,
+	// drafts included: the figure the admin confirmed.
+	'space.audience.changed': z.object({
+		from: spaceAudience,
+		to: spaceAudience,
+		pageCount
+	}),
+
+	'space.archived': z.object({ pageCount }),
+
+	'page.created': z.object({ title: presentName }),
+
+	'page.published': z.object({}),
+
+	// The space is named by its name as it read then; the parent by its code, null at the root.
+	'page.moved': z.object({
+		fromSpace: presentName,
+		toSpace: presentName,
+		fromParentTag: presentName.nullable(),
+		toParentTag: presentName.nullable()
+	}),
+
+	// A page archives with its whole subtree: `subtreeCount` counts the page itself.
+	'page.archived': z.object({ subtreeCount: pageCount }),
+
+	'page.unarchived': z.object({ subtreeCount: pageCount }),
+
+	// Restoring writes a new revision whose content is an old one's.
+	'page.revision.restored': z.object({
+		from: z.number().int().positive(),
+		to: z.number().int().positive()
+	}),
+
+	'page.attachment.added': z.object({ filename: presentName }),
+
+	'page.attachment.removed': z.object({ filename: presentName })
 } satisfies Record<ActivityVerb, z.ZodType>;
 
 /** The payload belonging to one verb, inferred from its schema. */

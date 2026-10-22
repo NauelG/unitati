@@ -65,7 +65,18 @@ export const ACTIVITY_VERBS = [
 	'person.location.changed',
 	'catalogue.location.created',
 	'catalogue.location.updated',
-	'catalogue.location.deleted'
+	'catalogue.location.deleted',
+	'space.created',
+	'space.audience.changed',
+	'space.archived',
+	'page.created',
+	'page.published',
+	'page.moved',
+	'page.archived',
+	'page.unarchived',
+	'page.revision.restored',
+	'page.attachment.added',
+	'page.attachment.removed'
 ] as const;
 
 export type ActivityVerb = (typeof ACTIVITY_VERBS)[number];
@@ -81,7 +92,9 @@ export const ACTIVITY_TARGETS = [
 	'taskId',
 	'projectId',
 	'personId',
-	'locationId'
+	'locationId',
+	'spaceId',
+	'pageId'
 ] as const;
 
 export type ActivityTargetColumn = (typeof ACTIVITY_TARGETS)[number];
@@ -91,7 +104,7 @@ export type ActivityTargetColumn = (typeof ACTIVITY_TARGETS)[number];
  * objects, so `{ assetId, ticketId }` is rejected by the compiler rather than
  * only by the `CHECK` — the constraint is the backstop, not the first defence.
  *
- * Derived from the list above rather than restating it, so the six names are
+ * Derived from the list above rather than restating it, so the names are
  * spelled once.
  */
 export type ActivityTarget = {

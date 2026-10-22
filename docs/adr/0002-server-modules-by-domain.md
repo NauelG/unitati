@@ -17,6 +17,7 @@ Server code lives in `src/lib/server/<domain>/`, and each folder is named after 
 | `assets/`        | assets, models, categories, assignments                                    |
 | `service-desk/`  | tickets, queues, comments                                                  |
 | `projects/`      | projects, milestones, tasks, boards                                        |
+| `knowledge/`     | knowledge spaces, pages and their revisions (ADR 0031)                     |
 | `links/`         | typed cross-domain relations (see `docs/domain-model.md`)                  |
 | `activity/`      | cross-cutting: the activity log, written inside each domain's transaction  |
 | `notifications/` | cross-cutting like `activity`: inbox, preferences, follows (ADR 0040)      |

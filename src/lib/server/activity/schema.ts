@@ -6,6 +6,7 @@ import { assets } from '../assets/schema';
 import { serviceAccounts } from '../api/schema';
 import { projects, tasks } from '../projects/schema';
 import { tickets } from '../service-desk/schema';
+import { knowledgeSpaces, pages } from '../knowledge/schema';
 import { ACTIVITY_TARGETS, ACTIVITY_VERBS } from './verbs';
 import type { ActivityEntry } from './payload';
 
@@ -65,7 +66,7 @@ export const activity = pgTable(
 		/** When it happened, which is not when the row was inserted. */
 		occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
 
-		// Exactly one of the six is set. A new entity with history costs a column
+		// Exactly one of the eight is set. A new entity with history costs a column
 		// and a term in the CHECK; at four principal entities that is cheap, and it
 		// buys a foreign key per target that a polymorphic `record_type` cannot.
 		assetId: uuid('asset_id').references(() => assets.id, { onDelete: 'cascade' }),
@@ -81,6 +82,8 @@ export const activity = pgTable(
 		 * location therefore carry their own name and path snapshots.
 		 */
 		locationId: uuid('location_id'),
+		spaceId: uuid('space_id').references(() => knowledgeSpaces.id, { onDelete: 'cascade' }),
+		pageId: uuid('page_id').references(() => pages.id, { onDelete: 'cascade' }),
 
 		...timestamps
 	},
@@ -114,6 +117,8 @@ export const activity = pgTable(
 		index('activity_project_occurred').on(table.projectId, table.occurredAt),
 		index('activity_person_occurred').on(table.personId, table.occurredAt),
 		index('activity_location_occurred').on(table.locationId, table.occurredAt),
+		index('activity_space_occurred').on(table.spaceId, table.occurredAt),
+		index('activity_page_occurred').on(table.pageId, table.occurredAt),
 		index('activity_org_occurred').on(table.organisationId, table.occurredAt)
 	]
 );

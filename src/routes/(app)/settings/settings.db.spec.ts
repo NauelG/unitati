@@ -7,6 +7,7 @@ import {
 	listStatesWithTaskCount
 } from '#lib/server/projects/index.js';
 import { createWorkspace, statesByGroup } from '#lib/server/projects/testing/fixtures.js';
+import { createPageRow } from '#lib/server/knowledge/testing/fixtures.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 import { visibleSections } from '#lib/settings/sections.js';
 import { load as loadSettings } from './+layout.server';
@@ -21,6 +22,7 @@ import {
 } from './assets/handover-agreements/+page.server';
 import { load as loadLabels, actions as labelActions } from './assets/labels/+page.server';
 import { load as loadQueues } from './service-desk/queues/+page.server';
+import { load as loadKnowledge, actions as knowledgeActions } from './knowledge/+page.server';
 import { load as loadBranding, actions as brandingActions } from './platform/branding/+page.server';
 
 /**
@@ -34,6 +36,7 @@ import { load as loadBranding, actions as brandingActions } from './platform/bra
 const event = (user: SessionUser | null, fields: Record<string, string> = {}) =>
 	({
 		locals: { user },
+		url: new URL('http://localhost/settings'),
 		request: new Request('http://localhost/settings/projects/states', {
 			method: 'POST',
 			body: new URLSearchParams(fields)
@@ -384,5 +387,95 @@ describe('/settings/projects/states', () => {
 		expect(refused.status).toBe(400);
 		expect(refused.data.message).not.toBe('');
 		expect((await listStatesWithTaskCount(technician)).some((s) => s.id === started.id)).toBe(true);
+	});
+});
+
+describe('/settings/knowledge', () => {
+	const fields = {
+		name: 'Ayuda',
+		description: '',
+		icon: 'life-buoy',
+		colour: 'teal',
+		audience: 'portal'
+	};
+
+	it('answers 403 to a technician and an employee, for the load and for every action', async () => {
+		const { technician, employee } = await createWorkspace();
+
+		for (const user of [technician, employee]) {
+			expect(await statusOf(() => loadKnowledge(event(user)))).toBe(403);
+			for (const name of ['create', 'preview', 'update', 'archive', 'delete'] as const) {
+				expect(await statusOf(() => knowledgeActions[name](event(user)))).toBe(403);
+			}
+		}
+	});
+
+	it('lets an admin in, and creates, lists, previews, changes the audience, archives and deletes', async () => {
+		const { admin, organisation } = await createWorkspace();
+
+		const created = (await knowledgeActions.create(event(admin, fields))) as { action: string };
+		expect(created.action).toBe('create');
+		const loaded = (await loadKnowledge(event(admin))) as unknown as {
+			spaces: { id: string; name: string }[];
+		};
+		expect(loaded.spaces.map((space) => space.name)).toEqual(['Ayuda']);
+		const id = loaded.spaces[0].id;
+		await createPageRow(organisation.id, id, { publishedAt: new Date() });
+
+		const previewed = (await knowledgeActions.preview(event(admin, { id, audience: 'staff' }))) as {
+			count: number;
+		};
+		expect(previewed.count).toBe(1);
+
+		const stale = (await knowledgeActions.update(
+			event(admin, { ...fields, id, audience: 'staff', confirmedCount: '7' })
+		)) as Refusal;
+		expect(stale.status).toBe(400);
+		expect(stale.data.id).toBe(id);
+
+		const missing = (await knowledgeActions.update(
+			event(admin, { ...fields, id, audience: 'staff' })
+		)) as Refusal;
+		expect(missing.status).toBe(400);
+
+		const updated = (await knowledgeActions.update(
+			event(admin, { ...fields, id, name: 'Soporte', audience: 'staff', confirmedCount: '1' })
+		)) as { action: string };
+		expect(updated.action).toBe('update');
+
+		const occupied = (await knowledgeActions.delete(event(admin, { id }))) as Refusal;
+		expect(occupied.status).toBe(400);
+
+		expect(
+			((await knowledgeActions.archive(event(admin, { id }))) as { action: string }).action
+		).toBe('archive');
+		const archived = (await loadKnowledge({
+			locals: { user: admin },
+			url: new URL('http://localhost/settings/knowledge?archived=1')
+		} as never)) as unknown as { spaces: { name: string; audience: string }[] };
+		expect(archived.spaces).toMatchObject([{ name: 'Soporte', audience: 'staff' }]);
+	});
+
+	it('refuses an icon outside the closed set on the field it belongs to', async () => {
+		const { admin } = await createWorkspace();
+
+		const refused = (await knowledgeActions.create(event(admin, { ...fields, icon: 'skull' }))) as {
+			status: number;
+			data: { errors: Record<string, string> };
+		};
+
+		expect(refused.status).toBe(400);
+		expect(Object.keys(refused.data.errors)).toEqual(['icon']);
+	});
+
+	it('refuses a duplicate name on the name field', async () => {
+		const { admin } = await createWorkspace();
+		await knowledgeActions.create(event(admin, fields));
+
+		const refused = (await knowledgeActions.create(event(admin, fields))) as {
+			data: { errors: Record<string, string> };
+		};
+
+		expect(Object.keys(refused.data.errors)).toEqual(['name']);
 	});
 });
