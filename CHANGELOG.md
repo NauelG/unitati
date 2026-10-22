@@ -5,6 +5,20 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.107.0] - 2026-10-22
+
+### Added
+
+- A "Comentarios" card on assets, tasks, projects and people, with a multi-line composer and the
+  thread below it, newest first. Each comment is also an entry in the record's history. Writing needs
+  the permission of the record's domain (`assets.manage`, `projects.manage`, `people.manage`); a task
+  or project that is archived is read-only. See ADR 0043.
+
+### Changed
+
+- The asset note box inside the history rail is gone, replaced by the card above. Existing asset notes
+  are migrated to comments, keeping their author and date.
+
 ## [0.106.0] - 2026-10-22
 
 ### Added

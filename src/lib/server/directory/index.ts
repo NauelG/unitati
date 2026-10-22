@@ -42,6 +42,8 @@ export {
 	userIdOfPerson
 } from './access';
 export type { PersonForAccess } from './access';
+export { addPersonComment, listPersonComments } from './person-comments';
+export type { AddPersonCommentFailure } from './person-comments';
 export { setPersonLocation } from './person-location';
 export type { SetPersonLocationFailure } from './person-location';
 export { createPerson, deactivatePerson, reactivatePerson, updatePerson } from './people';

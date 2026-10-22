@@ -72,6 +72,7 @@ function pageData(permissions: { canManage: boolean; canCheckout: boolean }) {
 		categories: [],
 		editForm: {},
 		modelForm: {},
+		comments: [],
 		timelineRail: Promise.resolve({ timeline: [], recentTickets: 0, related: [] })
 	} as never;
 }
@@ -162,12 +163,12 @@ describe('asset record in-place editing', () => {
 		expect(screen.getByRole('button', { name: 'Recuperar…' })).toBeTruthy();
 		expect(screen.queryByRole('button', { name: /^Estado/ })).toBeNull();
 		expect(screen.queryByRole('button', { name: /^Ubicación/ })).toBeNull();
-		expect(screen.queryByRole('button', { name: 'Añadir nota' })).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Comentar' })).toBeNull();
 	});
 
 	it('shows the note composer to someone who can manage', async () => {
 		renderPage({ canManage: true, canCheckout: false });
-		expect(await screen.findByRole('button', { name: 'Añadir nota' })).toBeTruthy();
+		expect(await screen.findByRole('button', { name: 'Comentar' })).toBeTruthy();
 	});
 
 	it('offers the label only to someone who can manage assets', () => {

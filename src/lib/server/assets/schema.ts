@@ -516,3 +516,24 @@ export type Category = typeof categories.$inferSelect;
 export type AssetModel = typeof assetModels.$inferSelect;
 export type Asset = typeof assets.$inferSelect;
 export type AssetAttachment = typeof assetAttachments.$inferSelect;
+
+/**
+ * Free-text comments on assets. One table per domain (ADR 0043): the
+ * foreign key is real, and the author survives as `null` if the person is deleted.
+ */
+export const assetComments = pgTable(
+	'asset_comments',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		assetId: uuid('asset_id')
+			.notNull()
+			.references(() => assets.id, { onDelete: 'cascade' }),
+		authorPersonId: uuid('author_person_id').references(() => people.id, { onDelete: 'set null' }),
+		body: text('body').notNull(),
+		...timestamps
+	},
+	(table) => [index('asset_comments_asset_created').on(table.assetId, table.createdAt)]
+);

@@ -166,8 +166,12 @@ export const PAYLOAD_SCHEMAS = {
 		toLocationName: presentName.nullable()
 	}),
 
+	// A comment on an asset, task, project or person. The text is a snapshot, like
+	// every name here; `commentId` points at the row in the domain's comments table.
+	// Optional because fixtures and entries written before the tables existed lack it.
 	'note.added': z.object({
-		text: z.string().min(1)
+		text: z.string().min(1),
+		commentId: z.uuid().optional()
 	}),
 
 	'ticket.created': z.object({

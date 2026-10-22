@@ -8,11 +8,13 @@ import {
 	createViewer
 } from '../assets/testing/fixtures';
 import {
+	addPersonComment,
 	createDepartment,
 	createLocation,
 	createPerson,
 	deactivatePerson,
 	listPeople,
+	listPersonComments,
 	people,
 	reactivatePerson,
 	updatePerson
@@ -245,5 +247,38 @@ describe('listPeople', () => {
 		});
 		expect(listed.find((p) => p.fullName === 'Ada Lovelace')?.hasAccess).toBe(true);
 		expect(actor.personId).toBeTruthy();
+	});
+});
+
+describe('person comments', () => {
+	it('lists comments newest first and records note.added on the person', async () => {
+		const { actor } = await setup();
+		const created = await createPerson(actor, draft());
+		if (!created.ok) throw new Error('fixture failed');
+		const personId = created.value.id;
+
+		await addPersonComment(actor, personId, 'Prefers email');
+		await addPersonComment(actor, personId, 'On leave until May');
+
+		const listed = await listPersonComments(actor.organisationId, personId);
+		expect(listed.map(({ body }) => body)).toEqual(['On leave until May', 'Prefers email']);
+		expect((await entries(personId)).map(({ verb }) => verb)).toContain('note.added');
+	});
+
+	it('refuses an empty body and a person of another organisation', async () => {
+		const { actor } = await setup();
+		const created = await createPerson(actor, draft());
+		if (!created.ok) throw new Error('fixture failed');
+		const otherOrganisation = await createOrganisation('Globex', 'globex');
+		const outsider = await createViewer(otherOrganisation.id, 'admin', 'Olga Outsider');
+
+		expect(await addPersonComment(actor, created.value.id, ' ')).toEqual({
+			ok: false,
+			error: 'empty_comment'
+		});
+		expect(await addPersonComment(outsider, created.value.id, 'Hi')).toEqual({
+			ok: false,
+			error: 'not_found'
+		});
 	});
 });

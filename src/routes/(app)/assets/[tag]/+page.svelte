@@ -1,20 +1,18 @@
 <script lang="ts">
 	import DescriptionList from '#lib/components/unitati/DescriptionList.svelte';
-	import FormError from '#lib/components/unitati/FormError.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import Printer from '@lucide/svelte/icons/printer';
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import { superForm } from 'sveltekit-superforms';
+	import CommentsCard from '#lib/components/unitati/CommentsCard.svelte';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
 	import { ASSET_STATES } from '#lib/domain/status.js';
-	import Field from '#lib/components/unitati/Field.svelte';
 	import { toViewTransitionName } from '#lib/motion.js';
-	import { optimisticEnhance } from '#lib/optimistic.js';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
@@ -118,8 +116,6 @@
 	let localLocationName = $state(asset.locationPath);
 	let localCustodianPersonId = $state(asset.visibility === 'full' ? asset.custodianPersonId : null);
 	let localCustodianName = $state(asset.visibility === 'full' ? asset.custodianName : null);
-	/** `addNote` has no display value of its own to flip — clearing the box is the feedback; see the form below. */
-	let noteDraft = $state('');
 
 	$effect(() => {
 		if (asset.visibility === 'full') {
@@ -188,12 +184,6 @@
 	}
 </script>
 
-{#snippet failure(action: string)}
-	{#if form && 'action' in form && form.action === action && 'message' in form}
-		<FormError>{form.message}</FormError>
-	{/if}
-{/snippet}
-
 {#snippet custodianRow()}
 	{#if data.canCheckout && localCustodianPersonId === null}
 		<span id="action-custody" class="flex items-center gap-[var(--space-3)]">
@@ -242,30 +232,6 @@
 			};
 		}}
 	/>
-{/snippet}
-
-{#snippet noteComposer()}
-	<form
-		method="POST"
-		action="?/addNote"
-		use:optimisticEnhance={(formData) => {
-			const text = formData.get('text');
-			const previous = noteDraft;
-			// Clearing the box is the whole feedback: the note itself joins the
-			// timeline on reconcile, so there is no second local copy to flip.
-			noteDraft = '';
-			return () => {
-				noteDraft = typeof text === 'string' ? text : previous;
-			};
-		}}
-		class="mb-[var(--space-4)] flex items-end gap-[var(--space-2)]"
-	>
-		<div class="min-w-0 flex-1">
-			<Field label={m.action_note_label()} name="text" required bind:value={noteDraft} />
-		</div>
-		<Button type="submit" variant="secondary" size="sm">{m.action_note_submit()}</Button>
-	</form>
-	{@render failure('addNote')}
 {/snippet}
 
 <svelte:head>
@@ -390,6 +356,18 @@
 				<HandoversTable rows={data.handovers} emptyMessage={m.asset_handovers_empty()} />
 			</WorkPanel>
 		{/if}
+
+		{#if data.comments}
+			<CommentsCard
+				id="comments"
+				comments={data.comments}
+				action="?/addComment"
+				canComment={data.canManage}
+				error={form && 'action' in form && form.action === 'addComment' && 'message' in form
+					? form.message
+					: undefined}
+			/>
+		{/if}
 	</div>
 
 	{#snippet side()}
@@ -414,7 +392,6 @@
 				</div>
 			{/if}
 			<WorkPanel heading={m.timeline_title()} actions={timelineTag}>
-				{#if data.canManage && asset.visibility === 'full'}{@render noteComposer()}{/if}
 				<TimelineSkeleton />
 			</WorkPanel>
 		{:then rail}
@@ -450,7 +427,6 @@
 					class="mb-[var(--space-4)]"
 				/>
 				<WorkPanel heading={m.timeline_title()} actions={timelineTag}>
-					{#if data.canManage && asset.visibility === 'full'}{@render noteComposer()}{/if}
 					{#if rail.recentTickets > 0}
 						<p class="text-sm font-medium text-[var(--ink)]">
 							{rail.recentTickets === 1

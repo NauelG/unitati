@@ -10,8 +10,9 @@ import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import {
 	addAssetAttachments,
-	addNote,
+	addAssetComment,
 	assetTimeline,
+	listAssetComments,
 	custodyHandover,
 	deliver,
 	listAssetAttachments,
@@ -97,6 +98,9 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 
 	const canManage = can(user, 'assets.manage');
 	const canCheckout = can(user, 'assets.checkout');
+
+	// Same gate as the history: a shared-asset visitor reads neither.
+	const comments = await listAssetComments(user, params.tag);
 
 	// The pickers feed the action forms, which only a person who can act sees.
 	const [people, locations] =
@@ -184,6 +188,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 
 	return {
 		asset,
+		comments: comments.ok ? comments.value : null,
 		fromTicket: fromTicket?.ok
 			? {
 					tag: fromTicket.value.ticketTag,
@@ -242,7 +247,13 @@ const deliverForm = z.object({
 const stateForm = z.object({ state: z.enum(ASSET_STATES) });
 // An empty string is "no location", which is a real choice, not a missing value.
 const locationForm = z.object({ locationId: z.union([z.uuid(), z.literal('')]) });
-const noteForm = z.object({ text: z.string().trim().min(1) });
+const commentFailures = {
+	empty_comment: m.action_error_empty_note,
+	comment_too_long: m.action_error_comment_too_long,
+	asset_not_found: m.asset_error_gone
+} as const;
+
+const commentForm = z.object({ text: z.string().trim().min(1) });
 
 export const actions: Actions = {
 	deliver: async ({ request, locals, params }) => {
@@ -333,21 +344,18 @@ export const actions: Actions = {
 		return { action: 'changeLocation' as const };
 	},
 
-	addNote: async ({ request, locals, params }) => {
+	addComment: async ({ request, locals, params }) => {
 		const user = requirePermission(locals.user, 'assets.manage');
-		const parsed = noteForm.safeParse(await fieldsOf(request));
-		if (!parsed.success) return rejected('addNote', m.action_error_empty_note());
+		const parsed = commentForm.safeParse(await fieldsOf(request));
+		if (!parsed.success) return rejected('addComment', m.action_error_empty_note());
 
 		const asset = await targetOf(user, params.tag);
-		const outcome = await addNote(user, asset.id, parsed.data.text);
+		const outcome = await addAssetComment(user, asset.id, parsed.data.text);
 
 		if (!outcome.ok) {
-			return rejected(
-				'addNote',
-				outcome.error === 'empty_note' ? m.action_error_empty_note() : m.asset_error_gone()
-			);
+			return rejected('addComment', commentFailures[outcome.error]());
 		}
-		return { action: 'addNote' as const };
+		return { action: 'addComment' as const };
 	},
 
 	addAttachments: async ({ request, locals, params }) => {

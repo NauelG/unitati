@@ -20,6 +20,8 @@ export {
 	stateGroup,
 	projectAttachments,
 	taskAttachments,
+	projectComments,
+	taskComments,
 	projectCodeSequence,
 	taskCodeSequence,
 	projectVisibility,
@@ -133,6 +135,14 @@ export type {
 	AddTaskAttachmentsFailure,
 	RemoveAttachmentFailure
 } from './attachments';
+
+export {
+	addProjectComment,
+	addTaskComment,
+	listProjectComments,
+	listTaskComments
+} from './comments';
+export type { AddProjectCommentFailure, AddTaskCommentFailure } from './comments';
 
 export { moveTaskToProject } from './reparent';
 export type { MoveTaskToProjectFailure } from './reparent';
