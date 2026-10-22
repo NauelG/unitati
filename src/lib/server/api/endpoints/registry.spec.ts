@@ -97,7 +97,7 @@ describe('the endpoint registry', () => {
 			'assets.custody.return': 'takeBack',
 			'assets.state': 'changeState',
 			'assets.location': 'changeLocation',
-			'assets.note': 'addNote'
+			'assets.note': 'addComment'
 		} as const;
 
 		for (const [id, action] of Object.entries(pairs)) {

@@ -272,3 +272,24 @@ export type Person = typeof people.$inferSelect;
 export type Department = typeof departments.$inferSelect;
 export type Location = typeof locations.$inferSelect;
 export type Team = typeof teams.$inferSelect;
+
+/**
+ * Free-text comments on persons. One table per domain (ADR 0043): the
+ * foreign key is real, and the author survives as `null` if the person is deleted.
+ */
+export const personComments = pgTable(
+	'person_comments',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		personId: uuid('person_id')
+			.notNull()
+			.references(() => people.id, { onDelete: 'cascade' }),
+		authorPersonId: uuid('author_person_id').references(() => people.id, { onDelete: 'set null' }),
+		body: text('body').notNull(),
+		...timestamps
+	},
+	(table) => [index('person_comments_person_created').on(table.personId, table.createdAt)]
+);

@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { getDb } from '../db';
 import {
-	addNote,
+	addAssetComment,
 	assignCustody,
 	changeLocation,
 	changeState,
@@ -146,7 +146,7 @@ export async function applyPlan(actor: SessionUser, plan: InventoryPlan): Promis
 					await changeLocation(actor, id, locationId(event.location));
 					break;
 				case 'note':
-					await addNote(actor, id, event.text);
+					await addAssetComment(actor, id, event.text);
 					break;
 			}
 		}

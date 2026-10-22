@@ -12,6 +12,7 @@
 	import { page } from '$app/state';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+	import CommentsCard from '#lib/components/unitati/CommentsCard.svelte';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
@@ -222,6 +223,14 @@
 				/>
 			</section>
 		{/if}
+
+		<CommentsCard
+			id="comments"
+			comments={data.comments}
+			action="?/addComment"
+			canComment={data.canManagePeople}
+			error={form?.action === 'addComment' && 'message' in form ? form.message : undefined}
+		/>
 
 		<WorkPanel heading={m.person_activity_title()}>
 			{#if data.timeline.length === 0}

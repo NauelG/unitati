@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ASSET_STATES } from '#lib/domain/status.js';
 import {
-	addNote,
+	addAssetComment,
 	assetTimeline,
 	deliver,
 	changeLocation,
@@ -145,7 +145,8 @@ const FIELD_FAILURES: Record<string, readonly [string, string]> = {
 	model_not_found: ['assetModelId', 'Asset model not found.'],
 	location_not_found: ['locationId', 'Location not found.'],
 	person_not_found: ['personId', 'Person not found.'],
-	empty_note: ['text', 'The note cannot be empty.']
+	empty_comment: ['text', 'The note cannot be empty.'],
+	comment_too_long: ['text', 'The note is too long.']
 };
 
 function assetRefusal(failure: string): ApiError {
@@ -398,7 +399,7 @@ export const addNoteEndpoint = defineEndpoint({
 	handler: async ({ principal, input }) => {
 		const actor = withReads(principal);
 		const target = await targetOf(actor, input.tag);
-		const outcome = await addNote(actor, target.id, input.text);
+		const outcome = await addAssetComment(actor, target.id, input.text);
 		if (!outcome.ok) throw assetRefusal(outcome.error);
 		return created(await written(actor, input.tag), `/assets/${input.tag}/timeline`);
 	}

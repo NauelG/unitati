@@ -13,6 +13,7 @@
 		resolveView,
 		storeBoardPreference
 	} from '#lib/board-preference.js';
+	import CommentsCard from '#lib/components/unitati/CommentsCard.svelte';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import DescriptionList from '#lib/components/unitati/DescriptionList.svelte';
@@ -467,6 +468,16 @@
 			{/each}
 		</div>
 	{/if}
+
+	<div class="mt-[var(--space-6)]">
+		<CommentsCard
+			id="comments"
+			comments={data.comments}
+			action="?/addComment"
+			canComment={writable}
+			error={failureFor('addComment')}
+		/>
+	</div>
 
 	{#snippet side()}
 		<WorkPanel heading={m.project_detail_details()}>

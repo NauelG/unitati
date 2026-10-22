@@ -253,3 +253,45 @@ export type Task = typeof tasks.$inferSelect;
 export type TaskAssignee = typeof taskAssignees.$inferSelect;
 export type ProjectAttachment = typeof projectAttachments.$inferSelect;
 export type TaskAttachment = typeof taskAttachments.$inferSelect;
+
+/**
+ * Free-text comments on projects. One table per domain (ADR 0043): the
+ * foreign key is real, and the author survives as `null` if the person is deleted.
+ */
+export const projectComments = pgTable(
+	'project_comments',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		projectId: uuid('project_id')
+			.notNull()
+			.references(() => projects.id, { onDelete: 'cascade' }),
+		authorPersonId: uuid('author_person_id').references(() => people.id, { onDelete: 'set null' }),
+		body: text('body').notNull(),
+		...timestamps
+	},
+	(table) => [index('project_comments_project_created').on(table.projectId, table.createdAt)]
+);
+
+/**
+ * Free-text comments on tasks. One table per domain (ADR 0043): the
+ * foreign key is real, and the author survives as `null` if the person is deleted.
+ */
+export const taskComments = pgTable(
+	'task_comments',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		taskId: uuid('task_id')
+			.notNull()
+			.references(() => tasks.id, { onDelete: 'cascade' }),
+		authorPersonId: uuid('author_person_id').references(() => people.id, { onDelete: 'set null' }),
+		body: text('body').notNull(),
+		...timestamps
+	},
+	(table) => [index('task_comments_task_created').on(table.taskId, table.createdAt)]
+);

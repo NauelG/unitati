@@ -4,6 +4,7 @@
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import CommentsCard from '#lib/components/unitati/CommentsCard.svelte';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import FollowControl from '#lib/components/unitati/FollowControl.svelte';
@@ -369,6 +370,16 @@
 			canManage={data.canManage}
 			uploadError={failureFor('addAttachments')}
 			removeError={failureFor('removeAttachment')}
+		/>
+	</div>
+
+	<div class="mt-[var(--space-6)]">
+		<CommentsCard
+			id="comments"
+			comments={data.comments}
+			action="?/addComment"
+			canComment={data.canManage}
+			error={failureFor('addComment')}
 		/>
 	</div>
 

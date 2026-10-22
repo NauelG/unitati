@@ -8,7 +8,7 @@ import { ASSET_STATES, type AssetState } from '#lib/domain/status.js';
 import { can } from '../access/permissions';
 import {
 	RESERVED_ASSET_TAGS,
-	addNote,
+	addAssetComment,
 	advanceAssetTagSequence,
 	assignCustody,
 	createAssetModel,
@@ -820,7 +820,7 @@ export async function commitAssetsImport(
 						if (!assigned.ok) abortRow();
 					}
 					if (asset.note !== null) {
-						const added = await addNote(actor, assetId, asset.note, options);
+						const added = await addAssetComment(actor, assetId, asset.note, options);
 						if (!added.ok) abortRow();
 					}
 				}

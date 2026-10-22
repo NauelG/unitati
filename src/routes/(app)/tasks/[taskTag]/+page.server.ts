@@ -9,6 +9,8 @@ import { listPeople } from '#lib/server/directory/index.js';
 import { relatedTo, taskTimeline, unlinkTask } from '#lib/server/links/index.js';
 import {
 	addTaskAttachments,
+	addTaskComment,
+	listTaskComments,
 	fieldsOf,
 	firstField,
 	orNull,
@@ -46,8 +48,11 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	// An archived project is read-only: its tasks render no write affordance.
 	const canManage = can(user, 'projects.manage') && !task.projectArchived;
 
-	const attachments = await listTaskAttachments(user, task.id);
-	if (!attachments.ok) error(404, 'Not found');
+	const [attachments, comments] = await Promise.all([
+		listTaskAttachments(user, task.id),
+		listTaskComments(user, task.id)
+	]);
+	if (!attachments.ok || !comments.ok) error(404, 'Not found');
 
 	const [states, people, projects] = canManage
 		? await Promise.all([listStates(user), listPeople(user.organisationId), listProjects(user)])
@@ -68,6 +73,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		canManage,
 		follow: await followState(user, { taskId: task.id }),
 		attachments: attachments.value,
+		comments: comments.value,
 		states: states.map(({ id, name, group }) => ({ id, name, group })),
 		people: assignable
 			.filter((person) => person.active)
@@ -97,6 +103,12 @@ async function targetOf(user: SessionUser, taskTag: string) {
 	const found = await getTask(user, taskTag);
 	if (!found.ok) error(404, 'Not found');
 	return found.value;
+}
+
+function commentFailureMessage(error: 'empty_comment' | 'comment_too_long' | 'project_archived') {
+	if (error === 'empty_comment') return m.action_error_empty_note();
+	if (error === 'comment_too_long') return m.action_error_comment_too_long();
+	return m.project_error_archived();
 }
 
 const updateFailures: Record<
@@ -232,6 +244,20 @@ export const actions: Actions = {
 			return rejected('unlinkTicket', m.related_unlink_failed());
 		}
 		return { action: 'unlinkTicket' as const };
+	},
+
+	addComment: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const text = (await fieldsOf(request)).get('text');
+
+		const task = await targetOf(user, params.taskTag);
+		const outcome = await addTaskComment(user, task.id, text);
+		if (!outcome.ok) {
+			if (outcome.error === 'task_not_found') error(404, 'Not found');
+			return rejected('addComment', commentFailureMessage(outcome.error));
+		}
+
+		return { action: 'addComment' as const };
 	},
 
 	addAttachments: async ({ request, locals, params }) => {

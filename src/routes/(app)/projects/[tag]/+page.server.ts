@@ -24,6 +24,8 @@ import {
 	orNull,
 	rejected,
 	addProjectAttachments,
+	addProjectComment,
+	listProjectComments,
 	addProjectMember,
 	archiveProject,
 	canManageMembers,
@@ -73,20 +75,22 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 
 	// What the viewer can see of the project: an employee gets their own tasks
 	// and counts of exactly those (the domain scopes both from the same viewer).
-	const [tasks, states, progress, people, related, attachments, members] = await Promise.all([
-		listTasks(user, { projectId: project.id }),
-		listStates(user),
-		projectProgress(user, project.id),
-		canManage && project.archivedAt === null
-			? listPeople(user.organisationId)
-			: Promise.resolve([]),
-		// The tickets behind this project, already scoped to what the viewer may
-		// see: an employee gets their own, and every count below follows suit.
-		relatedTo(user, { kind: 'project', id: project.id }),
-		listProjectAttachments(user, project.id),
-		listProjectMembers(user, project.id)
-	]);
-	if (!progress.ok || !attachments.ok || !members.ok) error(404, 'Not found');
+	const [tasks, states, progress, people, related, attachments, members, comments] =
+		await Promise.all([
+			listTasks(user, { projectId: project.id }),
+			listStates(user),
+			projectProgress(user, project.id),
+			canManage && project.archivedAt === null
+				? listPeople(user.organisationId)
+				: Promise.resolve([]),
+			// The tickets behind this project, already scoped to what the viewer may
+			// see: an employee gets their own, and every count below follows suit.
+			relatedTo(user, { kind: 'project', id: project.id }),
+			listProjectAttachments(user, project.id),
+			listProjectMembers(user, project.id),
+			listProjectComments(user, project.id)
+		]);
+	if (!progress.ok || !attachments.ok || !members.ok || !comments.ok) error(404, 'Not found');
 	const listed = new Set(members.value.map((member) => member.personId));
 
 	// The person's board preference (#127), cleaned of anything the cookie should
@@ -133,6 +137,7 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 			: [],
 		related,
 		attachments: attachments.value,
+		comments: comments.value,
 		// The header's summary value: direct plus via tasks, resolved and closed left out.
 		openTickets: openTicketCount(related),
 		// Unlinking concerns the ticket, so it is `tickets.manage` and it survives
@@ -144,6 +149,12 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 		timeline: projectTimeline(user, project.id, related)
 	};
 };
+
+function commentFailureMessage(error: 'empty_comment' | 'comment_too_long' | 'project_archived') {
+	if (error === 'empty_comment') return m.action_error_empty_note();
+	if (error === 'comment_too_long') return m.action_error_comment_too_long();
+	return m.project_error_archived();
+}
 
 const updateFailures: Record<
 	Exclude<UpdateProjectFailure, 'project_not_found'>,
@@ -278,6 +289,20 @@ export const actions: Actions = {
 			return rejected('unlinkTicket', m.related_unlink_failed());
 		}
 		return { action: 'unlinkTicket' as const };
+	},
+
+	addComment: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const text = (await fieldsOf(request)).get('text');
+
+		const project = await targetOf(user, params.tag);
+		const outcome = await addProjectComment(user, project.id, text);
+		if (!outcome.ok) {
+			if (outcome.error === 'project_not_found') error(404, 'Not found');
+			return rejected('addComment', commentFailureMessage(outcome.error));
+		}
+
+		return { action: 'addComment' as const };
 	},
 
 	// Both need `projects.manage`; downloading is the route's, open to every reader.

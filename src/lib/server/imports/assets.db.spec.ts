@@ -4,7 +4,14 @@ import type { AssetsMapping } from '#lib/domain/imports.js';
 import type { AssetState } from '#lib/domain/status.js';
 import { activity } from '../activity/schema';
 import { handovers } from '../assets/schema';
-import { addNote, assetModels, assets, categories, manufacturers, registerAsset } from '../assets';
+import {
+	addAssetComment,
+	assetModels,
+	assets,
+	categories,
+	manufacturers,
+	registerAsset
+} from '../assets';
 import { createCatalogue, createOrganisation, createViewer } from '../assets/testing/fixtures';
 import { getDb } from '../db';
 import { createPerson, locations, people } from '../directory';
@@ -418,7 +425,7 @@ describe('the assets import', () => {
 		const registered = await registerAsset(admin, { name: 'Plain', assetModelId: modelId });
 		expect(registered.ok).toBe(true);
 		if (!registered.ok) return;
-		const note = await addNote(admin, registered.value.id, 'hello');
+		const note = await addAssetComment(admin, registered.value.id, 'hello');
 		expect(note.ok).toBe(true);
 		expect(await verbsOf(registered.value.id)).toEqual(['asset.created', 'note.added']);
 		const [created] = await getDb()

@@ -1,4 +1,4 @@
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import { z } from 'zod';
 import { HANDOVER_STATES } from '#lib/domain/handover.js';
 import { listActivity } from '#lib/server/activity/index.js';
@@ -9,7 +9,14 @@ import {
 	listHandovers
 } from '#lib/server/assets/index.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
-import { listDepartments, listLocations, listPeople } from '#lib/server/directory/index.js';
+import {
+	addPersonComment,
+	listDepartments,
+	listLocations,
+	listPeople,
+	listPersonComments
+} from '#lib/server/directory/index.js';
+import { m } from '#lib/paraglide/messages.js';
 import {
 	countOpenTicketsAssignedTo,
 	openTicketsRequestedBy
@@ -40,11 +47,12 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 	// Assets are a module of their own: its permission decides what shows here.
 	const seesAssets = can(user, 'assets.view');
 	const seesTickets = can(user, 'tickets.view');
-	const [handovers, held, tickets, activity, locations, departments] = await Promise.all([
+	const [handovers, held, tickets, activity, comments, locations, departments] = await Promise.all([
 		seesAssets ? listHandovers(user, { personId: person.id, states: [...HANDOVER_STATES] }) : null,
 		seesAssets || canCheckout ? listAssetsHeldBy(user.organisationId, person.id) : [],
 		seesTickets ? openTicketsRequestedBy(user, person.id, REQUESTED_TICKETS) : null,
 		listActivity({ organisationId: user.organisationId, target: { personId: person.id } }),
+		listPersonComments(user.organisationId, person.id),
 		// The pickers feed a form only a person who can manage people sees.
 		canManagePeople ? listLocations(user.organisationId) : [],
 		canManagePeople ? listDepartments(user.organisationId) : []
@@ -75,6 +83,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 			at: entry.occurredAt,
 			entry
 		})),
+		comments,
 		canManagePeople,
 		canCheckout,
 		selfPersonId: user.personId,
@@ -86,8 +95,27 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 	};
 };
 
+const commentFailures = {
+	empty_comment: m.action_error_empty_note,
+	comment_too_long: m.action_error_comment_too_long
+} as const;
+
 export const actions: Actions = {
 	...personActions,
+	addComment: async ({ locals, request, params }) => {
+		const actor = requirePermission(locals.user, 'people.manage');
+		const data = await request.formData();
+		const text = data.get('text');
+		const outcome = await addPersonComment(actor, params.id, typeof text === 'string' ? text : '');
+		if (!outcome.ok) {
+			if (outcome.error === 'not_found') error(404, 'Not found');
+			return fail(400, {
+				action: 'addComment' as const,
+				message: commentFailures[outcome.error]()
+			});
+		}
+		return { action: 'addComment' as const };
+	},
 	takeBack: async ({ locals, request }) => {
 		const actor = requirePermission(locals.user, 'assets.checkout');
 		return takeBackAction(actor, await request.formData());

@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { getDb } from '../db';
 import { people } from '../directory/schema';
 import {
-	addNote,
+	addAssetComment,
+	listAssetComments,
 	assetTimeline,
 	assignCustody,
 	changeLocation,
@@ -289,12 +290,24 @@ describe('location changes', () => {
 });
 
 describe('notes', () => {
+	it('keeps the comment in its own table and lists it newest first', async () => {
+		const { modelId, technician } = await workspace();
+		const registered = await registerAsset(technician, { name: 'A laptop', assetModelId: modelId });
+		if (!registered.ok) throw new Error(registered.error);
+
+		await addAssetComment(technician, registered.value.id, 'First');
+		await addAssetComment(technician, registered.value.id, 'Second');
+
+		const listed = await listAssetComments(technician, registered.value.assetTag);
+		expect(listed.ok && listed.value.map(({ body }) => body)).toEqual(['Second', 'First']);
+	});
+
 	it('puts free text on the timeline', async () => {
 		const { modelId, technician } = await workspace();
 		const registered = await registerAsset(technician, { name: 'A laptop', assetModelId: modelId });
 		if (!registered.ok) throw new Error(registered.error);
 
-		await addNote(technician, registered.value.id, '  Keyboard replaced under warranty  ');
+		await addAssetComment(technician, registered.value.id, '  Keyboard replaced under warranty  ');
 
 		const timeline = await assetTimeline(technician, registered.value.assetTag);
 		const note = timeline.ok
@@ -311,9 +324,9 @@ describe('notes', () => {
 		const registered = await registerAsset(technician, { name: 'A laptop', assetModelId: modelId });
 		if (!registered.ok) throw new Error(registered.error);
 
-		expect(await addNote(technician, registered.value.id, '   ')).toEqual({
+		expect(await addAssetComment(technician, registered.value.id, '   ')).toEqual({
 			ok: false,
-			error: 'empty_note'
+			error: 'empty_comment'
 		});
 	});
 });
