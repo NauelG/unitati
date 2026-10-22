@@ -5,6 +5,25 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.110.0] - 2026-10-22
+
+### Added
+
+- Knowledge base pages and tree (#323, part of #17). Staff browse the spaces at `/knowledge`, open a
+  space to see its page tree, and read a page at `/knowledge/DOC-####` with its breadcrumb and the tree
+  beside it. Technicians and admins create pages (as drafts), reorder them by keyboard (Alt + arrows)
+  or drag, move a page with all its subpages to another page or space, publish, archive and unarchive.
+  Moving pages between a staff and a portal space says how many pages become visible to or hidden from
+  employees and asks for confirmation. A page cannot go under itself or a subpage, a draft parent
+  blocks publishing or moving a published page under it, and archiving takes the whole branch.
+  Writing page content arrives with the editor in the next step.
+- A "Documentación" entry in the app navigation, with its own colour.
+
+### Changed
+
+- The fractional position arithmetic of the board moves to `shared/position.ts`, so the knowledge
+  base reuses it without importing `projects`.
+
 ## [0.109.0] - 2026-10-22
 
 ### Added

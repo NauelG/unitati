@@ -79,7 +79,11 @@ describe('the knowledge actions', () => {
 		const { returned: previewed } = await outcomeOf(() =>
 			preview(actionEvent(technician, { id: a.id, spaceId: portal.id, parentId: '' }))
 		);
-		expect(previewed?.preview).toMatchObject({ subtreeCount: 1, audienceChanges: true });
+		// A success returns its data as is, not wrapped in a failure.
+		expect((previewed as unknown as { preview: unknown }).preview).toMatchObject({
+			subtreeCount: 1,
+			audienceChanges: true
+		});
 
 		const { returned: refused } = await outcomeOf(() =>
 			move(actionEvent(technician, { id: a.id, spaceId: portal.id, parentId: '' }))

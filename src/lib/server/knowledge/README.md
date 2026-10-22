@@ -2,10 +2,10 @@
 
 The knowledge base: **spaces**, the **pages** inside them, and the **revisions** of each page
 ([ADR 0031](../../../../docs/adr/0031-knowledge-base-spaces-page-tree-and-revisions.md) and its
-addendum). This folder is the domain with **only the spaces catalogue built** (#322): tables,
-permissions, the audience scope, activity, and `/settings/knowledge`. Page screens and writes are
-#323, editing and revisions #324, attachments, comments, citations, the portal and search the
-sub-issues after.
+addendum). This folder is the domain with **the spaces catalogue** (#322) and **the page tree and its
+lifecycle** (#323) built: tables, permissions, the audience scope, activity, `/settings/knowledge`,
+and the `/knowledge` screens. Editing and revisions are #324, attachments, comments, citations, the
+portal and search the sub-issues after.
 
 ## What it owns
 
@@ -26,8 +26,8 @@ sub-issues add no enum values. Only the three `space.*` verbs are written here.
 ## Invariants
 
 - **`pages.revision = max(page_revisions.number)`** at every commit, and creating a page inserts
-  revision 1 in the same transaction. The page-writing domain function lands in #323; nothing here
-  writes a page yet, but the invariant binds whoever does.
+  revision 1 in the same transaction (`createPage`). A move, a publish or an archive writes no
+  revision: the content did not change.
 - **A page's parent is in the same space.** The database cannot say it (it is a comparison between
   two rows), so the domain enforces it under the organisation lock.
 - **Any write that changes what a space's audience covers locks the space row**
@@ -38,6 +38,23 @@ sub-issues add no enum values. Only the three `space.*` verbs are written here.
   read-only, and the catalogue refuses to edit, re-audience or re-archive an archived space.
 - **A space with any page, archived included, cannot be deleted** (`has_pages`): the pages still
   carry history and revisions.
+
+## The tree and its writes (`pages.ts`)
+
+- **Lock order, in every page write: the organisation row, then the space rows by id.** The
+  organisation lock serialises structural writes, so two opposite moves (A under B, B under A)
+  answer one `cycle` (ADR 0027 §7); the space locks are the ones `changeSpaceAudience` takes.
+- A move carries the whole subtree (`space_id` of every descendant). When the target space has a
+  different audience, `movePage` needs `confirmedCount` equal to the non-archived subtree size
+  (`confirmation_required` / `count_changed`); `previewMove` answers that figure.
+- A published page cannot sit under a draft (`parent_unpublished`), on publish or on move. There is no
+  unpublish and no delete.
+- `archivePage` archives the subtree in one transaction; `unarchivePage` restores the page and the
+  pages archived **at the same instant**, so a branch archived on its own earlier stays archived.
+- Positions are fractional (`shared/position.ts`, ADR 0021) and the siblings are renumbered when a gap
+  collapses.
+- Reads: `listSpaceTree` and `getPageByTag` start from `readablePages`; `includeArchived` is a staff
+  read and ignored for everybody else.
 
 ## Who sees what
 
@@ -54,8 +71,9 @@ never as a filter after loading.
 - Everyone else reads `portal` spaces and, inside them, **published** pages.
 - `readableSpaces` — organisation, not archived, and `portal` unless staff.
 - `readablePages` — the page's space is readable **and** the page is not archived **and**, for a
-  non-staff viewer, `published_at is not null`. Archived pages reach staff only through an explicit
-  "show archived" read (#323).
+  non-staff viewer, `published_at is not null`. Archived pages reach staff only through
+  `includeArchived`.
+- `knowledge.manage` is required by **every write on pages** (`requirePagesManage`), which throws.
 - `knowledge.spaces.manage` (admin) is required by **every write on the catalogue**
   (`requireSpacesManage`), as a backstop to the route's gate. It throws: calling a write from the
   wrong place is a programming error, not a business outcome.
@@ -88,5 +106,6 @@ locked. A change to the audience the space already has is a no-op.
 | `schema.ts`     | the tables, the enum and the sequence                                    |
 | `scope.ts`      | `readableSpaces`, `readablePages`, `requireSpaceScope`, write guard      |
 | `spaces.ts`     | the catalogue: list, create, update, audience change, archive, delete    |
+| `pages.ts`      | the page tree: reads, create, reorder, move, publish, archive            |
 | `validation.ts` | Zod input for the catalogue; holds `icon` and `colour` to the closed set |
 | `index.ts`      | the public surface                                                       |
