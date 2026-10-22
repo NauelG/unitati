@@ -266,6 +266,9 @@ export const PAYLOAD_SCHEMAS = {
 
 	// The filename as it read when the file was added or removed: the row is
 	// gone after a removal, and the history must still say which file it was.
+	'asset.attachment.added': z.object({ filename: presentName }),
+	'asset.attachment.removed': z.object({ filename: presentName }),
+
 	'project.attachment.added': z.object({ filename: presentName }),
 	'project.attachment.removed': z.object({ filename: presentName }),
 

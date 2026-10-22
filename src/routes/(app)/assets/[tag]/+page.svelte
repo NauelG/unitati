@@ -26,6 +26,7 @@
 	import EditableDetailRow from '#lib/components/unitati/EditableDetailRow.svelte';
 	import { statusBadge } from '#lib/components/unitati/status.js';
 	import TimelineSkeleton from '#lib/components/unitati/TimelineSkeleton.svelte';
+	import RecordAttachments from '#lib/components/unitati/RecordAttachments.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { LINK_TICKET_EVENT, paletteContext } from '#lib/palette-context.svelte.js';
 	import Skeleton from '#lib/components/unitati/Skeleton.svelte';
@@ -46,6 +47,11 @@
 			? form.message
 			: undefined
 	);
+
+	const failureFor = (action: string) =>
+		form && 'action' in form && form.action === action && 'message' in form
+			? form.message
+			: undefined;
 
 	// Handing an asset over is a dialog, not a select: the technician must see the link (ADR 0035).
 	let deliverOpen = $state(false);
@@ -356,6 +362,16 @@
 				</p>
 			{/if}
 		</WorkPanel>
+
+		{#if data.attachments}
+			<RecordAttachments
+				items={data.attachments}
+				downloadBase="/asset-attachments"
+				canManage={data.canManage}
+				uploadError={failureFor('addAttachments')}
+				removeError={failureFor('removeAttachment')}
+			/>
+		{/if}
 
 		{#if data.handovers && data.custody}
 			<WorkPanel heading={m.asset_handovers_title()} id="handovers">

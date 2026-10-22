@@ -5,6 +5,16 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.106.0] - 2026-10-22
+
+### Added
+
+- Attachments on assets. The asset page has an "Adjuntos" panel where staff with `assets.manage`
+  upload up to 5 files of 10 MiB (invoice, warranty, delivery note) and remove them; anyone who sees
+  whole asset rows (`assets.view`) downloads them from `/asset-attachments/{id}`. Employees who only
+  see their own or shared assets get neither the list nor the files. Each add and remove is recorded
+  on the asset's timeline (`asset.attachment.added` / `asset.attachment.removed`).
+
 ## [0.105.0] - 2026-10-21
 
 ### Added

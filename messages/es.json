@@ -1496,6 +1496,8 @@
 	"handover_link_save": "Guardar",
 	"catalogue_requires_handover": "Requiere acta",
 	"catalogue_requires_handover_label": "{name}: requiere acta de entrega",
+	"activity_asset_attachment_added": "Adjuntó «{filename}»",
+	"activity_asset_attachment_removed": "Quitó el adjunto «{filename}»",
 	"activity_project_attachment_added": "Adjuntó «{filename}»",
 	"activity_project_attachment_removed": "Quitó el adjunto «{filename}»",
 	"activity_task_attachment_added": "Adjuntó «{filename}»",
