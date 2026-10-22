@@ -19,15 +19,17 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const user = requirePermission(locals.user, 'people.view');
 	const canManagePeople = can(user, 'people.manage');
+	// Admins hold both; a technician holds `people.edit` only when the organisation lends it (ADR 0044).
+	const canEditPeople = can(user, 'people.edit');
 	const canCheckout = can(user, 'assets.checkout');
 	const showInactive = url.searchParams.get('inactive') === '1';
 
 	const [people, teams, locations, departments] = await Promise.all([
 		listPeople(user.organisationId, { includeInactive: showInactive }),
 		countTeams(user.organisationId),
-		// The pickers feed a form only a person who can manage people sees.
-		canManagePeople ? listLocations(user.organisationId) : [],
-		canManagePeople ? listDepartments(user.organisationId) : []
+		// The pickers feed a form only a person who can edit people sees.
+		canEditPeople ? listLocations(user.organisationId) : [],
+		canEditPeople ? listDepartments(user.organisationId) : []
 	]);
 
 	// `?deactivate=<id>` opens the confirmation with what the person still holds.
@@ -53,9 +55,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		selfPersonId: user.personId,
 		lastAdminId: activeAdmins.length === 1 ? activeAdmins[0].id : null,
 		canManagePeople,
+		canEditPeople,
 		canCheckout,
 		showInactive,
-		openCreate: canManagePeople && url.searchParams.get('new') === '1',
+		openCreate: canEditPeople && url.searchParams.get('new') === '1',
 		deactivating,
 		locations: locationOptions(locations),
 		departments: options(departments, (department) => department.name)
@@ -65,7 +68,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 export const actions: Actions = {
 	...personActions,
 	createPerson: async ({ locals, request }) => {
-		const user = requirePermission(locals.user, 'people.manage');
+		const user = requirePermission(locals.user, 'people.edit');
 		const fields = await fieldsOf(request);
 		const parsed = personInput.safeParse(fields);
 		if (!parsed.success) return rejected('createPerson', issueOf(fields));

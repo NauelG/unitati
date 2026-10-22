@@ -4,7 +4,7 @@ import {
 	STAFF_SHELL_PERMISSIONS,
 	TICKET_READ_PERMISSIONS
 } from '#lib/domain/access.js';
-import { can, permissionsFor, type Permission } from '#lib/server/access/permissions.js';
+import { can, permissionsOf, type Permission } from '#lib/server/access/permissions.js';
 import { requireUser } from '#lib/server/auth/guards.js';
 import { assetRegistrationsSparkline, assetSummary } from '#lib/server/assets/index.js';
 import { countPeople, countTeams } from '#lib/server/directory/index.js';
@@ -50,7 +50,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		redirect(303, '/portal');
 	}
 
-	const permissions = permissionsFor(user.role);
+	const permissions = permissionsOf(user);
 	const hasAnyPermission = (list: readonly Permission[]) =>
 		list.some((permission) => permissions.includes(permission));
 

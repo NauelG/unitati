@@ -46,7 +46,7 @@
 	}
 
 	// A technician who can take equipment back has the menu too, with that one item.
-	const hasMenu = $derived(data.canManagePeople || data.canCheckout);
+	const hasMenu = $derived(data.canEditPeople || data.canManagePeople || data.canCheckout);
 
 	const columns = $derived<DataTableColumn<Person>[]>([
 		{ key: 'name', header: m.directory_column_name(), cell: name },
@@ -99,11 +99,13 @@
 					{m.directory_take_back()}
 				</DropdownMenu.Item>
 			{/if}
-			{#if data.canManagePeople}
+			{#if data.canEditPeople}
 				<DropdownMenu.Item onSelect={() => dialogs?.edit(person)}>
 					<PencilIcon class="size-4" aria-hidden="true" />
 					{m.directory_edit()}
 				</DropdownMenu.Item>
+			{/if}
+			{#if data.canManagePeople}
 				{#if !person.hasAccess}
 					{#if person.active}
 						<DropdownMenu.Item onSelect={() => dialogs?.access(person, 'grant')}>
@@ -172,14 +174,14 @@
 			>
 				{m.directory_show_inactive()}
 			</a>
-			{#if data.canManagePeople}
+			{#if data.canEditPeople}
 				<Button href="/directory/import" variant="secondary">{m.import_open()}</Button>
 				<Button onclick={() => dialogs?.create()}>{m.directory_new()}</Button>
 			{/if}
 		{/snippet}
 	</PageHeader>
 
-	{#if data.canManagePeople}
+	{#if data.canEditPeople}
 		<PersonDialogs
 			bind:this={dialogs}
 			{form}

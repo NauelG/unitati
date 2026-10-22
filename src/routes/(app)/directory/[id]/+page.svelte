@@ -73,11 +73,13 @@
 					{m.directory_take_back()}
 				</Button>
 			{/if}
-			{#if data.canManagePeople}
+			{#if data.canEditPeople}
 				<Button variant="secondary" onclick={() => dialogs?.edit(person)}>
 					<PencilIcon class="size-4" aria-hidden="true" />
 					{m.directory_edit()}
 				</Button>
+			{/if}
+			{#if data.canManagePeople}
 				<DropdownMenu.Root>
 					<DropdownMenu.Trigger
 						class="ut-transition-fast grid size-9 place-items-center rounded-[var(--radius-md)] border border-[var(--border)] text-[var(--ink-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink)]"
@@ -134,7 +136,7 @@
 		{/snippet}
 	</PageHeader>
 
-	{#if data.canManagePeople}
+	{#if data.canEditPeople}
 		<PersonDialogs
 			bind:this={dialogs}
 			{form}
@@ -228,7 +230,7 @@
 			id="comments"
 			comments={data.comments}
 			action="?/addComment"
-			canComment={data.canManagePeople}
+			canComment={data.canEditPeople}
 			error={form?.action === 'addComment' && 'message' in form ? form.message : undefined}
 		/>
 

@@ -35,6 +35,8 @@ export const organisations = pgTable('organisations', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	name: text('name').notNull(),
 	slug: text('slug').notNull().unique(),
+	/** ADR 0044: lends `people.edit` to the technician role. Off unless an admin turns it on. */
+	techniciansEditDirectory: boolean('technicians_edit_directory').notNull().default(false),
 	...timestamps
 });
 

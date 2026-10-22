@@ -1,0 +1,1 @@
+ALTER TABLE "organisations" ADD COLUMN "technicians_edit_directory" boolean DEFAULT false NOT NULL;

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { m } from '#lib/paraglide/messages.js';
+import { can } from '#lib/server/access/permissions.js';
 import {
 	changeAccessEmail,
 	changeRole,
@@ -57,7 +58,7 @@ export const failureMessage = {
 
 export const personActions = {
 	updatePerson: async ({ locals, request }: ActionEvent) => {
-		const user = requirePermission(locals.user, 'people.manage');
+		const user = requirePermission(locals.user, 'people.edit');
 		const fields = await fieldsOf(request);
 		const target = withId.safeParse(fields);
 		if (!target.success) return rejected('updatePerson', m.directory_error_not_found());
@@ -79,7 +80,14 @@ export const personActions = {
 
 		const { fullName, email, departmentId } = parsed.data;
 		let updated = await updatePerson(user, personId, { fullName, email, departmentId });
-		if (!updated.ok && updated.error === 'email_locked' && email !== undefined) {
+		if (
+			!updated.ok &&
+			updated.error === 'email_locked' &&
+			email !== undefined &&
+			// The address is the sign-in: moving it is an access change, not a data edit. A
+			// technician holding `people.edit` would otherwise take over any account (ADR 0044).
+			can(user, 'people.manage')
+		) {
 			// The address is also the sign-in, so `auth` changes both rows together;
 			// the directory then sees an unchanged email and applies the rest.
 			const moved = await changeAccessEmail(user, personId, email);

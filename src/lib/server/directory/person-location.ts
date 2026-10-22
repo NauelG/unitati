@@ -12,7 +12,7 @@ export type SetPersonLocationFailure = 'not_found' | 'location_not_found';
  * Where a person usually works (#176): one location, any node of the tree,
  * informative and independent of the custody of their assets.
  *
- * Whoever calls this has already been allowed to (`people.manage`); scoping to
+ * Whoever calls this has already been allowed to (`people.edit`); scoping to
  * the actor's organisation is this function's job. A save that changes nothing
  * records nothing, as in `updateLocation`.
  */

@@ -430,7 +430,7 @@ async function buildPlan(
 		activePeopleByName.set(key, [...(activePeopleByName.get(key) ?? []), person.id]);
 	}
 	const catalogue: LocationEntry[] = [...locationList];
-	const canCreatePeople = can(actor, 'people.manage');
+	const canCreatePeople = can(actor, 'people.edit');
 
 	const planned = emptyPlanned(emptyPlan());
 	const { plan } = planned;

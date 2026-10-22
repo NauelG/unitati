@@ -19,7 +19,7 @@ import {
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	requirePermission(locals.user, 'people.manage');
+	requirePermission(locals.user, 'people.edit');
 	return {
 		fields: PEOPLE_FIELDS.map(({ key, label, required }) => ({ key, label: label(), required })),
 		maxBytes: IMPORT_MAX_BYTES
@@ -43,7 +43,7 @@ function summary(plan: PeoplePlan) {
 
 export const actions: Actions = {
 	analyse: async ({ locals, request }) => {
-		requirePermission(locals.user, 'people.manage');
+		requirePermission(locals.user, 'people.edit');
 		const submission = await readMapping(request);
 		if ('error' in submission)
 			return fail(400, { step: 'analyse' as const, message: submission.error });
@@ -67,7 +67,7 @@ export const actions: Actions = {
 	},
 
 	preview: async ({ locals, request }) => {
-		const user = requirePermission(locals.user, 'people.manage');
+		const user = requirePermission(locals.user, 'people.edit');
 		const submission = await readMapping(request);
 		if ('error' in submission || !submission.mapping) {
 			return fail(400, {
@@ -80,7 +80,7 @@ export const actions: Actions = {
 	},
 
 	commit: async ({ locals, request }) => {
-		const user = requirePermission(locals.user, 'people.manage');
+		const user = requirePermission(locals.user, 'people.edit');
 		const submission = await readMapping(request);
 		if ('error' in submission || !submission.mapping) {
 			return fail(400, {

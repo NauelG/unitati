@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { permissionsFor } from '../access/permissions';
+import { permissionsOf } from '../access/permissions';
 import { requireUser, type SessionUser } from '../auth/guards';
 import { SETTINGS_SECTIONS, visibleSections } from '../../settings/sections';
 
@@ -15,7 +15,7 @@ import { SETTINGS_SECTIONS, visibleSections } from '../../settings/sections';
 /** `/settings/*`: at least one registry section must be visible to the viewer. */
 export function requireSettingsAccess(user: SessionUser | null): SessionUser {
 	const authenticated = requireUser(user);
-	if (visibleSections(permissionsFor(authenticated.role)).length === 0) {
+	if (visibleSections(permissionsOf(authenticated)).length === 0) {
 		error(403, 'Forbidden');
 	}
 	return authenticated;
@@ -26,7 +26,7 @@ export function requireSettingsSection(user: SessionUser | null, href: string): 
 	const authenticated = requireSettingsAccess(user);
 	const section = SETTINGS_SECTIONS.find((candidate) => candidate.href === href);
 	if (!section) throw new Error(`No settings section registered at ${href}.`);
-	if (!visibleSections(permissionsFor(authenticated.role), [section]).length) {
+	if (!visibleSections(permissionsOf(authenticated), [section]).length) {
 		error(403, 'Forbidden');
 	}
 	return authenticated;
