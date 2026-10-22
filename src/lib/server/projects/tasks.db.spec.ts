@@ -17,7 +17,7 @@ import {
 	unassign,
 	updateTask
 } from './index';
-import { MIN_GAP } from './position';
+import { MIN_GAP } from '../shared/position';
 import {
 	assignRow,
 	createProjectRow,

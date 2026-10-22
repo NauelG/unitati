@@ -46,13 +46,18 @@ export function readableSpaces(viewer: SessionUser): SQL | null {
 /**
  * The page's space is readable **and** the page is not archived **and**, for a
  * non-staff viewer, it is published. Staff see drafts; archived pages are the
- * staff's "show archived" reads, which add to this explicitly (#323).
+ * staff's "show archived" reads (`includeArchived`, ignored for everyone else).
  */
-export function readablePages(viewer: SessionUser): SQL {
+export function readablePages(
+	viewer: SessionUser,
+	options: { includeArchived?: boolean } = {}
+): SQL {
 	const spaces = requireSpaceScope(viewer);
+	// "Show archived" is a staff-only read: for anybody else the flag is ignored.
+	const withArchived = options.includeArchived === true && readsAsStaff(viewer);
 	return and(
 		eq(pages.organisationId, viewer.organisationId),
-		isNull(pages.archivedAt),
+		withArchived ? undefined : isNull(pages.archivedAt),
 		readsAsStaff(viewer) ? undefined : isNotNull(pages.publishedAt),
 		exists(
 			getDb()
@@ -84,6 +89,18 @@ export function requireSpacesManage(actor: SessionUser): void {
 	if (!can(actor, 'knowledge.spaces.manage')) {
 		throw new Error(
 			`The ${actor.role} role cannot manage knowledge spaces; the route should have called requirePermission first.`
+		);
+	}
+}
+
+/**
+ * Every write on pages requires `knowledge.manage` (technician, admin). Like
+ * `requireSpacesManage`, a backstop to the route's gate that throws.
+ */
+export function requirePagesManage(actor: SessionUser): void {
+	if (!can(actor, 'knowledge.manage')) {
+		throw new Error(
+			`The ${actor.role} role cannot manage knowledge pages; the route should have called requirePermission first.`
 		);
 	}
 }

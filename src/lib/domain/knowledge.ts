@@ -64,6 +64,9 @@ export const DEFAULT_SPACE_ICON: SpaceIcon = 'book-open';
 export const DEFAULT_SPACE_COLOUR: SpaceColour = 'blue';
 
 export const SPACE_NAME_MAX = 80;
+
+/** The longest page title, in characters. */
+export const PAGE_TITLE_MAX = 200;
 export const SPACE_DESCRIPTION_MAX = 280;
 
 export function isSpaceIcon(value: unknown): value is SpaceIcon {
