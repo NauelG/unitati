@@ -75,7 +75,8 @@ export async function create({ request, locals, url }: RequestEvent) {
 	const fields = await fieldsOf(request);
 	const parsed = pageCreateInput.safeParse({
 		spaceId: fields.spaceId,
-		parentId: fields.parentId === '' ? null : fields.parentId,
+		// Absent when the space has no pages (the picker is not rendered): the root.
+		parentId: fields.parentId ? fields.parentId : null,
 		title: fields.title
 	});
 	if (!parsed.success) {
