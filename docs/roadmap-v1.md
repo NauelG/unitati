@@ -74,17 +74,15 @@ whether anyone answered.
 
 Day-to-day breaks without these, but no MVP relation needs them.
 
+v1 is closed: it is what has shipped plus the knowledge base. Everything else that was
+classified here before moves to [Post-v1](#post-v1) with the reason it waits; none of it
+was judged unnecessary, it was judged not to block the first stable release.
+
 ### Service desk
 
-| Capability                   | Why                                                   | Seen in              |
-| ---------------------------- | ----------------------------------------------------- | -------------------- |
-| SLAs per queue and priority  | Without targets a service desk cannot be run          | Zammad               |
-| Canned responses             | Same answer typed fifty times                         | Zammad, OpenSupports |
-| Tags                         | Cross-cutting classification the queue cannot express | Zammad, OpenSupports |
-| Knowledge base               | Deflects the repeat question; holds all documentation | Zammad, OpenSupports |
-| Inbound email to ticket      | Users write email whether we support it or not        | Zammad, OpenSupports |
-| Mail templates and signature | Outbound mail must look like the organisation         | OpenSupports, Zammad |
-| Ticket merge and split       | Duplicates arrive daily                               | Zammad               |
+| Capability     | Why                                                   | Seen in              |
+| -------------- | ----------------------------------------------------- | -------------------- |
+| Knowledge base | Deflects the repeat question; holds all documentation | Zammad, OpenSupports |
 
 The knowledge base is its own domain, `knowledge`, and absorbed "wiki and project pages": one
 place to write documentation, so that it is trusted
@@ -92,57 +90,60 @@ place to write documentation, so that it is trusted
 
 ### Assets
 
-| Capability                           | Why                                                 | Seen in         |
-| ------------------------------------ | --------------------------------------------------- | --------------- |
-| CSV import                           | Only bulk entry path; manual typing does not scale  | Snipe-IT, Shelf |
-| QR / barcode labels, print, scan     | Core to inventory work, not decoration              | Shelf, Snipe-IT |
-| `ReportFound`                        | Scan a lost device's label and report it; near-free | Shelf           |
-| Physical audit sessions              | Annual inventory is a legal requirement for many    | Shelf, Snipe-IT |
-| Signed handover, delivery and return | Signed handover of equipment has legal value        | Snipe-IT, Shelf |
-| Equipment request                    | An employee asks for equipment instead of mailing   | Snipe-IT        |
-| Licences and seats                   | Software is the other half of IT inventory          | Snipe-IT        |
-| Consumables, accessories, components | The rest of what a technician hands out             | Snipe-IT        |
-| Kits                                 | "Laptop + dock + monitor" moves as one unit         | Shelf, Snipe-IT |
-| Maintenance records                  | Repair history feeds the replacement decision       | Snipe-IT        |
-
-### Projects
-
-| Capability        | Why                                     | Seen in         |
-| ----------------- | --------------------------------------- | --------------- |
-| Milestones        | A project without dates is a list       | Leantime, Plane |
-| Task dependencies | Blocking is the one relation tasks need | Plane           |
-| Labels            | Classification across projects          | Plane           |
+| Capability                           | Why                                                | Seen in         |
+| ------------------------------------ | -------------------------------------------------- | --------------- |
+| CSV import                           | Only bulk entry path; manual typing does not scale | Snipe-IT, Shelf |
+| QR / barcode labels, print, scan     | Core to inventory work, not decoration             | Shelf, Snipe-IT |
+| Signed handover, delivery and return | Signed handover of equipment has legal value       | Snipe-IT, Shelf |
+| Equipment request                    | An employee asks for equipment instead of mailing  | Snipe-IT        |
 
 ### Cross-cutting
 
-| Capability                        | Why                                                 | Seen in                |
-| --------------------------------- | --------------------------------------------------- | ---------------------- |
-| In-app notifications and mentions | Otherwise coordination happens elsewhere            | Zammad, Plane          |
-| Saved views and filters           | Every user rebuilds the same filter daily           | Shelf, Plane           |
-| REST API and outgoing webhooks    | An unintegrable tool becomes the fourth silo        | all                    |
-| English locale alongside es-ES    | One file, once the strings are already externalised | Zammad, OpenSupports   |
-| Dark mode                         | Already specified in the design system              | —                      |
-| Basic reports                     | Tickets per model, MTTR, asset ageing — the pitch   | Leantime, OpenSupports |
-| Audit log                         | Who changed what, beyond the activity feed          | Zammad, Shelf          |
+| Capability                        | Why                                          | Seen in       |
+| --------------------------------- | -------------------------------------------- | ------------- |
+| In-app notifications and mentions | Otherwise coordination happens elsewhere     | Zammad, Plane |
+| REST API                          | An unintegrable tool becomes the fourth silo | all           |
+| Dark mode                         | Already specified in the design system       | —             |
 
 ## Post-v1
 
 Legitimate, unscheduled, with the reason they wait.
 
-| Capability                          | Why it waits                                                                                                                                                                       |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Asset bookings and reservations     | A fourth domain in disguise: calendar, availability, overlaps, overdue, partial check-in. Teams and other suites already cover it. Shelf is stronger here and we will not beat it. |
-| Custom fields                       | The classic scope sink, and in tension with "opinionated defaults, few knobs"                                                                                                      |
-| Active multi-tenancy (org UI)       | The data model is ready from day one; the experience has no demand yet ([ADR 0004](adr/0004-tenancy.md))                                                                           |
-| SSO: LDAP, OIDC, SCIM               | Email + password is self-contained; SSO arrives with the first organisation that requires it                                                                                       |
-| Automation: macros, triggers, rules | Automating a workflow nobody has run yet automates a guess                                                                                                                         |
-| Time tracking                       | Only pays off where hours are billed; not our target user                                                                                                                          |
-| Gantt and timeline                  | Kanban plus milestones covers the MVP team size                                                                                                                                    |
-| Estimates and story points          | Agile ceremony, not IT operations                                                                                                                                                  |
-| Cycles and sprints                  | Same                                                                                                                                                                               |
-| Project → asset batches             | Needs assets and projects mature; the third relation, after the two that define the product                                                                                        |
-| MCP server for AI assistants        | Requires a stable API first                                                                                                                                                        |
-| Satisfaction surveys                | Needs ticket volume to mean anything                                                                                                                                               |
+| Capability                           | Why it waits                                                                                                                                                                       |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Asset bookings and reservations      | A fourth domain in disguise: calendar, availability, overlaps, overdue, partial check-in. Teams and other suites already cover it. Shelf is stronger here and we will not beat it. |
+| Custom fields                        | The classic scope sink, and in tension with "opinionated defaults, few knobs"                                                                                                      |
+| Active multi-tenancy (org UI)        | The data model is ready from day one; the experience has no demand yet ([ADR 0004](adr/0004-tenancy.md))                                                                           |
+| SSO: LDAP, OIDC, SCIM                | Email + password is self-contained; SSO arrives with the first organisation that requires it                                                                                       |
+| Automation: macros, triggers, rules  | Automating a workflow nobody has run yet automates a guess                                                                                                                         |
+| Time tracking                        | Only pays off where hours are billed; not our target user                                                                                                                          |
+| Gantt and timeline                   | Kanban plus milestones covers the MVP team size                                                                                                                                    |
+| Estimates and story points           | Agile ceremony, not IT operations                                                                                                                                                  |
+| Cycles and sprints                   | Same                                                                                                                                                                               |
+| Project → asset batches              | Needs assets and projects mature; the third relation, after the two that define the product                                                                                        |
+| MCP server for AI assistants         | Requires a stable API first                                                                                                                                                        |
+| Satisfaction surveys                 | Needs ticket volume to mean anything                                                                                                                                               |
+| SLAs per queue and priority          | Needs real ticket volume and a first set of queues to set targets against; targets guessed up front are targets nobody trusts                                                      |
+| Canned responses                     | A convenience on top of a working reply flow; the comment editor already covers writing an answer                                                                                  |
+| Tags on tickets                      | Queues, categories and links already classify; tags are a fourth axis nobody has asked for yet                                                                                     |
+| Inbound email to ticket              | The employee portal is the intake path; mail parsing (threading, bounces, spam) is a subsystem of its own                                                                          |
+| Mail templates and signature         | Outbound mail works with the default template; branding it is polish                                                                                                               |
+| Ticket merge and split               | Duplicates can be closed and linked by hand until volume makes that costly                                                                                                         |
+| Merge duplicate tasks and projects   | Reparenting, member and link reconciliation is large; two records can be closed and linked meanwhile                                                                               |
+| Physical audit sessions              | Needs label scanning and a stable inventory first; an annual count can be done on the asset list                                                                                   |
+| `ReportFound` (scan a label)         | Depends on the label scanning flow; near-free, but not blocking                                                                                                                    |
+| Licences and seats                   | A different inventory shape (entitlements, not objects); software is tracked elsewhere until it is not                                                                             |
+| Consumables, accessories, components | Stock counts are a different model from tracked assets; custody covers the assets that matter                                                                                      |
+| Kits                                 | A group of assets can be handed over one by one meanwhile                                                                                                                          |
+| Maintenance records per asset        | The per-asset history and linked tickets already record repairs                                                                                                                    |
+| Milestones                           | Task due dates and the project due date cover the MVP team size                                                                                                                    |
+| Task dependencies                    | Blocking can be said in a comment or a link until a board shows the pain                                                                                                           |
+| Labels on tasks                      | States and projects classify; labels wait for the same demand as ticket tags                                                                                                       |
+| Saved views and filters              | Filters are cheap to rebuild while the lists are short; revisit with real usage                                                                                                    |
+| Outgoing webhooks                    | The REST API is the integration surface; push events wait for the first integration that needs them                                                                                |
+| English locale alongside es-ES       | The UI is externalised, but a second locale is a translation and review commitment ([ADR 0008](adr/0008-ui-language.md))                                                           |
+| Basic reports                        | Needs accumulated data to say anything; the activity feed and search answer the day-to-day questions                                                                               |
+| Audit log                            | The activity feed records who changed what; a tamper-evident log waits for the first compliance requirement                                                                        |
 
 ## Discarded
 
