@@ -164,7 +164,7 @@ export async function updateSpace(
 }
 
 /** The row, locked for the length of the transaction: counts taken after it cannot move. */
-async function lockSpace(tx: Transaction, organisationId: string, id: string) {
+export async function lockSpace(tx: Transaction, organisationId: string, id: string) {
 	const [row] = await tx
 		.select()
 		.from(knowledgeSpaces)

@@ -56,3 +56,22 @@ describe('spread', () => {
 		expect(spread(0)).toEqual([]);
 	});
 });
+
+describe('many inserts between the same two siblings', () => {
+	it('keeps a strict order, renumbering when the gap collapses', () => {
+		let order: number[] = spread(2);
+		// Always insert right after the first sibling: the gap halves each time.
+		for (let i = 0; i < 200; i += 1) {
+			let placed = placeBetween(order[0], order[1]);
+			if ('renumber' in placed) {
+				order = spread(order.length);
+				placed = placeBetween(order[0], order[1]);
+			}
+			if (!('position' in placed)) throw new Error('A renumbered list always has room.');
+			order = [order[0], placed.position, ...order.slice(1)];
+		}
+
+		expect(order).toHaveLength(202);
+		for (let i = 1; i < order.length; i += 1) expect(order[i]).toBeGreaterThan(order[i - 1]);
+	});
+});

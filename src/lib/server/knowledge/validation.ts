@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+	PAGE_TITLE_MAX,
 	SPACE_AUDIENCES,
 	SPACE_COLOURS,
 	SPACE_DESCRIPTION_MAX,
@@ -44,3 +45,16 @@ export const spaceUpdateInput = z.object(spaceDetails);
 
 export type SpaceInput = z.output<typeof spaceInput>;
 export type SpaceUpdateInput = z.output<typeof spaceUpdateInput>;
+
+/**
+ * A new page: a title, and optionally a body (the screens create with none; the
+ * editor is #324). `parentId` null is the root of the space.
+ */
+export const pageCreateInput = z.object({
+	spaceId: z.uuid(),
+	parentId: z.uuid().nullable(),
+	title: z.string().trim().min(1).max(PAGE_TITLE_MAX),
+	body: z.string().default('')
+});
+
+export type PageCreateInput = z.input<typeof pageCreateInput>;

@@ -60,6 +60,8 @@
 	--desk-soft: #f0ebff;
 	--project: #0b7653;
 	--project-soft: #e2f6ee;
+	--knowledge: #0b6f8a;
+	--knowledge-soft: #e0f3f8;
 
 	/* Queue colours (`domain/queue-color.ts`): a dot beside a queue name */
 	--queue-gray: #5b6675;
@@ -231,6 +233,8 @@
 	--desk-soft: #251d4a;
 	--project: #4fd3a2;
 	--project-soft: #10302a;
+	--knowledge: #5cc8e6;
+	--knowledge-soft: #0f2e38;
 
 	--queue-gray: #98a3b3;
 	--queue-blue: #78a2ff;
@@ -323,6 +327,8 @@
 	--color-desk-soft: var(--desk-soft);
 	--color-project: var(--project);
 	--color-project-soft: var(--project-soft);
+	--color-knowledge: var(--knowledge);
+	--color-knowledge-soft: var(--knowledge-soft);
 	--color-success: var(--success);
 	--color-warning: var(--warning);
 

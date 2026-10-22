@@ -11,7 +11,7 @@ import { emit, type DomainEvents } from '../shared/events';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
 import type { ProjectVisibility } from './members';
-import { placeBetween, spread } from './position';
+import { placeBetween, spread } from '../shared/position';
 import { matchesQuery } from './search';
 import { projects, states, taskAssignees, tasks } from './schema';
 import { requireManage, requireTaskScope } from './scope';

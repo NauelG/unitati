@@ -4,7 +4,7 @@ import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
-import { placeBetween } from './position';
+import { placeBetween } from '../shared/position';
 import { projectMembers, projects, taskAssignees, tasks, type Task } from './schema';
 import { requireManage } from './scope';
 import { columnOf } from './tasks';

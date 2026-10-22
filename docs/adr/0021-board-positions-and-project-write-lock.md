@@ -16,7 +16,7 @@ what stops two simultaneous drops from corrupting it, and what code may assume a
    between two neighbours gives it the midpoint of theirs; at the ends it goes one step (1000) past
    the last or before the first. One drop writes one row. When the gap between the neighbours falls
    below `1e-6` the column is renumbered, one step apart, inside the same transaction. The
-   arithmetic is a pure function (`projects/position.ts`) so its edges are unit tests.
+   arithmetic is a pure function (`shared/position.ts`) so its edges are unit tests.
    `moveTask` is the only function that writes `state_id` or `position`.
 2. **The project row is the lock.** Every write inside a project (creating or editing a task,
    assigning, moving, archiving) starts by locking that project's row with `select … for update`.

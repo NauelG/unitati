@@ -586,6 +586,22 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/TaskBoard.svelte')
 	},
 	{
+		id: 'page-tree',
+		name: 'PageTree',
+		category: 'data',
+		summary: 'El árbol de páginas de un espacio: desplegable, con estados y reordenable.',
+		sourceFile: 'PageTree.svelte',
+		load: () => import('./specs/PageTree.svelte')
+	},
+	{
+		id: 'page-status-badge',
+		name: 'PageStatusBadge',
+		category: 'data',
+		summary: 'Borrador, publicada o archivada: el estado de una página de documentación.',
+		sourceFile: 'PageStatusBadge.svelte',
+		load: () => import('./specs/PageStatusBadge.svelte')
+	},
+	{
 		id: 'board-column',
 		name: 'BoardColumn',
 		category: 'data',

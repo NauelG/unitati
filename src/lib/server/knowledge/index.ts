@@ -16,6 +16,32 @@ export {
 } from './schema';
 export type { KnowledgeSpace, Page, PageRevision } from './schema';
 
+export {
+	archivePage,
+	createPage,
+	getPageByTag,
+	listSpaceTree,
+	movePage,
+	previewMove,
+	publishPage,
+	reorderPage,
+	unarchivePage
+} from './pages';
+export type {
+	MovePreview,
+	PageArchiveFailure,
+	PageCreateFailure,
+	PageMoveConfirmationFailure,
+	PageMoveFailure,
+	PagePublishFailure,
+	PageReorderFailure,
+	PageStatus,
+	PageUnarchiveFailure,
+	PageView,
+	Placement,
+	TreeEntry
+} from './pages';
+
 export { readablePages, readableSpaces, requireSpaceScope } from './scope';
 
 export {
@@ -37,5 +63,5 @@ export type {
 	SpaceUpdateFailure
 } from './spaces';
 
-export { spaceInput, spaceUpdateInput } from './validation';
-export type { SpaceInput, SpaceUpdateInput } from './validation';
+export { pageCreateInput, spaceInput, spaceUpdateInput } from './validation';
+export type { PageCreateInput, SpaceInput, SpaceUpdateInput } from './validation';

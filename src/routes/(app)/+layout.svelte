@@ -2,6 +2,7 @@
 	import { APP_ENV } from '$app/env/public';
 	import PackageIcon from '@lucide/svelte/icons/package';
 	import TicketIcon from '@lucide/svelte/icons/ticket';
+	import BookOpenIcon from '@lucide/svelte/icons/book-open';
 	import FolderKanbanIcon from '@lucide/svelte/icons/folder-kanban';
 	import ListChecksIcon from '@lucide/svelte/icons/list-checks';
 	import UsersIcon from '@lucide/svelte/icons/users';
@@ -100,6 +101,22 @@
 					icon: ListChecksIcon,
 					permission: PROJECT_READ_PERMISSIONS,
 					count: data.counts.tasks
+				}
+			]
+		},
+		{
+			id: 'knowledge',
+			label: m.nav_knowledge(),
+			icon: BookOpenIcon,
+			section: 'modules',
+			accent: 'var(--knowledge)',
+			children: [
+				{
+					href: '/knowledge',
+					label: m.nav_knowledge(),
+					icon: BookOpenIcon,
+					// Staff only in the app: employees read from the portal (#328).
+					permission: 'knowledge.manage'
 				}
 			]
 		},
