@@ -201,6 +201,12 @@ export function activitySentence(entry: ActivityEntry): string {
 						count: entry.payload.unassignedTaskCount
 					});
 
+		case 'asset.attachment.added':
+			return m.activity_asset_attachment_added({ filename: entry.payload.filename });
+
+		case 'asset.attachment.removed':
+			return m.activity_asset_attachment_removed({ filename: entry.payload.filename });
+
 		case 'project.attachment.added':
 			return m.activity_project_attachment_added({ filename: entry.payload.filename });
 

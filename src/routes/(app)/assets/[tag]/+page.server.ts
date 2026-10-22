@@ -2,16 +2,19 @@ import { error } from '@sveltejs/kit';
 import { superValidate } from 'sveltekit-superforms';
 import { zod4 } from 'sveltekit-superforms/adapters';
 import { z } from 'zod';
+import { attachmentFailureMessage } from '#lib/attachment-errors.js';
 import { ASSET_READ_PERMISSIONS } from '#lib/domain/access.js';
 import { HANDOVER_STATES } from '#lib/domain/handover.js';
 import { ASSET_STATES } from '#lib/domain/status.js';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import {
+	addAssetAttachments,
 	addNote,
 	assetTimeline,
 	custodyHandover,
 	deliver,
+	listAssetAttachments,
 	listAssetsHeldBy,
 	listHandovers,
 	listDeliverableAssets,
@@ -20,6 +23,8 @@ import {
 	changeState,
 	getAssetByTag,
 	listAssetModels,
+	readAssetAttachmentForm,
+	removeAssetAttachment,
 	WAIVE_REASON_MAX,
 	type FullAssetView
 } from '#lib/server/assets/index.js';
@@ -165,6 +170,11 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 					custodyHandover(user, { id: asset.id, custodianPersonId: asset.custodianPersonId })
 				])
 			: [null, null];
+	// Invoices and warranties follow the serial's rule: whole-row viewers only.
+	const attachments =
+		asset.visibility === 'full' && can(user, 'assets.view')
+			? await listAssetAttachments(user, asset.id)
+			: null;
 	const [editForm, editModels, modelForm, catalogues] = await Promise.all([
 		superValidate(editSeed, zod4(editAssetForm)),
 		editable ? listAssetModels(user.organisationId) : Promise.resolve([]),
@@ -200,6 +210,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 		heldAssets,
 		handovers,
 		custody,
+		attachments: attachments?.ok ? attachments.value : null,
 		editForm,
 		editModels,
 		modelForm,
@@ -337,6 +348,39 @@ export const actions: Actions = {
 			);
 		}
 		return { action: 'addNote' as const };
+	},
+
+	addAttachments: async ({ request, locals, params }) => {
+		const user = requirePermission(locals.user, 'assets.manage');
+		const { files } = await readAssetAttachmentForm(request);
+		if (files.length === 0) return rejected('addAttachments', m.attachments_pick_none());
+
+		const asset = await targetOf(user, params.tag);
+		const outcome = await addAssetAttachments(user, asset.id, files);
+		if (!outcome.ok) {
+			return rejected('addAttachments', attachmentFailureMessage(outcome.error));
+		}
+
+		return { action: 'addAttachments' as const };
+	},
+
+	removeAttachment: async ({ request, locals, params }) => {
+		const user = requirePermission(locals.user, 'assets.manage');
+		const { attachmentId } = await readAssetAttachmentForm(request);
+		if (!z.uuid().safeParse(attachmentId).success) {
+			return rejected('removeAttachment', m.action_error_invalid());
+		}
+
+		// The page's asset must be one the viewer can reach; the domain then
+		// resolves the attachment inside the organisation.
+		await targetOf(user, params.tag);
+		const outcome = await removeAssetAttachment(user, attachmentId);
+		// Already gone, e.g. a second tab removed it first: the reload shows the truth.
+		if (!outcome.ok && outcome.error !== 'attachment_not_found') {
+			return rejected('removeAttachment', m.error_generic());
+		}
+
+		return { action: 'removeAttachment' as const };
 	},
 
 	linkTickets: async ({ request, locals, params }) => {

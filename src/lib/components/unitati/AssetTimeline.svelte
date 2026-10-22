@@ -105,6 +105,8 @@
 		'project.visibility.changed': Lock,
 		'project.member.added': UserPlus,
 		'project.member.removed': UserMinus,
+		'asset.attachment.added': Paperclip,
+		'asset.attachment.removed': Paperclip,
 		'project.attachment.added': Paperclip,
 		'project.attachment.removed': Paperclip,
 		'task.created': ListTodo,

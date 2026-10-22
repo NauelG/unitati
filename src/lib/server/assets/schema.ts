@@ -480,7 +480,39 @@ export const handoverAssets = pgTable(
 	]
 );
 
+/**
+ * Files attached to an asset: the invoice, the warranty, the delivery note
+ * (ADR 0039). The asset's own table, not the service desk's or the projects':
+ * each domain owns its attachments and shares only the byte store. They hang
+ * off the asset itself, so deleting an asset takes its rows with it. Bytes live
+ * in `Storage`, keyed by `storage_key`.
+ */
+export const assetAttachments = pgTable(
+	'asset_attachments',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		assetId: uuid('asset_id')
+			.notNull()
+			.references(() => assets.id, { onDelete: 'cascade' }),
+		uploadedByPersonId: uuid('uploaded_by_person_id').references(() => people.id, {
+			onDelete: 'set null'
+		}),
+		filename: text('filename').notNull(),
+		/** `application/octet-stream` when the browser sends none. */
+		contentType: text('content_type').notNull(),
+		byteSize: integer('byte_size').notNull(),
+		/** Server-generated and opaque: never derived from the filename or the request. */
+		storageKey: text('storage_key').notNull().unique(),
+		...timestamps
+	},
+	(table) => [index('asset_attachments_asset_idx').on(table.assetId)]
+);
+
 export type Manufacturer = typeof manufacturers.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type AssetModel = typeof assetModels.$inferSelect;
 export type Asset = typeof assets.$inferSelect;
+export type AssetAttachment = typeof assetAttachments.$inferSelect;

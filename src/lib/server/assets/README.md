@@ -16,6 +16,13 @@ and `custodyHandover`. A handover's state comes only from `deriveHandoverState`
 `resendHandover` (`handover-resend.ts`) swaps the token hash and the expiry on a pending or
 expired handover and writes `handover.resent`.
 
+Files on an asset (`attachments.ts`, ADR 0039) live in `asset_attachments`: invoice, warranty,
+delivery note. Same limits as everywhere (5 files, 10 MiB each) and the same bytes-first, rows-second
+discipline as projects. Reading is for `assets.view` only: a viewer restricted to own or shared
+assets gets `asset_not_found`, because an invoice carries a price and a supplier. Writing trusts the
+route's `assets.manage` gate. Downloads are `/asset-attachments/{id}`, always `attachment`; each add
+and remove writes `asset.attachment.*` with the filename as a snapshot.
+
 ## The shape of it
 
 The catalogue hangs off the **model**, not off each asset: `manufacturers` and `categories` point

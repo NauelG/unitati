@@ -32,6 +32,22 @@ export { requireAssetScope } from './scope';
 /** Asset registrations per day, for the KPI sparkline (#90). */
 export { assetRegistrationsSparkline } from './sparkline';
 
+/** Files attached to an asset: invoice, warranty, delivery note (ADR 0039). */
+export {
+	addAssetAttachments,
+	getAssetAttachment,
+	listAssetAttachments,
+	readAssetAttachmentForm,
+	removeAssetAttachment
+} from './attachments';
+export type {
+	AddAssetAttachmentsFailure,
+	AssetAttachmentBytes,
+	AssetAttachmentDeps,
+	AssetAttachmentView,
+	RemoveAssetAttachmentFailure
+} from './attachments';
+
 /** Count per lifecycle state, for the donut on the assets index (#90). */
 export { assetStateDistribution } from './state-distribution';
 export type { AssetStateSlice } from './state-distribution';

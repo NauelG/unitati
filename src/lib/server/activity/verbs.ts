@@ -24,6 +24,8 @@ export const ACTIVITY_VERBS = [
 	'state.changed',
 	'location.changed',
 	'note.added',
+	'asset.attachment.added',
+	'asset.attachment.removed',
 	'ticket.created',
 	'ticket.status.changed',
 	'ticket.assigned',

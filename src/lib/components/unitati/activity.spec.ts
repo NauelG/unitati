@@ -111,6 +111,8 @@ describe('activitySentence', () => {
 				verb: 'project.member.removed',
 				payload: { personId: PERSON, personName: 'Ada', unassignedTaskCount: 2 }
 			},
+			{ verb: 'asset.attachment.added', payload: { filename: 'plan.pdf' } },
+			{ verb: 'asset.attachment.removed', payload: { filename: 'plan.pdf' } },
 			{ verb: 'project.attachment.added', payload: { filename: 'plan.pdf' } },
 			{ verb: 'project.attachment.removed', payload: { filename: 'plan.pdf' } },
 			{ verb: 'task.attachment.added', payload: { filename: 'plan.pdf' } },
