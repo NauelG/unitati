@@ -5,6 +5,7 @@ import { getDb } from '../db';
 import {
 	archivePage,
 	createPage,
+	listSpaces,
 	getPageByTag,
 	listSpaceTree,
 	movePage,
@@ -424,6 +425,15 @@ describe('reads', () => {
 				error: 'not_found'
 			});
 		}
+	});
+
+	it('counts only published pages for an employee, drafts included for staff', async () => {
+		const { employee, admin, portal } = await tree();
+
+		const countOf = async (viewer: typeof employee) =>
+			(await listSpaces(viewer)).find((entry) => entry.id === portal.id)?.pageCount;
+		expect(await countOf(employee)).toBe(2);
+		expect(await countOf(admin)).toBe(3);
 	});
 
 	it('gives staff drafts, and archived pages only when asked', async () => {

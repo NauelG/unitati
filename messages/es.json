@@ -1863,6 +1863,7 @@
 	"knowledge_status_published": "Publicada",
 	"knowledge_status_archived": "Archivada",
 	"knowledge_page_new": "Nueva página",
+	"knowledge_page_new_short": "Nuevo",
 	"knowledge_page_new_child": "Nueva subpágina",
 	"knowledge_page_new_in": "Nueva página en {space}",
 	"knowledge_page_new_child_of": "Nueva subpágina de {title}",

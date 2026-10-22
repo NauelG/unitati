@@ -60,7 +60,7 @@
 					<div>
 						<Button variant="secondary" size="sm" onclick={() => (creatingIn = space)}>
 							<Plus class="size-4" aria-hidden="true" />
-							{m.knowledge_page_new()}
+							{m.knowledge_page_new_short()}
 						</Button>
 					</div>
 				</li>
