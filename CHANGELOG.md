@@ -5,6 +5,13 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.110.1] - 2026-10-22
+
+### Fixed
+
+- Creating a page in a knowledge space that had no pages yet failed with "Esa página ya no existe":
+  the form sends no parent when there is none to pick, and the action refused that as invalid.
+
 ## [0.110.0] - 2026-10-22
 
 ### Added

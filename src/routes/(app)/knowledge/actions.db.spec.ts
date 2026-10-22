@@ -37,6 +37,18 @@ describe('the knowledge actions', () => {
 		expect(thrown?.location).toBe(`/knowledge/${page.pageTag}`);
 	});
 
+	it('create a root page when the form carries no parentId at all', async () => {
+		const { organisation, technician } = await createWorkspace();
+		const space = await createSpaceRow(organisation.id);
+
+		const { thrown } = await outcomeOf(() =>
+			create(actionEvent(technician, { spaceId: space.id, title: 'First' }))
+		);
+
+		expect(thrown?.status).toBe(303);
+		expect(await getDb().select().from(pages)).toHaveLength(1);
+	});
+
 	it('answer a blank title with a message', async () => {
 		const { organisation, technician } = await createWorkspace();
 		const space = await createSpaceRow(organisation.id);
