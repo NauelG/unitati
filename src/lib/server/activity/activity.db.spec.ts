@@ -11,6 +11,7 @@ import {
 } from '../assets/testing/fixtures';
 import { ensureDefaultStates } from '../projects/defaults';
 import { createProjectRow, createTaskRow, statesByGroup } from '../projects/testing/fixtures';
+import { createPageRow, createSpaceRow } from '../knowledge/testing/fixtures';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
 import { activity } from './schema';
 import { recordActivity } from './writer';
@@ -97,6 +98,8 @@ describe('the exactly-one-target CHECK', () => {
 		const { backlog } = await statesByGroup(organisation.id);
 		const project = await createProjectRow(organisation.id);
 		const task = await createTaskRow(organisation.id, project.id, backlog.id);
+		const space = await createSpaceRow(organisation.id);
+		const page = await createPageRow(organisation.id, space.id);
 		const ids: Record<string, string> = {
 			assetId: asset.id,
 			personId: person.id,
@@ -104,7 +107,9 @@ describe('the exactly-one-target CHECK', () => {
 			taskId: task.id,
 			projectId: project.id,
 			// No row behind it: the one target without a foreign key.
-			locationId: crypto.randomUUID()
+			locationId: crypto.randomUUID(),
+			spaceId: space.id,
+			pageId: page.id
 		};
 
 		const refusals = await Promise.all(

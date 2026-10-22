@@ -134,6 +134,23 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/SelectField.svelte')
 	},
 	{
+		id: 'space-icon-picker',
+		name: 'SpaceIconPicker',
+		category: 'fields',
+		summary: 'La rejilla de iconos de un espacio de conocimiento; un grupo de radios.',
+		sourceFile: 'SpaceIconPicker.svelte',
+		load: () => import('./specs/SpaceIconPicker.svelte')
+	},
+	{
+		id: 'space-colour-picker',
+		name: 'SpaceColourPicker',
+		category: 'fields',
+		summary:
+			'Las muestras de color de un espacio, sobre una paleta cerrada con modo claro y oscuro.',
+		sourceFile: 'SpaceColourPicker.svelte',
+		load: () => import('./specs/SpaceColourPicker.svelte')
+	},
+	{
 		id: 'search-select-field',
 		name: 'SearchSelectField',
 		category: 'fields',

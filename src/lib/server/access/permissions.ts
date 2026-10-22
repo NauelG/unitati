@@ -42,6 +42,13 @@ export const PERMISSIONS = [
 	'projects.view.assigned',
 	'projects.manage',
 
+	// Knowledge base (ADR 0031). `.view` is every role; which spaces and pages a
+	// viewer then reads is decided by the audience scope inside the domain.
+	'knowledge.view',
+	'knowledge.manage',
+	/** The catalogue of spaces: an audience decision, so admins only. */
+	'knowledge.spaces.manage',
+
 	// API keys (ADR 0022). `.manage` is a person's own keys; `.manage.all` is every
 	// key in the organisation.
 	'api.keys.manage',
@@ -76,6 +83,8 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
 		'tickets.comment.internal',
 		'projects.view',
 		'projects.manage',
+		'knowledge.view',
+		'knowledge.manage',
 		'api.keys.manage'
 	],
 	employee: [
@@ -83,7 +92,8 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
 		'assets.view.shared',
 		'tickets.view.own',
 		'tickets.create',
-		'projects.view.assigned'
+		'projects.view.assigned',
+		'knowledge.view'
 	]
 };
 

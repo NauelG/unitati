@@ -20,6 +20,10 @@
 	import MapPinPlus from '@lucide/svelte/icons/map-pin-plus';
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import MessageSquare from '@lucide/svelte/icons/message-square';
+	import BookOpen from '@lucide/svelte/icons/book-open';
+	import FilePlus from '@lucide/svelte/icons/file-plus';
+	import FileText from '@lucide/svelte/icons/file-text';
+	import History from '@lucide/svelte/icons/history';
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import PackagePlus from '@lucide/svelte/icons/package-plus';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
@@ -124,7 +128,18 @@
 		'person.location.changed': MapPin,
 		'catalogue.location.created': MapPinPlus,
 		'catalogue.location.updated': MapPinPen,
-		'catalogue.location.deleted': MapPinMinus
+		'catalogue.location.deleted': MapPinMinus,
+		'space.created': BookOpen,
+		'space.audience.changed': ArrowRightLeft,
+		'space.archived': Archive,
+		'page.created': FilePlus,
+		'page.published': FileCheck,
+		'page.moved': ArrowRightLeft,
+		'page.archived': Archive,
+		'page.unarchived': ArchiveRestore,
+		'page.revision.restored': History,
+		'page.attachment.added': Paperclip,
+		'page.attachment.removed': FileText
 	};
 </script>
 

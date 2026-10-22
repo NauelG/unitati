@@ -14,6 +14,14 @@ function projectVisibilityLabel(visibility: 'organisation' | 'members'): string 
 		: m.activity_project_visibility_organisation();
 }
 
+function spaceAudienceLabel(audience: 'staff' | 'portal'): string {
+	return audience === 'portal' ? m.knowledge_audience_portal() : m.knowledge_audience_staff();
+}
+
+function pagesCount(count: number): string {
+	return count === 1 ? m.knowledge_pages_one() : m.knowledge_pages_other({ count });
+}
+
 /**
  * Turns an activity entry into the sentence a reader sees (ADR 0009). It lives
  * with the components, not with the table: the row stores a verb and a payload,
@@ -288,6 +296,56 @@ export function activitySentence(entry: ActivityEntry): string {
 
 		case 'catalogue.location.deleted':
 			return m.activity_location_deleted({ path: entry.payload.path });
+
+		case 'space.created':
+			return m.activity_space_created({
+				name: entry.payload.name,
+				audience: spaceAudienceLabel(entry.payload.audience)
+			});
+
+		case 'space.audience.changed':
+			return m.activity_space_audience_changed({
+				from: spaceAudienceLabel(entry.payload.from),
+				to: spaceAudienceLabel(entry.payload.to),
+				pages: pagesCount(entry.payload.pageCount)
+			});
+
+		case 'space.archived':
+			return m.activity_space_archived({ pages: pagesCount(entry.payload.pageCount) });
+
+		case 'page.created':
+			return m.activity_page_created({ title: entry.payload.title });
+
+		case 'page.published':
+			return m.activity_page_published();
+
+		case 'page.moved':
+			return m.activity_page_moved({
+				from: entry.payload.fromParentTag
+					? `${entry.payload.fromSpace} › ${entry.payload.fromParentTag}`
+					: entry.payload.fromSpace,
+				to: entry.payload.toParentTag
+					? `${entry.payload.toSpace} › ${entry.payload.toParentTag}`
+					: entry.payload.toSpace
+			});
+
+		case 'page.archived':
+			return m.activity_page_archived({ pages: pagesCount(entry.payload.subtreeCount) });
+
+		case 'page.unarchived':
+			return m.activity_page_unarchived({ pages: pagesCount(entry.payload.subtreeCount) });
+
+		case 'page.revision.restored':
+			return m.activity_page_revision_restored({
+				from: entry.payload.from,
+				to: entry.payload.to
+			});
+
+		case 'page.attachment.added':
+			return m.activity_page_attachment_added({ filename: entry.payload.filename });
+
+		case 'page.attachment.removed':
+			return m.activity_page_attachment_removed({ filename: entry.payload.filename });
 
 		default: {
 			const unhandled: never = entry;

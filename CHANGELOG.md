@@ -5,6 +5,18 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.108.0] - 2026-10-22
+
+### Added
+
+- Knowledge base, first step (#322, part of #17). Admins get a catalogue of spaces at
+  `/settings/knowledge`: each space has a name, description, icon and colour from closed sets, and an
+  audience, "Personal" (technicians and admins) or "Portal" (every employee). Changing a space's
+  audience says how many pages it exposes or hides and asks to confirm; archiving a space archives
+  its pages; only an empty space can be deleted. Pages themselves arrive in later steps.
+- New permissions `knowledge.view` (every role), `knowledge.manage` (technician, admin) and
+  `knowledge.spaces.manage` (admin), and the activity entries for spaces and pages.
+
 ## [0.107.0] - 2026-10-22
 
 ### Added

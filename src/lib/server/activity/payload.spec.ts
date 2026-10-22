@@ -144,4 +144,28 @@ describe('parsePayload', () => {
 		});
 		expect(() => parsePayload('task.due.changed', { from: null, to: '1 Dec' })).toThrow();
 	});
+
+	it('parses the knowledge-base verbs and refuses what is malformed', () => {
+		expect(parsePayload('space.created', { name: 'Ayuda', audience: 'portal' })).toEqual({
+			name: 'Ayuda',
+			audience: 'portal'
+		});
+		expect(() => parsePayload('space.created', { name: 'Ayuda', audience: 'everyone' })).toThrow();
+		expect(
+			parsePayload('space.audience.changed', { from: 'staff', to: 'portal', pageCount: 0 })
+				.pageCount
+		).toBe(0);
+		expect(() => parsePayload('space.archived', { pageCount: -1 })).toThrow();
+		expect(parsePayload('page.published', {})).toEqual({});
+		expect(
+			parsePayload('page.moved', {
+				fromSpace: 'A',
+				toSpace: 'B',
+				fromParentTag: null,
+				toParentTag: 'DOC-0001'
+			}).toParentTag
+		).toBe('DOC-0001');
+		expect(() => parsePayload('page.revision.restored', { from: 0, to: 2 })).toThrow();
+		expect(() => parsePayload('page.attachment.added', { filename: '' })).toThrow();
+	});
 });
