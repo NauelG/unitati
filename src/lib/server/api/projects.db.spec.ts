@@ -4,8 +4,8 @@ import { listActivity } from '../activity';
 import { createPerson } from '../assets/testing/fixtures';
 import { getDb } from '../db';
 import { ticketTask } from '../links/schema';
-import { notifyTaskCompleted } from '../links/notify-task-completed';
-import { projects, tasks } from '../projects';
+import { notifyTaskCompleted } from '../links/testing/notify';
+import { projects, tasks } from '../projects/schema';
 import {
 	assignRow,
 	createProjectRow,

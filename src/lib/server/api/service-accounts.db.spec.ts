@@ -1,6 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { activity, listActivity } from '../activity';
+import { listActivity } from '../activity';
+import { activity } from '../activity/schema';
 import {
 	createAsset,
 	createCatalogue,

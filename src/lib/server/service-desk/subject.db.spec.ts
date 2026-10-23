@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { activity } from '../activity';
+import { activity } from '../activity/schema';
 import { createOrganisation, createViewer } from '../assets/testing/fixtures';
 import { getDb } from '../db';
 import { InMemoryStorage } from '../shared/storage';

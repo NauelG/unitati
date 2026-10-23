@@ -1,8 +1,8 @@
 import { asc, eq } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 import { getDb } from '../db';
-import { activity } from '../activity';
-import { ticketAsset } from '../links';
+import { activity } from '../activity/schema';
+import { ticketAsset } from '../links/schema';
 import { tickets } from './schema';
 import {
 	createAsset,

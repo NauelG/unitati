@@ -13,7 +13,8 @@ import {
 	createViewer
 } from '../assets/testing/fixtures';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
-import { linkAsset, linkTicketAssets, relatedTo, ticketAsset, unlinkAsset } from './index';
+import { linkAsset, linkTicketAssets, relatedTo, unlinkAsset } from './index';
+import { ticketAsset } from './schema';
 
 /**
  * ADR 0005 stakes the product on this: the database cannot hold a ticket

@@ -4,15 +4,8 @@ import type { Mapping } from '#lib/domain/imports.js';
 import { activity } from '../activity/schema';
 import { createOrganisation, createViewer } from '../assets/testing/fixtures';
 import { getDb } from '../db';
-import {
-	createDepartment,
-	createLocation,
-	createPerson,
-	departments,
-	listLocations,
-	locations,
-	people
-} from '../directory';
+import { createDepartment, createLocation, createPerson, listLocations } from '../directory';
+import { departments, locations, people } from '../directory/schema';
 import { commitPeopleImport, planPeopleImport } from '.';
 
 const utf8 = (text: string) => new TextEncoder().encode(text);

@@ -7,15 +7,6 @@
  * they then read is data, and lives here: every read starts from `scope.ts`.
  */
 
-export {
-	knowledgeSpaces,
-	knowledgeSpaceAudience,
-	pages,
-	pageRevisions as pageRevisionsTable,
-	pageAttachments,
-	pageCodeSequence,
-	pageComments
-} from './schema';
 export type { KnowledgeSpace, Page, PageAttachment, PageComment, PageRevision } from './schema';
 
 export {

@@ -14,7 +14,6 @@ export type { ActivityVerb, ActivityTarget, ActivityTargetColumn } from './verbs
 export { PAYLOAD_SCHEMAS, parsePayload } from './payload';
 export type { ActivityEntry, PayloadFor } from './payload';
 
-export { activity, activityVerb } from './schema';
 export type { ActivityRow } from './schema';
 
 export { recordActivity, actorColumns } from './writer';

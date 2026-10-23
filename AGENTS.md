@@ -5,6 +5,7 @@ Unitati: projects, service desk and ITAM on one data model. Start with `README.m
 ## Conventions
 
 - Architecture: server code by business domain, see `docs/adr/0002-server-modules-by-domain.md`. Routes never query the database; domains never import each other's tables (use `links`).
+- Module boundaries live in `.dependency-cruiser.cjs` and run first in `npm run lint` (ADR 0048). Never add an entry to `.dependency-cruiser-known-violations.json` without justifying it in the pull request.
 - Domain vocabulary: `docs/domain-model.md`. New architectural decisions go in `docs/adr/NNNN-title.md`.
 - Code, comments and docs in English. Pull request descriptions are the one exception: they are written in Catalan, see `docs/agents/pull-requests.md`.
 - Cross-domain reactions go through `shared/events.ts` (ADR 0024): emit after commit from the owning domain, subscribe in `subscriptions.ts`; never import another domain's tables to react.

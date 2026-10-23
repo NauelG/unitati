@@ -37,7 +37,7 @@ Rules:
 
 1. **Routes never query the database.** They validate input, call a domain function and map the result to HTTP (`fail`, `redirect`).
 2. **Domain functions return outcomes, not HTTP.** Expected business failures are typed results (`shared/outcome.ts`). Exceptions are only for invariant violations.
-3. **Domains never import each other's tables.** `assets`, `service-desk` and `projects` reuse each other's rules only through exported functions, and relate records through `links`. Every domain may depend on `directory`.
+3. **Domains never import each other's tables.** `assets`, `service-desk` and `projects` reuse each other's rules only through exported functions, and relate records through `links`. Every domain may depend on `directory`. The rules are enforced by dependency-cruiser; see [ADR 0048](0048-module-boundaries-enforced-by-dependency-cruiser.md).
 4. **Specs live next to their module.**
 
 ## Consequences

@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { getDb } from '../db';
 import { createOrganisation, createPerson } from '../assets/testing/fixtures';
-import { ensureDefaultStates } from '../projects/defaults';
+import { ensureDefaultStates } from '../projects';
 import { refusalFrom } from '../db/testing/refusal';
 import { listActivity } from '../activity';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
@@ -19,11 +19,10 @@ import {
 	linkTask,
 	linkTicketToProject,
 	linkTicketToTask,
-	ticketProject,
-	ticketTask,
 	unlinkProject,
 	unlinkTask
 } from './index';
+import { ticketProject, ticketTask } from './schema';
 
 /**
  * The ticket → work relations at the module's public surface (#149). The ticket

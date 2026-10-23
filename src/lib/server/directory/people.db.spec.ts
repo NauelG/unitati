@@ -15,10 +15,10 @@ import {
 	deactivatePerson,
 	listPeople,
 	listPersonComments,
-	people,
 	reactivatePerson,
 	updatePerson
 } from '.';
+import { people } from './schema';
 
 async function setup() {
 	const organisation = await createOrganisation();

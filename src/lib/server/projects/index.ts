@@ -12,21 +12,6 @@
  * Code may depend on a state's `group`, never on its name.
  */
 
-export {
-	states,
-	projects,
-	tasks,
-	taskAssignees,
-	stateGroup,
-	projectAttachments,
-	taskAttachments,
-	projectComments,
-	taskComments,
-	projectCodeSequence,
-	taskCodeSequence,
-	projectVisibility,
-	projectMembers
-} from './schema';
 export type { State, Project, Task, TaskAssignee } from './schema';
 
 export { requireProjectScope, requireTaskScope, seesAllProjects } from './scope';

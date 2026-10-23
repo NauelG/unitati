@@ -1,7 +1,7 @@
 {
 	"name": "unitati",
 	"private": true,
-	"version": "0.118.3",
+	"version": "0.118.4",
 	"license": "AGPL-3.0-only",
 	"repository": {
 		"type": "git",
@@ -19,7 +19,8 @@
 		"prepare": "(svelte-kit sync && paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide) || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"lint": "prettier --check --cache --cache-strategy content . && eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/ .",
+		"lint:boundaries": "depcruise src --config .dependency-cruiser.cjs --ignore-known --no-cache",
+		"lint": "npm run lint:boundaries && prettier --check --cache --cache-strategy content . && eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/ .",
 		"format": "prettier --write .",
 		"test:unit": "vitest --project server --project component",
 		"test": "npm run test:unit -- --run",
@@ -55,6 +56,7 @@
 		"@types/sanitize-html": "^2.16.2",
 		"bits-ui": "^2.19.5",
 		"clsx": "^2.1.1",
+		"dependency-cruiser": "^18.7.0",
 		"drizzle-kit": "^0.31.10",
 		"eslint": "^10.4.1",
 		"eslint-config-prettier": "^10.1.8",
