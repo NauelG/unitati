@@ -119,6 +119,8 @@ forbids. There is no low-entropy secret to protect, so there is no stretching to
     object of facts about the refusal (`in_use` on a location reports the `children` and `assets`
     that block the delete). Locations, having no human-readable tag, are addressed by UUID,
   - `429` with `Retry-After`.
+  - Each endpoint declares how it answers every domain failure, and the documentation lists the
+    codes per status: see [ADR 0047](0047-api-refusals-declared-per-endpoint.md).
 - The path carries the major version. Additive changes ship in `v1`; a breaking change is
   `v2`, served alongside it.
 - Rate limiting is per key, with a fixed window held in process. One Node container serves

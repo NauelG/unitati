@@ -5,7 +5,7 @@ import { ENDPOINTS } from './endpoints';
 import type { ApiPrincipal } from './keys';
 import { buildOpenApiDocument } from './openapi';
 import { rateLimit } from './rate-limit';
-import { ApiError, matchPath, Reply, type Endpoint } from './registry';
+import { ApiError, matchPath, Reply, resolveRefusal, type Endpoint } from './registry';
 
 /**
  * The HTTP plumbing behind `src/routes/api/v1/[...path]/+server.ts`: one
@@ -123,7 +123,11 @@ export async function handleApiRequest(
 			});
 		}
 
-		const result = await endpoint.handler({ principal, input: input.data });
+		const result = await endpoint.handler({
+			principal,
+			input: input.data,
+			refuse: (failure) => resolveRefusal(endpoint.id, endpoint.refusalTable, failure)
+		});
 		const reply = result instanceof Reply ? result : new Reply(200, result);
 		// Serialised through the schema, so a field it does not name never leaves.
 		const body = endpoint.output.parse(reply.body);

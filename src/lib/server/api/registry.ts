@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type { Permission } from '../access/permissions';
+import type { Failure } from '../shared/outcome';
 import type { ApiPrincipal } from './keys';
 
 /**
@@ -51,7 +52,126 @@ export const notFound = (message = 'Not found.') => new ApiError(404, 'not_found
 /** A domain refusal, such as an illegal transition. */
 export const conflict = (code: string, message: string) => new ApiError(409, code, message);
 
-export interface Endpoint<I extends z.ZodType = z.ZodType, O extends z.ZodType = z.ZodType> {
+/** The message of a `409` whose entry gives none: the code, spelled as a sentence. */
+export const defaultConflictMessage = (code: string): string =>
+	code.replaceAll('_', ' ').replace(/^./, (c) => c.toUpperCase()) + '.';
+
+/**
+ * The refusal table (ADR 0047). An endpoint says, next to its schemas, how the
+ * API answers each failure its domain call can return. The vocabulary is
+ * closed and every entry has a statically known status, so the OpenAPI
+ * document is derived from the table without running anything.
+ *
+ * `M` is the failure member the entry answers: the object itself for a failure
+ * keyed by `kind`, `never` for a plain string code (there is nothing to compute from).
+ */
+export type RefusalEntry<M = never> =
+	/** `404 not_found`: a record that is not there, or that the key may not know about (ADR 0007). */
+	| { as: 'not_found'; message?: string }
+	/** `409`, whose code is the failure's own name. */
+	| {
+			as: 'conflict';
+			/** Defaults to the code as a sentence, as `refusal()` always did. */
+			message?: string | ((failure: M) => string);
+			/** Structured facts, serialised as `error.details`. */
+			details?: (failure: M) => Record<string, unknown>;
+			/** One line for the documentation, for facts the message does not carry. */
+			describe?: string;
+	  }
+	/** `400 invalid_input` with one issue on a named body field. */
+	| { as: 'field'; path: string; message: string | ((failure: M) => string) }
+	/** `403 forbidden_create`: the key may see the record but not create what is asked. */
+	| { as: 'forbidden' }
+	/** `422 invalid_input`: the domain rejected values that parsed. */
+	| { as: 'unprocessable' }
+	/**
+	 * Impossible given this endpoint's input (the API accepts no attachments, offers
+	 * no waiver). Never documented; reaching it is a bug and answers `500`.
+	 * `why` is mandatory so the assumption is written where it is made.
+	 */
+	| { as: 'unreachable'; why: string };
+
+/** The key a failure has in a table: the code itself, or the `kind` of an object failure. */
+export type FailureKey<F> = F extends string
+	? F
+	: F extends { kind: infer K extends string }
+		? K
+		: never;
+
+/** One entry per member of the failure union, and no other: exhaustive in both directions. */
+export type RefusalEntries<F extends Failure> = {
+	[K in FailureKey<F>]: RefusalEntry<Extract<F, { kind: K }>>;
+};
+
+/** The table an endpoint declares. `F` is carried by the type only: it is what `refuse` accepts. */
+export interface RefusalTable<F extends Failure = Failure> {
+	/** Exhaustiveness is checked by `refusalTable()`; the stored form is loose so `F` stays easy to compare. */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	readonly entries: Readonly<Record<string, RefusalEntry<any>>>;
+	readonly __failure?: F;
+}
+
+/**
+ * Builds a table. `F` is named explicitly (the failure union the handler refuses
+ * with), so a member missing from `entries`, or one that is not in `F`, does not compile.
+ */
+export function refusalTable<F extends Failure>(entries: RefusalEntries<F>): RefusalTable<F> {
+	return { entries: entries as RefusalTable<F>['entries'] };
+}
+
+const keyOf = (failure: Failure): string => (typeof failure === 'string' ? failure : failure.kind);
+
+/** The `ApiError` a failure answers with, per its table entry. An unreachable entry yields a plain `Error`: a `500`. */
+export function resolveRefusal<F extends Failure>(
+	endpointId: string,
+	table: RefusalTable<F> | undefined,
+	failure: F
+): Error {
+	const key = keyOf(failure);
+	if (!table)
+		return new Error(`Endpoint ${endpointId} declares no refusal table (refused ${key}).`);
+	const entry = table.entries[key];
+	if (!entry) return new Error(`Endpoint ${endpointId} has no refusal entry for ${key}.`);
+
+	// The entry's functions take the typed member; the table type guarantees it is the right one.
+	const member = failure as never;
+	switch (entry.as) {
+		case 'not_found':
+			return notFound(entry.message);
+		case 'conflict': {
+			const message = typeof entry.message === 'function' ? entry.message(member) : entry.message;
+			return new ApiError(
+				409,
+				key,
+				message ?? defaultConflictMessage(key),
+				undefined,
+				entry.details?.(member)
+			);
+		}
+		case 'field':
+			return new ApiError(400, 'invalid_input', 'The request is not valid.', [
+				{
+					path: [entry.path],
+					message: typeof entry.message === 'function' ? entry.message(member) : entry.message
+				}
+			]);
+		case 'forbidden':
+			return new ApiError(403, 'forbidden_create', 'The key may not create this record.');
+		case 'unprocessable':
+			return new ApiError(422, 'invalid_input', 'The values are not valid.');
+		case 'unreachable':
+			return new Error(
+				`Endpoint ${endpointId} reached an unreachable refusal ${key}: ${entry.why}`
+			);
+	}
+}
+
+export interface Endpoint<
+	I extends z.ZodType = z.ZodType,
+	O extends z.ZodType = z.ZodType,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the registry holds endpoints of every failure union
+	F extends Failure = any
+> {
 	/** Stable use-case id, e.g. `tickets.list`. */
 	id: string;
 	method: HttpMethod;
@@ -70,6 +190,12 @@ export interface Endpoint<I extends z.ZodType = z.ZodType, O extends z.ZodType =
 	 * name but not do, `422` for input that parses and that the domain rejects.
 	 */
 	refusals?: readonly (403 | 422)[];
+	/**
+	 * Every failure the handler refuses with, each mapped to one answer (ADR 0047).
+	 * When present, the documentation derives the error responses from it and
+	 * `refusals` is ignored. Endpoints not yet migrated keep the generic behaviour.
+	 */
+	refusalTable?: RefusalTable<F>;
 	/** "Any of", like `requireAnyPermission`. Never empty. */
 	permissions: readonly [Permission, ...Permission[]];
 	/** Path parameters, query string and JSON body, merged; path parameters win. */
@@ -78,13 +204,15 @@ export interface Endpoint<I extends z.ZodType = z.ZodType, O extends z.ZodType =
 	handler: (context: {
 		principal: ApiPrincipal;
 		input: z.output<I>;
+		/** The `ApiError` to throw for a failure; accepts only what this endpoint's table covers. */
+		refuse: (failure: F) => Error;
 	}) => Promise<z.input<O> | Reply<z.input<O>>>;
 }
 
 /** Identity at runtime; exists so each declaration's schemas and handler are checked against each other. */
-export function defineEndpoint<I extends z.ZodType, O extends z.ZodType>(
-	endpoint: Endpoint<I, O>
-): Endpoint<I, O> {
+export function defineEndpoint<I extends z.ZodType, O extends z.ZodType, F extends Failure = never>(
+	endpoint: Endpoint<I, O, F>
+): Endpoint<I, O, F> {
 	if (endpoint.permissions.length === 0) {
 		throw new Error(`Endpoint ${endpoint.id} needs at least one permission.`);
 	}

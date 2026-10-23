@@ -1,4 +1,4 @@
-import { ApiError, conflict, notFound } from '../registry';
+import { ApiError, conflict, defaultConflictMessage, notFound } from '../registry';
 
 /** A reference in the body that points at nothing: a field the caller can fix, so a `400` on that field. */
 export function invalidField(field: string, message: string): ApiError {
@@ -39,8 +39,5 @@ export function refusal(failure: string): ApiError {
 	) {
 		return notFound();
 	}
-	return conflict(
-		failure,
-		failure.replaceAll('_', ' ').replace(/^./, (c) => c.toUpperCase()) + '.'
-	);
+	return conflict(failure, defaultConflictMessage(failure));
 }
