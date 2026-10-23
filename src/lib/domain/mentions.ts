@@ -29,6 +29,12 @@ export function mentionToken(name: string, personId: string): string {
 	return `@[${escapeMentionLabel(name)}](person:${personId})`;
 }
 
+/** The people `after` names that `before` did not: who an edit newly mentions. */
+export function addedMentions(before: string, after: string): string[] {
+	const known = new Set(extractMentions(before));
+	return extractMentions(after).filter((id) => !known.has(id));
+}
+
 /** The people named in a markdown body: unique ids, in order of first appearance. */
 export function extractMentions(markdown: string): string[] {
 	const ids: string[] = [];

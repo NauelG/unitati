@@ -13,9 +13,10 @@ export {
 	pages,
 	pageRevisions,
 	pageAttachments,
-	pageCodeSequence
+	pageCodeSequence,
+	pageComments
 } from './schema';
-export type { KnowledgeSpace, Page, PageAttachment, PageRevision } from './schema';
+export type { KnowledgeSpace, Page, PageAttachment, PageComment, PageRevision } from './schema';
 
 export {
 	addPageAttachments,
@@ -68,6 +69,14 @@ export type {
 	SaveResult,
 	StaleRevision
 } from './revisions';
+
+export { addPageComment, editPageComment, listPageComments, mentionablesForPage } from './comments';
+export type {
+	PageCommentEditFailure,
+	PageCommentFailure,
+	PageCommentView,
+	PageMentionable
+} from './comments';
 
 export { readablePages, readableSpaces, requireSpaceScope } from './scope';
 

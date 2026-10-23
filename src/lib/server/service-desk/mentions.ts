@@ -6,7 +6,7 @@ import { userRole, users } from '../auth/schema';
 import { getDb, type Executor, type Transaction } from '../db';
 import { people } from '../directory/schema';
 import { followTicket, notify, type PendingEmail } from '../notifications';
-import { plainExcerpt } from '../shared/markdown';
+import { likePattern, MENTION_PICKER_LIMIT, mentionSnapshot } from '../shared/mentions';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { ticketComments, tickets } from './schema';
 import { requireTicketScope } from './scope';
@@ -18,9 +18,6 @@ import { requireTicketScope } from './scope';
  * client**: a token in the markdown only becomes a notification when this says
  * the person may see what is being written.
  */
-
-/** What the picker shows at most (#303). */
-export const MENTION_PICKER_LIMIT = 8;
 
 export type MentionVisibility = 'public' | 'internal';
 
@@ -34,11 +31,6 @@ export type Mentionable = { id: string; label: string; hint: string };
 
 /** The roles that work tickets: those holding `tickets.view`. */
 const STAFF_ROLES = userRole.enumValues.filter((role) => roleCan(role, 'tickets.view'));
-
-/** `%` and `_` in a search are literal characters, not wildcards. */
-function likePattern(query: string): string {
-	return `%${query.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
-}
 
 /**
  * The people `viewer` may mention on `ticket` in a comment of `visibility`, never
@@ -175,9 +167,6 @@ export async function allowedMentions(
 	return named.filter((id) => ids.has(id));
 }
 
-/** The longest excerpt a notification carries (ADR 0040). */
-const EXCERPT_LENGTH = 280;
-
 type NotifiableTicket = MentionableTicket & { ticketTag: string; subject: string };
 
 /** What every notification about a comment says: the ticket, who wrote, and how it starts. */
@@ -186,12 +175,7 @@ export function commentSnapshot(
 	actor: { name: string },
 	body: string
 ) {
-	return {
-		code: ticket.ticketTag,
-		title: ticket.subject,
-		actorName: actor.name,
-		excerpt: plainExcerpt(body, EXCERPT_LENGTH) || undefined
-	};
+	return mentionSnapshot({ code: ticket.ticketTag, title: ticket.subject }, actor, body);
 }
 
 /**

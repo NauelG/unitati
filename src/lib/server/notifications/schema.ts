@@ -12,6 +12,7 @@ import {
 	uuid
 } from 'drizzle-orm/pg-core';
 import { organisations, people } from '../directory/schema';
+import { pages } from '../knowledge/schema';
 import { projects, tasks } from '../projects/schema';
 import { tickets } from '../service-desk/schema';
 import type { Snapshot } from './snapshot';
@@ -22,7 +23,7 @@ import { NOTIFICATION_CHANNELS, NOTIFICATION_TYPES } from './types';
  * `activity`: this module owns the tables, the domains call `notify` inside their
  * own transaction.
  *
- * It imports the tables of `service-desk` and `projects` for one reason, exactly
+ * It imports the tables of `service-desk`, `projects` and `knowledge` for one reason, exactly
  * as `activity` does: a foreign key has to name its table, and the database
  * should refuse a notification about a record that does not exist. The
  * dependency runs one way (a domain calls `notify`; this file points at the
@@ -49,6 +50,7 @@ export const notifications = pgTable(
 		ticketId: uuid('ticket_id').references(() => tickets.id, { onDelete: 'cascade' }),
 		taskId: uuid('task_id').references(() => tasks.id, { onDelete: 'cascade' }),
 		projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+		pageId: uuid('page_id').references(() => pages.id, { onDelete: 'cascade' }),
 		snapshot: jsonb('snapshot').notNull().$type<Snapshot>(),
 		readAt: timestamp('read_at', { withTimezone: true }),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
@@ -56,7 +58,7 @@ export const notifications = pgTable(
 	(table) => [
 		check(
 			'notifications_exactly_one_target',
-			sql`num_nonnulls(${table.ticketId}, ${table.taskId}, ${table.projectId}) = 1`
+			sql`num_nonnulls(${table.ticketId}, ${table.taskId}, ${table.projectId}, ${table.pageId}) = 1`
 		),
 		index('notifications_recipient_created').on(table.recipientPersonId, table.createdAt.desc()),
 		index('notifications_recipient_unread')

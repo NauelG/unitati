@@ -25,6 +25,7 @@
 	import CreatePageDialog from '../CreatePageDialog.svelte';
 	import KnowledgeTree from '../KnowledgeTree.svelte';
 	import MovePageDialog from '../MovePageDialog.svelte';
+	import PageComments from './PageComments.svelte';
 	import type { PageProps } from './$types';
 	import { pageTrail } from '../trail.js';
 
@@ -132,6 +133,14 @@
 			<EmptyState description={m.knowledge_page_body_empty()} />
 		{/if}
 	</WorkPanel>
+
+	<PageComments
+		comments={data.comments}
+		archived={status === 'archived'}
+		mentionsUrl={`/knowledge/${data.page.tag}/mentions`}
+		error={form?.action === 'addComment' ? form.message : null}
+		editError={form?.action === 'editComment' ? form.message : null}
+	/>
 
 	{#snippet side()}
 		<RecordAttachments

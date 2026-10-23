@@ -70,7 +70,8 @@ export type {
 	EditCommentFailure
 } from './comments';
 
-export { searchMentionables, searchStaffMentionables, MENTION_PICKER_LIMIT } from './mentions';
+export { searchMentionables, searchStaffMentionables } from './mentions';
+export { MENTION_PICKER_LIMIT } from '../shared/mentions';
 export type { Mentionable, MentionVisibility } from './mentions';
 
 export { listQueues, defaultQueue, createQueue, renameQueue, deleteQueue } from './queues';

@@ -39,7 +39,12 @@ export type NotificationFailure = 'not_found';
  * `tickets.view` (an employee) reads their tickets in the portal.
  */
 export function notificationHref(
-	row: { ticketId: string | null; taskId: string | null; snapshot: Snapshot },
+	row: {
+		ticketId: string | null;
+		taskId: string | null;
+		pageId?: string | null;
+		snapshot: Snapshot;
+	},
 	viewer: Pick<Viewer, 'role' | 'scopes'>
 ): string {
 	const code = encodeURIComponent(row.snapshot.code);
@@ -47,6 +52,10 @@ export function notificationHref(
 		return can(viewer, 'tickets.view') ? `/service-desk/${code}` : `/portal/tickets/${code}`;
 	}
 	if (row.taskId) return `/tasks/${code}`;
+	if (row.pageId) {
+		const anchor = row.snapshot.commentId ? `#comment-${row.snapshot.commentId}` : '';
+		return `/knowledge/${code}${anchor}`;
+	}
 	return `/projects/${code}`;
 }
 
@@ -104,6 +113,7 @@ export async function listInbox(
 			createdAt: notifications.createdAt,
 			ticketId: notifications.ticketId,
 			taskId: notifications.taskId,
+			pageId: notifications.pageId,
 			cursorAt: sql<string>`${notifications.createdAt}::text`
 		})
 		.from(notifications)

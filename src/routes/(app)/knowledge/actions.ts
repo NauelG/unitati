@@ -40,6 +40,8 @@ const MESSAGES: Record<string, () => string> = {
 	parent_not_found: () => m.knowledge_error_parent_not_found(),
 	parent_archived: () => m.knowledge_error_parent_archived(),
 	archived: () => m.knowledge_error_archived(),
+	page_archived: () => m.knowledge_error_archived(),
+	empty_body: () => m.knowledge_comments_error_empty(),
 	not_archived: () => m.knowledge_error_not_archived(),
 	cycle: () => m.knowledge_error_cycle(),
 	parent_unpublished: () => m.knowledge_error_parent_unpublished(),
