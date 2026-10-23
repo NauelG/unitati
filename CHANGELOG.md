@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.112.0] - 2026-10-23
+
+### Added
+
+- Attachments on knowledge-base pages (#325, part of #17). Staff attach up to 5 files of 10 MB per
+  upload to a page (a vendor PDF, a script, a configuration file) from the "Adjuntos" panel of
+  `/knowledge/DOC-####`, and remove them with a confirmation. Files are download-only and never
+  previewed. Adding or removing one is recorded in the page's history and creates no revision.
+
 ## [0.111.0] - 2026-10-23
 
 ### Added
