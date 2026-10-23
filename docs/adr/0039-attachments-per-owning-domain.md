@@ -14,7 +14,7 @@ generalising that table; `Storage` has since moved to `shared/` (#272).
 ## Decision
 
 1. **Each domain owns its attachments table**: `attachments` (service desk, per comment),
-   `project_attachments` and `task_attachments` (projects), and `asset_attachments` (assets). Same columns, each with a real foreign
+   `project_attachments` and `task_attachments` (projects), `asset_attachments` (assets), and `page_attachments` (knowledge). Same columns, each with a real foreign
    key to its owner and `on delete cascade`.
 2. **All of them write bytes through the shared `Storage`.** The limits (`attachmentProblem`),
    the multipart-to-`UploadedFile` step and the server-generated storage key live in

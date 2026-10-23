@@ -51,6 +51,7 @@
 		MAX_ATTACHMENT_BYTES,
 		MAX_ATTACHMENTS_PER_COMMENT
 	} from '#lib/domain/attachments.js';
+	import { formatDateTime } from '#lib/format-date.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import Button from './Button.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
@@ -62,6 +63,9 @@
 		filename: string;
 		contentType: string;
 		byteSize: number;
+		/** Shown when the record keeps who uploaded the file and when. */
+		uploaderName?: string | null;
+		createdAt?: Date | string;
 	}
 
 	interface Props {
@@ -190,7 +194,11 @@
 						>
 							{item.filename}
 						</a>
-						<span class={styles.meta()}>{formatBytes(item.byteSize)} · {item.contentType}</span>
+						<span class={styles.meta()}>
+							{formatBytes(item.byteSize)} · {item.contentType}{#if item.uploaderName}
+								· {item.uploaderName}{/if}{#if item.createdAt}
+								· {formatDateTime(new Date(item.createdAt))}{/if}
+						</span>
 					</div>
 					{#if canManage}
 						<Button

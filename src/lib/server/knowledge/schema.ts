@@ -137,6 +137,36 @@ export const pageRevisions = pgTable(
 	(table) => [unique('page_revisions_page_number').on(table.pageId, table.number)]
 );
 
+/**
+ * Files attached to a page (ADR 0039): the knowledge base's own table, with a real
+ * foreign key. Bytes live in `Storage`, keyed by `storage_key`. Attaching a file
+ * is not an edit of the page, so it appends no revision.
+ */
+export const pageAttachments = pgTable(
+	'page_attachments',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		pageId: uuid('page_id')
+			.notNull()
+			.references(() => pages.id, { onDelete: 'cascade' }),
+		uploadedByPersonId: uuid('uploaded_by_person_id').references(() => people.id, {
+			onDelete: 'set null'
+		}),
+		filename: text('filename').notNull(),
+		/** `application/octet-stream` when the browser sends none. */
+		contentType: text('content_type').notNull(),
+		byteSize: integer('byte_size').notNull(),
+		/** Server-generated and opaque: never derived from the filename or the request. */
+		storageKey: text('storage_key').notNull().unique(),
+		...timestamps
+	},
+	(table) => [index('page_attachments_page_idx').on(table.pageId)]
+);
+
 export type KnowledgeSpace = typeof knowledgeSpaces.$inferSelect;
 export type Page = typeof pages.$inferSelect;
 export type PageRevision = typeof pageRevisions.$inferSelect;
+export type PageAttachment = typeof pageAttachments.$inferSelect;

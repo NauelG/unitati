@@ -29,7 +29,7 @@ A **person page** (`/directory/{id}`, `people.view`) composes one person from se
 
 An asset's **label** carries a QR that encodes `{public address}/s/{tag}`. That **scan route** is a contract that never changes: it resolves the tag for whoever is scanning, sends a signed-in viewer to the asset (or a 404 if they may not see it) and an anonymous one to the login, which returns to it ([ADR 0038](adr/0038-asset-labels-and-the-scan-route.md)).
 
-An **attachment** is a file that belongs to exactly one owner: a ticket **comment**, a **project** or a **task**. Each owning domain keeps its own table and writes the bytes through the shared store ([ADR 0039](adr/0039-attachments-per-owning-domain.md)); an attachment has no code, no page and no existence apart from its owner. Limits are the same everywhere: 5 files per submission, 10 MiB each. It is downloaded, never previewed.
+An **attachment** is a file that belongs to exactly one owner: a ticket **comment**, a **project**, a **task** or a knowledge **page**. Each owning domain keeps its own table and writes the bytes through the shared store ([ADR 0039](adr/0039-attachments-per-owning-domain.md)); an attachment has no code and no existence apart from its owner. Limits are the same everywhere: 5 files per submission, 10 MiB each. It is downloaded, never previewed. A page's attachments are not part of its revisions: adding or removing one appends none.
 
 `Organisation` exists so the schema is tenant-ready while exactly one row is used: every aggregate root carries `organisation_id` ([ADR 0004](adr/0004-tenancy.md)).
 
@@ -79,6 +79,7 @@ erDiagram
     PROJECT ||--o{ ATTACHMENT : "has"
     TASK ||--o{ ATTACHMENT : "has"
     COMMENT ||--o{ ATTACHMENT : "has"
+    PAGE ||--o{ ATTACHMENT : "has"
 
     TICKET ||--o{ TICKET_ASSET : "affects"
     ASSET ||--o{ TICKET_ASSET : "affected by"
