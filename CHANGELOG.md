@@ -5,6 +5,23 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.113.0] - 2026-10-23
+
+### Added
+
+- Staff comments with mentions on knowledge-base pages (#326, part of #17). Technicians and admins
+  discuss a page in a "Comentarios" section below its text, in `staff` and `portal` spaces alike;
+  employees never see it. `@` offers active colleagues who can manage the knowledge base, and each
+  person mentioned gets a notification in the bell and a mail that opens the comment. Authors can
+  edit their own comments (they then read "editado"); nobody deletes one. An archived page keeps its
+  comments readable and takes no new ones. Editing a comment to add a mention notifies only the new
+  person.
+
+### Changed
+
+- Notifications can target a knowledge page. The generic mention logic (who an edit newly names, the
+  excerpt a notification carries) no longer lives in the service desk.
+
 ## [0.112.0] - 2026-10-23
 
 ### Added
