@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { getAuth } from '../auth';
 import type { SessionUser } from '../auth/guards';
-import { provisionFirstAdmin } from '../auth/provision';
+import { provisionFirstAdmin } from '../provisioning';
 import { users, type UserRole } from '../auth/schema';
 import { getDb } from '../db';
 import { organisations, people, resolveSessionUser } from '../directory';
