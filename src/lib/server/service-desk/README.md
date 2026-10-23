@@ -15,7 +15,7 @@ Later: canned responses, SLAs, inbound email.
 | `transitions.ts`   | The status workflow, as data                                                                                                                                                             |
 | `mentions.ts`      | Who may be @mentioned on a ticket (`mentionableFor`, one rule for the picker and for every write), and the notification + follow of the people a body names (#303)                       |
 | `scope.ts`         | Which tickets a viewer sees; who sees internal notes                                                                                                                                     |
-| `summaries.ts`     | Reads other domains draw on: `ticketSummaries`, `assignedOpenTickets`                                                                                                                    |
+| `summaries.ts`     | Reads other domains draw on: `ticketSummaries`, `assignedOpenTickets`, `ticketInOrganisation` (tenancy only, consumed by `links` for writes)                                             |
 
 ## Decisions worth knowing before changing this
 

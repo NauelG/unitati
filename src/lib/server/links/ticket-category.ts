@@ -1,9 +1,9 @@
 import { and, eq } from 'drizzle-orm';
-import { categories } from '../assets/schema';
+import { categoryInOrganisation as findCategory } from '../assets';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
+import { ticketInOrganisation } from '../service-desk';
 import { failure, success, type Outcome } from '../shared/outcome';
-import { ticketInOrganisation } from './ticket-asset';
 import { ticketCategory } from './schema';
 
 /**
@@ -25,12 +25,7 @@ export async function categoryInOrganisation(
 	actor: SessionUser,
 	categoryId: string
 ): Promise<RequestedCategory | null> {
-	const [category] = await getDb()
-		.select({ id: categories.id, name: categories.name })
-		.from(categories)
-		.where(and(eq(categories.id, categoryId), eq(categories.organisationId, actor.organisationId)))
-		.limit(1);
-	return category ?? null;
+	return findCategory(getDb(), actor.organisationId, categoryId);
 }
 
 /**
@@ -45,13 +40,7 @@ export async function linkCategory(
 ): Promise<Outcome<void, LinkCategoryFailure>> {
 	if (!(await ticketInOrganisation(tx, actor, pair.ticketId))) return failure('ticket_not_found');
 
-	const [category] = await tx
-		.select({ id: categories.id })
-		.from(categories)
-		.where(
-			and(eq(categories.id, pair.categoryId), eq(categories.organisationId, actor.organisationId))
-		)
-		.limit(1);
+	const category = await findCategory(tx, actor.organisationId, pair.categoryId);
 	if (!category) return failure('category_not_found');
 
 	await tx
@@ -76,14 +65,15 @@ export async function requestedCategory(
 	organisationId: string,
 	ticketId: string
 ): Promise<RequestedCategory | null> {
-	const [row] = await getDb()
-		.select({ id: categories.id, name: categories.name })
+	const [link] = await getDb()
+		.select({ categoryId: ticketCategory.categoryId })
 		.from(ticketCategory)
-		.innerJoin(categories, eq(categories.id, ticketCategory.categoryId))
 		.where(
 			and(eq(ticketCategory.organisationId, organisationId), eq(ticketCategory.ticketId, ticketId))
 		)
 		.orderBy(ticketCategory.createdAt)
 		.limit(1);
-	return row ?? null;
+	if (!link) return null;
+
+	return findCategory(getDb(), organisationId, link.categoryId);
 }

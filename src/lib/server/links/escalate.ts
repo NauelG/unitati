@@ -9,8 +9,8 @@ import {
 	projectSnapshot,
 	taskSnapshot
 } from '../projects';
+import { ticketInOrganisation } from '../service-desk';
 import { failure, success, type Outcome } from '../shared/outcome';
-import { ticketInOrganisation } from './ticket-asset';
 import { linkProject, linkTask } from './ticket-work';
 
 /**

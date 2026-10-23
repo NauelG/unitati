@@ -2,7 +2,7 @@ import { and, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import type { Priority, TicketStatus } from '#lib/domain/status.js';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
-import { getDb } from '../db';
+import { getDb, type Executor } from '../db';
 import { people } from '../directory/schema';
 import { tickets } from './schema';
 import { requireTicketScope } from './scope';
@@ -39,6 +39,29 @@ export async function ticketSummaries(viewer: SessionUser, ids: string[]): Promi
 		.from(tickets)
 		.leftJoin(people, eq(tickets.assigneePersonId, people.id))
 		.where(and(requireTicketScope(viewer), inArray(tickets.id, ids)));
+}
+
+/**
+ * The ticket, scoped to the actor's organisation and nothing more.
+ *
+ * Carries tenancy, not "who may write to this ticket": that rule is ours and
+ * this function does not restate it. `links` calls it with a ticket the caller
+ * has already authorised (it just created it, or its route is gated by
+ * `tickets.manage`), exactly as the staff writes here trust the route and scope
+ * tenancy only.
+ */
+export async function ticketInOrganisation(
+	executor: Executor,
+	actor: SessionUser,
+	ticketId: string
+): Promise<{ id: string } | null> {
+	const [ticket] = await executor
+		.select({ id: tickets.id })
+		.from(tickets)
+		.where(and(eq(tickets.id, ticketId), eq(tickets.organisationId, actor.organisationId)))
+		.limit(1);
+
+	return ticket ?? null;
 }
 
 /** Whether the viewer is the requester of this ticket of their organisation. */

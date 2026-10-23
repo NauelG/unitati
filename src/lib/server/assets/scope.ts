@@ -16,8 +16,8 @@ import { assets } from './schema';
  * runtime rather than at module scope. A leaf module no one imports back is not
  * a cycle at all.
  *
- * `index.ts` still re-exports `requireAssetScope`, so `links` and anything else
- * outside the domain keeps importing it from `'../assets'` unchanged.
+ * The scope is internal to the domain: other domains ask through
+ * `link-targets.ts` (`findAssetInScope`, `assetSummaries`) instead of composing it.
  */
 
 /**
@@ -57,11 +57,7 @@ function visibleAssets(viewer: SessionUser): SQL | null {
 	return and(organisation, or(...clauses)) as SQL;
 }
 
-/**
- * Exported for `links`, which has to ask "may this person see this asset?" when
- * somebody attaches one to a ticket. The rule stays here, in one place: `links`
- * composes it into its own query instead of restating who holds what (ADR 0002).
- */
+/** The one place that says who holds what; every asset read in the domain starts from it. */
 export function requireAssetScope(
 	viewer: SessionUser,
 	options: { includeArchived?: boolean } = {}

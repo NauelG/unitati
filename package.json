@@ -1,7 +1,7 @@
 {
 	"name": "unitati",
 	"private": true,
-	"version": "0.118.0",
+	"version": "0.118.1",
 	"license": "AGPL-3.0-only",
 	"repository": {
 		"type": "git",

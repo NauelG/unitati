@@ -42,17 +42,6 @@ function withProjectReads(principal: ApiPrincipal): ApiPrincipal {
 	return { ...principal, scopes: [...new Set([...principal.scopes, ...PROJECT_READS])] };
 }
 
-/**
- * `relatedTo` of a ticket also resolves the assets it affects, and refuses a
- * viewer with no asset-read scope. This endpoint never returns them, so the
- * scopes are added for that call only and widen nothing the owner lacks.
- */
-const ASSET_READS = ['assets.view', 'assets.view.own', 'assets.view.shared'] as const;
-
-function withAssetReads(principal: ApiPrincipal): ApiPrincipal {
-	return { ...principal, scopes: [...new Set([...principal.scopes, ...ASSET_READS])] };
-}
-
 const tag = z.string().min(1);
 
 /* -------------------------------------------------------------------------- */
@@ -338,7 +327,7 @@ export const ticketWorkEndpoint = defineEndpoint({
 	output: relatedResponse,
 	handler: async ({ principal, input }) => {
 		// Seeing the work of a ticket is part of reading it; the role still decides what.
-		const actor = withAssetReads(withProjectReads(principal));
+		const actor = withProjectReads(principal);
 		const ticket = await getTicketByTag(actor, input.tag);
 		if (!ticket.ok) throw notFound();
 

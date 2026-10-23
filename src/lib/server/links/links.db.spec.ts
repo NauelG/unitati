@@ -481,6 +481,31 @@ describe('unlinkAsset', () => {
 		});
 	});
 
+	it('unlinks an archived asset and records its snapshot', async () => {
+		const { organisation, technician, ticket, pair } = await linked();
+		// Straight in the table: `archiveAsset` refuses an asset that has custody history.
+		await getDb().update(assets).set({ archivedAt: new Date() }).where(eq(assets.id, pair.assetId));
+
+		const outcome = await unlinkAsset(technician, pair);
+		const history = await listActivity({
+			organisationId: organisation.id,
+			target: { ticketId: ticket.id }
+		});
+
+		expect({
+			outcome,
+			links: (await getDb().select().from(ticketAsset)).length,
+			latest: history[0] && { verb: history[0].verb, payload: history[0].payload }
+		}).toEqual({
+			outcome: { ok: true, value: undefined },
+			links: 0,
+			latest: {
+				verb: 'link.asset.removed',
+				payload: { assetId: pair.assetId, assetTag: 'AST-0142', assetName: 'MacBook Pro 14' }
+			}
+		});
+	});
+
 	it('is refused to an employee, who cannot undo what staff attached', async () => {
 		const { employee, pair } = await linked();
 

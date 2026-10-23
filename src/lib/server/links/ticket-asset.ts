@@ -1,12 +1,11 @@
 import { and, eq } from 'drizzle-orm';
 import { actorColumns, recordActivity } from '../activity';
 import { can } from '../access/permissions';
-import { requireAssetScope } from '../assets';
-import { assets } from '../assets/schema';
+import { assetSnapshot, findAssetInScope, type AssetLinkTarget } from '../assets';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { failure, success, type Outcome } from '../shared/outcome';
-import { tickets } from '../service-desk/schema';
+import { ticketInOrganisation } from '../service-desk';
 import { ticketAsset } from './schema';
 
 /**
@@ -28,37 +27,6 @@ export interface TicketAssetPair {
 export type LinkAssetFailure = 'ticket_not_found' | 'asset_not_found' | 'already_linked';
 
 /**
- * The ticket, scoped to the actor's organisation and nothing more.
- *
- * Who may write to *which* ticket is `service-desk`'s rule, and this function
- * does not restate it: the caller has already authorised the ticket (it just
- * created it, or its route is gated by `tickets.manage`), exactly as the staff
- * writes in `service-desk` trust the route and scope tenancy only. Importing
- * that rule from `service-desk` would make the two domains depend on each other,
- * because `createTicket` is the thing that calls `linkAsset`.
- */
-export async function ticketInOrganisation(tx: Transaction, actor: SessionUser, ticketId: string) {
-	const [ticket] = await tx
-		.select({ id: tickets.id })
-		.from(tickets)
-		.where(and(eq(tickets.id, ticketId), eq(tickets.organisationId, actor.organisationId)))
-		.limit(1);
-
-	return ticket ?? null;
-}
-
-/** The asset as the actor may see it — the rule lives in `assets`, not here. */
-async function visibleAsset(tx: Transaction, actor: SessionUser, assetId: string) {
-	const [asset] = await tx
-		.select({ id: assets.id, assetTag: assets.assetTag, name: assets.name })
-		.from(assets)
-		.where(and(requireAssetScope(actor), eq(assets.id, assetId)))
-		.limit(1);
-
-	return asset ?? null;
-}
-
-/**
  * Writes one link and its `link.asset.added` entry; `false` when the pair was
  * already there and nothing was written.
  *
@@ -70,7 +38,7 @@ async function insertLink(
 	tx: Transaction,
 	actor: SessionUser,
 	ticketId: string,
-	asset: { id: string; assetTag: string; name: string }
+	asset: AssetLinkTarget
 ): Promise<boolean> {
 	const inserted = await tx
 		.insert(ticketAsset)
@@ -102,7 +70,7 @@ async function insertLink(
  * **The ticket is the caller's to authorise; the asset is ours to check.** The
  * actor can only attach what they can see: an employee attaches the
  * laptop they hold or a shared printer and nothing else, which is
- * `requireAssetScope` and is enforced here rather than in the form: a request
+ * `findAssetInScope` and is enforced here rather than in the form: a request
  * posted by hand with another asset's id meets the same check.
  *
  * Takes a `Transaction` like `recordActivity`, because linking happens while a
@@ -116,7 +84,7 @@ export async function linkAsset(
 	const ticket = await ticketInOrganisation(tx, actor, pair.ticketId);
 	if (!ticket) return failure('ticket_not_found');
 
-	const asset = await visibleAsset(tx, actor, pair.assetId);
+	const asset = await findAssetInScope(tx, actor, pair.assetId);
 	if (!asset) return failure('asset_not_found');
 
 	const created = await insertLink(tx, actor, ticket.id, asset);
@@ -179,7 +147,7 @@ export async function linkTicketAssets(
 				const ticket = await ticketInOrganisation(tx, actor, pair.ticketId);
 				if (!ticket) throw new Refusal({ reason: 'ticket_not_found', id: pair.ticketId });
 
-				const asset = await visibleAsset(tx, actor, pair.assetId);
+				const asset = await findAssetInScope(tx, actor, pair.assetId);
 				if (!asset) throw new Refusal({ reason: 'asset_not_found', id: pair.assetId });
 
 				if (await insertLink(tx, actor, ticket.id, asset)) linked += 1;
@@ -212,9 +180,8 @@ export async function unlinkAsset(
 		// The snapshot is read before the row goes: the entry says which asset it
 		// was even after the asset is renamed or retired (ADR 0009).
 		const [link] = await tx
-			.select({ id: ticketAsset.id, assetTag: assets.assetTag, assetName: assets.name })
+			.select({ id: ticketAsset.id })
 			.from(ticketAsset)
-			.innerJoin(assets, eq(ticketAsset.assetId, assets.id))
 			.where(
 				and(
 					eq(ticketAsset.organisationId, actor.organisationId),
@@ -225,6 +192,11 @@ export async function unlinkAsset(
 			.limit(1);
 		if (!link) return failure('not_linked');
 
+		// Archived assets included: a retired link is still undone with its name.
+		const asset = await assetSnapshot(tx, actor.organisationId, pair.assetId);
+		// The foreign key makes this unreachable; it narrows the type without a cast.
+		if (!asset) return failure('not_linked');
+
 		await tx.delete(ticketAsset).where(eq(ticketAsset.id, link.id));
 
 		await recordActivity(tx, {
@@ -232,7 +204,7 @@ export async function unlinkAsset(
 			...actorColumns(actor),
 			target: { ticketId: pair.ticketId },
 			verb: 'link.asset.removed',
-			payload: { assetId: pair.assetId, assetTag: link.assetTag, assetName: link.assetName }
+			payload: { assetId: pair.assetId, assetTag: asset.assetTag, assetName: asset.name }
 		});
 
 		return success(undefined);

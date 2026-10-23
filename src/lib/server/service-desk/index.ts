@@ -55,6 +55,7 @@ export { ticketOpeningsSparkline } from './sparkline';
 
 export {
 	ticketSummaries,
+	ticketInOrganisation,
 	isRequester,
 	assignedOpenTickets,
 	countOpenTicketsAssignedTo

@@ -13,6 +13,59 @@ const NOTIFICATIONS_TABLES = {
 		'Domains call notify() from the notifications index and never read its tables (ADR 0040).'
 };
 
+/**
+ * The tables, enums and sequences each barrel re-exports. `links` may not import
+ * them (ADR 0002): it asks the owner's functions instead. MAINTAINED BY HAND:
+ * when one of these barrels re-exports a new table or enum, add its name here.
+ */
+const BARREL_TABLES = {
+	assets: [
+		'assets',
+		'assetModels',
+		'categories',
+		'manufacturers',
+		'assetState',
+		'assetCodeSequence'
+	],
+	'service-desk': [
+		'queues',
+		'requestForms',
+		'requestFormKind',
+		'tickets',
+		'ticketComments',
+		'attachments',
+		'ticketStatus',
+		'ticketPriority',
+		'ticketChannel',
+		'commentVisibility',
+		'ticketCodeSequence'
+	],
+	projects: [
+		'states',
+		'projects',
+		'tasks',
+		'taskAssignees',
+		'stateGroup',
+		'projectAttachments',
+		'taskAttachments',
+		'projectComments',
+		'taskComments',
+		'projectCodeSequence',
+		'taskCodeSequence',
+		'projectVisibility',
+		'projectMembers'
+	],
+	knowledge: [
+		'knowledgeSpaces',
+		'knowledgeSpaceAudience',
+		'pages',
+		'pageAttachments',
+		'pageCodeSequence',
+		'pageComments',
+		'pageRevisionsTable'
+	]
+};
+
 const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
 export default defineConfig(
@@ -70,12 +123,40 @@ export default defineConfig(
 		files: [
 			'src/lib/server/assets/**/*.ts',
 			'src/lib/server/directory/**/*.ts',
-			'src/lib/server/service-desk/**/*.ts',
-			'src/lib/server/links/**/*.ts'
+			'src/lib/server/service-desk/**/*.ts'
 		],
 		ignores: ['**/*.spec.ts', '**/testing/**'],
 		rules: {
 			'no-restricted-imports': ['error', { patterns: [NOTIFICATIONS_TABLES] }]
+		}
+	},
+	{
+		// `links` owns the join tables and nothing else: every cross-domain read goes
+		// through the owner's functions (ADR 0002). Only `schema.ts` keeps the foreign
+		// keys. `directory` stays allowed, the one domain everyone depends on. The
+		// notifications pattern is repeated here: a later block replaces the rule.
+		files: ['src/lib/server/links/**/*.ts'],
+		ignores: ['src/lib/server/links/schema.ts', '**/*.spec.ts', '**/testing/**'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					patterns: [
+						// One per barrel. The regex covers the relative, `#lib/…` and `$lib/…`
+						// forms, with or without `/index` and an extension.
+						...Object.entries(BARREL_TABLES).map(([domain, importNames]) => ({
+							regex: `(^|/)${domain}(/index(\\.(js|ts))?)?$`,
+							importNames,
+							message: `links reads ${domain} through its functions, never its tables (ADR 0002).`
+						})),
+						{
+							regex: '(^|/)(assets|service-desk|projects|knowledge)/schema',
+							message: 'links must not import other domains\u2019 tables (ADR 0002).'
+						},
+						NOTIFICATIONS_TABLES
+					]
+				}
+			]
 		}
 	},
 	{
