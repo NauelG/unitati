@@ -30,7 +30,7 @@ async function scenario() {
 	return { organisation, admin, technician, colleague, employee, ticket, project, task, states };
 }
 
-const inbox = () => getDb().select().from(notifications);
+const inbox = () => getDb().select().from(notifications).orderBy(notifications.createdAt);
 const forRecipient = async (personId: string | null) =>
 	(await inbox()).filter((row) => row.recipientPersonId === personId);
 const comment = (
