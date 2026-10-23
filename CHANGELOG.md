@@ -5,6 +5,26 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.111.0] - 2026-10-23
+
+### Added
+
+- Page editing with revisions (#324, part of #17). Staff write a knowledge page at
+  `/knowledge/DOC-####/edit` with the rich text editor's new `document` profile: section headings,
+  tables (add and remove rows and columns), a separator line, and a page picker (a button, or `[[`)
+  that links another page as `/knowledge/DOC-####`. Every save keeps a revision; saving a published
+  page publishes the change at once. If someone else saved while you were editing, the save is
+  refused, your title and text stay in the form, and the screen says who saved, with links to open
+  the current version and copy your text. Leaving the editor with unsaved changes asks first.
+- A page's history at `/knowledge/DOC-####/revisions`: every revision with its author and time, each
+  readable on its own, and "Restaurar esta versión", which saves it again as a new revision.
+- The page header shows which revision you are reading, who saved it and when. Headings in a page
+  can be linked by section (`/knowledge/DOC-0012#h-paso-2`).
+
+### Changed
+
+- The @mention list and the new page picker share one suggestion popup.
+
 ## [0.110.1] - 2026-10-22
 
 ### Fixed
