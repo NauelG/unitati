@@ -20,6 +20,8 @@ import {
 	listHandovers,
 	listDeliverableAssets,
 	signingLinkQr,
+	archiveAsset,
+	unarchiveAsset,
 	changeLocation,
 	changeState,
 	getAssetByTag,
@@ -323,6 +325,29 @@ export const actions: Actions = {
 
 		if (!outcome.ok) return rejected('changeState', m.asset_error_gone());
 		return { action: 'changeState' as const };
+	},
+
+	archive: async ({ locals, params }) => {
+		const user = requirePermission(locals.user, 'assets.manage');
+		const asset = await targetOf(user, params.tag);
+		const outcome = await archiveAsset(user, asset.id);
+
+		if (!outcome.ok) {
+			return rejected(
+				'archive',
+				outcome.error === 'has_history' ? m.asset_archive_has_history() : m.asset_error_gone()
+			);
+		}
+		return { action: 'archive' as const };
+	},
+
+	unarchive: async ({ locals, params }) => {
+		const user = requirePermission(locals.user, 'assets.manage');
+		const asset = await targetOf(user, params.tag);
+		const outcome = await unarchiveAsset(user, asset.id);
+
+		if (!outcome.ok) return rejected('unarchive', m.asset_error_gone());
+		return { action: 'unarchive' as const };
 	},
 
 	changeLocation: async ({ request, locals, params }) => {

@@ -3,6 +3,9 @@
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import Printer from '@lucide/svelte/icons/printer';
+	import Archive from '@lucide/svelte/icons/archive';
+	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
+	import { enhance } from '$app/forms';
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import { superForm } from 'sveltekit-superforms';
@@ -39,6 +42,9 @@
 	let { data, form }: PageProps = $props();
 
 	const asset = $derived(data.asset);
+	const archived = $derived(asset.visibility === 'full' && asset.archivedAt !== null);
+	let archiveOpen = $state(false);
+	let archiving = $state(false);
 
 	const unlinkTicketError = $derived(
 		form && 'action' in form && form.action === 'unlinkTicket' && 'message' in form
@@ -266,8 +272,29 @@
 					{m.asset_detail_edit()}
 				</Button>
 			{/if}
+			{#if data.canManage && asset.visibility === 'full'}
+				{#if archived}
+					<form method="POST" action="?/unarchive" use:enhance>
+						<Button type="submit" variant="secondary">
+							<ArchiveRestore class="size-4" aria-hidden="true" />
+							{m.asset_unarchive_button()}
+						</Button>
+					</form>
+				{:else}
+					<Button type="button" variant="secondary" onclick={() => (archiveOpen = true)}>
+						<Archive class="size-4" aria-hidden="true" />
+						{m.asset_archive_button()}
+					</Button>
+				{/if}
+			{/if}
 		{/snippet}
 	</PageHeader>
+
+	{#if archived}
+		<p class="mt-[var(--space-3)] text-sm text-[var(--ink-muted)]" role="status">
+			{m.asset_archived_notice()}
+		</p>
+	{/if}
 
 	{#if asset.visibility === 'full'}
 		<div class="mt-[var(--space-2)] flex items-center gap-[var(--space-2)]">
@@ -276,7 +303,7 @@
 				options={stateChoices}
 				action="?/changeState"
 				name="state"
-				editable={data.canManage}
+				editable={data.canManage && !archived}
 				openOnHash="action-state"
 				label={m.asset_detail_state()}
 				optimistic={(formData) => {
@@ -512,6 +539,35 @@
 					event.preventDefault();
 					confirmDiscard = false;
 					editOpen = false;
+				}}
+			>
+				{@render confirm()}
+			</form>
+		{/snippet}
+	</ConfirmDialog>
+{/if}
+
+{#if asset.visibility === 'full' && data.canManage}
+	<ConfirmDialog
+		open={archiveOpen}
+		onOpenChange={(next) => (archiveOpen = next)}
+		title={m.asset_archive_title()}
+		description={m.asset_archive_ask({ tag: asset.assetTag })}
+		confirmLabel={m.asset_archive_confirm()}
+		pending={archiving}
+		error={failureFor('archive')}
+	>
+		{#snippet action(confirm)}
+			<form
+				method="POST"
+				action="?/archive"
+				use:enhance={() => {
+					archiving = true;
+					return async ({ result, update }) => {
+						archiving = false;
+						if (result.type === 'success') archiveOpen = false;
+						await update();
+					};
 				}}
 			>
 				{@render confirm()}

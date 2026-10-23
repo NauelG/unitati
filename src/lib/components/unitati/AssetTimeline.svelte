@@ -77,6 +77,8 @@
 	 */
 	export const ACTIVITY_ICONS: Record<ActivityVerb, typeof PackagePlus> = {
 		'asset.created': PackagePlus,
+		'asset.archived': Archive,
+		'asset.unarchived': ArchiveRestore,
 		'custody.assigned': UserCheck,
 		'custody.returned': Undo2,
 		'handover.issued': FileSignature,

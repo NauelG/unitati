@@ -221,6 +221,8 @@
 
 	"activity_asset_created": "Registró el activo",
 	"activity_asset_created_imported": "Registró el activo mediante una importación",
+	"activity_asset_archived": "Archivó el activo",
+	"activity_asset_unarchived": "Restauró el activo",
 	"activity_custody_assigned": "Asignó la custodia a {personName}",
 	"activity_custody_returned": "Recuperó la custodia de {personName}",
 	"activity_custody_returned_condition": "Recuperó la custodia de {personName}: {condition}",
@@ -313,6 +315,13 @@
 	"asset_error_model_missing": "El modelo elegido ya no existe.",
 	"asset_error_location_missing": "La ubicación elegida ya no existe.",
 	"asset_error_gone": "Este activo ya no existe.",
+	"asset_archive_button": "Archivar",
+	"asset_archive_title": "Archivar este activo",
+	"asset_archive_ask": "Archivar {tag} lo oculta de listados, búsqueda y recuentos. Úsalo solo si el activo se registró por error; si salió de servicio, márcalo como retirado.",
+	"asset_archive_confirm": "Archivar",
+	"asset_archive_has_history": "Este activo tiene historial (custodia o entregas). Márcalo como retirado en lugar de archivarlo.",
+	"asset_unarchive_button": "Restaurar",
+	"asset_archived_notice": "Este activo está archivado: se registró por error y no aparece en listados ni en la búsqueda.",
 
 	"model_add_link": "¿No encuentras el modelo? Añádelo",
 	"model_dialog_title": "Nuevo modelo",

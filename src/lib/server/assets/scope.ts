@@ -1,4 +1,4 @@
-import { and, eq, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { assets } from './schema';
@@ -62,9 +62,16 @@ function visibleAssets(viewer: SessionUser): SQL | null {
  * somebody attaches one to a ticket. The rule stays here, in one place: `links`
  * composes it into its own query instead of restating who holds what (ADR 0002).
  */
-export function requireAssetScope(viewer: SessionUser): SQL {
+export function requireAssetScope(
+	viewer: SessionUser,
+	options: { includeArchived?: boolean } = {}
+): SQL {
 	const scope = visibleAssets(viewer);
-	if (scope) return scope;
+	if (scope) {
+		// An archived asset is a record that should not have existed: it drops out
+		// of every read unless the caller is the one that restores it.
+		return options.includeArchived ? scope : (and(scope, isNull(assets.archivedAt)) as SQL);
+	}
 
 	// An invariant violation, not a business failure: every role in ADR 0007
 	// holds at least one asset-read permission, so arriving here means a route

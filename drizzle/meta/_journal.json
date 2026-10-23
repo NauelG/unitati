@@ -274,6 +274,13 @@
       "when": 1792744790265,
       "tag": "0038_knowledge_citations",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792751147805,
+      "tag": "0039_asset_archiving",
+      "breakpoints": true
     }
   ]
 }

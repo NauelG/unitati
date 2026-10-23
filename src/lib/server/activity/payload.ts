@@ -110,6 +110,10 @@ export const PAYLOAD_SCHEMAS = {
 		via: z.literal('import').optional()
 	}),
 
+	// A record that should never have existed: no payload, the actor is the fact.
+	'asset.archived': z.object({}),
+	'asset.unarchived': z.object({}),
+
 	'custody.assigned': z.object({
 		toPersonId: z.uuid(),
 		toPersonName: presentName

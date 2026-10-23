@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
 import type { AssetState } from '#lib/domain/status.js';
 import { listActivity, actorColumns, recordActivity, type TimelineEntry } from '../activity';
 import { can } from '../access/permissions';
@@ -11,7 +11,14 @@ import { checkCommentBody, type CommentBodyFailure, type CommentView } from '../
 import { failure, success, type Outcome } from '../shared/outcome';
 import type { WriteOptions } from '../shared/write-options';
 import { page, pageWindow, type Page, type PageRequest } from '../shared/pagination';
-import { assetComments, assetModels, assets, categories, manufacturers } from './schema';
+import {
+	assetComments,
+	assetModels,
+	assets,
+	categories,
+	handoverAssets,
+	manufacturers
+} from './schema';
 import { recordCustodyAssigned, recordCustodyReturned } from './custody';
 import { requireAssetScope } from './scope';
 import { viewAsset, type AssetView } from './view';
@@ -245,7 +252,8 @@ const fullAssetColumns = {
 	categoryName: categories.name,
 	custodianPersonId: assets.custodianPersonId,
 	custodianName: people.fullName,
-	locationId: assets.locationId
+	locationId: assets.locationId,
+	archivedAt: assets.archivedAt
 };
 
 /**
@@ -443,7 +451,13 @@ export async function countActive(organisationId: string): Promise<number> {
 	const [row] = await getDb()
 		.select({ count: sql<number>`count(*)::int` })
 		.from(assets)
-		.where(and(eq(assets.organisationId, organisationId), sql`${assets.state} <> 'retired'`));
+		.where(
+			and(
+				eq(assets.organisationId, organisationId),
+				sql`${assets.state} <> 'retired'`,
+				isNull(assets.archivedAt)
+			)
+		);
 	return row?.count ?? 0;
 }
 
@@ -542,7 +556,12 @@ export async function getAssetByTag(
 	assetTag: string
 ): Promise<Outcome<AssetView, 'asset_not_found'>> {
 	const [row] = await assetsWithCatalogue()
-		.where(and(requireAssetScope(viewer), eq(assets.assetTag, assetTag)))
+		.where(
+			and(
+				requireAssetScope(viewer, { includeArchived: can(viewer, 'assets.manage') }),
+				eq(assets.assetTag, assetTag)
+			)
+		)
 		.limit(1);
 
 	if (!row) return failure('asset_not_found');
@@ -566,7 +585,12 @@ export async function assetTimeline(
 	const [row] = await getDb()
 		.select({ id: assets.id, custodianPersonId: assets.custodianPersonId })
 		.from(assets)
-		.where(and(requireAssetScope(viewer), eq(assets.assetTag, assetTag)))
+		.where(
+			and(
+				requireAssetScope(viewer, { includeArchived: can(viewer, 'assets.manage') }),
+				eq(assets.assetTag, assetTag)
+			)
+		)
 		.limit(1);
 
 	if (!row) return failure('asset_not_found');
@@ -719,7 +743,13 @@ export async function updateAssetDetails(
 		const updated = await getDb()
 			.update(assets)
 			.set({ ...values, updatedAt: new Date() })
-			.where(and(eq(assets.id, assetId), eq(assets.organisationId, actor.organisationId)))
+			.where(
+				and(
+					eq(assets.id, assetId),
+					eq(assets.organisationId, actor.organisationId),
+					isNull(assets.archivedAt)
+				)
+			)
 			.returning({ id: assets.id });
 
 		if (updated.length === 0) return failure('asset_not_found');
@@ -736,19 +766,103 @@ export async function updateAssetDetails(
  * actor's organisation. Returns null rather than throwing so each caller can
  * name its own failure.
  */
-async function lockedAsset(tx: Transaction, actor: SessionUser, assetId: string) {
+async function lockedAsset(
+	tx: Transaction,
+	actor: SessionUser,
+	assetId: string,
+	options: { includeArchived?: boolean } = {}
+) {
 	const [row] = await tx
 		.select({
 			id: assets.id,
+			assetTag: assets.assetTag,
+			name: assets.name,
 			state: assets.state,
 			custodianPersonId: assets.custodianPersonId,
-			locationId: assets.locationId
+			locationId: assets.locationId,
+			archivedAt: assets.archivedAt
 		})
 		.from(assets)
-		.where(and(eq(assets.id, assetId), eq(assets.organisationId, actor.organisationId)))
+		.where(
+			and(
+				eq(assets.id, assetId),
+				eq(assets.organisationId, actor.organisationId),
+				// An archived asset takes no writes: to everything but its own
+				// restoration it is as good as gone.
+				options.includeArchived ? undefined : isNull(assets.archivedAt)
+			)
+		)
+		.for('update')
 		.limit(1);
 
 	return row ?? null;
+}
+
+export type ArchiveAssetFailure = 'asset_not_found' | 'has_history';
+
+/**
+ * Archives an asset that should never have been registered. Refused when the
+ * asset has a history that archiving would hide: somebody holds it, or it has
+ * been through a handover. Those are retired, not archived. Idempotent.
+ */
+export async function archiveAsset(
+	actor: SessionUser,
+	assetId: string
+): Promise<Outcome<void, ArchiveAssetFailure>> {
+	return getDb().transaction(async (tx) => {
+		const asset = await lockedAsset(tx, actor, assetId, { includeArchived: true });
+		if (!asset) return failure('asset_not_found');
+		if (asset.archivedAt) return success(undefined);
+
+		const [handedOver] = await tx
+			.select({ assetId: handoverAssets.assetId })
+			.from(handoverAssets)
+			.where(eq(handoverAssets.assetId, asset.id))
+			.limit(1);
+		if (asset.custodianPersonId !== null || handedOver) return failure('has_history');
+
+		await tx
+			.update(assets)
+			.set({ archivedAt: new Date(), updatedAt: new Date() })
+			.where(eq(assets.id, asset.id));
+
+		await recordActivity(tx, {
+			organisationId: actor.organisationId,
+			...actorColumns(actor),
+			target: { assetId: asset.id },
+			verb: 'asset.archived',
+			payload: {}
+		});
+
+		return success(undefined);
+	});
+}
+
+/** Restores an archived asset exactly as it was. Idempotent on an active one. */
+export async function unarchiveAsset(
+	actor: SessionUser,
+	assetId: string
+): Promise<Outcome<void, 'asset_not_found'>> {
+	return getDb().transaction(async (tx) => {
+		const asset = await lockedAsset(tx, actor, assetId, { includeArchived: true });
+		if (!asset) return failure('asset_not_found');
+		if (!asset.archivedAt) return success(undefined);
+
+		await tx
+			.update(assets)
+			.set({ archivedAt: null, updatedAt: new Date() })
+			.where(eq(assets.id, asset.id));
+
+		await recordActivity(tx, {
+			organisationId: actor.organisationId,
+			...actorColumns(actor),
+			target: { assetId: asset.id },
+			verb: 'asset.unarchived',
+			payload: {}
+		});
+
+		return success(undefined);
+	});
 }
 
 export type AssignCustodyFailure = 'asset_not_found' | 'person_not_found' | 'already_in_custody';
@@ -972,7 +1086,12 @@ export async function listAssetComments(
 	const [row] = await getDb()
 		.select({ id: assets.id, custodianPersonId: assets.custodianPersonId })
 		.from(assets)
-		.where(and(requireAssetScope(viewer), eq(assets.assetTag, assetTag)))
+		.where(
+			and(
+				requireAssetScope(viewer, { includeArchived: can(viewer, 'assets.manage') }),
+				eq(assets.assetTag, assetTag)
+			)
+		)
 		.limit(1);
 	if (!row) return failure('asset_not_found');
 

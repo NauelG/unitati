@@ -186,6 +186,13 @@ export const assets = pgTable(
 		 * This flag is what `assets.view.shared` reads (ADR 0007).
 		 */
 		shared: boolean('shared').notNull().default(false),
+		/**
+		 * Set when the record should never have existed (a duplicate, a typo'd
+		 * registration). Not a state: `retired` is an asset that existed and left
+		 * service. The row stays, so its tag and serial stay taken and the activity
+		 * log keeps pointing at something; every read except the detail page skips it.
+		 */
+		archivedAt: timestamp('archived_at', { withTimezone: true }),
 		/** The asset's own location, not its custodian's: #24 audits rooms. */
 		// `restrict`, not `set null` (ADR 0027): an asset silently losing its place is worse than a refused delete.
 		locationId: uuid('location_id').references(() => locations.id, { onDelete: 'restrict' }),
