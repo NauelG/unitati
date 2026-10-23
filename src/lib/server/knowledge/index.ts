@@ -83,6 +83,9 @@ export { readablePages, readableSpaces, requireSpaceScope } from './scope';
 export { pageSummaries, readablePagesByTag } from './citations';
 export type { CitablePage, PageSummary } from './citations';
 
+export { searchPages } from './search';
+export type { PageHit } from './search';
+
 export {
 	archiveSpace,
 	changeSpaceAudience,

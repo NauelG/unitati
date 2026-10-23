@@ -23,7 +23,7 @@ import { fieldsOf, withId } from '../assets/form-data';
  * both, so reordering and moving must be reachable from both).
  *
  * The app screens are staff only (`knowledge.manage`); an employee reads from
- * the portal once #328 lands, and gets 403 here until then. A viewer without
+ * the portal, and the page's canonical link sends them there. A viewer without
  * `knowledge.view` at all gets the usual 404. Every action calls the guard too:
  * a form action does not re-run the layout's `load`.
  */

@@ -31,13 +31,13 @@ const open = (user: unknown, tag: string) =>
 
 describe('/knowledge/[tag]', () => {
 	// The canonical link is the only one inserted anywhere, so an employee follows it
-	// too. Until the portal reader exists (#328) there is nowhere to send them: 404.
-	it('does not open for an employee', async () => {
+	// too, and is sent on to the portal reader (#328).
+	it('sends an employee on to the portal', async () => {
 		const { employee, page } = await setup();
 
 		const { thrown } = await open(employee, page.tag);
 
-		expect(thrown?.status).toBe(404);
+		expect(thrown).toMatchObject({ status: 303, location: `/portal/knowledge/${page.tag}` });
 	});
 
 	it('answers 404 for a page that does not exist', async () => {
