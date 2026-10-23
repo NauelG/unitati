@@ -52,7 +52,8 @@ describe('the endpoint registry', () => {
 			'assets.update',
 			'locations.update',
 			'projects.update',
-			'tasks.update'
+			'tasks.update',
+			'knowledge.pages.update'
 		]);
 	});
 

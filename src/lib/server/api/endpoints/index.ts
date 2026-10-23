@@ -1,5 +1,6 @@
 import type { Endpoint } from '../registry';
 import { ASSET_ENDPOINTS } from './assets';
+import { KNOWLEDGE_ENDPOINTS } from './knowledge';
 import { LOCATION_ENDPOINTS } from './locations';
 import { PROJECT_ENDPOINTS } from './projects';
 import { listQueuesEndpoint } from './queues';
@@ -26,5 +27,6 @@ export const ENDPOINTS: readonly Endpoint[] = [
 	...LOCATION_ENDPOINTS,
 	...PROJECT_ENDPOINTS,
 	...TASK_ENDPOINTS,
+	...KNOWLEDGE_ENDPOINTS,
 	listStatesEndpoint
 ];

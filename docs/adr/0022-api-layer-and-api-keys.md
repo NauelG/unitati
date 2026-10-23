@@ -158,3 +158,13 @@ forbids. There is no low-entropy secret to protect, so there is no stretching to
   (`getWrittenTicket`). A key scoped to `tickets.manage` or `tickets.create` alone may hold no
   read permission, and the staff writes already trust the permission gate and scope tenancy only
   (ADR 0007). Reads through `GET` keep the full row-level scope.
+
+## Addendum: concurrent writes to a resource with revisions
+
+A resource with revisions (knowledge pages, #234) is written with a required `baseRevision` body
+field and answers `409 stale_revision` when it is out of date: see
+[ADR 0046](0046-optimistic-concurrency-in-the-api.md).
+
+Like tickets and projects, the knowledge endpoints add `knowledge.view` to a key scoped to
+`knowledge.manage` alone for the duration of the call, so the domain can read the page it writes.
+`can()` still intersects with the owner's role.

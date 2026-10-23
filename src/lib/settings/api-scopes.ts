@@ -44,6 +44,10 @@ export const SCOPE_GROUPS: readonly ScopeGroup[] = [
 	{
 		label: m.api_scope_group_projects,
 		permissions: ['projects.view', 'projects.view.assigned', 'projects.manage']
+	},
+	{
+		label: m.api_scope_group_knowledge,
+		permissions: ['knowledge.view', 'knowledge.manage']
 	}
 ];
 
@@ -64,7 +68,9 @@ export const SCOPE_LABELS: Partial<Record<Permission, () => string>> = {
 	'tickets.comment.internal': m.permission_tickets_comment_internal,
 	'projects.view': m.permission_projects_view,
 	'projects.view.assigned': m.permission_projects_view_assigned,
-	'projects.manage': m.permission_projects_manage
+	'projects.manage': m.permission_projects_manage,
+	'knowledge.view': m.permission_knowledge_view,
+	'knowledge.manage': m.permission_knowledge_manage
 };
 
 /** A label for any permission; the raw string only for one nobody has labelled yet. */
