@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.118.1] - 2026-10-23
+
+### Changed
+
+- Asset, handover, category and ticket reads behind the related panel go through their owning domain
+  instead of joining its tables (ADR 0002), and a lint rule keeps it that way. Handover references
+  now require `assets.view` (no change for any current role). The ticket work API no longer needs
+  asset scopes internally. Nothing changes for users.
+
 ## [0.118.0] - 2026-10-23
 
 ### Added
