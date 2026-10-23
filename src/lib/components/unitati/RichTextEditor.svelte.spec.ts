@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { beforeAll, describe, expect, it } from 'vitest';
 import RichTextEditor from './RichTextEditor.svelte';
 
@@ -19,6 +19,21 @@ const hidden = (container: HTMLElement) =>
 	container.querySelector<HTMLInputElement>('input[type="hidden"][name="body"]')!;
 
 const surface = () => screen.getByRole('textbox', { name: 'Respuesta' });
+
+/** Types at the start of the first paragraph and leaves the caret after the text. */
+async function type(text: string) {
+	surface().focus();
+	const paragraph = surface().querySelector('p')!;
+	const node = document.createTextNode(text);
+	paragraph.insertBefore(node, paragraph.firstChild);
+	const range = document.createRange();
+	range.setStart(node, text.length);
+	range.collapse(true);
+	const selection = window.getSelection()!;
+	selection.removeAllRanges();
+	selection.addRange(range);
+	document.dispatchEvent(new Event('selectionchange'));
+}
 
 describe('RichTextEditor', () => {
 	it('starts with the given markdown in the hidden input', () => {
@@ -80,6 +95,173 @@ describe('RichTextEditor', () => {
 		expect(screen.getByRole('alert').textContent).toContain('10');
 	});
 
+	describe('the document profile (#324)', () => {
+		const page = [
+			'Intro',
+			'',
+			'## Paso 1',
+			'',
+			'### Detalle',
+			'',
+			'#### Nota',
+			'',
+			'| Equipo | Planta |',
+			'| --- | --- |',
+			'| Impresora | 2 |',
+			'',
+			'---',
+			'',
+			'Ver [VPN](/knowledge/DOC-0012)'
+		].join('\n');
+
+		it('round-trips headings, tables, the rule and page links', async () => {
+			const { container } = render(RichTextEditor, {
+				name: 'body',
+				label: 'Respuesta',
+				profile: 'document',
+				value: page
+			});
+			await waitFor(() => expect(surface().querySelector('table')).toBeTruthy());
+			expect(surface().querySelector('h2')?.textContent).toBe('Paso 1');
+			expect(surface().querySelector('h3')?.textContent).toBe('Detalle');
+			expect(surface().querySelector('h4')?.textContent).toBe('Nota');
+			expect(surface().querySelector('hr')).toBeTruthy();
+			expect(surface().querySelector('a')?.getAttribute('href')).toBe('/knowledge/DOC-0012');
+
+			// Any edit re-serialises the whole document, which is what a round trip is.
+			await type('X');
+			await waitFor(() => expect(hidden(container).value.startsWith('XIntro')).toBe(true));
+			const markdown = hidden(container).value;
+			expect(markdown).toContain('## Paso 1');
+			expect(markdown).toContain('### Detalle');
+			expect(markdown).toContain('#### Nota');
+			expect(markdown).toMatch(/\| Equipo\s*\| Planta\s*\|/);
+			expect(markdown).toMatch(/\| Impresora\s*\| 2\s*\|/);
+			expect(markdown).toContain('---');
+			expect(markdown).toContain('[VPN](/knowledge/DOC-0012)');
+		});
+
+		it('offers a heading menu, a page picker, the rule and tables', () => {
+			render(RichTextEditor, {
+				name: 'body',
+				label: 'Respuesta',
+				profile: 'document',
+				pageSource: async () => []
+			});
+			expect(screen.getByRole('combobox', { name: 'Estilo del párrafo' })).toBeTruthy();
+			for (const name of ['Enlazar una página', 'Línea separadora', 'Insertar tabla']) {
+				expect(screen.getByRole('button', { name })).toBeTruthy();
+			}
+		});
+
+		it('has no page picker without a source', () => {
+			render(RichTextEditor, { name: 'body', label: 'Respuesta', profile: 'document' });
+			expect(screen.queryByRole('button', { name: 'Enlazar una página' })).toBeNull();
+			expect(screen.getByRole('button', { name: 'Insertar tabla' })).toBeTruthy();
+		});
+
+		it('inserts a table and offers row and column tools inside it', async () => {
+			const { container } = render(RichTextEditor, {
+				name: 'body',
+				label: 'Respuesta',
+				profile: 'document'
+			});
+			await waitFor(() => expect(surface().querySelector('p')).toBeTruthy());
+			expect(screen.queryByRole('button', { name: 'Añadir fila' })).toBeNull();
+
+			await fireEvent.click(screen.getByRole('button', { name: 'Insertar tabla' }));
+			await waitFor(() => expect(surface().querySelectorAll('tr')).toHaveLength(3));
+			await fireEvent.click(await screen.findByRole('button', { name: 'Añadir fila' }));
+			await waitFor(() => expect(surface().querySelectorAll('tr')).toHaveLength(4));
+			await fireEvent.click(screen.getByRole('button', { name: 'Añadir columna' }));
+			await waitFor(() => expect(surface().querySelectorAll('tr th')).toHaveLength(4));
+			await waitFor(() => expect(hidden(container).value).toMatch(/^\|.*\|.*\|.*\|.*\|$/m));
+		});
+
+		it('turns a paragraph into a heading from the menu', async () => {
+			const { container } = render(RichTextEditor, {
+				name: 'body',
+				label: 'Respuesta',
+				profile: 'document',
+				value: 'Instalación'
+			});
+			await waitFor(() => expect(surface().querySelector('p')).toBeTruthy());
+			surface().focus();
+
+			await fireEvent.change(screen.getByRole('combobox', { name: 'Estilo del párrafo' }), {
+				target: { value: '3' }
+			});
+			await waitFor(() => expect(hidden(container).value.trim()).toBe('### Instalación'));
+		});
+
+		it('links a page chosen from the [[ picker', async () => {
+			const asked: string[] = [];
+			const { container } = render(RichTextEditor, {
+				name: 'body',
+				label: 'Respuesta',
+				profile: 'document',
+				pageSource: async (query: string) => {
+					asked.push(query);
+					return [{ tag: 'DOC-0012', title: 'VPN en casa', hint: 'Ayuda' }];
+				}
+			});
+			await waitFor(() => expect(surface().querySelector('p')).toBeTruthy());
+
+			await type('[[vpn');
+			const list = await screen.findByRole('listbox', { name: 'Páginas que puedes enlazar' });
+			expect(asked).toContain('vpn');
+			expect(
+				within(list)
+					.getAllByRole('option')
+					.map((option) => option.textContent)
+			).toEqual(['VPN en casaAyuda']);
+
+			await fireEvent.keyDown(surface(), { key: 'Enter' });
+			await waitFor(() =>
+				expect(hidden(container).value).toContain('[VPN en casa](/knowledge/DOC-0012)')
+			);
+			expect(hidden(container).value).not.toContain('[[');
+		});
+
+		it('opens the same picker from the toolbar button', async () => {
+			render(RichTextEditor, {
+				name: 'body',
+				label: 'Respuesta',
+				profile: 'document',
+				pageSource: async () => []
+			});
+			await waitFor(() => expect(surface().querySelector('p')).toBeTruthy());
+			surface().focus();
+
+			await fireEvent.click(screen.getByRole('button', { name: 'Enlazar una página' }));
+			await screen.findByText('Ninguna página coincide');
+		});
+
+		it('offers no mentions, even with a source', async () => {
+			const { container } = render(RichTextEditor, {
+				name: 'body',
+				label: 'Respuesta',
+				profile: 'document',
+				mentionSource: async () => [{ id: crypto.randomUUID(), label: 'Ana' }]
+			});
+			await waitFor(() => expect(surface().querySelector('p')).toBeTruthy());
+
+			await type('@an');
+			await waitFor(() => expect(hidden(container).value).toBe('@an'));
+			expect(screen.queryByRole('listbox')).toBeNull();
+		});
+	});
+
+	describe('the comment profile, unchanged', () => {
+		it('has no heading menu, page picker, rule or tables, and flattens nothing it cannot hold', () => {
+			render(RichTextEditor, { name: 'body', label: 'Respuesta' });
+			expect(screen.queryByRole('combobox')).toBeNull();
+			for (const name of ['Enlazar una página', 'Línea separadora', 'Insertar tabla']) {
+				expect(screen.queryByRole('button', { name })).toBeNull();
+			}
+		});
+	});
+
 	describe('@mentions (#303)', () => {
 		const ID = '6f1d0a39-2c4e-4d8b-9a77-1e2f3a4b5c6d';
 		const token = `@[Ana \\] Pérez](person:${ID})`;
@@ -87,20 +269,6 @@ describe('RichTextEditor', () => {
 			{ id: ID, label: 'Ana ] Pérez', hint: 'ana@acme.test' },
 			{ id: '7f1d0a39-2c4e-4d8b-9a77-1e2f3a4b5c6d', label: 'Anselmo', hint: 'ans@acme.test' }
 		];
-
-		async function type(text: string) {
-			surface().focus();
-			const paragraph = surface().querySelector('p')!;
-			const node = document.createTextNode(text);
-			paragraph.insertBefore(node, paragraph.firstChild);
-			const range = document.createRange();
-			range.setStart(node, text.length);
-			range.collapse(true);
-			const selection = window.getSelection()!;
-			selection.removeAllRanges();
-			selection.addRange(range);
-			document.dispatchEvent(new Event('selectionchange'));
-		}
 
 		it('round-trips the token through the editor', async () => {
 			const { container } = render(RichTextEditor, {

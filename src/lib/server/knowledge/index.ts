@@ -22,6 +22,7 @@ export {
 	getPageByTag,
 	listSpaceTree,
 	movePage,
+	pickPages,
 	previewMove,
 	publishPage,
 	reorderPage,
@@ -33,6 +34,7 @@ export type {
 	PageCreateFailure,
 	PageMoveConfirmationFailure,
 	PageMoveFailure,
+	PagePick,
 	PagePublishFailure,
 	PageReorderFailure,
 	PageStatus,
@@ -41,6 +43,17 @@ export type {
 	Placement,
 	TreeEntry
 } from './pages';
+
+export { getRevision, listRevisions, restoreRevision, savePage } from './revisions';
+export type {
+	PageSaveFailure,
+	PageSaveInput,
+	RevisionEntry,
+	RevisionRestoreFailure,
+	RevisionView,
+	SaveResult,
+	StaleRevision
+} from './revisions';
 
 export { readablePages, readableSpaces, requireSpaceScope } from './scope';
 
@@ -63,5 +76,11 @@ export type {
 	SpaceUpdateFailure
 } from './spaces';
 
-export { pageCreateInput, spaceInput, spaceUpdateInput } from './validation';
+export {
+	pageCreateInput,
+	pageSaveInput,
+	revisionRestoreInput,
+	spaceInput,
+	spaceUpdateInput
+} from './validation';
 export type { PageCreateInput, SpaceInput, SpaceUpdateInput } from './validation';

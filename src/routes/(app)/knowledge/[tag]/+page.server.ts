@@ -42,11 +42,14 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 			title: page.title,
 			status: page.status,
 			parentId: page.parentId,
-			updatedAt: page.updatedAt
+			updatedAt: page.updatedAt,
+			revision: page.revision,
+			revisionAuthorName: page.revisionAuthorName,
+			revisedAt: page.revisedAt
 		},
 		space: page.space,
 		path: page.path,
-		bodyHtml: renderMarkdown(page.body),
+		bodyHtml: renderMarkdown(page.body, 'document'),
 		hasBody: page.body.trim() !== '',
 		showArchived,
 		tree,

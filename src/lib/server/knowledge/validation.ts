@@ -58,3 +58,20 @@ export const pageCreateInput = z.object({
 });
 
 export type PageCreateInput = z.input<typeof pageCreateInput>;
+
+/**
+ * A save from the editor (#324): the title, the markdown, and the revision the
+ * editor started from. The body's length is the domain's to refuse
+ * (`body_too_long`), so it is not bounded here.
+ */
+export const pageSaveInput = z.object({
+	title: z.string().trim().min(1).max(PAGE_TITLE_MAX),
+	body: z.string(),
+	baseRevision: z.coerce.number().int().positive()
+});
+
+/** Restoring revision `number`, from the revision the screen showed as current. */
+export const revisionRestoreInput = z.object({
+	number: z.coerce.number().int().positive(),
+	baseRevision: z.coerce.number().int().positive()
+});

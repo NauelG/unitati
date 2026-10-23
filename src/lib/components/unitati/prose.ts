@@ -15,5 +15,18 @@ export const prose = [
 	'[&_pre_code]:bg-transparent [&_pre_code]:p-0',
 	// The @mention chip (#303), in the editor and in rendered content alike.
 	'[&_.mention]:rounded-[var(--radius-sm)] [&_.mention]:bg-[var(--brand-soft)] [&_.mention]:px-1 [&_.mention]:font-medium [&_.mention]:text-[var(--brand)]',
-	'[&_blockquote]:my-[var(--space-2)] [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--border-strong)] [&_blockquote]:pl-[var(--space-3)] [&_blockquote]:text-[var(--ink-muted)]'
+	'[&_blockquote]:my-[var(--space-2)] [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--border-strong)] [&_blockquote]:pl-[var(--space-3)] [&_blockquote]:text-[var(--ink-muted)]',
+	// The `document` profile (#324): headings, rules and tables. A comment never
+	// contains them (the sanitiser drops them), so these only style pages.
+	'[&_h2]:text-title-1 [&_h2]:mt-[var(--space-6)] [&_h2]:mb-[var(--space-2)] [&_h2]:scroll-mt-[var(--space-6)]',
+	'[&_h3]:text-title-2 [&_h3]:mt-[var(--space-5)] [&_h3]:mb-[var(--space-2)] [&_h3]:scroll-mt-[var(--space-6)]',
+	'[&_h4]:text-title-3 [&_h4]:mt-[var(--space-4)] [&_h4]:mb-[var(--space-1)] [&_h4]:scroll-mt-[var(--space-6)]',
+	'[&>:first-child]:mt-0 [&_.ProseMirror>:first-child]:mt-0',
+	'[&_hr]:my-[var(--space-5)] [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-[var(--border)]',
+	'[&_table]:my-[var(--space-3)] [&_table]:w-full [&_table]:border-collapse [&_table]:text-body',
+	'[&_th]:border [&_th]:border-[var(--border)] [&_th]:bg-[var(--surface-2)] [&_th]:px-[var(--space-2)] [&_th]:py-[var(--space-1)] [&_th]:text-left [&_th]:font-semibold',
+	'[&_td]:border [&_td]:border-[var(--border)] [&_td]:px-[var(--space-2)] [&_td]:py-[var(--space-1)] [&_td]:align-top',
+	'[&_th_p]:my-0 [&_td_p]:my-0',
+	// The cell the caret is in, while editing a table.
+	'[&_.selectedCell]:bg-[var(--brand-soft)]'
 ];

@@ -1,7 +1,7 @@
 {
 	"name": "unitati",
 	"private": true,
-	"version": "0.110.1",
+	"version": "0.111.0",
 	"license": "AGPL-3.0-only",
 	"repository": {
 		"type": "git",
@@ -95,6 +95,7 @@
 		"@number-flow/svelte": "^0.4.2",
 		"@tiptap/core": "^3.32.0",
 		"@tiptap/extension-mention": "^3.32.0",
+		"@tiptap/extension-table": "^3.32.0",
 		"@tiptap/markdown": "^3.32.0",
 		"@tiptap/pm": "^3.32.0",
 		"@tiptap/starter-kit": "^3.32.0",

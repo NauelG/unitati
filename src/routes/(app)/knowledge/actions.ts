@@ -1,6 +1,6 @@
 import { error, fail, redirect, type RequestEvent } from '@sveltejs/kit';
 import { z } from 'zod';
-import { PAGE_TITLE_MAX } from '#lib/domain/knowledge.js';
+import { PAGE_BODY_MAX_LENGTH, PAGE_TITLE_MAX } from '#lib/domain/knowledge.js';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import { requirePermission, type SessionUser } from '#lib/server/auth/guards.js';
@@ -45,9 +45,12 @@ const MESSAGES: Record<string, () => string> = {
 	parent_unpublished: () => m.knowledge_error_parent_unpublished(),
 	not_siblings: () => m.knowledge_error_not_siblings(),
 	confirmation_required: () => m.knowledge_error_confirmation_required(),
-	count_changed: () => m.knowledge_error_count_changed()
+	count_changed: () => m.knowledge_error_count_changed(),
+	body_too_long: () => m.knowledge_error_body_too_long({ max: PAGE_BODY_MAX_LENGTH }),
+	revision_not_found: () => m.knowledge_error_revision_not_found()
 };
 
+/** The sentence for a failure code. A failure with a `kind` (`stale_revision`) is the caller's to word. */
 export function failureMessage(error: string): string {
 	return (MESSAGES[error] ?? MESSAGES.not_found)();
 }

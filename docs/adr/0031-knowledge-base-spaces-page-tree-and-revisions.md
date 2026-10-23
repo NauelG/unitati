@@ -163,3 +163,18 @@ left open. Each point amends or completes the numbered decision or consequence i
 - Changing a space's audience takes the **count the admin confirmed** and refuses `count_changed`
   if the number of non-archived pages (drafts included) is different when the space row is
   locked. Creating a page must take the same lock (#323) for the guarantee to hold.
+
+### What the editing sub-issue (#324) settled about saves
+
+- **The page row is the lock.** `savePage` and `restoreRevision` take it `FOR UPDATE` and compare
+  `pages.revision` with the base the editor started from; two saves from one base serialise on it,
+  one appends and the other answers `stale_revision` (with the current number and its author)
+  having written nothing. No organisation lock: a save changes content, not the tree.
+- **Content identical to the page's is a no-op, checked before the base.** A save whose title and
+  body equal the current revision appends nothing and succeeds even from an old base: nothing can
+  be lost, and the usual cause is a double submit. Restoring a revision whose content is already
+  the page's is a no-op the same way, with no `page.revision.restored`.
+- **A refused save is not retried silently.** The form keeps the user's text and the base they
+  started from, so saving again is refused again; the screen offers the current version (new tab)
+  and a copy of the user's text, and editing resumes from the current version.
+- Archived pages cannot be written or restored (`archived`); their history stays readable to staff.
