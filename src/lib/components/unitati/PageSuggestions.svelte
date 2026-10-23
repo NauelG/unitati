@@ -125,7 +125,7 @@
 			<div class="mt-[var(--space-5)]">
 				<RecordAttachments
 					items={preview.attachments}
-					downloadBase={`/portal/knowledge/${preview.tag}/attachments`}
+					downloadBase={`/portal/knowledge/${encodeURIComponent(preview.tag)}/attachments`}
 					canManage={false}
 				/>
 			</div>
