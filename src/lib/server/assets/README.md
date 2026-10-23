@@ -3,6 +3,12 @@
 IT asset management: assets, models, categories, custody (check-out / check-in). Later: kits,
 licences and consumables.
 
+`index.ts` is the public surface only: it re-exports and declares nothing. The implementation of the
+asset itself lives in four files by topic: `reads.ts` (lists, pickers, counts, lookups by tag and
+the timeline), `registration.ts` (registering and editing an asset, its tag sequence and the keys an
+import compares against), `lifecycle.ts` (archiving, custody, state and location, plus the row lock
+they share) and `comments.ts` (an asset's comments, which reuse that lock).
+
 A decided handover has one stored PDF (`handover-documents.ts`, ADR 0036). `decideHandover`
 generates it after the decision commits; `ensureHandoverDocument(id)` repairs a missing one and
 never replaces an existing file. `renderHandoverDocument` takes only frozen evidence and returns
