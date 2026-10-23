@@ -89,11 +89,13 @@ describe('the OpenAPI document built from the real registry', () => {
 		expect(byId['assets.list'].tags).toEqual(['Assets']);
 		expect(byId['locations.list'].tags).toEqual(['Directory']);
 		expect(byId['states.list'].tags).toEqual(['Projects']);
+		expect(byId['knowledge.pages.get'].tags).toEqual(['Knowledge']);
 		expect(document.tags).toEqual([
 			{ name: 'Service desk' },
 			{ name: 'Projects' },
 			{ name: 'Assets' },
-			{ name: 'Directory' }
+			{ name: 'Directory' },
+			{ name: 'Knowledge' }
 		]);
 	});
 
