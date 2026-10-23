@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Endpoint } from './registry';
+import { defaultConflictMessage, type Endpoint, type RefusalTable } from './registry';
 import { errorEnvelopeSchema, schemaNames } from './shared-schemas';
 
 /**
@@ -112,6 +112,89 @@ function errorResponse(status: keyof typeof ERROR_DESCRIPTIONS): OpenApiResponse
 			: {}),
 		content: { 'application/json': { schema: ERROR_REF } }
 	};
+}
+
+/**
+ * The error responses a refusal table implies (ADR 0047): `404` always, `400`
+ * when the endpoint has input, and `409`/`403`/`422` only where the table has
+ * entries of that kind. Each status narrows `error.code` to the codes it can
+ * carry and lists one line per code. Unreachable entries never appear.
+ */
+function tableResponses(
+	entries: RefusalTable['entries'],
+	hasInput: boolean
+): Record<string, OpenApiResponse> {
+	const codes: Record<'400' | '403' | '404' | '409' | '422', Map<string, string>> = {
+		'400': new Map(),
+		'403': new Map(),
+		'404': new Map([['not_found', 'There is no such resource, or the key may not know about it.']]),
+		'409': new Map(),
+		'422': new Map()
+	};
+	const fields: string[] = [];
+
+	for (const [key, entry] of Object.entries(entries)) {
+		switch (entry.as) {
+			case 'conflict': {
+				const line = [typeof entry.message === 'string' ? entry.message : null, entry.describe]
+					.filter(Boolean)
+					.join(' ');
+				codes['409'].set(key, line || defaultConflictMessage(key));
+				break;
+			}
+			case 'field':
+				if (!fields.includes(entry.path)) fields.push(entry.path);
+				break;
+			case 'forbidden':
+				codes['403'].set('forbidden_create', ERROR_DESCRIPTIONS['403']);
+				break;
+			case 'unprocessable':
+				codes['422'].set('invalid_input', ERROR_DESCRIPTIONS['422']);
+				break;
+			default:
+				break; // not_found is always documented; unreachable never is
+		}
+	}
+	if (hasInput) {
+		codes['400'].set('invalid_input', ERROR_DESCRIPTIONS['400']);
+	}
+
+	const narrowed = (status: keyof typeof codes): OpenApiResponse => {
+		const lines = [...codes[status]].map(([code, text]) => `- \`${code}\`: ${text}`);
+		const intro =
+			status === '400' && fields.length > 0
+				? `${ERROR_DESCRIPTIONS['400']} The fields that can be rejected include ${fields.map((f) => `\`${f}\``).join(', ')}.`
+				: ERROR_DESCRIPTIONS[status];
+		return {
+			description: status === '400' ? intro : `${intro}\n\n${lines.join('\n')}`,
+			content: {
+				'application/json': {
+					schema: {
+						allOf: [
+							ERROR_REF,
+							{
+								type: 'object',
+								properties: {
+									error: {
+										type: 'object',
+										properties: { code: { enum: [...codes[status].keys()] } }
+									}
+								}
+							}
+						]
+					}
+				}
+			}
+		};
+	};
+
+	const responses: Record<string, OpenApiResponse> = {};
+	if (hasInput) responses['400'] = narrowed('400');
+	responses['404'] = narrowed('404');
+	for (const status of ['403', '409', '422'] as const) {
+		if (codes[status].size > 0) responses[status] = narrowed(status);
+	}
+	return responses;
 }
 
 interface Converted {
@@ -267,12 +350,24 @@ function operationOf(endpoint: Endpoint, schemas: Record<string, JsonSchema>): O
 			content: { 'application/json': { schema: output.schema } }
 		};
 	}
-	if (parameters.length > 0 || body) responses['400'] = errorResponse('400');
-	responses['401'] = errorResponse('401');
-	responses['404'] = errorResponse('404');
-	if (endpoint.method !== 'GET') responses['409'] = errorResponse('409');
-	for (const status of endpoint.refusals ?? []) {
-		responses[String(status)] = errorResponse(String(status) as '403' | '422');
+	if (endpoint.refusalTable) {
+		const derived = tableResponses(
+			endpoint.refusalTable.entries,
+			parameters.length > 0 || body !== undefined
+		);
+		if (derived['400']) responses['400'] = derived['400'];
+		responses['401'] = errorResponse('401');
+		for (const status of ['403', '404', '409', '422']) {
+			if (derived[status]) responses[status] = derived[status];
+		}
+	} else {
+		if (parameters.length > 0 || body) responses['400'] = errorResponse('400');
+		responses['401'] = errorResponse('401');
+		responses['404'] = errorResponse('404');
+		if (endpoint.method !== 'GET') responses['409'] = errorResponse('409');
+		for (const status of endpoint.refusals ?? []) {
+			responses[String(status)] = errorResponse(String(status) as '403' | '422');
+		}
 	}
 	responses['429'] = errorResponse('429');
 

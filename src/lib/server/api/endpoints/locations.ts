@@ -7,20 +7,22 @@ import {
 	listLocations,
 	locationInput,
 	updateLocation,
+	type LocationCreateFailure,
+	type LocationDeleteFailure,
 	type LocationEntry,
-	type LocationInput
+	type LocationInput,
+	type LocationUpdateFailure
 } from '../../directory';
 import {
 	ApiError,
-	conflict,
 	created,
 	defineEndpoint,
 	noContent,
 	notFound,
+	refusalTable,
 	type Endpoint
 } from '../registry';
 import { named } from '../shared-schemas';
-import { refusal } from './refusals';
 
 /**
  * The locations catalogue (ADR 0022, ADR 0027). Reading is `assets.view`, held
@@ -102,30 +104,60 @@ function validated(values: Record<string, unknown>): LocationInput {
 }
 
 /**
- * A domain failure as the envelope's refusal. `parent_not_found` and `cycle`
- * name a value in the body, so they are a `400` on `parentId`; they are mapped
- * before `refusal()`, which would turn any `*_not_found` into a `404`.
+ * How the API answers each failure of the locations use cases (ADR 0047).
+ * `parent_not_found` and `cycle` name a value in the body, so they are a `400`
+ * on `parentId`, and not the `404` a `*_not_found` would be.
  */
-function locationRefusal(failure: string): ApiError {
-	if (failure === 'parent_not_found') {
-		return new ApiError(400, 'invalid_input', 'The request is not valid.', [
-			{ path: ['parentId'], message: 'Parent location not found.' }
-		]);
+const parentNotFound = {
+	as: 'field',
+	path: 'parentId',
+	message: 'Parent location not found.'
+} as const;
+const cycle = {
+	as: 'field',
+	path: 'parentId',
+	message: 'A location cannot sit below itself.'
+} as const;
+const duplicateName = {
+	as: 'conflict',
+	message: 'A sibling location already has this name.'
+} as const;
+const duplicateCode = {
+	as: 'conflict',
+	message: 'Another location already has this code.'
+} as const;
+const notFoundEntry = { as: 'not_found', message: 'Location not found.' } as const;
+
+const createRefusals = refusalTable<LocationCreateFailure>({
+	duplicate_name: duplicateName,
+	duplicate_code: duplicateCode,
+	parent_not_found: parentNotFound
+});
+
+const updateRefusals = refusalTable<LocationUpdateFailure>({
+	duplicate_name: duplicateName,
+	duplicate_code: duplicateCode,
+	parent_not_found: parentNotFound,
+	cycle,
+	not_found: notFoundEntry
+});
+
+/**
+ * `in_use` is a bare code in the domain; the handler composes the counts that
+ * explain it (two domains) and refuses with this richer member of its own.
+ */
+type LocationInUse = { kind: 'in_use'; children: number; assets: number };
+type LocationDeleteRefusal = Exclude<LocationDeleteFailure, 'in_use'> | LocationInUse;
+
+const deleteRefusals = refusalTable<LocationDeleteRefusal>({
+	not_found: notFoundEntry,
+	in_use: {
+		as: 'conflict',
+		message: 'The location still has sub-locations or assets.',
+		details: ({ children, assets }) => ({ children, assets }),
+		describe: '`error.details` carries the `children` and `assets` that block the delete.'
 	}
-	if (failure === 'cycle') {
-		return new ApiError(400, 'invalid_input', 'The request is not valid.', [
-			{ path: ['parentId'], message: 'A location cannot sit below itself.' }
-		]);
-	}
-	if (failure === 'not_found') return notFound('Location not found.');
-	if (failure === 'duplicate_name') {
-		return conflict(failure, 'A sibling location already has this name.');
-	}
-	if (failure === 'duplicate_code') {
-		return conflict(failure, 'Another location already has this code.');
-	}
-	return refusal(failure);
-}
+});
 
 export const listLocationsEndpoint = defineEndpoint({
 	id: 'locations.list',
@@ -148,7 +180,7 @@ export const getLocationEndpoint = defineEndpoint({
 	path: '/locations/{id}',
 	summary: 'Get one location by its id.',
 	description:
-		'Returns one location with its `path`. An id from another organisation is answered with `404`, the same as one that does not exist.',
+		'Returns one location with its `path`. An id from another organisation is answered as one that does not exist.',
 	permissions: VIEW,
 	input: z.object({ id }),
 	output: locationResponse,
@@ -175,6 +207,7 @@ export const createLocationEndpoint = defineEndpoint({
 	},
 	status: 201,
 	permissions: MANAGE,
+	refusalTable: createRefusals,
 	input: z.object({
 		name: fields.name,
 		parentId: fields.parentId.optional(),
@@ -185,9 +218,9 @@ export const createLocationEndpoint = defineEndpoint({
 		longitude: fields.longitude.optional()
 	}),
 	output: locationResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const outcome = await createLocation(principal, validated(input));
-		if (!outcome.ok) throw locationRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 
 		const entry = await find(principal.organisationId, outcome.value.id);
 		return created({ data: toWire(entry) }, `/locations/${entry.id}`);
@@ -203,6 +236,7 @@ export const updateLocationEndpoint = defineEndpoint({
 		'Changes only the fields the body names: an absent field is left as it is, and `null` clears an optional one (`code`, `address`, `notes`, and the coordinates, which clear together). `parentId: null` moves the location to the root. `name` cannot be `null`. A location cannot be moved below itself or below one of its own sub-locations.',
 	example: { code: 'BCN-1', address: null },
 	permissions: MANAGE,
+	refusalTable: updateRefusals,
 	input: z.object({
 		id,
 		name: fields.name.optional(),
@@ -214,7 +248,7 @@ export const updateLocationEndpoint = defineEndpoint({
 		longitude: fields.longitude.optional()
 	}),
 	output: locationResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const { id: locationId, ...patch } = input;
 		const current = await find(principal.organisationId, locationId);
 
@@ -233,7 +267,7 @@ export const updateLocationEndpoint = defineEndpoint({
 		});
 
 		const outcome = await updateLocation(principal, locationId, merged);
-		if (!outcome.ok) throw locationRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 
 		return { data: toWire(await find(principal.organisationId, locationId)) };
 	}
@@ -245,27 +279,22 @@ export const deleteLocationEndpoint = defineEndpoint({
 	path: '/locations/{id}',
 	summary: 'Delete a location.',
 	description:
-		'Deletes a location that nothing points at. A location with sub-locations or assets is not deleted: the answer is `409 in_use`, and `error.details` carries the `children` and `assets` that block it. People placed there are not blockers: their location is cleared and the change is recorded on each person.',
+		'Deletes a location that nothing points at. A location with sub-locations or assets is not deleted. People placed there are not blockers: their location is cleared and the change is recorded on each person.',
 	permissions: MANAGE,
+	refusalTable: deleteRefusals,
 	input: z.object({ id }),
 	output: z.null(),
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const outcome = await deleteLocation(principal, input.id);
 		if (outcome.ok) return noContent();
-		if (outcome.error !== 'in_use') throw locationRefusal(outcome.error);
+		if (outcome.error !== 'in_use') throw refuse(outcome.error);
 
 		// Two domains, composed here: neither imports the other's tables.
 		const [children, assets] = await Promise.all([
 			countLocationChildren(principal.organisationId, input.id),
 			countAssetsByLocation(principal.organisationId).then((counts) => counts.get(input.id) ?? 0)
 		]);
-		throw new ApiError(
-			409,
-			'in_use',
-			'The location still has sub-locations or assets.',
-			undefined,
-			{ children, assets }
-		);
+		throw refuse({ kind: 'in_use', children, assets });
 	}
 });
 

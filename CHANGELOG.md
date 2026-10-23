@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.118.2] - 2026-10-23
+
+### Changed
+
+- API: the locations endpoints declare their refusals per endpoint (ADR 0047, #350). The OpenAPI
+  document now lists, for each locations write, the exact `error.code` values of every error
+  status and the body field that can be rejected (`parentId`), and no longer advertises a `409`
+  on endpoints that cannot conflict. Statuses, codes, messages and `details` are unchanged.
+
 ## [0.118.1] - 2026-10-23
 
 ### Changed

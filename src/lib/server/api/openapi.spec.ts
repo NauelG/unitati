@@ -123,6 +123,81 @@ describe('the OpenAPI document built from the real registry', () => {
 		expect(envelope.properties.error.required).not.toContain('details');
 	});
 
+	/** The refusal tables of the locations endpoints are the source of these responses (ADR 0047). */
+	describe('the error responses derived from the locations refusal tables', () => {
+		type Narrowed = {
+			description: string;
+			content: {
+				'application/json': {
+					schema: {
+						allOf: [
+							unknown,
+							{ properties: { error: { properties: { code: { enum: string[] } } } } }
+						];
+					};
+				};
+			};
+		};
+		const codesOf = (response: unknown): string[] =>
+			(response as Narrowed).content['application/json'].schema.allOf[1].properties.error.properties
+				.code.enum;
+
+		it('narrows the 409 of a write to the codes its table lists, with a line per code', () => {
+			const create = document.paths['/locations'].post.responses;
+			expect(codesOf(create['409'])).toEqual(['duplicate_name', 'duplicate_code']);
+			expect(create['409'].description).toContain(
+				'`duplicate_name`: A sibling location already has this name.'
+			);
+			expect(codesOf(document.paths['/locations/{id}'].patch.responses['409'])).toEqual([
+				'duplicate_name',
+				'duplicate_code'
+			]);
+			const remove = document.paths['/locations/{id}'].delete.responses;
+			expect(codesOf(remove['409'])).toEqual(['in_use']);
+			expect(remove['409'].description).toContain('`children` and `assets`');
+		});
+
+		it('names the body fields a 400 can reject, and always answers 404 as not_found', () => {
+			const create = document.paths['/locations'].post.responses;
+			expect(codesOf(create['400'])).toEqual(['invalid_input']);
+			expect(create['400'].description).toContain('`parentId`');
+			expect(codesOf(create['404'])).toEqual(['not_found']);
+
+			const remove = document.paths['/locations/{id}'].delete.responses;
+			expect(remove['400'].description).not.toContain('`parentId`');
+		});
+
+		it('advertises no 403, no 422 and, where no entry conflicts, no 409', () => {
+			for (const operation of [
+				document.paths['/locations'].post,
+				document.paths['/locations/{id}'].patch,
+				document.paths['/locations/{id}'].delete
+			]) {
+				expect(operation.responses['403']).toBeUndefined();
+				expect(operation.responses['422']).toBeUndefined();
+			}
+			expect(document.paths['/locations/{id}'].get.responses['409']).toBeUndefined();
+		});
+
+		it('keeps the generic responses of an endpoint that has no table', () => {
+			expect(document.paths['/tickets'].post.responses['409'].content).toEqual({
+				'application/json': { schema: { $ref: '#/components/schemas/Error' } }
+			});
+		});
+
+		it('leaves no error-code prose in the migrated descriptions', () => {
+			for (const id of [
+				'locations.get',
+				'locations.delete',
+				'locations.create',
+				'locations.update'
+			]) {
+				const { operation } = operations.find((item) => item.operation.operationId === id)!;
+				expect(operation.description, id).not.toMatch(/\b(409|404|in_use)\b/);
+			}
+		});
+	});
+
 	it('takes path parameters, query and body from the input schema', () => {
 		const list = document.paths['/tickets'].get;
 		expect(list.parameters?.map((parameter) => [parameter.name, parameter.in])).toEqual(

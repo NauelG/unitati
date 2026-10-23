@@ -1,5 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { refusalTable, resolveRefusal, defineEndpoint, ApiError } from '../registry';
+import { z } from 'zod';
 import { ENDPOINTS } from './index';
 
 /** The registry is the one description of the API (ADR 0022): an entry that is not described cannot ship. */
@@ -173,5 +175,104 @@ describe('the endpoint registry', () => {
 			const source = readFileSync(new URL(file, directory), 'utf8');
 			expect(source, file).not.toMatch(/getDb|from 'drizzle-orm|from '[./]+\/db'|\/schema'/);
 		}
+	});
+});
+
+/** The central guarantee of ADR 0047: a failure cannot reach the wire without an explicit answer. */
+describe('the refusal table', () => {
+	type Failure = 'gone' | 'taken' | { kind: 'busy'; count: number };
+
+	const table = refusalTable<Failure>({
+		gone: { as: 'not_found' },
+		taken: { as: 'conflict' },
+		busy: {
+			as: 'conflict',
+			message: ({ count }) => `Busy with ${count}.`,
+			details: ({ count }) => ({ count })
+		}
+	});
+
+	it('does not compile when a member of the failure union is missing', () => {
+		// @ts-expect-error `busy` is a member of the union and has no entry
+		const partial = refusalTable<Failure>({ gone: { as: 'not_found' }, taken: { as: 'conflict' } });
+		expect(Object.keys(partial.entries)).toEqual(['gone', 'taken']);
+		// @ts-expect-error `extra` is not a member of the union
+		const extra = refusalTable<Failure>({ ...table.entries, extra: { as: 'conflict' } });
+		expect(extra.entries).toHaveProperty('extra');
+	});
+
+	it('does not compile when the handler refuses with a failure the table does not cover', () => {
+		const endpoint = defineEndpoint({
+			id: 'widgets.break',
+			method: 'POST',
+			path: '/widgets',
+			summary: 'Break.',
+			permissions: ['tickets.view'],
+			refusalTable: table,
+			input: z.object({}),
+			output: z.null(),
+			handler: async ({ refuse }) => {
+				refuse('gone');
+				refuse({ kind: 'busy', count: 2 });
+				// @ts-expect-error `missing` is not in this endpoint's table
+				refuse('missing');
+				// @ts-expect-error an object failure needs the data its entry computes from
+				refuse({ kind: 'busy' });
+				return null;
+			}
+		});
+		expect(endpoint.refusalTable).toBe(table);
+	});
+
+	it('does not offer refuse to an endpoint that declares no table', () => {
+		const endpoint = defineEndpoint({
+			id: 'widgets.plain',
+			method: 'GET',
+			path: '/widgets',
+			summary: 'Plain.',
+			permissions: ['tickets.view'],
+			input: z.object({}),
+			output: z.null(),
+			handler: async ({ refuse }) => {
+				// @ts-expect-error no table, so nothing can be refused through it
+				refuse('gone');
+				return null;
+			}
+		});
+		expect(endpoint.refusalTable).toBeUndefined();
+	});
+
+	it('answers each entry of the closed vocabulary with its status', () => {
+		const answer = (failure: Failure) => resolveRefusal('widgets.x', table, failure) as ApiError;
+
+		expect(answer('gone')).toMatchObject({ status: 404, code: 'not_found' });
+		expect(answer('taken')).toMatchObject({ status: 409, code: 'taken', message: 'Taken.' });
+		expect(answer({ kind: 'busy', count: 3 })).toMatchObject({
+			status: 409,
+			code: 'busy',
+			message: 'Busy with 3.',
+			details: { count: 3 }
+		});
+
+		const all = refusalTable<'a' | 'b' | 'c' | 'd'>({
+			a: { as: 'field', path: 'parentId', message: 'Nope.' },
+			b: { as: 'forbidden' },
+			c: { as: 'unprocessable' },
+			d: { as: 'unreachable', why: 'The endpoint never sends one.' }
+		});
+		expect(resolveRefusal('w', all, 'a')).toMatchObject({
+			status: 400,
+			code: 'invalid_input',
+			issues: [{ path: ['parentId'], message: 'Nope.' }]
+		});
+		expect(resolveRefusal('w', all, 'b')).toMatchObject({ status: 403, code: 'forbidden_create' });
+		expect(resolveRefusal('w', all, 'c')).toMatchObject({ status: 422, code: 'invalid_input' });
+	});
+
+	it('turns an unreachable entry into an internal error, never a refusal', () => {
+		const unreachable = refusalTable<'a'>({ a: { as: 'unreachable', why: 'Never sent.' } });
+		const error = resolveRefusal('w', unreachable, 'a');
+		expect(error).not.toBeInstanceOf(ApiError);
+		expect(error.message).toContain('Never sent.');
 	});
 });
