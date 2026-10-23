@@ -5,6 +5,15 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.117.1] - 2026-10-23
+
+### Fixed
+
+- Knowledge: a page or revision written through a service-account key now records the account as its
+  author (#344, part of #234), so history and `stale_revision` name it instead of reading "author
+  unknown". Creating a page refuses a body over the length limit, as saving already did. The domain
+  gains a paged revision history read for the API slice; the app's screens are unchanged.
+
 ## [0.117.0] - 2026-10-23
 
 ### Added

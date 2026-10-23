@@ -1,12 +1,14 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 import { PAGE_BODY_MAX_LENGTH } from '#lib/domain/knowledge.js';
 import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
+import { page as pageOf, type Page, type PageWindow } from '../shared/pagination';
+import { authorColumns, withAuthorNames } from './authors';
 import { readablePages, requirePagesManage } from './scope';
-import { pageRevisions, pages } from './schema';
+import { pageRevisions as revisionsTable, pages } from './schema';
 
 /**
  * Writing a page (ADR 0031 §6, #324): every save appends a revision, guarded
@@ -63,16 +65,26 @@ async function lockPage(tx: Transaction, organisationId: string, pageId: string)
 async function readRevision(executor: Pick<Transaction, 'select'>, pageId: string, number: number) {
 	const [row] = await executor
 		.select({
-			number: pageRevisions.number,
-			title: pageRevisions.title,
-			body: pageRevisions.body,
-			authorName: people.fullName,
-			createdAt: pageRevisions.createdAt
+			number: revisionsTable.number,
+			title: revisionsTable.title,
+			body: revisionsTable.body,
+			personName: people.fullName,
+			serviceAccountId: revisionsTable.authorServiceAccountId,
+			organisationId: revisionsTable.organisationId,
+			createdAt: revisionsTable.createdAt
 		})
-		.from(pageRevisions)
-		.leftJoin(people, eq(people.id, pageRevisions.authorPersonId))
-		.where(and(eq(pageRevisions.pageId, pageId), eq(pageRevisions.number, number)));
-	return row;
+		.from(revisionsTable)
+		.leftJoin(people, eq(people.id, revisionsTable.authorPersonId))
+		.where(and(eq(revisionsTable.pageId, pageId), eq(revisionsTable.number, number)));
+	if (!row) return undefined;
+	const [named] = await withAuthorNames(row.organisationId, [row]);
+	return {
+		number: named.number,
+		title: named.title,
+		body: named.body,
+		authorName: named.authorName,
+		createdAt: named.createdAt
+	};
 }
 
 async function staleRevision(
@@ -100,13 +112,15 @@ async function appendRevision(
 ): Promise<number> {
 	const next = page.revision + 1;
 	const now = new Date();
-	await tx.insert(pageRevisions).values({
+	const author = authorColumns(actor);
+	await tx.insert(revisionsTable).values({
 		organisationId: actor.organisationId,
 		pageId: page.id,
 		number: next,
 		title: content.title,
 		body: content.body,
-		authorPersonId: actor.personId,
+		authorPersonId: author.personId,
+		authorServiceAccountId: author.serviceAccountId,
 		createdAt: now
 	});
 	await tx
@@ -162,24 +176,44 @@ async function pageExists(viewer: SessionUser, pageId: string): Promise<boolean>
 	return row !== undefined;
 }
 
+/** The rows of one page's history, newest first, with the author still unnamed. */
+function revisionRows(pageId: string) {
+	return getDb()
+		.select({
+			number: revisionsTable.number,
+			title: revisionsTable.title,
+			personName: people.fullName,
+			serviceAccountId: revisionsTable.authorServiceAccountId,
+			createdAt: revisionsTable.createdAt
+		})
+		.from(revisionsTable)
+		.leftJoin(people, eq(people.id, revisionsTable.authorPersonId))
+		.where(eq(revisionsTable.pageId, pageId))
+		.orderBy(desc(revisionsTable.number));
+}
+
 /** Every revision of the page, newest first. Staff only: it throws for anybody else. */
 export async function listRevisions(
 	viewer: SessionUser,
 	pageId: string
 ): Promise<Outcome<RevisionEntry[], 'not_found'>> {
 	if (!(await pageExists(viewer, pageId))) return failure('not_found');
-	const rows = await getDb()
-		.select({
-			number: pageRevisions.number,
-			title: pageRevisions.title,
-			authorName: people.fullName,
-			createdAt: pageRevisions.createdAt
-		})
-		.from(pageRevisions)
-		.leftJoin(people, eq(people.id, pageRevisions.authorPersonId))
-		.where(eq(pageRevisions.pageId, pageId))
-		.orderBy(desc(pageRevisions.number));
-	return success(rows);
+	return success(await withAuthorNames(viewer.organisationId, await revisionRows(pageId)));
+}
+
+/** One window of the page's history, newest first. Same scope as `listRevisions`. */
+export async function pageRevisions(
+	viewer: SessionUser,
+	pageId: string,
+	window: PageWindow
+): Promise<Outcome<Page<RevisionEntry>, 'not_found'>> {
+	if (!(await pageExists(viewer, pageId))) return failure('not_found');
+	const [rows, [counted]] = await Promise.all([
+		revisionRows(pageId).limit(window.limit).offset(window.offset),
+		getDb().select({ total: count() }).from(revisionsTable).where(eq(revisionsTable.pageId, pageId))
+	]);
+	const named = await withAuthorNames(viewer.organisationId, rows);
+	return success(pageOf(named, counted.total, window));
 }
 
 /** One revision with its body. Staff only: it throws for anybody else. */

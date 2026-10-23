@@ -1,3 +1,4 @@
+import { PAGE_BODY_MAX_LENGTH } from '#lib/domain/knowledge.js';
 import { asc, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { PAGE_PICK_LIMIT } from '#lib/domain/knowledge.js';
@@ -38,6 +39,21 @@ async function reload(id: string) {
 }
 
 const published = () => ({ publishedAt: new Date() });
+
+describe('createPage: body limit', () => {
+	it('refuses a body over the limit and writes nothing', async () => {
+		const { organisation, admin } = await createWorkspace();
+		const space = await createSpaceRow(organisation.id);
+		const result = await createPage(admin, {
+			spaceId: space.id,
+			parentId: null,
+			title: 'Long',
+			body: 'x'.repeat(PAGE_BODY_MAX_LENGTH + 1)
+		});
+		expect(result).toEqual({ ok: false, error: 'body_too_long' });
+		expect(await getDb().select().from(pages).where(eq(pages.spaceId, space.id))).toHaveLength(0);
+	});
+});
 
 describe('createPage', () => {
 	it('creates a draft at the end of its siblings with revision 1 and an entry', async () => {

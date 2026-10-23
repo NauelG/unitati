@@ -14,6 +14,7 @@ import {
 	type AnyPgColumn
 } from 'drizzle-orm/pg-core';
 import { SPACE_AUDIENCES } from '#lib/domain/knowledge.js';
+import { serviceAccounts } from '../api/schema';
 import { timestamps } from '../shared/columns';
 import { searchVector, tsvector } from '../shared/search-vector';
 import { organisations, people } from '../directory/schema';
@@ -95,6 +96,11 @@ export const pages = pgTable(
 		createdByPersonId: uuid('created_by_person_id').references(() => people.id, {
 			onDelete: 'set null'
 		}),
+		/** Set instead of `createdByPersonId` when an API key created the page. */
+		createdByServiceAccountId: uuid('created_by_service_account_id').references(
+			() => serviceAccounts.id,
+			{ onDelete: 'restrict' }
+		),
 		/** Title and body in Spanish, the code verbatim, like `tickets` (ADR 0028). */
 		search: tsvector('search')
 			.notNull()
@@ -107,6 +113,10 @@ export const pages = pgTable(
 	(table) => [
 		unique('pages_org_tag').on(table.organisationId, table.pageTag),
 		check('pages_not_own_parent', sql`${table.parentId} <> ${table.id}`),
+		check(
+			'pages_at_most_one_creator',
+			sql`num_nonnulls(${table.createdByPersonId}, ${table.createdByServiceAccountId}) <= 1`
+		),
 		index('pages_space_parent_position').on(table.spaceId, table.parentId, table.position),
 		index('pages_search_gin').using('gin', table.search)
 	]
@@ -132,9 +142,19 @@ export const pageRevisions = pgTable(
 		authorPersonId: uuid('author_person_id').references(() => people.id, {
 			onDelete: 'set null'
 		}),
+		/** Set instead of `authorPersonId` when an API key saved the revision. */
+		authorServiceAccountId: uuid('author_service_account_id').references(() => serviceAccounts.id, {
+			onDelete: 'restrict'
+		}),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 	},
-	(table) => [unique('page_revisions_page_number').on(table.pageId, table.number)]
+	(table) => [
+		unique('page_revisions_page_number').on(table.pageId, table.number),
+		check(
+			'page_revisions_at_most_one_author',
+			sql`num_nonnulls(${table.authorPersonId}, ${table.authorServiceAccountId}) <= 1`
+		)
+	]
 );
 
 /**
