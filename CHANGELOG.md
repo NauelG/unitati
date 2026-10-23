@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.115.0] - 2026-10-23
+
+### Added
+
+- The knowledge base in the portal (#328, part of #17). Employees open "Documentación" from the
+  portal topbar, browse the `portal` spaces and their published pages, search them
+  ("Buscar en la documentación") and download page attachments. Drafts, archived pages and `staff`
+  spaces never appear in lists, trees, search results or counts, and answer 404 by tag. Each page
+  offers "¿No resuelve tu problema? Abrir un ticket". The canonical `/knowledge/DOC-####` link now
+  sends an employee to the portal reader, so the pages cited in their tickets open there.
+
 ## [0.114.0] - 2026-10-23
 
 ### Added

@@ -1,6 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import { can } from '#lib/server/access/permissions.js';
-import { requirePermission } from '#lib/server/auth/guards.js';
+import { requirePermission, type SessionUser } from '#lib/server/auth/guards.js';
+import { listSpaces } from '#lib/server/knowledge/index.js';
 import { unreadCount } from '#lib/server/notifications/index.js';
 import type { LayoutServerLoad } from './$types';
 
@@ -17,6 +18,13 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	return {
 		user: { name: user.name, email: user.email },
 		unreadNotifications: await unreadCount(user),
-		canSeeHandovers: can(user, 'assets.view.own')
+		canSeeHandovers: can(user, 'assets.view.own'),
+		canSeeKnowledge: await hasReadableSpace(user)
 	};
 };
+
+/** The link is worth showing only when there is something behind it. */
+async function hasReadableSpace(user: SessionUser): Promise<boolean> {
+	if (!can(user, 'knowledge.view')) return false;
+	return (await listSpaces(user)).length > 0;
+}

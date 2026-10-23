@@ -1,4 +1,4 @@
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import { attachmentFailureMessage } from '#lib/attachment-errors.js';
 import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
@@ -37,11 +37,13 @@ import type { Action, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params, url }) => {
 	// `/knowledge/DOC-####` is the only link ever inserted (#327), so an employee
-	// opens it too. They read pages in the portal: the canonical link answers
-	// `303` to `/portal/knowledge/DOC-####` once that route exists (#328), and
-	// `404` until then. Unreadable is `404` either way.
+	// opens it too. They read pages in the portal (#328): the canonical link
+	// answers `303` to `/portal/knowledge/DOC-####`, and the portal says `404` for
+	// a page they cannot read.
 	const viewer = requirePermission(locals.user, 'knowledge.view', url);
-	if (!can(viewer, 'knowledge.manage')) error(404, 'Not found');
+	if (!can(viewer, 'knowledge.manage')) {
+		redirect(303, `/portal/knowledge/${encodeURIComponent(params.tag)}`);
+	}
 	const user = requireKnowledgeStaff(locals.user, url);
 
 	const found = await getPageByTag(user, params.tag);

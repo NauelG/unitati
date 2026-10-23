@@ -47,8 +47,8 @@ describe('/knowledge/[tag]', () => {
 
 		const attempt = serialised(s.employee, s.page.pageTag);
 
-		// 404 until the portal reader exists (#328, #327): the canonical link has nowhere to send them.
-		await expect(attempt).rejects.toMatchObject({ status: 404 });
+		// The canonical link sends them to the portal reader (#328), which holds no comments.
+		await expect(attempt).rejects.toMatchObject({ status: 303 });
 	});
 
 	it('refuses an employee the comment actions and the picker', async () => {

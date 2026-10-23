@@ -26,6 +26,11 @@
 					{m.portal_handovers_nav()}
 				</a>
 			{/if}
+			{#if data.canSeeKnowledge}
+				<a href="/portal/knowledge" class="text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">
+					{m.portal_knowledge_nav()}
+				</a>
+			{/if}
 			<a href="/assets" class="text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]">
 				{m.portal_assets_link()}
 			</a>
