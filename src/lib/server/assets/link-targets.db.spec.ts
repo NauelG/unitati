@@ -13,7 +13,7 @@ import {
 	handoverInOrganisation,
 	handoverSummaries
 } from '.';
-import { assets, handoverTemplateVersions, handovers } from './schema';
+import { assets, handoverTemplateVersions, handoverTemplates, handovers } from './schema';
 import {
 	createAsset,
 	createCatalogue,
@@ -219,6 +219,8 @@ describe('handoverSummaries', () => {
 		const [version] = await getDb()
 			.select({ id: handoverTemplateVersions.id })
 			.from(handoverTemplateVersions)
+			.innerJoin(handoverTemplates, eq(handoverTemplateVersions.templateId, handoverTemplates.id))
+			.where(eq(handoverTemplates.organisationId, organisation.id))
 			.limit(1);
 		const ada = await createPerson(organisation.id, 'Ada Lovelace');
 		const handover = await waivedHandover(organisation.id, ada, {

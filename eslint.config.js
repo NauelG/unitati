@@ -19,7 +19,7 @@ const NOTIFICATIONS_TABLES = {
  * when one of these barrels re-exports a new table or enum, add its name here.
  */
 const BARREL_TABLES = {
-	'../assets': [
+	assets: [
 		'assets',
 		'assetModels',
 		'categories',
@@ -27,7 +27,7 @@ const BARREL_TABLES = {
 		'assetState',
 		'assetCodeSequence'
 	],
-	'../service-desk': [
+	'service-desk': [
 		'queues',
 		'requestForms',
 		'requestFormKind',
@@ -40,7 +40,7 @@ const BARREL_TABLES = {
 		'commentVisibility',
 		'ticketCodeSequence'
 	],
-	'../projects': [
+	projects: [
 		'states',
 		'projects',
 		'tasks',
@@ -55,7 +55,7 @@ const BARREL_TABLES = {
 		'projectVisibility',
 		'projectMembers'
 	],
-	'../knowledge': [
+	knowledge: [
 		'knowledgeSpaces',
 		'knowledgeSpaceAudience',
 		'pages',
@@ -141,12 +141,14 @@ export default defineConfig(
 			'no-restricted-imports': [
 				'error',
 				{
-					paths: Object.entries(BARREL_TABLES).map(([name, importNames]) => ({
-						name,
-						importNames,
-						message: `links reads ${name.slice(3)} through its functions, never its tables (ADR 0002).`
-					})),
 					patterns: [
+						// One per barrel. The regex covers the relative, `#lib/…` and `$lib/…`
+						// forms, with or without `/index` and an extension.
+						...Object.entries(BARREL_TABLES).map(([domain, importNames]) => ({
+							regex: `(^|/)${domain}(/index(\\.(js|ts))?)?$`,
+							importNames,
+							message: `links reads ${domain} through its functions, never its tables (ADR 0002).`
+						})),
 						{
 							regex: '(^|/)(assets|service-desk|projects|knowledge)/schema',
 							message: 'links must not import other domains\u2019 tables (ADR 0002).'

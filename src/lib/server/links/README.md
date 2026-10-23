@@ -47,6 +47,7 @@ Two more relations, `ticket_task` (`resolved_in`) and `ticket_project` (`handled
 
 `ticket_handover` (`fulfilled-by`) relates a ticket to the handover that answers it, built like `ticket_asset`. Seen from the ticket it reads `fulfilled_by` (staff only: a handover is signature evidence), from the handover `fulfils`. A handover has no page yet, so its item has `href: null` and the constellation leaves it out.
 
+- **Handover references keep their shape** (ADR 0042 Leaks §1) **but are gated by `assets.view` in their owning domain:** `handoverSummaries` returns nothing without it, on top of the `staff` standing gate in `relatedTo`.
 - **`assets` never imports `links`.** `deliver` and `takeBack` take an `afterIssue(tx, handover)` hook that runs in their transaction; the route passes `linkHandover` through it, so the link and the custody commit together and a throw rolls both back.
 - **A decision leaves a note, nothing more.** `notifyHandoverDecided` writes one internal, authorless comment per linked ticket through `service-desk`'s `addSystemNote`. Status, assignee and queue are never touched (ADR 0035). A handover with no link finds no rows and does nothing.
 - **No `activity` entry.** The panel shows the link and the note shows the outcome; a third record would only repeat them.

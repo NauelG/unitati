@@ -1,9 +1,15 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { createViewer } from '../assets/testing/fixtures';
+import { handovers } from '../assets/schema';
+import {
+	createAsset,
+	createCatalogue,
+	createPerson,
+	createViewer
+} from '../assets/testing/fixtures';
 import { listActivity } from '../activity';
 import { getDb } from '../db';
-import { ticketProject, ticketTask } from '../links';
+import { ticketAsset, ticketHandover, ticketProject, ticketTask } from '../links';
 import { projects, tasks } from '../projects/schema';
 import {
 	createProjectRow,
@@ -338,14 +344,48 @@ describe('reading the work of a ticket and the tickets of work', () => {
 		});
 	});
 
-	it('answers a key scoped to ticket reads only, with the same groups', async () => {
+	it('answers a key scoped to ticket reads only, with the same groups as an unrestricted key', async () => {
 		const s = await escalated();
+		// The ticket also affects an asset and is fulfilled by a handover, which the
+		// narrow key may not read: the work endpoint must not need them.
+		const { modelId } = await createCatalogue(s.organisation.id);
+		const asset = await createAsset(s.organisation.id, modelId, { name: 'Laptop' });
+		const ada = await createPerson(s.organisation.id, 'Ada Lovelace');
+		const [handover] = await getDb()
+			.insert(handovers)
+			.values({
+				organisationId: s.organisation.id,
+				direction: 'delivery',
+				status: 'waived',
+				personId: ada.id,
+				personNameSnapshot: ada.fullName,
+				recipientEmailSnapshot: ada.email,
+				issuedAt: new Date(),
+				waiveReason: 'Because'
+			})
+			.returning();
+		await getDb()
+			.insert(ticketAsset)
+			.values({ organisationId: s.organisation.id, ticketId: s.ticket.id, assetId: asset.id });
+		await getDb().insert(ticketHandover).values({
+			organisationId: s.organisation.id,
+			ticketId: s.ticket.id,
+			handoverId: handover.id
+		});
 		const ticketsOnly = await keyFor(s.technician, ['tickets.view']);
+		const unrestricted = await keyFor(s.technician, [
+			'tickets.view',
+			'projects.view',
+			'assets.view'
+		]);
 
-		const { response, body } = await send('GET', `${s.base}/work`, ticketsOnly);
+		const narrow = await send('GET', `${s.base}/work`, ticketsOnly);
+		const full = await send('GET', `${s.base}/work`, unrestricted);
 
-		expect(response.status).toBe(200);
-		expect(body.data.map((group: { relation: string }) => group.relation)).toEqual([
+		expect(narrow.response.status).toBe(200);
+		expect(full.response.status).toBe(200);
+		expect(narrow.body.data).toEqual(full.body.data);
+		expect(narrow.body.data.map((group: { relation: string }) => group.relation)).toEqual([
 			'resolved_in',
 			'handled_in'
 		]);
