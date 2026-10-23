@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.117.0] - 2026-10-23
+
+### Added
+
+- Archiving an asset. An asset registered by mistake can be archived from its page by anyone with
+  `assets.manage`; it leaves lists, search, counts, the state distribution and labels, and keeps its
+  tag and serial taken. It is not `retired`, which remains the state of an asset that left service.
+  An asset somebody holds, or that has been through a handover, is refused: retire it instead. An
+  archived asset opens by its direct link, where it can be restored; both moves are recorded in its
+  history.
+
 ## [0.116.0] - 2026-10-23
 
 ### Added
