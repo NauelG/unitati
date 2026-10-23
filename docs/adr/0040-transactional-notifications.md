@@ -28,8 +28,10 @@ in between, which is acceptable for a courtesy mail and not for an inbox that pe
 5. **A snapshot per row** (`code`, `title`, `actorName`, a short excerpt). The inbox reads what it
    read when the thing happened, even if the record is renamed. Rows cascade away with the record.
 6. **Exactly one target**, with typed foreign keys and a `CHECK`, as in ADR 0009. The module imports
-   the tables of `service-desk` and `projects` for those keys and calls none of their functions;
-   no domain imports its tables (ESLint enforces both).
+   the tables of `service-desk`, `projects` and `knowledge` for those keys and calls none of their
+   functions; no domain imports its tables (ESLint enforces both). The target may also be a
+   knowledge page (#326): a `mention` in a page comment, anchored to the comment through the
+   snapshot's `commentId`, for recipients holding `knowledge.manage` only. Pages are not followed.
 7. **Polling, not push.** The bell polls `GET /notifications/unread` every 60 s while the tab is
    visible, and once when it becomes visible again.
 8. **Cleanup is opportunistic.** Opening the inbox deletes the viewer's read rows older than 90 days.

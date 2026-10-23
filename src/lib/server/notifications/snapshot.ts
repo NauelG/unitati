@@ -9,7 +9,9 @@ export const snapshotSchema = z.object({
 	title: z.string(),
 	summary: z.string().optional(),
 	excerpt: z.string().max(280).optional(),
-	actorName: z.string().optional()
+	actorName: z.string().optional(),
+	/** The comment a notification leads to, for the targets that anchor to one (a page, #326). */
+	commentId: z.string().optional()
 });
 
 export type Snapshot = z.infer<typeof snapshotSchema>;

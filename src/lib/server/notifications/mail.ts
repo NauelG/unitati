@@ -28,6 +28,7 @@ function recordUrl(email: PendingEmail, origin: string): string {
 		{
 			ticketId: 'ticketId' in target ? target.ticketId : null,
 			taskId: 'taskId' in target ? target.taskId : null,
+			pageId: 'pageId' in target ? target.pageId : null,
 			snapshot
 		},
 		// A person without a user can only ever get access as a requester (#230).

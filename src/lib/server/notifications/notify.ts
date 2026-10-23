@@ -9,7 +9,8 @@ import type { Snapshot } from './snapshot';
 import { snapshotSchema } from './snapshot';
 import { DEFAULTS, isDirect, strongerType, type NotificationType } from './types';
 
-export type NotifyTarget = { ticketId: string } | { taskId: string } | { projectId: string };
+export type NotifyTarget =
+	{ ticketId: string } | { taskId: string } | { projectId: string } | { pageId: string };
 
 export type NotifyInput = {
 	organisationId: string;
@@ -73,7 +74,8 @@ async function addFollowers(
 	input: NotifyInput,
 	candidates: Map<string, NotificationType>
 ): Promise<Map<string, NotificationType>> {
-	if (!input.followers) return candidates;
+	// Pages cannot be followed (#326); the comment thread is staff-only.
+	if (!input.followers || 'pageId' in input.target) return candidates;
 
 	const ids = await followerIds(tx, input.target);
 	if (ids.length === 0) return candidates;
@@ -133,6 +135,10 @@ export async function notify(tx: Transaction, input: NotifyInput): Promise<Pendi
 
 	const eligible = rows.filter((person) => {
 		if (!person.active) return false;
+		// Page comments are staff business: a demoted person stops receiving them (#326).
+		if ('pageId' in input.target) {
+			if (person.role === null || !can({ role: person.role }, 'knowledge.manage')) return false;
+		}
 		if (input.audience && person.role !== 'admin' && !input.audience.has(person.id)) return false;
 		if (input.visibility === 'internal') {
 			return person.role !== null && can({ role: person.role }, 'tickets.comment.internal');

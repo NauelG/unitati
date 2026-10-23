@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractMentions, mentionToken, MENTION_TOKEN } from './mentions';
+import { addedMentions, extractMentions, mentionToken, MENTION_TOKEN } from './mentions';
 
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -39,5 +39,15 @@ describe('extractMentions', () => {
 		const match = new RegExp(MENTION_TOKEN.source, 'u').exec(mentionToken('Ana ] Pérez', A));
 		expect(match?.[1]).toBe('Ana \\] Pérez');
 		expect(match?.[2]).toBe(A);
+	});
+});
+
+describe('addedMentions', () => {
+	it('returns only the people the new body names and the old one did not', () => {
+		const before = `Hola ${mentionToken('Ana', A)}`;
+		const after = `Hola ${mentionToken('Ana', A)} y ${mentionToken('Beto', B)}`;
+		expect(addedMentions(before, after)).toEqual([B]);
+		expect(addedMentions(after, before)).toEqual([]);
+		expect(addedMentions('', after)).toEqual([A, B]);
 	});
 });

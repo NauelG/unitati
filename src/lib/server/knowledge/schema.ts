@@ -166,7 +166,34 @@ export const pageAttachments = pgTable(
 	(table) => [index('page_attachments_page_idx').on(table.pageId)]
 );
 
+/**
+ * Staff comments on a page (#326). Not part of the page's content or history:
+ * no revision, no activity, no follow rows. Never deleted; the author may edit
+ * (`edited_at`). Readable and writable by `knowledge.manage` only.
+ */
+export const pageComments = pgTable(
+	'page_comments',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		pageId: uuid('page_id')
+			.notNull()
+			.references(() => pages.id, { onDelete: 'cascade' }),
+		authorPersonId: uuid('author_person_id').references(() => people.id, {
+			onDelete: 'set null'
+		}),
+		body: text('body').notNull(),
+		/** Null means never edited. */
+		editedAt: timestamp('edited_at', { withTimezone: true }),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [index('page_comments_page_created').on(table.pageId, table.createdAt)]
+);
+
 export type KnowledgeSpace = typeof knowledgeSpaces.$inferSelect;
 export type Page = typeof pages.$inferSelect;
 export type PageRevision = typeof pageRevisions.$inferSelect;
 export type PageAttachment = typeof pageAttachments.$inferSelect;
+export type PageComment = typeof pageComments.$inferSelect;

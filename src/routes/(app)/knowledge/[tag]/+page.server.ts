@@ -1,18 +1,23 @@
 import { error } from '@sveltejs/kit';
 import { z } from 'zod';
 import { attachmentFailureMessage } from '#lib/attachment-errors.js';
+import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 import { m } from '#lib/paraglide/messages.js';
 import { renderMarkdown } from '#lib/server/shared/markdown.js';
 import {
 	addPageAttachments,
+	addPageComment,
+	editPageComment,
 	getPageByTag,
 	listPageAttachments,
+	listPageComments,
 	listSpaces,
 	listSpaceTree,
 	removePageAttachment
 } from '#lib/server/knowledge/index.js';
 import { readAttachmentForm } from '#lib/server/projects/index.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
+import { fieldsOf } from '../../assets/form-data';
 import {
 	archive,
 	create,
@@ -40,16 +45,20 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 	const spaces = await listSpaces(user);
 	const targets = spaces.filter((space) => space.archivedAt === null);
 
-	const [tree, targetTrees, attachments] = await Promise.all([
+	const [tree, targetTrees, attachments, comments] = await Promise.all([
 		listSpaceTree(user, page.space.id, { includeArchived: showArchived }),
 		// The "Mover…" dialog picks a parent from the target space's tree. One read per
 		// space, archived pages left out: nothing can be moved under one.
 		Promise.all(
 			targets.map(async (space) => [space.id, await listSpaceTree(user, space.id)] as const)
 		),
-		listPageAttachments(user, page.id)
+		listPageAttachments(user, page.id),
+		// Staff only (#326): this route 403s everybody else before it gets here, and
+		// the list itself refuses a viewer without `knowledge.manage`.
+		listPageComments(user, page.id)
 	]);
 	if (!attachments.ok) error(404, 'Not found');
+	if (!comments.ok) error(404, 'Not found');
 
 	return {
 		page: {
@@ -71,7 +80,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 		showArchived,
 		tree,
 		spaces: targets.map(({ id, name, audience }) => ({ id, name, audience })),
-		targetTrees: Object.fromEntries(targetTrees)
+		targetTrees: Object.fromEntries(targetTrees),
+		comments: comments.value
 	};
 };
 
@@ -119,10 +129,50 @@ const removeAttachment: Action = async ({ request, locals, params, url }) => {
 	return { action: 'removeAttachment', message: null };
 };
 
+const commentFields = z.object({ body: z.string() });
+
+/** The sentence for a refused comment write; a body over the limit has its own wording. */
+function commentFailure(action: string, code: string) {
+	if (code === 'body_too_long') {
+		return refuse(action, m.knowledge_comments_error_too_long({ max: RICH_TEXT_MAX_LENGTH }));
+	}
+	return refuse(action, failureMessage(code));
+}
+
+const addComment: Action = async ({ locals, request, params, url }) => {
+	const user = requireKnowledgeStaff(locals.user, url);
+	const fields = commentFields.safeParse(await fieldsOf(request));
+	if (!fields.success) return refuse('addComment', failureMessage('empty_body'));
+
+	const page = await targetOf(user, params.tag);
+	const outcome = await addPageComment(user, page.id, fields.data.body);
+	if (!outcome.ok) {
+		if (outcome.error === 'not_found') error(404, 'Not found');
+		return commentFailure('addComment', outcome.error);
+	}
+	return { action: 'addComment', message: null };
+};
+
+const editComment: Action = async ({ locals, request, url }) => {
+	const user = requireKnowledgeStaff(locals.user, url);
+	const fields = commentFields.extend({ commentId: z.uuid() }).safeParse(await fieldsOf(request));
+	if (!fields.success) return refuse('editComment', failureMessage('empty_body'));
+
+	const outcome = await editPageComment(user, fields.data.commentId, fields.data.body);
+	if (!outcome.ok) {
+		if (outcome.error === 'not_found') error(404, 'Not found');
+		if (outcome.error === 'forbidden') error(403, 'Forbidden');
+		return commentFailure('editComment', outcome.error);
+	}
+	return { action: 'editComment', message: null };
+};
+
 export const actions = {
 	addAttachments,
+	addComment,
 	archive,
 	create,
+	editComment,
 	move,
 	preview,
 	publish,

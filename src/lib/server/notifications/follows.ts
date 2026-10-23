@@ -19,7 +19,8 @@ import { follows, notifications } from './schema';
  * them from here.
  */
 
-export type FollowTarget = NotifyTarget;
+/** Everything but pages: a page's comments are not followed (#326). */
+export type FollowTarget = Exclude<NotifyTarget, { pageId: string }>;
 export type FollowViewer = Pick<SessionUser, 'role' | 'personId' | 'organisationId'>;
 export type FollowFailure = 'forbidden' | 'participant';
 
