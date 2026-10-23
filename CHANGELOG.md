@@ -5,6 +5,14 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.118.3] - 2026-10-23
+
+### Changed
+
+- `assets/index.ts` is now only the domain's public surface; its implementation moved byte for byte
+  into `reads.ts`, `registration.ts`, `lifecycle.ts` and `comments.ts`. No behaviour change: the
+  barrel exports exactly what it exported before.
+
 ## [0.118.2] - 2026-10-23
 
 ### Changed
