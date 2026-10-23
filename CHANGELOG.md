@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.118.0] - 2026-10-23
+
+### Added
+
+- API: the knowledge base is available through `/api/v1` (#234). Keys with the new `knowledge.view`
+  scope read spaces, page trees, pages and search; keys with `knowledge.manage` also read revision
+  history and create, edit, move, reorder, publish, archive and restore pages, with the same audience
+  rules as the app. Pages are addressed by their `DOC-####` tag. Editing requires a `baseRevision`
+  and answers `409 stale_revision` when the page moved on (ADR 0046). The scopes are offered on
+  the API keys screen.
+
 ## [0.117.1] - 2026-10-23
 
 ### Fixed
