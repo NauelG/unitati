@@ -4,8 +4,9 @@ import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { people } from '../directory/schema';
+import { pageTagsIn } from '#lib/domain/knowledge.js';
 import { extractMentions } from '#lib/domain/mentions.js';
-import { redactLinkEvents } from '../links';
+import { citePageTags, citePagesFromBody, redactLinkEvents, type CitationRefusal } from '../links';
 import { m } from '#lib/paraglide/messages.js';
 import {
 	followTicket,
@@ -199,6 +200,11 @@ function commentRecipients(
  * viewer's scope, so an employee can only answer their own; an internal note
  * additionally needs `tickets.comment.internal`.
  *
+ * Every `/knowledge/DOC-####` link in the body is cited on the ticket in the same
+ * transaction (#327). A page a reply may not link (`page_not_public` in a public
+ * reply, `page_not_citable` in a note) refuses the whole comment, naming it, and
+ * writes nothing.
+ *
  * Notifies the requester and the assignee inside the same transaction
  * (ADR 0040); their mails go out **after commit, unawaited**: with SMTP down the
  * comment is still saved and the response still returns (ADR 0006).
@@ -209,7 +215,7 @@ export async function addComment(
 	input: AddCommentInput,
 	files: UploadedFile[] = [],
 	deps: Deps = {}
-): Promise<Outcome<{ commentId: string }, AddCommentFailure>> {
+): Promise<Outcome<{ commentId: string }, AddCommentFailure | CitationRefusal>> {
 	// Checked before the schema so the caller gets a typed failure to show
 	// inline rather than a thrown validation error.
 	if (input.body.trim().length > MAX_COMMENT_LENGTH) return failure('body_too_long');
@@ -241,8 +247,16 @@ export async function addComment(
 
 	let commentId: string;
 	let emails: PendingEmail[];
+	let refusal: CitationRefusal | null = null;
 	try {
 		({ commentId, emails } = await getDb().transaction(async (tx) => {
+			// First, so a refusal happens before any row is written.
+			const cited = await citePagesFromBody(tx, actor, ticket.id, values.body, values.visibility);
+			if (!cited.ok) {
+				refusal = cited.error;
+				return { commentId: '', emails: [] };
+			}
+
 			const [comment] = await tx
 				.insert(ticketComments)
 				.values({
@@ -305,6 +319,11 @@ export async function addComment(
 		throw error;
 	}
 
+	if (refusal) {
+		await Promise.all(stored.map((file) => storage.delete(file.row.storageKey)));
+		return failure(refusal);
+	}
+
 	// After commit, not awaited: with SMTP down the comment is still saved (ADR 0006).
 	void sendNotificationEmails(mailer, emails, origin);
 
@@ -312,6 +331,7 @@ export async function addComment(
 }
 
 export type EditCommentFailure = 'not_found' | 'forbidden' | 'body_too_long';
+export type EditCommentOutcomeFailure = EditCommentFailure | CitationRefusal;
 
 /**
  * Edits the text of a comment (#222). The comment is found through the
@@ -326,7 +346,7 @@ export async function editComment(
 	commentId: string,
 	body: string,
 	deps: Deps = {}
-): Promise<Outcome<void, EditCommentFailure>> {
+): Promise<Outcome<void, EditCommentOutcomeFailure>> {
 	if (body.trim().length > MAX_COMMENT_LENGTH) return failure('body_too_long');
 	const values = editCommentInput.parse({ body });
 	// Not `resolveDeps`: an edit stores no file, so it must not need a storage.
@@ -334,7 +354,7 @@ export async function editComment(
 
 	let emails: PendingEmail[] = [];
 	const outcome = await getDb().transaction(
-		async (tx): Promise<Outcome<void, EditCommentFailure>> => {
+		async (tx): Promise<Outcome<void, EditCommentOutcomeFailure>> => {
 			const [comment] = await tx
 				.select({
 					id: ticketComments.id,
@@ -370,6 +390,16 @@ export async function editComment(
 
 			if (!mayEditComment(actor, comment, first?.id === comment.id)) return failure('forbidden');
 			if (comment.body === values.body) return success(undefined);
+
+			// Only the pages this edit adds: a link that was already there was cited
+			// (or refused) when it was written, and a page archived since must not
+			// block fixing a typo around it (#327).
+			const already = new Set(pageTagsIn(comment.body));
+			const added = pageTagsIn(values.body).filter((tag) => !already.has(tag));
+			if (added.length > 0) {
+				const cited = await citePageTags(tx, actor, comment.ticketId, added, comment.visibility);
+				if (!cited.ok) return failure(cited.error);
+			}
 
 			const now = new Date();
 			await tx

@@ -4,13 +4,23 @@
  * from here, never from a file inside.
  */
 
-export { ticketAsset, ticketTask, ticketProject, ticketHandover, ticketCategory } from './schema';
+export {
+	ticketAsset,
+	ticketTask,
+	ticketProject,
+	ticketHandover,
+	ticketCategory,
+	ticketPage,
+	projectPage
+} from './schema';
 export type {
 	TicketAsset,
 	TicketTask,
 	TicketProject,
 	TicketHandover,
-	TicketCategory
+	TicketCategory,
+	TicketPage,
+	ProjectPage
 } from './schema';
 
 export { linkAsset, linkAssetToTicket, linkTicketAssets, unlinkAsset } from './ticket-asset';
@@ -50,6 +60,12 @@ export type {
 	TicketProjectPair
 } from './ticket-work';
 
+export { citePage, citePageTags, citePagesFromBody, uncitePage } from './ticket-page';
+export type { CitationRefusal, CitePageFailure } from './ticket-page';
+
+export { documentProject, undocumentProject } from './project-page';
+export type { DocumentProjectFailure } from './project-page';
+
 export { relatedTo, assetRelations } from './related';
 export type {
 	RecordKind,
@@ -58,6 +74,7 @@ export type {
 	RestrictedRecordRef,
 	AssetRelatedGroup,
 	HandoverState,
+	PageState,
 	TaskStatus,
 	ProjectStatus,
 	RelatedGroup,

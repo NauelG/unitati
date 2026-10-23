@@ -159,7 +159,13 @@ const OPTIONS: Record<MarkdownProfile, sanitizeHtml.IOptions> = {
 		allowedTags: [...COMMENT_TAGS, 'span'],
 		allowedAttributes: { a: ['href', 'rel', 'target'], span: ['class', 'data-person-id'] },
 		transformTags: {
-			a: sanitizeHtml.simpleTransform('a', linkAttributes),
+			// A link to a knowledge page (#327) is navigation inside the app, as in a document.
+			a: (tagName, attribs) => {
+				const kept: sanitizeHtml.Attributes = PAGE_LINK.test(attribs.href ?? '')
+					? { href: attribs.href }
+					: { ...attribs, ...linkAttributes };
+				return { tagName, attribs: kept };
+			},
 			// The only span that survives is the mention chip the renderer made in this
 			// very call; a span written by hand keeps its text and loses every attribute.
 			span: (tagName, attribs) => {

@@ -5,9 +5,13 @@ import type { PageOption } from './page-link-extension.js';
  * the editor may offer. The server decides what the viewer can read; a failed
  * request offers none rather than breaking the typing.
  */
-export async function fetchPages(url: string, query: string): Promise<PageOption[]> {
+export async function fetchPages(
+	url: string,
+	query: string,
+	extra: Record<string, string> = {}
+): Promise<PageOption[]> {
 	try {
-		const response = await fetch(`${url}?${new URLSearchParams({ q: query })}`, {
+		const response = await fetch(`${url}?${new URLSearchParams({ ...extra, q: query })}`, {
 			headers: { accept: 'application/json' }
 		});
 		if (!response.ok) return [];

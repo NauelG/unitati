@@ -4,6 +4,7 @@ import { organisations, people } from '../directory/schema';
 import { assets, categories, handovers } from '../assets/schema';
 import { projects, tasks } from '../projects/schema';
 import { tickets } from '../service-desk/schema';
+import { pages } from '../knowledge/schema';
 
 /**
  * The cross-domain relations (ADR 0005): one join table per pair, each with
@@ -172,3 +173,62 @@ export const ticketCategory = pgTable(
 );
 
 export type TicketCategory = typeof ticketCategory.$inferSelect;
+
+/**
+ * A ticket cites this knowledge page (`cites`, #327): by hand from the rail, or
+ * automatically when a reply links `/knowledge/DOC-####`. Removing the link from
+ * the text later keeps the citation. Many to many.
+ */
+export const ticketPage = pgTable(
+	'ticket_page',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		ticketId: uuid('ticket_id')
+			.notNull()
+			.references(() => tickets.id, { onDelete: 'cascade' }),
+		pageId: uuid('page_id')
+			.notNull()
+			.references(() => pages.id, { onDelete: 'cascade' }),
+		createdByPersonId: uuid('created_by_person_id').references(() => people.id, {
+			onDelete: 'set null'
+		}),
+		...timestamps
+	},
+	(table) => [
+		unique('ticket_page_pair').on(table.ticketId, table.pageId),
+		/** The page asks "which tickets cite me". */
+		index('ticket_page_page_idx').on(table.pageId)
+	]
+);
+
+/** A project is documented by this knowledge page (`documented-by`, #327). Many to many. */
+export const projectPage = pgTable(
+	'project_page',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		projectId: uuid('project_id')
+			.notNull()
+			.references(() => projects.id, { onDelete: 'cascade' }),
+		pageId: uuid('page_id')
+			.notNull()
+			.references(() => pages.id, { onDelete: 'cascade' }),
+		createdByPersonId: uuid('created_by_person_id').references(() => people.id, {
+			onDelete: 'set null'
+		}),
+		...timestamps
+	},
+	(table) => [
+		unique('project_page_pair').on(table.projectId, table.pageId),
+		/** The page asks "which projects do I document". */
+		index('project_page_page_idx').on(table.pageId)
+	]
+);
+
+export type TicketPage = typeof ticketPage.$inferSelect;
+export type ProjectPage = typeof projectPage.$inferSelect;

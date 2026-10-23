@@ -9,6 +9,7 @@ import { requireAnyPermission, requirePermission } from '#lib/server/auth/guards
 import { listDeliverableAssets } from '#lib/server/assets/index.js';
 import { listPeople, personLocation } from '#lib/server/directory/index.js';
 import {
+	citePage,
 	escalateTicket,
 	escalationDraft,
 	invalidField,
@@ -17,6 +18,7 @@ import {
 	parseEscalation,
 	relatedTo,
 	requestedCategory,
+	uncitePage,
 	unlinkAsset,
 	unlinkHandover,
 	unlinkProject,
@@ -323,6 +325,47 @@ export const actions: Actions = {
 			return rejected('unlinkHandover', m.related_unlink_failed());
 		}
 		return { action: 'unlinkHandover' as const };
+	},
+
+	// A page cited from the rail, without a reply (#327).
+	citePage: async ({ locals, request, params }) => {
+		const user = requirePermission(locals.user, 'tickets.manage');
+		const parsed = z
+			.object({ pageTag: z.string().trim().min(1) })
+			.safeParse(await fieldsOf(request));
+		if (!parsed.success) return rejected('citePage', m.ticket_page_error_invalid());
+
+		const found = await getTicketByTag(user, params.tag);
+		if (!found.ok) error(404, 'Not found');
+
+		const outcome = await citePage(user, found.value.id, parsed.data.pageTag);
+		if (!outcome.ok) {
+			if (outcome.error === 'forbidden') error(403, 'Forbidden');
+			if (outcome.error === 'ticket_not_found') error(404, 'Not found');
+			return rejected(
+				'citePage',
+				outcome.error === 'page_not_citable'
+					? m.ticket_page_error_not_citable()
+					: m.ticket_page_error_not_found()
+			);
+		}
+		return { action: 'citePage' as const };
+	},
+
+	uncitePage: async ({ locals, request, params }) => {
+		const user = requirePermission(locals.user, 'tickets.manage');
+		const parsed = z.object({ recordId: z.uuid() }).safeParse(await fieldsOf(request));
+		if (!parsed.success) return rejected('uncitePage', m.related_unlink_failed());
+
+		const found = await getTicketByTag(user, params.tag);
+		if (!found.ok) error(404, 'Not found');
+
+		const outcome = await uncitePage(user, found.value.id, parsed.data.recordId);
+		// Already gone, e.g. a second tab removed it first: the page reloads and shows the truth.
+		if (!outcome.ok && outcome.error !== 'link_not_found') {
+			return rejected('uncitePage', m.related_unlink_failed());
+		}
+		return { action: 'uncitePage' as const };
 	},
 
 	unlinkTask: (event) => unlinkWork(event, 'task'),

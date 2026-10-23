@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import {
 	PAGE_PICK_LIMIT,
 	type SpaceAudience,
@@ -232,7 +232,11 @@ function likePattern(query: string): string {
  * drafts for staff; never archived), matching `query` in the title or the code,
  * most recently changed first. An empty query offers the latest pages.
  */
-export async function pickPages(viewer: SessionUser, query: string): Promise<PagePick[]> {
+export async function pickPages(
+	viewer: SessionUser,
+	query: string,
+	options: { citableIn?: 'public' | 'internal' } = {}
+): Promise<PagePick[]> {
 	const text = query.trim();
 	const rows = await getDb()
 		.select({
@@ -247,6 +251,10 @@ export async function pickPages(viewer: SessionUser, query: string): Promise<Pag
 		.where(
 			and(
 				readablePages(viewer),
+				// What a ticket reply may cite (#327): published pages only, and for a
+				// public reply those of a `portal` space, the ones its readers can open.
+				options.citableIn ? isNotNull(pages.publishedAt) : undefined,
+				options.citableIn === 'public' ? eq(knowledgeSpaces.audience, 'portal') : undefined,
 				text === ''
 					? undefined
 					: or(ilike(pages.title, likePattern(text)), ilike(pages.pageTag, likePattern(text)))

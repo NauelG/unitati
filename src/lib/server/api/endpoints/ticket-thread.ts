@@ -122,7 +122,8 @@ export const commentEndpoint = defineEndpoint({
 			body: input.body,
 			visibility: input.visibility
 		});
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok)
+			throw refusal(typeof outcome.error === 'string' ? outcome.error : outcome.error.kind);
 		return created({ data: { id: outcome.value.commentId } }, `/tickets/${input.tag}/comments`);
 	}
 });

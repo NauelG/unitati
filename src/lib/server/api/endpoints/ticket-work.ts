@@ -274,9 +274,12 @@ const relatedResponse = z.object({
 	)
 });
 
-/** What this API answers for: handovers have no wire shape yet (#279). */
-type WireItem = Exclude<RelatedItem, { ref: { kind: 'handover' } }>;
-type WireRelation = Exclude<RelationName, 'fulfilled_by' | 'fulfils'>;
+/** What this API answers for: handovers (#279) and pages (#327, API exposure is #234) have no wire shape yet. */
+type WireItem = Exclude<RelatedItem, { ref: { kind: 'handover' | 'page' } }>;
+type WireRelation = Exclude<
+	RelationName,
+	'fulfilled_by' | 'fulfils' | 'cites' | 'cited_by' | 'documented_by' | 'documents'
+>;
 
 function itemToWire(item: WireItem): z.input<typeof relatedItemSchema> {
 	return {
@@ -310,7 +313,10 @@ function groupsToWire(groups: readonly RelatedGroup[], relations: readonly WireR
 						{
 							relation: group.relation as WireRelation,
 							items: group.items
-								.filter((item): item is WireItem => item.ref.kind !== 'handover')
+								.filter(
+									(item): item is WireItem =>
+										item.ref.kind !== 'handover' && item.ref.kind !== 'page'
+								)
 								.map(itemToWire),
 							restricted: group.restricted ?? 0
 						}

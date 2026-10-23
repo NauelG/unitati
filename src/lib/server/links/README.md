@@ -8,6 +8,8 @@ Typed relations between records of different domains (ticket → asset, ticket �
 | `ticket-asset.ts`            | `linkAsset` (inside the caller's transaction) and `unlinkAsset` (behind `tickets.manage`)                                  |
 | `ticket-work.ts`             | `linkTask`/`linkProject` (inside the caller's transaction), their `linkTicketTo…` wrappers, `unlinkTask`/`unlinkProject`   |
 | `ticket-handover.ts`         | `linkHandover` (inside the caller's transaction), `linkHandoverByCode`, `unlinkHandover` (#279)                            |
+| `ticket-page.ts`             | `citePage`, `uncitePage`, `citePagesFromBody`/`citePageTags` (inside the caller's transaction) (#327)                      |
+| `project-page.ts`            | `documentProject`, `undocumentProject` (#327)                                                                              |
 | `ticket-category.ts`         | `categoryInOrganisation`, `linkCategory` (inside the caller's transaction), `requestedCategory` (#271)                     |
 | `notify-handover-decided.ts` | The `handover.accepted`/`handover.rejected` subscriber: one internal system note per linked ticket (#279)                  |
 | `escalate.ts`                | `escalateTicket`: link an existing task or project, or create one and link it, in one transaction                          |
@@ -50,3 +52,12 @@ Two more relations, `ticket_task` (`resolved_in`) and `ticket_project` (`handled
 - **No `activity` entry.** The panel shows the link and the note shows the outcome; a third record would only repeat them.
 
 `ticket_category` (`requests`) records the asset category an equipment request form asked for, written in the ticket's opening transaction. It has no related-panel entry: the ticket page reads it through `requestedCategory` and shows it as a detail, and Deliver filters on it.
+
+## Ticket → page, project → page (#327)
+
+`ticket_page` (`cites`) and `project_page` (`documented-by`) relate knowledge pages to the work, built like `ticket_asset`. `links` reads pages only through `knowledge`'s `readablePagesByTag` and `pageSummaries`.
+
+- **A reply cites what it links.** `addComment` and `editComment` call `citePageTags` in their transaction, **before** writing the comment: a public reply may link published pages of a `portal` space (`page_not_public { pageTag }` otherwise), an internal note published pages its author can read (`page_not_citable { pageTag }`). A refusal writes nothing. An edit cites only the links it adds, and removing a link from the text keeps the citation. Only `tickets.manage` cites; an employee's reply is left alone.
+- **Activity hangs off the ticket or the project** (`link.page.added|removed { pageTag, pageTitle }`), never off the page.
+- **A requester gets the code of an unreadable cited page, nothing else.** This intentionally differs from the code-less restricted tasks and projects (#310): the code is already in the reply's text. The page side counts the projects it documents that the viewer cannot open, with no code or title.
+- **Pages have no wire shape yet** (#234): the API's `related` endpoints leave the page groups out.

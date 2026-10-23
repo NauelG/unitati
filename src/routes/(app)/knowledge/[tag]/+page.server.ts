@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { attachmentFailureMessage } from '#lib/attachment-errors.js';
 import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 import { m } from '#lib/paraglide/messages.js';
+import { can } from '#lib/server/access/permissions.js';
+import { requirePermission } from '#lib/server/auth/guards.js';
+import { relatedTo } from '#lib/server/links/index.js';
 import { renderMarkdown } from '#lib/server/shared/markdown.js';
 import {
 	addPageAttachments,
@@ -33,6 +36,12 @@ import {
 import type { Action, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params, url }) => {
+	// `/knowledge/DOC-####` is the only link ever inserted (#327), so an employee
+	// opens it too. They read pages in the portal: the canonical link answers
+	// `303` to `/portal/knowledge/DOC-####` once that route exists (#328), and
+	// `404` until then. Unreadable is `404` either way.
+	const viewer = requirePermission(locals.user, 'knowledge.view', url);
+	if (!can(viewer, 'knowledge.manage')) error(404, 'Not found');
 	const user = requireKnowledgeStaff(locals.user, url);
 
 	const found = await getPageByTag(user, params.tag);
@@ -74,6 +83,9 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 		},
 		space: page.space,
 		path: page.path,
+		// Tickets that cite the page and projects it documents (#327), each scoped
+		// to what the viewer may open.
+		related: await relatedTo(user, { kind: 'page', id: page.id }),
 		bodyHtml: renderMarkdown(page.body, 'document'),
 		hasBody: page.body.trim() !== '',
 		attachments: attachments.value,

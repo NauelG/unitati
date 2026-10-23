@@ -101,6 +101,8 @@
 		'link.task.removed': Unlink,
 		'link.project.added': Link,
 		'link.project.removed': Unlink,
+		'link.page.added': Link,
+		'link.page.removed': Unlink,
 		'project.created': FolderPlus,
 		'project.archived': Archive,
 		'project.unarchived': ArchiveRestore,

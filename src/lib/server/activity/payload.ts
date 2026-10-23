@@ -48,6 +48,11 @@ const linkedTask = z.object({
 	taskTitle: presentName
 });
 
+const linkedPage = z.object({
+	pageTag: presentName,
+	pageTitle: presentName
+});
+
 const linkedProject = z.object({
 	projectId: z.uuid(),
 	projectTag: presentName,
@@ -234,6 +239,10 @@ export const PAYLOAD_SCHEMAS = {
 	'link.task.removed': linkedTask,
 	'link.project.added': linkedProject,
 	'link.project.removed': linkedProject,
+	// A page cited by a ticket or documenting a project (#327): the entry hangs off
+	// the ticket or the project, with the page's code and title as they were.
+	'link.page.added': linkedPage,
+	'link.page.removed': linkedPage,
 
 	'project.created': z.object({
 		projectTag: presentName,

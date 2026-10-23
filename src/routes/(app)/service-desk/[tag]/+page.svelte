@@ -9,6 +9,7 @@
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
+	import PageCitePanel from '#lib/components/unitati/PageCitePanel.svelte';
 	import QueueLabel from '#lib/components/unitati/QueueLabel.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
@@ -177,6 +178,7 @@
 			'action' in form &&
 			(form.action === 'unlinkAsset' ||
 				form.action === 'unlinkHandover' ||
+				form.action === 'uncitePage' ||
 				form.action === 'unlinkTask' ||
 				form.action === 'unlinkProject') &&
 			'message' in form
@@ -231,6 +233,7 @@
 			? form.message
 			: undefined;
 	const editError = $derived(formMessage('editComment'));
+	const citeError = $derived(formMessage('citePage'));
 	const subjectError = $derived(formMessage('subject'));
 </script>
 
@@ -353,6 +356,7 @@
 		action="?/reply"
 		allowInternal={data.canInternal}
 		mentionsUrl={`/service-desk/${ticket.ticketTag}/mentions`}
+		pagesUrl={data.canManage ? '/knowledge/pages/pick' : undefined}
 		error={replyError}
 		placeholder={m.composer_placeholder_reply({ name: ticket.requesterName })}
 		onOptimisticSend={(formData) => {
@@ -424,7 +428,8 @@
 							asset: '?/unlinkAsset',
 							task: '?/unlinkTask',
 							project: '?/unlinkProject',
-							handover: '?/unlinkHandover'
+							handover: '?/unlinkHandover',
+							page: '?/uncitePage'
 						}
 					: {}}
 				error={unlinkError}
@@ -444,6 +449,15 @@
 				bind:linkOpen
 			/>
 			{#if data.canManage}
+				<PageCitePanel
+					heading={m.ticket_page_cite_title()}
+					label={m.ticket_page_cite_field()}
+					placeholder={m.ticket_page_cite_placeholder()}
+					submitLabel={m.ticket_page_cite_submit()}
+					action="?/citePage"
+					searchUrl="/knowledge/pages/pick?format=options&citable=internal"
+					error={citeError}
+				/>
 				<WorkPanel heading={m.ticket_handover_title()}>
 					<div class="space-y-[var(--space-3)]">
 						{#if data.canDeliver && data.requestedCategory}

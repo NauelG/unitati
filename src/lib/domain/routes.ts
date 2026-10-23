@@ -14,5 +14,8 @@ export const ticketHref = (ticketTag: string): string =>
 
 export const taskHref = (taskTag: string): string => `/tasks/${encodeURIComponent(taskTag)}`;
 
+/** The canonical link of a knowledge page (#327): an employee is sent on to the portal. */
+export const pageHref = (pageTag: string): string => `/knowledge/${encodeURIComponent(pageTag)}`;
+
 export const projectHref = (projectTag: string): string =>
 	`/projects/${encodeURIComponent(projectTag)}`;

@@ -64,6 +64,7 @@
 	import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 	import Button from './Button.svelte';
 	import { fetchMentions } from './mention-source.js';
+	import { fetchPages } from './page-source.js';
 	import RichTextEditor from './RichTextEditor.svelte';
 
 	interface Props {
@@ -77,6 +78,13 @@
 		 * somebody who could not read it.
 		 */
 		mentionsUrl?: string;
+		/**
+		 * The endpoint that says which pages "Insertar página" may offer (#327). The
+		 * composer adds the visibility it is writing in: a public reply is only
+		 * offered published pages of the portal. Absent in the portal: employees
+		 * do not cite.
+		 */
+		pagesUrl?: string;
 		/** Shown under the box when the last submission was refused. */
 		error?: string;
 		/** Files already chosen; only the gallery sets it, to show the chip list and the drop state. */
@@ -101,6 +109,7 @@
 		action,
 		allowInternal = false,
 		mentionsUrl,
+		pagesUrl,
 		error,
 		initialFiles = [],
 		initialDragging = false,
@@ -245,6 +254,9 @@
 			(internal ? m.composer_placeholder_internal() : m.composer_placeholder_portal())}
 		bind:value={body}
 		onsubmitshortcut={send}
+		pageSource={pagesUrl
+			? (query) => fetchPages(pagesUrl, query, { citable: internal ? 'internal' : 'public' })
+			: undefined}
 		mentionSource={mentionsUrl
 			? (query) =>
 					fetchMentions(mentionsUrl, { q: query, visibility: internal ? 'internal' : 'public' })

@@ -18,6 +18,7 @@
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import RecordAttachments from '#lib/components/unitati/RecordAttachments.svelte';
+	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import PageStatusBadge from '#lib/components/unitati/PageStatusBadge.svelte';
 	import { prose } from '#lib/components/unitati/prose.js';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
@@ -159,6 +160,11 @@
 				currentId={data.page.id}
 			/>
 		</WorkPanel>
+
+		{#if data.related.length > 0}
+			<!-- Read-only: a citation is removed from the ticket, a project's page from the project. -->
+			<RelatedRecords groups={data.related} />
+		{/if}
 	{/snippet}
 </PageLayout>
 

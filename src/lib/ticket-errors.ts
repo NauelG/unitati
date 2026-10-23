@@ -9,6 +9,7 @@ import type {
 	RequestFormEditFailure,
 	SubmitRequestFailure
 } from '#lib/server/service-desk/index.js';
+import type { CitationRefusal } from '#lib/server/links/index.js';
 
 /**
  * One sentence per domain failure, shared by the staff screens and the
@@ -52,6 +53,12 @@ const MESSAGES: Record<Failure, () => string> = {
 	request_form_in_use: m.request_forms_error_in_use
 };
 
-export function failureMessage(failure: Failure): string {
+export function failureMessage(failure: Failure | CitationRefusal): string {
+	if (typeof failure === 'object') {
+		// A reply that links a page it may not (#327): the sentence names the page.
+		return failure.kind === 'page_not_public'
+			? m.ticket_error_page_not_public({ page: failure.pageTag })
+			: m.ticket_error_page_not_citable({ page: failure.pageTag });
+	}
 	return MESSAGES[failure]();
 }

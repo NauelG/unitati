@@ -76,7 +76,7 @@ const say = async (
 	visibility: 'public' | 'internal' = 'public'
 ) => {
 	const outcome = await addComment(author, w.tag, { body, visibility }, [], w.deps);
-	if (!outcome.ok) throw new Error(outcome.error);
+	if (!outcome.ok) throw new Error(JSON.stringify(outcome.error));
 	return outcome.value.commentId;
 };
 

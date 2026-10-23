@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { deriveHandoverState, type HandoverState } from '#lib/domain/handover.js';
-import { assetHref, projectHref, taskHref, ticketHref } from '#lib/domain/routes.js';
+import { assetHref, pageHref, projectHref, taskHref, ticketHref } from '#lib/domain/routes.js';
 import type { AssetState, Priority, StateGroup, TicketStatus } from '#lib/domain/status.js';
 import { can } from '../access/permissions';
 import { requireAssetScope } from '../assets';
@@ -8,6 +8,7 @@ import { assets, handovers } from '../assets/schema';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { listPeople } from '../directory';
+import { pageSummaries } from '../knowledge';
 import {
 	projectProgress,
 	projectSummaries,
@@ -17,7 +18,14 @@ import {
 	type TaskSummary
 } from '../projects';
 import { isRequester, ticketSummaries, tickets, type TicketRow } from '../service-desk';
-import { ticketAsset, ticketHandover, ticketProject, ticketTask } from './schema';
+import {
+	projectPage,
+	ticketAsset,
+	ticketHandover,
+	ticketPage,
+	ticketProject,
+	ticketTask
+} from './schema';
 
 /**
  * The uniform read interface over storage that is deliberately not uniform
@@ -31,7 +39,7 @@ import { ticketAsset, ticketHandover, ticketProject, ticketTask } from './schema
  * stale status dressed as history (ADR 0009).
  */
 
-export type RecordKind = 'ticket' | 'asset' | 'task' | 'project' | 'handover';
+export type RecordKind = 'ticket' | 'asset' | 'task' | 'project' | 'handover' | 'page';
 
 /** Which record to look up. */
 export interface RecordLocator {
@@ -57,6 +65,9 @@ export interface RecordRef<K extends RecordKind = RecordKind> {
 export type RestrictedRecordRef<K extends RecordKind = RecordKind> = Omit<RecordRef<K>, 'href'> & {
 	href: null;
 };
+
+/** Where a knowledge page stands today. */
+export type PageState = 'draft' | 'published' | 'archived';
 
 /** Where a handover stands today: derived in the domain, never stored as `expired`. */
 export type { HandoverState };
@@ -106,6 +117,16 @@ export type RelatedItem = {
 	  }
 	| { ref: RecordRef<'task'>; status: TaskStatus }
 	| { ref: RecordRef<'project'>; status: ProjectStatus }
+	| { ref: RecordRef<'page'>; status: PageState }
+	/**
+	 * A cited page the viewer cannot read (#327): **its code only**, no title, no
+	 * link and no state. This intentionally differs from the code-less shape of
+	 * restricted tasks and projects (#310): the code of a page is already in the
+	 * text of the reply that cited it, so hiding it from the requester would
+	 * protect nothing, and showing it tells them why the link in their reply
+	 * stopped opening (the page was archived or moved to staff).
+	 */
+	| { ref: RestrictedRecordRef<'page'>; status: null }
 );
 
 /**
@@ -122,7 +143,11 @@ export type RelationName =
 	| 'handles'
 	| 'resolves_via_tasks'
 	| 'fulfilled_by'
-	| 'fulfils';
+	| 'fulfils'
+	| 'cites'
+	| 'cited_by'
+	| 'documented_by'
+	| 'documents';
 
 export interface RelatedGroup {
 	relation: RelationName;
@@ -553,6 +578,148 @@ async function ticketsFulfilledBy(viewer: SessionUser, handoverId: string): Prom
 	return ticketItems(viewer, links);
 }
 
+/* -------------------------------------------------------------------------- */
+/* Tickets and projects with the knowledge pages they cite or are documented by (#327) */
+/* -------------------------------------------------------------------------- */
+
+/** The pages of `links` as items, oldest first; one the viewer cannot read keeps its code only. */
+async function pageItems(
+	viewer: SessionUser,
+	links: { pageId: string; linkedAt: Date }[]
+): Promise<RelatedItem[]> {
+	if (links.length === 0) return [];
+
+	const byId = new Map(
+		(
+			await pageSummaries(
+				viewer,
+				links.map((link) => link.pageId)
+			)
+		).map((page) => [page.id, page])
+	);
+
+	return links.flatMap((link): RelatedItem[] => {
+		const page = byId.get(link.pageId);
+		if (!page) return [];
+
+		if (!page.readable) {
+			return [
+				{
+					ref: { kind: 'page', id: page.id, tag: page.tag, title: '', href: null },
+					status: null,
+					linkedAt: link.linkedAt
+				}
+			];
+		}
+		return [
+			{
+				ref: {
+					kind: 'page',
+					id: page.id,
+					tag: page.tag,
+					title: page.title,
+					href: pageHref(page.tag)
+				},
+				status: page.status,
+				linkedAt: link.linkedAt
+			}
+		];
+	});
+}
+
+async function pagesCitedBy(viewer: SessionUser, ticketId: string): Promise<RelatedItem[]> {
+	const links = await getDb()
+		.select({ pageId: ticketPage.pageId, linkedAt: ticketPage.createdAt })
+		.from(ticketPage)
+		.where(
+			and(eq(ticketPage.organisationId, viewer.organisationId), eq(ticketPage.ticketId, ticketId))
+		)
+		.orderBy(asc(ticketPage.createdAt), asc(ticketPage.id));
+
+	return pageItems(viewer, links);
+}
+
+async function pagesDocumenting(viewer: SessionUser, projectId: string): Promise<RelatedItem[]> {
+	const links = await getDb()
+		.select({ pageId: projectPage.pageId, linkedAt: projectPage.createdAt })
+		.from(projectPage)
+		.where(
+			and(
+				eq(projectPage.organisationId, viewer.organisationId),
+				eq(projectPage.projectId, projectId)
+			)
+		)
+		.orderBy(asc(projectPage.createdAt), asc(projectPage.id));
+
+	return pageItems(viewer, links);
+}
+
+/** A page's tickets are history: staff read them, nobody else gets the group. */
+async function ticketsCiting(viewer: SessionUser, pageId: string): Promise<RelatedItem[]> {
+	if (!can(viewer, 'tickets.view')) return [];
+
+	const links = await getDb()
+		.select({
+			ticketId: ticketPage.ticketId,
+			linkedAt: ticketPage.createdAt,
+			createdByPersonId: ticketPage.createdByPersonId
+		})
+		.from(ticketPage)
+		.where(and(eq(ticketPage.organisationId, viewer.organisationId), eq(ticketPage.pageId, pageId)))
+		.orderBy(asc(ticketPage.createdAt), asc(ticketPage.id));
+
+	return ticketItems(viewer, links);
+}
+
+/** The projects a page documents; the ones the viewer cannot open are only counted (#310). */
+async function projectsDocumentedBy(viewer: SessionUser, pageId: string): Promise<WorkItems> {
+	if (!can(viewer, 'knowledge.manage')) return { items: [], restricted: 0 };
+
+	const links = await getDb()
+		.select({ projectId: projectPage.projectId, linkedAt: projectPage.createdAt })
+		.from(projectPage)
+		.where(
+			and(eq(projectPage.organisationId, viewer.organisationId), eq(projectPage.pageId, pageId))
+		)
+		.orderBy(asc(projectPage.createdAt), asc(projectPage.id));
+
+	const byId = new Map(
+		(
+			await projectSummaries(
+				viewer,
+				links.map((link) => link.projectId)
+			)
+		).map((project) => [project.id, project])
+	);
+
+	const items: RelatedItem[] = [];
+	let restricted = 0;
+
+	for (const link of links) {
+		const project = byId.get(link.projectId);
+		if (!project) continue;
+		if (!project.inScope) {
+			restricted += 1;
+			continue;
+		}
+
+		const progress = await projectProgress(viewer, project.id);
+		items.push({
+			ref: {
+				kind: 'project',
+				id: project.id,
+				tag: project.projectTag,
+				title: project.name,
+				href: projectHref(project.projectTag)
+			},
+			status: { archived: project.archived, progress: progress.ok ? progress.value : null },
+			linkedAt: link.linkedAt
+		});
+	}
+
+	return { items, restricted };
+}
+
 /**
  * What a record is connected to, as groups ready to render, in the design
  * system's order and with empty groups left out (it offers *Link* instead).
@@ -585,6 +752,9 @@ export async function relatedTo(
 			if (standing === 'staff') {
 				add('fulfilled_by', 'handover', await handoversFulfilling(viewer, record.id));
 			}
+			// The requester reads the citations of their own ticket too: a page they
+			// cannot read comes back with its code only (see `RelatedItem`).
+			if (standing) add('cites', 'page', await pagesCitedBy(viewer, record.id));
 			break;
 		}
 
@@ -603,6 +773,12 @@ export async function relatedTo(
 		case 'project':
 			add('handles', 'ticket', await ticketsHandledBy(viewer, record.id));
 			add('resolves_via_tasks', 'ticket', await ticketsViaTasksOf(viewer, record.id));
+			add('documented_by', 'page', await pagesDocumenting(viewer, record.id));
+			break;
+
+		case 'page':
+			add('cited_by', 'ticket', await ticketsCiting(viewer, record.id));
+			add('documents', 'project', await projectsDocumentedBy(viewer, record.id));
 			break;
 	}
 

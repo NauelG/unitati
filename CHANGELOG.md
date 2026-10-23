@@ -5,6 +5,19 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.114.0] - 2026-10-23
+
+### Added
+
+- Ticket citations and project documentation for knowledge-base pages (#327, part of #17). A reply
+  or internal note that links a page (`/knowledge/DOC-####`) cites it on the ticket, once; a public
+  reply may only link published pages of a portal space, and is refused naming the page otherwise.
+  The reply composer has an "Insertar página" button (or `[[`) that offers only what the reply may
+  cite. The ticket rail has "Citar una página" and lists the cited pages with "Quitar".
+- Projects have a "Documentación" panel: add a page, see its code and status, remove it.
+- Pages show "Tickets que la citan" and "Proyectos que documenta", with projects you cannot open
+  counted as restricted. A requester whose cited page they can no longer read sees its code only.
+
 ## [0.113.0] - 2026-10-23
 
 ### Added
