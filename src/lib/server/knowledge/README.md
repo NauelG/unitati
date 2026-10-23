@@ -2,10 +2,10 @@
 
 The knowledge base: **spaces**, the **pages** inside them, and the **revisions** of each page
 ([ADR 0031](../../../../docs/adr/0031-knowledge-base-spaces-page-tree-and-revisions.md) and its
-addendum). This folder is the domain with **the spaces catalogue** (#322) and **the page tree and its
-lifecycle** (#323) built: tables, permissions, the audience scope, activity, `/settings/knowledge`,
-and the `/knowledge` screens. Editing and revisions are #324, attachments, comments, citations, the
-portal and search the sub-issues after.
+addendum). This folder is the domain with **the spaces catalogue** (#322), **the page tree and its
+lifecycle** (#323) and **writing pages with revisions** (#324) built: tables, permissions, the
+audience scope, activity, `/settings/knowledge`, and the `/knowledge` screens. Attachments, comments,
+citations, the portal and search are the sub-issues after.
 
 ## What it owns
 
@@ -56,6 +56,29 @@ sub-issues add no enum values. Only the three `space.*` verbs are written here.
 - Reads: `listSpaceTree` and `getPageByTag` start from `readablePages`; `includeArchived` is a staff
   read and ignored for everybody else.
 
+## Writing a page (`revisions.ts`)
+
+- **Every save appends a revision** (`savePage`): the full title and markdown, the author and the
+  time, as `pages.revision + 1`, and the page row takes the same title, body and number in the same
+  transaction. The body is rendered with the `document` profile of `renderMarkdown` (ADR 0030) and
+  may hold `PAGE_BODY_MAX_LENGTH` characters (`body_too_long`). A plain save writes **no activity
+  row**: the revision is the record.
+- **The save carries the revision it started from** (`baseRevision`). The page row is locked
+  `FOR UPDATE`; if `pages.revision` has moved on, the answer is `stale_revision` with the current
+  number and its author, and **nothing is written**, so the screen keeps the user's text. Two saves
+  from the same base serialise on that row: one appends, the other is refused. No organisation lock:
+  a save changes content, not the tree.
+- **Content identical to the current revision is a no-op** (`changed: false`), whatever the base:
+  nothing would be lost, and a double submit is the usual cause.
+- A published page stays published, so the change is public at once; a draft stays a draft. An
+  archived page cannot be written (`archived`).
+- **Restoring revision N appends a new revision** equal to N (`restoreRevision`), with the same lock
+  and stale check, and writes `page.revision.restored { from, to }`. History is never rewritten.
+- `listRevisions` and `getRevision` are staff reads (they throw for anybody else), archived pages
+  included, scoped to the organisation.
+- `pickPages` (in `pages.ts`) is the editor's page picker: what the viewer may read, by title or code,
+  never archived.
+
 ## Who sees what
 
 Two questions in two places, as in the other domains. May they reach the screen? A capability,
@@ -101,11 +124,12 @@ locked. A change to the audience the space already has is a no-op.
 
 ## Files
 
-| File            | What                                                                     |
-| --------------- | ------------------------------------------------------------------------ |
-| `schema.ts`     | the tables, the enum and the sequence                                    |
-| `scope.ts`      | `readableSpaces`, `readablePages`, `requireSpaceScope`, write guard      |
-| `spaces.ts`     | the catalogue: list, create, update, audience change, archive, delete    |
-| `pages.ts`      | the page tree: reads, create, reorder, move, publish, archive            |
-| `validation.ts` | Zod input for the catalogue; holds `icon` and `colour` to the closed set |
-| `index.ts`      | the public surface                                                       |
+| File            | What                                                                    |
+| --------------- | ----------------------------------------------------------------------- |
+| `schema.ts`     | the tables, the enum and the sequence                                   |
+| `scope.ts`      | `readableSpaces`, `readablePages`, `requireSpaceScope`, write guard     |
+| `spaces.ts`     | the catalogue: list, create, update, audience change, archive, delete   |
+| `pages.ts`      | the page tree: reads, create, reorder, move, publish, archive, picker   |
+| `revisions.ts`  | saving with a base revision, the history, restoring a revision          |
+| `validation.ts` | Zod input for the catalogue and the editor; `icon`/`colour` closed sets |
+| `index.ts`      | the public surface                                                      |

@@ -3,9 +3,12 @@
 	import Archive from '@lucide/svelte/icons/archive';
 	import ArchiveRestore from '@lucide/svelte/icons/archive-restore';
 	import FolderInput from '@lucide/svelte/icons/folder-input';
+	import History from '@lucide/svelte/icons/history';
+	import Pencil from '@lucide/svelte/icons/pencil';
 	import Plus from '@lucide/svelte/icons/plus';
 	import Send from '@lucide/svelte/icons/send';
 	import { documentTitle } from '#lib/brand.svelte.js';
+	import { formatDateTime, formatRelative } from '#lib/format-date.js';
 	import Alert from '#lib/components/unitati/Alert.svelte';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
@@ -31,6 +34,7 @@
 	let archivePending = $state(false);
 
 	const status = $derived(data.page.status);
+	const revisedAt = $derived(new Date(data.page.revisedAt));
 	const refusal = $derived(
 		form && ['publish', 'unarchive'].includes(form.action ?? '') ? form.message : null
 	);
@@ -56,9 +60,32 @@
 
 	<PageHeader title={data.page.title} level="record" code={data.page.tag}>
 		{#snippet summary()}
-			<PageStatusBadge {status} />
+			<span class="flex flex-wrap items-center gap-[var(--space-2)]">
+				<PageStatusBadge {status} />
+				<span title={formatDateTime(revisedAt)}>
+					{m.knowledge_page_revision_by({
+						n: data.page.revision,
+						author: data.page.revisionAuthorName ?? m.knowledge_page_author_unknown(),
+						time: formatRelative(revisedAt)
+					})}
+				</span>
+			</span>
 		{/snippet}
 		{#snippet actions()}
+			{#if status !== 'archived'}
+				<!-- Publishing is a draft's main action; editing is everybody else's. -->
+				<Button
+					variant={status === 'draft' ? 'secondary' : 'primary'}
+					href={`/knowledge/${data.page.tag}/edit`}
+				>
+					<Pencil class="size-4" aria-hidden="true" />
+					{m.knowledge_page_edit()}
+				</Button>
+			{/if}
+			<Button variant="secondary" href={`/knowledge/${data.page.tag}/revisions`}>
+				<History class="size-4" aria-hidden="true" />
+				{m.knowledge_page_history()}
+			</Button>
 			<Button variant="secondary" onclick={() => (creating = true)}>
 				<Plus class="size-4" aria-hidden="true" />
 				{m.knowledge_page_new_child()}

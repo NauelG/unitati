@@ -67,6 +67,14 @@ export const SPACE_NAME_MAX = 80;
 
 /** The longest page title, in characters. */
 export const PAGE_TITLE_MAX = 200;
+
+/**
+ * Characters of markdown a page body may hold (#324). Ten times a comment's
+ * `RICH_TEXT_MAX_LENGTH`: a procedure with tables is long, and every save stores
+ * the whole body again as a revision. Enforced by the editor and by the domain
+ * (`body_too_long`), not by the database.
+ */
+export const PAGE_BODY_MAX_LENGTH = 200_000;
 export const SPACE_DESCRIPTION_MAX = 280;
 
 export function isSpaceIcon(value: unknown): value is SpaceIcon {

@@ -91,6 +91,112 @@ describe('renderMarkdown', () => {
 		expect(renderMarkdown('a\nb')).toContain('<br');
 		expect(renderMarkdown('\n\n')).toBe('');
 	});
+
+	it('is the comment profile when none is given', () => {
+		const source = '## Paso\n\n| a | b |\n| - | - |\n| 1 | 2 |\n\n---';
+		expect(renderMarkdown(source)).toBe(renderMarkdown(source, 'comment'));
+	});
+
+	it('drops headings, tables and rules in a comment, keeping the text', () => {
+		const html = renderMarkdown(
+			'## Paso\n\n| a | b |\n| - | - |\n| 1 | 2 |\n\n---\n\nfin',
+			'comment'
+		);
+		expect(html).not.toMatch(/<h\d|<table|<tr|<td|<th|<hr/);
+		expect(html).toContain('Paso');
+		expect(html).toContain('1');
+		expect(html).toContain('fin');
+	});
+});
+
+describe('renderMarkdown, document profile (#324)', () => {
+	const doc = (source: string) => renderMarkdown(source, 'document');
+
+	it('renders h2 to h4, an h1 as h2 and anything deeper as h4', () => {
+		expect(doc('## Dos')).toBe('<h2 id="dos">Dos</h2>\n');
+		expect(doc('### Tres')).toBe('<h3 id="tres">Tres</h3>\n');
+		expect(doc('#### Cuatro')).toBe('<h4 id="cuatro">Cuatro</h4>\n');
+		expect(doc('# Uno')).toBe('<h2 id="uno">Uno</h2>\n');
+		expect(doc('###### Seis')).toBe('<h4 id="seis">Seis</h4>\n');
+		expect(doc('# Uno')).not.toMatch(/<h1|<h5|<h6/);
+	});
+
+	it('gives headings a slug of their text, deduplicated, as id', () => {
+		const html = doc('## Configuración del **correo**\n\n## Paso 1\n\n## Paso 1\n\n## ¿?');
+		expect(html).toContain(
+			'<h2 id="configuracion-del-correo">Configuración del <strong>correo</strong></h2>'
+		);
+		expect(html).toContain('<h2 id="paso-1">Paso 1</h2>');
+		expect(html).toContain('<h2 id="paso-1-2">Paso 1</h2>');
+		expect(html).toContain('<h2 id="seccion">¿?</h2>');
+	});
+
+	it('starts the deduplication afresh on every call', () => {
+		expect(doc('## Paso')).toContain('id="paso"');
+		expect(doc('## Paso')).toContain('id="paso"');
+	});
+
+	it('renders GFM tables with their alignment', () => {
+		const html = doc('| Equipo | Planta |\n| :- | -: |\n| Impresora | 2 |');
+		expect(html).toContain('<table>');
+		expect(html).toContain('<th align="left">Equipo</th>');
+		expect(html).toContain('<td align="right">2</td>');
+	});
+
+	it('renders the horizontal rule', () => {
+		expect(doc('uno\n\n---\n\ndos')).toContain('<hr />');
+	});
+
+	it('keeps everything a comment allows', () => {
+		const html = doc('**b** *i* `c`\n\n- a\n\n1. b\n\n> q\n\n```\nx\n```');
+		expect(html).toMatch(/<strong>b<\/strong>.*<em>i<\/em>.*<code>c<\/code>/);
+		expect(html).toMatch(/<ul>[\s\S]*<ol>[\s\S]*<blockquote>[\s\S]*<pre>/);
+	});
+
+	it('opens a link to a page in the same tab, and any other link in a new one', () => {
+		const html = doc(
+			'[VPN](/knowledge/DOC-0012) [paso](/knowledge/DOC-0012#paso-2) [x](https://example.com)'
+		);
+		expect(html).toContain('<a href="/knowledge/DOC-0012">VPN</a>');
+		expect(html).toContain('<a href="/knowledge/DOC-0012#paso-2">paso</a>');
+		expect(html).toContain(
+			'<a href="https://example.com" rel="noopener noreferrer" target="_blank">x</a>'
+		);
+	});
+
+	it('renders a mention token as plain text, never a chip', () => {
+		const html = doc('Hola @[Ada \\] Admin](person:6f1d0a39-2c4e-4d8b-9a77-1e2f3a4b5c6d)');
+		expect(html).toBe('<p>Hola @Ada ] Admin</p>\n');
+	});
+
+	it('neutralises scripts, handlers, javascript links, images and raw html', () => {
+		const html = doc(
+			[
+				'<script>alert(1)</script>',
+				'<img src=x onerror=alert(1)>',
+				'![logo](https://example.com/x.png)',
+				'<iframe src="https://evil"></iframe>',
+				'[bad](javascript:alert(1))',
+				'<h2 id="fake" onclick="y">raw heading</h2>',
+				'<table><tr><td onclick="y">raw cell</td></tr></table>',
+				'<span class="mention" data-person-id="6f1d0a39-2c4e-4d8b-9a77-1e2f3a4b5c6d">@Fake</span>',
+				'## Título <img src=x onerror=alert(1)>'
+			].join('\n\n')
+		);
+		expect(html).not.toMatch(
+			/<script|<img|<iframe|<span|<td|onerror|onclick|javascript:|alert\(1\)|id="fake"|mention|src=/
+		);
+		expect(html).toContain('raw heading');
+		expect(html).toContain('raw cell');
+		expect(html).toContain('@Fake');
+		expect(html).toContain('<h2 id="titulo">Título');
+	});
+
+	it('renders no task list checkbox', () => {
+		const html = doc('- [ ] pendiente\n- [x] hecho');
+		expect(html).not.toMatch(/<input|checkbox/);
+		expect(html).toContain('pendiente');
+	});
 });
 
 describe('plainExcerpt', () => {

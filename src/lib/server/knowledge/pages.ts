@@ -1,9 +1,9 @@
-import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import type { SpaceAudience, SpaceColour, SpaceIcon } from '#lib/domain/knowledge.js';
 import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
-import { organisations } from '../directory/schema';
+import { organisations, people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { placeBetween, spread } from '../shared/position';
 import { readablePages, requirePagesManage } from './scope';
@@ -13,7 +13,8 @@ import type { PageCreateInput } from './validation';
 
 /**
  * The page tree and its lifecycle (ADR 0031 §3–§7): browse, create, reorder,
- * move, publish, archive. Editing the body, and the revisions UI, are #324.
+ * move, publish, archive. Writing the body, and its revisions, live in
+ * `revisions.ts` (#324).
  *
  * Reads go through the scope in `scope.ts`, in the query. Every write requires
  * `knowledge.manage` and throws without it (`requirePagesManage`).
@@ -42,6 +43,9 @@ export type PageView = {
 	title: string;
 	body: string;
 	revision: number;
+	/** Who saved the revision the page shows, and when; `null` once that person is deleted. */
+	revisionAuthorName: string | null;
+	revisedAt: Date;
 	parentId: string | null;
 	status: PageStatus;
 	publishedAt: Date | null;
@@ -183,12 +187,19 @@ export async function getPageByTag(
 		.reverse();
 
 	const { page } = row;
+	const [latest] = await getDb()
+		.select({ authorName: people.fullName, createdAt: pageRevisions.createdAt })
+		.from(pageRevisions)
+		.leftJoin(people, eq(people.id, pageRevisions.authorPersonId))
+		.where(and(eq(pageRevisions.pageId, page.id), eq(pageRevisions.number, page.revision)));
 	return success({
 		id: page.id,
 		tag: page.pageTag,
 		title: page.title,
 		body: page.body,
 		revision: page.revision,
+		revisionAuthorName: latest?.authorName ?? null,
+		revisedAt: latest?.createdAt ?? page.updatedAt,
 		parentId: page.parentId,
 		status: statusOf(page),
 		publishedAt: page.publishedAt,
@@ -202,6 +213,51 @@ export async function getPageByTag(
 		},
 		path
 	});
+}
+
+/** A page the editor's picker offers to link to (#324). */
+export type PagePick = { tag: string; title: string; spaceName: string; status: PageStatus };
+
+/** At most this many pages are offered. */
+export const PAGE_PICK_LIMIT = 8;
+
+function likePattern(query: string): string {
+	return `%${query.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+}
+
+/**
+ * The pages the viewer could link to: what they can read (published pages, and
+ * drafts for staff; never archived), matching `query` in the title or the code,
+ * most recently changed first. An empty query offers the latest pages.
+ */
+export async function pickPages(viewer: SessionUser, query: string): Promise<PagePick[]> {
+	const text = query.trim();
+	const rows = await getDb()
+		.select({
+			tag: pages.pageTag,
+			title: pages.title,
+			spaceName: knowledgeSpaces.name,
+			publishedAt: pages.publishedAt,
+			archivedAt: pages.archivedAt
+		})
+		.from(pages)
+		.innerJoin(knowledgeSpaces, eq(knowledgeSpaces.id, pages.spaceId))
+		.where(
+			and(
+				readablePages(viewer),
+				text === ''
+					? undefined
+					: or(ilike(pages.title, likePattern(text)), ilike(pages.pageTag, likePattern(text)))
+			)
+		)
+		.orderBy(desc(pages.updatedAt), asc(pages.pageTag))
+		.limit(PAGE_PICK_LIMIT);
+	return rows.map((row) => ({
+		tag: row.tag,
+		title: row.title,
+		spaceName: row.spaceName,
+		status: statusOf(row)
+	}));
 }
 
 // ---------------------------------------------------------------------------

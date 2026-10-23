@@ -28,7 +28,7 @@ The stored format also decides three other things. `ticket_comments.search` is a
    client never receives unsanitised HTML, and SSR works.
 4. **Allowed formatting:** bold, italic, bulleted and numbered lists, links, inline code, code
    blocks and blockquotes. **Not allowed:** headings, strikethrough, tables, inline images
-   (attachments already exist). The editor's schema and the sanitiser allow-list say the same
+   (attachments already exist). Pages are the exception: see _Profiles_ below. The editor's schema and the sanitiser allow-list say the same
    thing.
 5. **Sanitiser allow-list:** tags `p, br, strong, em, ul, ol, li, a, code, pre, blockquote` (and
    the mention `span`, item 10); attribute `href` on `a` only (plus the `rel` and `target` the transform sets); schemes `http`,
@@ -61,14 +61,38 @@ The stored format also decides three other things. `ticket_comments.search` is a
 | `@tiptap/markdown`          | 3.32.0  |
 | `@tiptap/extension-mention` | 3.32.0  |
 | `@tiptap/suggestion`        | 3.32.0  |
+| `@tiptap/extension-table`   | 3.32.0  |
 | `marked`                    | 18.1.1  |
 | `sanitize-html`             | 2.18.1  |
 | `@types/sanitize-html`      | 2.16.2  |
 
 `@tiptap/markdown` requires `@tiptap/core` and `@tiptap/pm` at the same version, so the Tiptap
-packages are pinned together (`@tiptap/extension-mention` and `@tiptap/suggestion` included, #303). The spike confirmed that `editor.getMarkdown()` and
+packages are pinned together (`@tiptap/extension-mention` and `@tiptap/suggestion` included, #303;
+`@tiptap/extension-table` for the `document` profile, #324). The spike confirmed that `editor.getMarkdown()` and
 `setContent(md, { contentType: 'markdown' })` round-trip bold, lists, links, code and quotes, and
 that the editor runs under jsdom (with layout stubs) for component tests.
+
+### Profiles (#324)
+
+What a text may contain is a **profile** (`src/lib/domain/markdown-profiles.ts`), passed to both
+`RichTextEditor` (`profile`) and `renderMarkdown(source, profile)`, so the editor's schema and the
+allow-list still say the same thing. One pipeline: the same `marked` instance and sanitiser, with
+the renderer's choices and the allow-list picked by the profile of the call.
+
+- **`comment`** (the default) is everything above, unchanged: ticket replies and notes,
+  descriptions, and page comments later.
+- **`document`** is for knowledge base pages ([ADR 0031](0031-knowledge-base-spaces-page-tree-and-revisions.md)
+  §10): `comment` **minus** mentions (a token renders as plain `@Name` and the editor offers no
+  picker) **plus** headings h2–h4 (`#` reads as h2, five or more `#` as h4: the page title is the
+  only h1), GFM tables (`align` on cells, `left`, `center` or `right` only), the horizontal rule,
+  and links to pages. A heading gets an `id`, the slug of its text deduplicated within the
+  document, so a section can be linked (`/knowledge/DOC-0012#paso-2`). A link to a page, or to a
+  section, stays in the tab; every other link opens a new one as before. **No raw HTML at all**:
+  where a comment drops the tags outside its list, a document drops every tag typed by hand, even
+  `<h2>` or `<table>`, keeping the text; only the markdown makes them. No images and no task lists.
+  The editor adds a heading menu, table tools, the rule and a page picker (`[[` or a button, which
+  inserts `[Title](/knowledge/DOC-0012)` from `GET /knowledge/pages/pick`), and grows with the
+  text instead of scrolling. A page body may hold 200,000 characters (`PAGE_BODY_MAX_LENGTH`).
 
 ## Alternatives rejected
 

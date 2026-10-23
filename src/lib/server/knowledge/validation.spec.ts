@@ -1,8 +1,13 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { SPACE_DESCRIPTION_MAX, SPACE_ICONS, SPACE_NAME_MAX } from '#lib/domain/knowledge.js';
-import { spaceInput, spaceUpdateInput } from './validation';
+import {
+	PAGE_TITLE_MAX,
+	SPACE_DESCRIPTION_MAX,
+	SPACE_ICONS,
+	SPACE_NAME_MAX
+} from '#lib/domain/knowledge.js';
+import { pageSaveInput, spaceInput, spaceUpdateInput } from './validation';
 
 const valid = {
 	name: ' Ayuda ',
@@ -47,6 +52,28 @@ describe('spaceInput', () => {
 describe('spaceUpdateInput', () => {
 	it('carries no audience: changing it has its own confirmed path', () => {
 		expect(spaceUpdateInput.parse(valid)).not.toHaveProperty('audience');
+	});
+});
+
+describe('pageSaveInput', () => {
+	it('trims the title and reads the base revision from the form', () => {
+		expect(pageSaveInput.parse({ title: ' VPN ', body: '## Hola', baseRevision: '3' })).toEqual({
+			title: 'VPN',
+			body: '## Hola',
+			baseRevision: 3
+		});
+	});
+
+	it('refuses a blank or too long title and a missing base', () => {
+		const base = { body: '', baseRevision: '1' };
+		expect(pageSaveInput.safeParse({ ...base, title: '  ' }).success).toBe(false);
+		expect(
+			pageSaveInput.safeParse({ ...base, title: 'a'.repeat(PAGE_TITLE_MAX + 1) }).success
+		).toBe(false);
+		expect(pageSaveInput.safeParse({ title: 'x', body: '', baseRevision: '' }).success).toBe(false);
+		expect(pageSaveInput.safeParse({ title: 'x', body: '', baseRevision: '0' }).success).toBe(
+			false
+		);
 	});
 });
 

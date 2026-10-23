@@ -9,6 +9,8 @@ import {
 	getPageByTag,
 	listSpaceTree,
 	movePage,
+	PAGE_PICK_LIMIT,
+	pickPages,
 	previewMove,
 	publishPage,
 	reorderPage,
@@ -464,5 +466,54 @@ describe('reads', () => {
 		const { admin, archived } = await tree();
 		const found = await getPageByTag(admin, archived.pageTag);
 		expect(found.ok && found.value.status).toBe('archived');
+	});
+});
+
+describe('pickPages (#324)', () => {
+	it('offers staff drafts and both audiences, and never archived pages', async () => {
+		const { organisation, admin, employee } = await createWorkspace();
+		const portal = await createSpaceRow(organisation.id, { audience: 'portal', name: 'Ayuda' });
+		const internal = await createSpaceRow(organisation.id, { audience: 'staff', name: 'Interno' });
+		await createPageRow(organisation.id, portal.id, { title: 'VPN en casa', ...published() });
+		await createPageRow(organisation.id, portal.id, { title: 'VPN borrador', position: '2' });
+		await createPageRow(organisation.id, portal.id, {
+			title: 'VPN antigua',
+			position: '3',
+			...published(),
+			archivedAt: new Date()
+		});
+		await createPageRow(organisation.id, internal.id, { title: 'VPN servidor', ...published() });
+		await createPageRow(organisation.id, portal.id, { title: 'Impresoras', ...published() });
+
+		const staff = await pickPages(admin, 'vpn');
+		expect(staff.map((pick) => pick.title).sort()).toEqual([
+			'VPN borrador',
+			'VPN en casa',
+			'VPN servidor'
+		]);
+		expect(staff.find((pick) => pick.title === 'VPN borrador')).toMatchObject({
+			status: 'draft',
+			spaceName: 'Ayuda'
+		});
+
+		const portalOnly = await pickPages(employee, 'vpn');
+		expect(portalOnly.map((pick) => pick.title)).toEqual(['VPN en casa']);
+	});
+
+	it('matches the code, treats % and _ literally, and caps the list', async () => {
+		const { organisation, admin } = await createWorkspace();
+		const space = await createSpaceRow(organisation.id);
+		const created = await Promise.all(
+			Array.from({ length: PAGE_PICK_LIMIT + 2 }, (_, i) =>
+				createPageRow(organisation.id, space.id, { title: `Página ${i}`, position: String(i + 1) })
+			)
+		);
+
+		expect(await pickPages(admin, '')).toHaveLength(PAGE_PICK_LIMIT);
+		expect((await pickPages(admin, created[3].pageTag.toLowerCase())).map((p) => p.tag)).toEqual([
+			created[3].pageTag
+		]);
+		expect(await pickPages(admin, '%')).toEqual([]);
+		expect(await pickPages(admin, '_')).toEqual([]);
 	});
 });
