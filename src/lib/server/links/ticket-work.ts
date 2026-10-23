@@ -4,8 +4,8 @@ import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { findProjectInScope, findTaskInScope, projectSnapshot, taskSnapshot } from '../projects';
+import { ticketInOrganisation } from '../service-desk';
 import { failure, success, type Outcome } from '../shared/outcome';
-import { ticketInOrganisation } from './ticket-asset';
 import { ticketProject, ticketTask } from './schema';
 
 /**

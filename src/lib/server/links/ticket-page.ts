@@ -5,8 +5,8 @@ import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { pageSummaries, readablePagesByTag, type CitablePage } from '../knowledge';
+import { ticketInOrganisation } from '../service-desk';
 import { failure, success, type Outcome } from '../shared/outcome';
-import { ticketInOrganisation } from './ticket-asset';
 import type { LinkResult, UnlinkFailure } from './ticket-work';
 import { ticketPage } from './schema';
 

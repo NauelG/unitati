@@ -1,10 +1,10 @@
 import { and, eq } from 'drizzle-orm';
 import { can } from '../access/permissions';
-import { handovers } from '../assets/schema';
+import { handoverByCode, handoverInOrganisation } from '../assets';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { failure, success, type Outcome } from '../shared/outcome';
-import { ticketInOrganisation } from './ticket-asset';
+import { ticketInOrganisation } from '../service-desk';
 import { ticketHandover } from './schema';
 
 /**
@@ -24,15 +24,6 @@ export interface TicketHandoverPair {
 
 export type LinkHandoverFailure = 'ticket_not_found' | 'handover_not_found';
 
-async function handoverInOrganisation(tx: Transaction, actor: SessionUser, handoverId: string) {
-	const [handover] = await tx
-		.select({ id: handovers.id })
-		.from(handovers)
-		.where(and(eq(handovers.id, handoverId), eq(handovers.organisationId, actor.organisationId)))
-		.limit(1);
-	return handover ?? null;
-}
-
 /**
  * Links a handover to a ticket inside the caller's transaction, so a delivery
  * and its link commit together. Idempotent: a pair that already exists writes
@@ -46,7 +37,7 @@ export async function linkHandover(
 	pair: TicketHandoverPair
 ): Promise<Outcome<void, LinkHandoverFailure>> {
 	if (!(await ticketInOrganisation(tx, actor, pair.ticketId))) return failure('ticket_not_found');
-	if (!(await handoverInOrganisation(tx, actor, pair.handoverId))) {
+	if (!(await handoverInOrganisation(tx, actor.organisationId, pair.handoverId))) {
 		return failure('handover_not_found');
 	}
 
@@ -73,16 +64,7 @@ export async function linkHandoverByCode(
 	if (!can(actor, 'tickets.manage')) return failure('forbidden');
 
 	return getDb().transaction(async (tx) => {
-		const [handover] = await tx
-			.select({ id: handovers.id })
-			.from(handovers)
-			.where(
-				and(
-					eq(handovers.organisationId, actor.organisationId),
-					eq(handovers.code, input.code.trim().toUpperCase())
-				)
-			)
-			.limit(1);
+		const handover = await handoverByCode(tx, actor.organisationId, input.code);
 		if (!handover) return failure('handover_not_found' as const);
 
 		return linkHandover(tx, actor, { ticketId: input.ticketId, handoverId: handover.id });

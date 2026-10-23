@@ -29,13 +29,19 @@ export { viewAsset } from './view';
 export type { AssetView, FullAssetView, SharedAssetView } from './view';
 
 /**
- * The row scope (`scope.ts`), re-exported so `links` and every other caller
- * outside the domain keeps reaching it at `'../assets'`. It is defined in a
- * leaf module rather than here so the domain's own read modules
- * (`sparkline.ts`, `state-distribution.ts`) can import it without forming a
- * cycle with this barrel.
+ * What `links` reads of an asset, a handover or a category to relate a ticket to
+ * it (ADR 0002). The row scope itself (`scope.ts`) stays inside the domain.
  */
-export { requireAssetScope } from './scope';
+export {
+	assetSnapshot,
+	assetSummaries,
+	categoryInOrganisation,
+	findAssetInScope,
+	handoverByCode,
+	handoverInOrganisation,
+	handoverSummaries
+} from './link-targets';
+export type { AssetLinkTarget, AssetLinkSummary, HandoverSummary } from './link-targets';
 
 /** Asset registrations per day, for the KPI sparkline (#90). */
 export { assetRegistrationsSparkline } from './sparkline';

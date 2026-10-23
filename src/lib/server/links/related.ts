@@ -1,10 +1,9 @@
 import { and, asc, eq, inArray } from 'drizzle-orm';
-import { deriveHandoverState, type HandoverState } from '#lib/domain/handover.js';
+import type { HandoverState } from '#lib/domain/handover.js';
 import { assetHref, pageHref, projectHref, taskHref, ticketHref } from '#lib/domain/routes.js';
 import type { AssetState, Priority, StateGroup, TicketStatus } from '#lib/domain/status.js';
 import { can } from '../access/permissions';
-import { requireAssetScope } from '../assets';
-import { assets, handovers } from '../assets/schema';
+import { assetSummaries, handoverSummaries } from '../assets';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { listPeople } from '../directory';
@@ -17,7 +16,7 @@ import {
 	type ProjectProgress,
 	type TaskSummary
 } from '../projects';
-import { isRequester, ticketSummaries, tickets, type TicketRow } from '../service-desk';
+import { isRequester, ticketSummaries, type TicketRow } from '../service-desk';
 import {
 	projectPage,
 	ticketAsset,
@@ -183,38 +182,44 @@ export function assetRelations(groups: readonly RelatedGroup[]): AssetRelatedGro
 }
 
 async function assetsAffectedBy(viewer: SessionUser, ticketId: string): Promise<RelatedItem[]> {
-	const rows = await getDb()
-		.select({
-			id: assets.id,
-			tag: assets.assetTag,
-			title: assets.name,
-			status: assets.state,
-			linkedAt: ticketAsset.createdAt
-		})
+	const links = await getDb()
+		.select({ assetId: ticketAsset.assetId, linkedAt: ticketAsset.createdAt })
 		.from(ticketAsset)
-		.innerJoin(assets, eq(ticketAsset.assetId, assets.id))
 		.where(
-			and(
-				eq(ticketAsset.organisationId, viewer.organisationId),
-				eq(ticketAsset.ticketId, ticketId),
-				// An employee sees the assets they could have attached themselves and no
-				// others: a colleague's laptop stays out of the panel even if staff added it.
-				requireAssetScope(viewer)
-			)
+			and(eq(ticketAsset.organisationId, viewer.organisationId), eq(ticketAsset.ticketId, ticketId))
 		)
 		.orderBy(asc(ticketAsset.createdAt), asc(ticketAsset.id));
 
-	return rows.map((row) => ({
-		ref: {
-			kind: 'asset' as const,
-			id: row.id,
-			tag: row.tag,
-			title: row.title,
-			href: assetHref(row.tag)
-		},
-		status: row.status,
-		linkedAt: row.linkedAt
-	}));
+	// An employee sees the assets they could have attached themselves and no
+	// others: a colleague's laptop stays out of the panel even if staff added it.
+	// `assets` applies that scope; what it does not return is simply absent.
+	const byId = new Map(
+		(
+			await assetSummaries(
+				viewer,
+				links.map((link) => link.assetId)
+			)
+		).map((asset) => [asset.id, asset])
+	);
+
+	return links.flatMap((link): RelatedItem[] => {
+		const asset = byId.get(link.assetId);
+		if (!asset) return [];
+
+		return [
+			{
+				ref: {
+					kind: 'asset',
+					id: asset.id,
+					tag: asset.assetTag,
+					title: asset.name,
+					href: assetHref(asset.assetTag)
+				},
+				status: asset.state,
+				linkedAt: link.linkedAt
+			}
+		];
+	});
 }
 
 async function ticketsAffecting(viewer: SessionUser, assetId: string): Promise<RelatedItem[]> {
@@ -223,32 +228,31 @@ async function ticketsAffecting(viewer: SessionUser, assetId: string): Promise<R
 	// not an empty one they could mistake for "this machine never broke".
 	if (!can(viewer, 'tickets.view')) return [];
 
-	const rows = await getDb()
-		.select({
-			id: tickets.id,
-			tag: tickets.ticketTag,
-			title: tickets.subject,
-			status: tickets.status,
-			linkedAt: ticketAsset.createdAt
-		})
+	const links = await getDb()
+		.select({ ticketId: ticketAsset.ticketId, linkedAt: ticketAsset.createdAt })
 		.from(ticketAsset)
-		.innerJoin(tickets, eq(ticketAsset.ticketId, tickets.id))
 		.where(
 			and(eq(ticketAsset.organisationId, viewer.organisationId), eq(ticketAsset.assetId, assetId))
 		)
 		.orderBy(asc(ticketAsset.createdAt), asc(ticketAsset.id));
+	if (links.length === 0) return [];
 
-	return rows.map((row) => ({
-		ref: {
-			kind: 'ticket' as const,
-			id: row.id,
-			tag: row.tag,
-			title: row.title,
-			href: ticketHref(row.tag)
-		},
-		status: row.status,
-		linkedAt: row.linkedAt
-	}));
+	const byId = new Map(
+		(
+			await ticketSummaries(
+				viewer,
+				links.map((link) => link.ticketId)
+			)
+		).map((ticket) => [ticket.id, ticket])
+	);
+
+	// Ref, status and date only: an asset's page does not show priority or assignee.
+	return links.flatMap((link): RelatedItem[] => {
+		const ticket = byId.get(link.ticketId);
+		if (!ticket) return [];
+
+		return [{ ref: ticketRef(ticket), status: ticket.status, linkedAt: link.linkedAt }];
+	});
 }
 
 /* -------------------------------------------------------------------------- */
@@ -529,19 +533,9 @@ async function ticketsViaTasksOf(viewer: SessionUser, projectId: string): Promis
 
 /** Handovers are staff business (signature evidence): never shown to a requester. */
 async function handoversFulfilling(viewer: SessionUser, ticketId: string): Promise<RelatedItem[]> {
-	const now = new Date();
-	const rows = await getDb()
-		.select({
-			id: handovers.id,
-			code: handovers.code,
-			person: handovers.personNameSnapshot,
-			status: handovers.status,
-			expiresAt: handovers.expiresAt,
-			linkedAt: ticketHandover.createdAt,
-			createdByPersonId: ticketHandover.createdByPersonId
-		})
+	const links = await getDb()
+		.select({ handoverId: ticketHandover.handoverId, linkedAt: ticketHandover.createdAt })
 		.from(ticketHandover)
-		.innerJoin(handovers, eq(ticketHandover.handoverId, handovers.id))
 		.where(
 			and(
 				eq(ticketHandover.organisationId, viewer.organisationId),
@@ -550,11 +544,33 @@ async function handoversFulfilling(viewer: SessionUser, ticketId: string): Promi
 		)
 		.orderBy(asc(ticketHandover.createdAt), asc(ticketHandover.id));
 
-	return rows.map((row) => ({
-		ref: { kind: 'handover' as const, id: row.id, tag: row.code, title: row.person, href: null },
-		status: deriveHandoverState(row, now),
-		linkedAt: row.linkedAt
-	}));
+	const byId = new Map(
+		(
+			await handoverSummaries(
+				viewer,
+				links.map((link) => link.handoverId)
+			)
+		).map((handover) => [handover.id, handover])
+	);
+
+	return links.flatMap((link): RelatedItem[] => {
+		const handover = byId.get(link.handoverId);
+		if (!handover) return [];
+
+		return [
+			{
+				ref: {
+					kind: 'handover',
+					id: handover.id,
+					tag: handover.code,
+					title: handover.personName,
+					href: null
+				},
+				status: handover.state,
+				linkedAt: link.linkedAt
+			}
+		];
+	});
 }
 
 async function ticketsFulfilledBy(viewer: SessionUser, handoverId: string): Promise<RelatedItem[]> {

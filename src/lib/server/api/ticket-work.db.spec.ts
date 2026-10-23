@@ -338,6 +338,19 @@ describe('reading the work of a ticket and the tickets of work', () => {
 		});
 	});
 
+	it('answers a key scoped to ticket reads only, with the same groups', async () => {
+		const s = await escalated();
+		const ticketsOnly = await keyFor(s.technician, ['tickets.view']);
+
+		const { response, body } = await send('GET', `${s.base}/work`, ticketsOnly);
+
+		expect(response.status).toBe(200);
+		expect(body.data.map((group: { relation: string }) => group.relation)).toEqual([
+			'resolved_in',
+			'handled_in'
+		]);
+	});
+
 	it('lists the tickets of a task and of a project', async () => {
 		const s = await escalated();
 
