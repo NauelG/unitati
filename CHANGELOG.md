@@ -5,6 +5,19 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.116.0] - 2026-10-23
+
+### Added
+
+- Pages in global search (#329, part of #17). A "Páginas" group shows the pages the viewer may read,
+  with the space name as hint, and an exact `DOC-####` jumps to the page only when the viewer can
+  read it. Audience, draft and archive filtering happen inside the query, so an employee never
+  gets a `staff` page, a draft or a count that includes them.
+- Page suggestions on new portal tickets. While an employee types the subject of a free-form
+  ticket, up to five matching published pages appear under it ("¿Te ayuda alguna de estas
+  páginas?") and open in a side sheet without leaving the form; "Seguir con mi solicitud" returns to
+  it intact. Request forms show none.
+
 ## [0.115.0] - 2026-10-23
 
 ### Added

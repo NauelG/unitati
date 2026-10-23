@@ -288,3 +288,73 @@ describe('search, as an employee', () => {
 		});
 	});
 });
+
+describe('search, pages', () => {
+	const scenario = async () => {
+		const { createPageRow, createSpaceRow, createWorkspace } =
+			await import('../knowledge/testing/fixtures');
+		const workspace = await createWorkspace();
+		const { organisation } = workspace;
+		const published = new Date();
+		const portal = await createSpaceRow(organisation.id, { name: 'Ayuda', audience: 'portal' });
+		const staff = await createSpaceRow(organisation.id, { name: 'Interno', audience: 'staff' });
+		const open = await createPageRow(organisation.id, portal.id, {
+			pageTag: 'DOC-0001',
+			title: 'Conectar la impresora',
+			publishedAt: published
+		});
+		const internal = await createPageRow(organisation.id, staff.id, {
+			pageTag: 'DOC-0002',
+			title: 'Reiniciar la impresora del CPD',
+			publishedAt: published
+		});
+		const draft = await createPageRow(organisation.id, portal.id, {
+			pageTag: 'DOC-0003',
+			title: 'Borrador de impresora'
+		});
+		await createPageRow(organisation.id, portal.id, {
+			pageTag: 'DOC-0004',
+			title: 'Impresora retirada',
+			publishedAt: published,
+			archivedAt: new Date()
+		});
+		return { ...workspace, open, internal, draft };
+	};
+
+	it('groups pages for a technician, drafts and staff spaces included, with the space as hint', async () => {
+		const { technician } = await scenario();
+
+		const result = await search(technician, 'impresoras');
+
+		expect(result.groups.map((found) => found.key)).toEqual(['pages']);
+		expect(codes(group(result, 'pages')).sort()).toEqual(['DOC-0001', 'DOC-0002', 'DOC-0003']);
+		expect(group(result, 'pages')?.hits.find((hit) => hit.code === 'DOC-0001')).toMatchObject({
+			kind: 'page',
+			subtitle: 'Ayuda',
+			href: '/knowledge/DOC-0001'
+		});
+	});
+
+	it('never gives an employee a staff page, a draft or an archived page, nor counts them', async () => {
+		const { employee } = await scenario();
+
+		const result = await search(employee, 'impresora');
+
+		expect(codes(group(result, 'pages'))).toEqual(['DOC-0001']);
+		expect(group(result, 'pages')?.total).toBe(1);
+	});
+
+	it('jumps to an exact DOC code the viewer can read', async () => {
+		const { employee, technician } = await scenario();
+
+		expect(codes(group(await search(employee, 'doc-0001'), 'code'))).toEqual(['DOC-0001']);
+		expect(codes(group(await search(technician, 'DOC-0003'), 'code'))).toEqual(['DOC-0003']);
+	});
+
+	it('gives no hit at all for an exact code the viewer cannot read', async () => {
+		const { employee } = await scenario();
+
+		expect((await search(employee, 'DOC-0002')).groups).toEqual([]);
+		expect((await search(employee, 'DOC-0003')).groups).toEqual([]);
+	});
+});

@@ -146,6 +146,7 @@
 		asset_tickets: () => m.search_group_asset_tickets(),
 		tickets: () => m.search_group_tickets(),
 		projects: () => m.search_group_projects(),
+		pages: () => m.search_group_pages(),
 		people: () => m.search_group_people()
 	};
 

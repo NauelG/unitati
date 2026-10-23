@@ -4,6 +4,7 @@
 	import { enhance } from '$app/forms';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
+	import PageSuggestions from '#lib/components/unitati/PageSuggestions.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import SearchSelectField from '#lib/components/unitati/SearchSelectField.svelte';
@@ -18,6 +19,9 @@
 	let busy = $state(false);
 
 	const values = $derived(form && 'values' in form ? form.values : {});
+	// Seeded once from a failed post, then owned by the field: it feeds the page suggestions.
+	// svelte-ignore state_referenced_locally
+	let subject = $state(values.subject ?? '');
 </script>
 
 <svelte:head>
@@ -71,7 +75,9 @@
 		}}
 		class="mt-[var(--space-4)] space-y-[var(--space-4)]"
 	>
-		<Field label={m.ticket_form_subject()} name="subject" value={values.subject} required />
+		<Field label={m.ticket_form_subject()} name="subject" bind:value={subject} required />
+
+		<PageSuggestions {subject} />
 
 		<label class="flex flex-col gap-[var(--space-1)]">
 			<span class="text-label text-[var(--ink)]">{m.ticket_form_body()}</span>

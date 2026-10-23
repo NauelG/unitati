@@ -1,8 +1,15 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, or, sql } from 'drizzle-orm';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { plainExcerpt } from '../shared/markdown';
-import { readablePages, requireSpaceScope } from './scope';
+import {
+	isCode,
+	matches,
+	rankOf,
+	type SearchHitKind,
+	type SearchTerm
+} from '../shared/search-hits';
+import { readablePages, readableSpaces, requireSpaceScope } from './scope';
 import { knowledgeSpaces, pages } from './schema';
 
 const EXCERPT_LENGTH = 200;
@@ -56,4 +63,30 @@ export async function searchPages(
 		spaceName: row.spaceName,
 		excerpt: plainExcerpt(row.body, EXCERPT_LENGTH)
 	}));
+}
+
+/**
+ * Pages as global-search hits (#329), through the same `readablePages` scope as
+ * every other read: audience, draft and archive are conditions of the sub-query,
+ * so an exact `DOC-####` the viewer cannot read matches nothing at all. `null`
+ * when the viewer holds no `knowledge.view`. The space name is the hint.
+ */
+export function pageHits(viewer: SessionUser, term: SearchTerm) {
+	if (readableSpaces(viewer) === null) return null;
+
+	const exact = isCode(pages.pageTag, term);
+
+	return getDb()
+		.select({
+			kind: sql<SearchHitKind>`'page'`.as('kind'),
+			id: sql<string>`${pages.id}`.as('id'),
+			code: sql<string | null>`${pages.pageTag}`.as('code'),
+			title: sql<string>`${pages.title}`.as('title'),
+			subtitle: sql<string | null>`${knowledgeSpaces.name}`.as('subtitle'),
+			rank: rankOf(pages.search, 'spanish', term, exact).as('rank'),
+			exact: sql<boolean>`${exact}`.as('exact')
+		})
+		.from(pages)
+		.innerJoin(knowledgeSpaces, eq(knowledgeSpaces.id, pages.spaceId))
+		.where(and(readablePages(viewer), or(matches(pages.search, 'spanish', term), exact)));
 }

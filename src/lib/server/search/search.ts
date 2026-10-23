@@ -3,6 +3,7 @@ import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { assetHits } from '../assets';
 import { personHits } from '../directory';
+import { pageHits } from '../knowledge';
 import { relatedTo } from '../links';
 import { projectHits, taskHits } from '../projects';
 import { parseSearchTerm, type SearchHitKind } from '../shared/search-hits';
@@ -29,9 +30,9 @@ const GROUP_LIMIT = 5;
  * tickets of the top asset, appended right after `assets`.
  */
 export type SearchGroupKey =
-	'code' | 'assets' | 'asset_tickets' | 'tickets' | 'projects' | 'people';
+	'code' | 'assets' | 'asset_tickets' | 'tickets' | 'projects' | 'pages' | 'people';
 
-const QUERY_GROUPS = ['code', 'assets', 'tickets', 'projects', 'people'] as const;
+const QUERY_GROUPS = ['code', 'assets', 'tickets', 'projects', 'pages', 'people'] as const;
 
 export interface SearchHit {
 	kind: SearchHitKind;
@@ -74,6 +75,9 @@ function hrefOf(kind: SearchHitKind, code: string | null): string {
 			return `/projects/${encodeURIComponent(code ?? '')}`;
 		case 'task':
 			return `/tasks/${encodeURIComponent(code ?? '')}`;
+		case 'page':
+			// An employee is redirected to the portal reader by the canonical link.
+			return `/knowledge/${encodeURIComponent(code ?? '')}`;
 		case 'person':
 			// There is no person page yet: the directory is the place to find them.
 			return '/directory';
@@ -97,6 +101,7 @@ export async function search(viewer: SessionUser, input: string): Promise<Search
 		ticketHits(viewer, term),
 		projectHits(viewer, term),
 		taskHits(viewer, term),
+		pageHits(viewer, term),
 		personHits(viewer, term)
 	].filter((part) => part !== null);
 	if (parts.length === 0) return { groups: [] };
@@ -119,6 +124,7 @@ export async function search(viewer: SessionUser, input: string): Promise<Search
 					when kind = 'asset' then 'assets'
 					when kind = 'ticket' then 'tickets'
 					when kind in ('project', 'task') then 'projects'
+					when kind = 'page' then 'pages'
 					else 'people'
 				end as grp
 			from hits
