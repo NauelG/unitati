@@ -656,6 +656,11 @@ export const GALLERY_EXCEPTIONS: GalleryException[] = [
 			'Bound to the record: its Seguir / Siguiendo form posts to the ?/follow and ?/unfollow actions of /service-desk/[tag], /tasks/[taskTag] and /projects/[tag], which answer 404 without a record the viewer can see.'
 	},
 	{
+		sourceFile: 'PageSuggestions.svelte',
+		reason:
+			'Bound to the portal: it asks /portal/knowledge/suggest and /portal/knowledge/[tag]/preview, which answer for employees only, so the gallery would render an empty list. Covered by its component spec.'
+	},
+	{
 		sourceFile: 'PageCitePanel.svelte',
 		reason:
 			'Bound to the record: its form posts to the ?/citePage action of /service-desk/[tag] and the ?/documentPage action of /projects/[tag], and searches the knowledge pages the viewer may read, which answer 404 without a record the viewer can see.'

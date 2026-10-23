@@ -15,7 +15,7 @@ import type { SearchDictionary } from './search-vector';
  */
 
 /** The kinds of record a hit can be, in a form `search/` groups on. */
-export type SearchHitKind = 'asset' | 'ticket' | 'project' | 'task' | 'person';
+export type SearchHitKind = 'asset' | 'ticket' | 'project' | 'task' | 'person' | 'page';
 
 /** A typed term: the words the viewer wrote, ready to be matched as a prefix query. */
 export interface SearchTerm {
