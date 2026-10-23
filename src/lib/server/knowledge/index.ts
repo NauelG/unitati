@@ -11,7 +11,7 @@ export {
 	knowledgeSpaces,
 	knowledgeSpaceAudience,
 	pages,
-	pageRevisions,
+	pageRevisions as pageRevisionsTable,
 	pageAttachments,
 	pageCodeSequence,
 	pageComments
@@ -59,7 +59,7 @@ export type {
 	TreeEntry
 } from './pages';
 
-export { getRevision, listRevisions, restoreRevision, savePage } from './revisions';
+export { getRevision, listRevisions, pageRevisions, restoreRevision, savePage } from './revisions';
 export type {
 	PageSaveFailure,
 	PageSaveInput,

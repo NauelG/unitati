@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import {
+	PAGE_BODY_MAX_LENGTH,
 	PAGE_PICK_LIMIT,
 	type SpaceAudience,
 	type SpaceColour,
@@ -11,6 +12,7 @@ import { getDb, type Transaction } from '../db';
 import { organisations, people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { placeBetween, spread } from '../shared/position';
+import { authorColumns, withAuthorNames } from './authors';
 import { readablePages, requirePagesManage } from './scope';
 import { knowledgeSpaces, pageRevisions, pages } from './schema';
 import { lockSpace } from './spaces';
@@ -70,7 +72,7 @@ export type PageView = {
 };
 
 export type PageCreateFailure =
-	'space_not_found' | 'space_archived' | 'parent_not_found' | 'parent_archived';
+	'space_not_found' | 'space_archived' | 'parent_not_found' | 'parent_archived' | 'body_too_long';
 export type PageReorderFailure = 'not_found' | 'archived' | 'not_siblings';
 export type PageMoveFailure =
 	| 'not_found'
@@ -192,11 +194,16 @@ export async function getPageByTag(
 		.reverse();
 
 	const { page } = row;
-	const [latest] = await getDb()
-		.select({ authorName: people.fullName, createdAt: pageRevisions.createdAt })
+	const [latestRow] = await getDb()
+		.select({
+			personName: people.fullName,
+			serviceAccountId: pageRevisions.authorServiceAccountId,
+			createdAt: pageRevisions.createdAt
+		})
 		.from(pageRevisions)
 		.leftJoin(people, eq(people.id, pageRevisions.authorPersonId))
 		.where(and(eq(pageRevisions.pageId, page.id), eq(pageRevisions.number, page.revision)));
+	const [latest] = await withAuthorNames(viewer.organisationId, latestRow ? [latestRow] : []);
 	return success({
 		id: page.id,
 		tag: page.pageTag,
@@ -409,6 +416,8 @@ export async function createPage(
 ): Promise<Outcome<{ id: string; tag: string }, PageCreateFailure>> {
 	requirePagesManage(actor);
 	const body = input.body ?? '';
+	if (body.length > PAGE_BODY_MAX_LENGTH) return failure('body_too_long');
+	const author = authorColumns(actor);
 	return getDb().transaction(async (tx) => {
 		await lockOrganisation(tx, actor.organisationId);
 		const space = (await lockSpaces(tx, actor.organisationId, [input.spaceId])).get(input.spaceId);
@@ -434,7 +443,8 @@ export async function createPage(
 				body,
 				revision: 1,
 				position: String(position),
-				createdByPersonId: actor.personId
+				createdByPersonId: author.personId,
+				createdByServiceAccountId: author.serviceAccountId
 			})
 			.returning({ id: pages.id, tag: pages.pageTag });
 		await tx.insert(pageRevisions).values({
@@ -443,7 +453,8 @@ export async function createPage(
 			number: 1,
 			title: input.title,
 			body,
-			authorPersonId: actor.personId
+			authorPersonId: author.personId,
+			authorServiceAccountId: author.serviceAccountId
 		});
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,

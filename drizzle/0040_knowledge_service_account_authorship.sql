@@ -1,0 +1,6 @@
+ALTER TABLE "page_revisions" ADD COLUMN "author_service_account_id" uuid;--> statement-breakpoint
+ALTER TABLE "pages" ADD COLUMN "created_by_service_account_id" uuid;--> statement-breakpoint
+ALTER TABLE "page_revisions" ADD CONSTRAINT "page_revisions_author_service_account_id_service_accounts_id_fk" FOREIGN KEY ("author_service_account_id") REFERENCES "public"."service_accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "pages" ADD CONSTRAINT "pages_created_by_service_account_id_service_accounts_id_fk" FOREIGN KEY ("created_by_service_account_id") REFERENCES "public"."service_accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "page_revisions" ADD CONSTRAINT "page_revisions_at_most_one_author" CHECK (num_nonnulls("page_revisions"."author_person_id", "page_revisions"."author_service_account_id") <= 1);--> statement-breakpoint
+ALTER TABLE "pages" ADD CONSTRAINT "pages_at_most_one_creator" CHECK (num_nonnulls("pages"."created_by_person_id", "pages"."created_by_service_account_id") <= 1);

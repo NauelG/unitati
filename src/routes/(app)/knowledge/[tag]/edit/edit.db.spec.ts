@@ -1,7 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { getDb } from '#lib/server/db/index.js';
-import { createPage, pageRevisions, pages, savePage } from '#lib/server/knowledge/index.js';
+import { createPage, pageRevisionsTable, pages, savePage } from '#lib/server/knowledge/index.js';
 import { createSpaceRow, createWorkspace } from '#lib/server/knowledge/testing/fixtures.js';
 import { actionEvent, outcomeOf } from '#lib/server/projects/testing/action-event.js';
 import { GET as pick } from '../../pages/pick/+server';
@@ -27,9 +27,9 @@ const save = (user: unknown, tag: string, fields: Record<string, string>) =>
 const revisions = (pageId: string) =>
 	getDb()
 		.select()
-		.from(pageRevisions)
-		.where(eq(pageRevisions.pageId, pageId))
-		.orderBy(asc(pageRevisions.number));
+		.from(pageRevisionsTable)
+		.where(eq(pageRevisionsTable.pageId, pageId))
+		.orderBy(asc(pageRevisionsTable.number));
 
 describe('/knowledge/[tag]/edit', () => {
 	it('saves a revision and lands on the page', async () => {

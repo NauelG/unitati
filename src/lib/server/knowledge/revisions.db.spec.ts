@@ -1,6 +1,8 @@
 import { asc, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { PAGE_BODY_MAX_LENGTH } from '#lib/domain/knowledge.js';
+import { serviceAccounts } from '../api/schema';
+import { pageWindow } from '../shared/pagination';
 import { activity } from '../activity/schema';
 import { getDb } from '../db';
 import {
@@ -9,6 +11,7 @@ import {
 	getPageByTag,
 	getRevision,
 	listRevisions,
+	pageRevisions as pageRevisionsPage,
 	publishPage,
 	restoreRevision,
 	savePage
@@ -328,5 +331,149 @@ describe('getPageByTag: the latest revision', () => {
 		expect(read.value.revision).toBe(2);
 		expect(read.value.revisionAuthorName).toBe('Tom Technician');
 		expect(read.value.revisedAt).toBeInstanceOf(Date);
+	});
+});
+
+/** A principal acting through an API key: no person, a service account id. */
+async function apiPrincipal(
+	workspace: Awaited<ReturnType<typeof createWorkspace>>,
+	name = 'Wiki bot'
+) {
+	const [account] = await getDb()
+		.insert(serviceAccounts)
+		.values({ organisationId: workspace.organisation.id, name, role: 'technician' })
+		.returning();
+	return {
+		account,
+		actor: { ...workspace.technician, personId: null, serviceAccountId: account.id }
+	};
+}
+
+describe('service-account authorship', () => {
+	it('records the account, not a person, on create, save and restore', async () => {
+		const workspace = await createWorkspace();
+		const space = await createSpaceRow(workspace.organisation.id, { audience: 'staff' });
+		const { account, actor } = await apiPrincipal(workspace);
+
+		const created = await createPage(actor, {
+			spaceId: space.id,
+			parentId: null,
+			title: 'API',
+			body: 'uno'
+		});
+		if (!created.ok) throw new Error('expected the page to be created');
+		const id = created.value.id;
+
+		expect(await reload(id)).toMatchObject({
+			createdByPersonId: null,
+			createdByServiceAccountId: account.id
+		});
+
+		await savePage(actor, id, { title: 'API', body: 'dos', baseRevision: 1 });
+		await restoreRevision(actor, id, 1, { baseRevision: 2 });
+
+		const revisions = await revisionsOf(id);
+		expect(revisions).toHaveLength(3);
+		for (const revision of revisions) {
+			expect(revision.authorPersonId).toBeNull();
+			expect(revision.authorServiceAccountId).toBe(account.id);
+		}
+
+		const list = await listRevisions(workspace.admin, id);
+		expect(list.ok && list.value.map((r) => r.authorName)).toEqual([
+			'Wiki bot',
+			'Wiki bot',
+			'Wiki bot'
+		]);
+		const one = await getRevision(workspace.admin, id, 2);
+		expect(one.ok && one.value.authorName).toBe('Wiki bot');
+		const read = await getPageByTag(workspace.admin, (await reload(id)).pageTag);
+		expect(read.ok && read.value.revisionAuthorName).toBe('Wiki bot');
+	});
+
+	it('names the account in a stale_revision failure', async () => {
+		const workspace = await createWorkspace();
+		const space = await createSpaceRow(workspace.organisation.id, { audience: 'staff' });
+		const { actor } = await apiPrincipal(workspace);
+		const created = await createPage(workspace.admin, {
+			spaceId: space.id,
+			parentId: null,
+			title: 'P',
+			body: 'a'
+		});
+		if (!created.ok) throw new Error('expected the page');
+		await savePage(actor, created.value.id, { title: 'P', body: 'b', baseRevision: 1 });
+
+		const stale = await savePage(workspace.admin, created.value.id, {
+			title: 'P',
+			body: 'c',
+			baseRevision: 1
+		});
+		expect(stale).toMatchObject({
+			ok: false,
+			error: { kind: 'stale_revision', authorName: 'Wiki bot' }
+		});
+	});
+
+	it('refuses a revision with both authors set', async () => {
+		const workspace = await setup();
+		const { page } = workspace;
+		const { account } = await apiPrincipal(workspace);
+		await expect(
+			getDb().insert(pageRevisions).values({
+				organisationId: workspace.organisation.id,
+				pageId: page.id,
+				number: 99,
+				title: 't',
+				body: 'b',
+				authorPersonId: workspace.admin.personId,
+				authorServiceAccountId: account.id
+			})
+		).rejects.toThrow();
+	});
+
+	it('keeps authorName null when the person was deleted', async () => {
+		const { admin, page } = await setup();
+		await getDb()
+			.update(pageRevisions)
+			.set({ authorPersonId: null })
+			.where(eq(pageRevisions.pageId, page.id));
+		const list = await listRevisions(admin, page.id);
+		expect(list.ok && list.value[0].authorName).toBeNull();
+	});
+});
+
+describe('pageRevisions', () => {
+	it('pages the history newest first and reports the total', async () => {
+		const { admin, page } = await setup();
+		for (let base = 1; base <= 4; base++) {
+			await savePage(admin, page.id, { title: 'VPN', body: `v${base}`, baseRevision: base });
+		}
+
+		const first = await pageRevisionsPage(admin, page.id, pageWindow({ page: 1, perPage: 2 }));
+		expect(first.ok && first.value.rows.map((r) => r.number)).toEqual([5, 4]);
+		expect(first.ok && first.value).toMatchObject({ total: 5, pageCount: 3, perPage: 2 });
+		const last = await pageRevisionsPage(admin, page.id, pageWindow({ page: 3, perPage: 2 }));
+		expect(last.ok && last.value.rows.map((r) => r.number)).toEqual([1]);
+		const clamped = await pageRevisionsPage(
+			admin,
+			page.id,
+			pageWindow({ page: -4, perPage: 100000 })
+		);
+		expect(clamped.ok && clamped.value).toMatchObject({ page: 1, perPage: 100 });
+	});
+
+	it('answers not_found for an unreadable page and throws for non-staff', async () => {
+		const { admin, employee, page } = await setup();
+		const other = await createWorkspace('Other', 'other');
+		expect(await pageRevisionsPage(other.admin, page.id, pageWindow())).toEqual({
+			ok: false,
+			error: 'not_found'
+		});
+		expect(await pageRevisionsPage(admin, crypto.randomUUID(), pageWindow())).toEqual({
+			ok: false,
+			error: 'not_found'
+		});
+		await expect(pageRevisionsPage(employee, page.id, pageWindow())).rejects.toThrow();
 	});
 });
