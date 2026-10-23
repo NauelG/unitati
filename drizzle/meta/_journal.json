@@ -253,6 +253,13 @@
       "when": 1792672507536,
       "tag": "0035_technicians_edit_directory",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792740535537,
+      "tag": "0036_page_attachments",
+      "breakpoints": true
     }
   ]
 }

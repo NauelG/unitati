@@ -12,9 +12,23 @@ export {
 	knowledgeSpaceAudience,
 	pages,
 	pageRevisions,
+	pageAttachments,
 	pageCodeSequence
 } from './schema';
-export type { KnowledgeSpace, Page, PageRevision } from './schema';
+export type { KnowledgeSpace, Page, PageAttachment, PageRevision } from './schema';
+
+export {
+	addPageAttachments,
+	getPageAttachment,
+	listPageAttachments,
+	removePageAttachment
+} from './attachments';
+export type {
+	PageAttachmentAddFailure,
+	PageAttachmentBytes,
+	PageAttachmentRemoveFailure,
+	PageAttachmentView
+} from './attachments';
 
 export {
 	archivePage,

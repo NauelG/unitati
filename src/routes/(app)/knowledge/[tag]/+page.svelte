@@ -17,6 +17,7 @@
 	import EmptyState from '#lib/components/unitati/EmptyState.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
+	import RecordAttachments from '#lib/components/unitati/RecordAttachments.svelte';
 	import PageStatusBadge from '#lib/components/unitati/PageStatusBadge.svelte';
 	import { prose } from '#lib/components/unitati/prose.js';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
@@ -36,6 +37,8 @@
 
 	const status = $derived(data.page.status);
 	const revisedAt = $derived(new Date(data.page.revisedAt));
+	const failureFor = (action: string) =>
+		form && form.action === action && form.message ? String(form.message) : undefined;
 	const refusal = $derived(
 		form && ['publish', 'unarchive'].includes(form.action ?? '') ? form.message : null
 	);
@@ -131,6 +134,14 @@
 	</WorkPanel>
 
 	{#snippet side()}
+		<RecordAttachments
+			items={data.attachments}
+			downloadBase={`/knowledge/${data.page.tag}/attachments`}
+			canManage={status !== 'archived'}
+			uploadError={failureFor('addAttachments')}
+			removeError={failureFor('removeAttachment')}
+		/>
+
 		<WorkPanel heading={m.knowledge_tree_label({ space: data.space.name })}>
 			<KnowledgeTree
 				entries={data.tree}
