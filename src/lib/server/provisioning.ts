@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
-import { ensureDefaultHandoverTemplates } from '../assets';
-import { getDb } from '../db';
-import { organisations, people } from '../directory/schema';
-import { ensureDefaultStates } from '../projects';
-import { failure, success, type Outcome } from '../shared/outcome';
-import { users } from './schema';
+import { ensureDefaultHandoverTemplates } from './assets';
+import { getDb } from './db';
+import { organisations, people } from './directory/schema';
+import { ensureDefaultStates } from './projects';
+import { failure, success, type Outcome } from './shared/outcome';
+import { users } from './auth/schema';
 
 export type SetupFailure = 'already-set-up' | 'account-not-created';
 
