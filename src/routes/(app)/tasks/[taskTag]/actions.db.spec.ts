@@ -14,7 +14,7 @@ import { listActivity } from '#lib/server/activity/index.js';
 import { linkTicketToTask, relatedTo } from '#lib/server/links/index.js';
 import { createQueue, createTicket } from '#lib/server/service-desk/testing/fixtures.js';
 import { getDb } from '#lib/server/db/index.js';
-import { projectMembers, projects } from '#lib/server/projects/index.js';
+import { projectMembers, projects } from '#lib/server/projects/schema.js';
 import { actions, load } from './+page.server';
 
 async function setup() {

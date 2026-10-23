@@ -155,14 +155,6 @@ export type {
 	AssetModelEntry
 } from './catalogue';
 
-export {
-	assets,
-	assetModels,
-	categories,
-	manufacturers,
-	assetState,
-	assetCodeSequence
-} from './schema';
 export type { Asset, AssetModel, Category, Manufacturer } from './schema';
 export {
 	RESERVED_ASSET_TAGS,

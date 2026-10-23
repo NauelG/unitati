@@ -1,6 +1,6 @@
 import { setError, type SuperValidated } from 'sveltekit-superforms';
 import { m } from '#lib/paraglide/messages.js';
-import { assetModelInput, registerAssetInput } from '#lib/server/assets/validation.js';
+import { assetModelInput, registerAssetInput } from '#lib/server/assets/index.js';
 
 /**
  * The shapes the asset forms submit, derived from the validators the domain

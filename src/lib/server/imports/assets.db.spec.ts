@@ -4,17 +4,12 @@ import type { AssetsMapping } from '#lib/domain/imports.js';
 import type { AssetState } from '#lib/domain/status.js';
 import { activity } from '../activity/schema';
 import { handovers } from '../assets/schema';
-import {
-	addAssetComment,
-	assetModels,
-	assets,
-	categories,
-	manufacturers,
-	registerAsset
-} from '../assets';
+import { addAssetComment, registerAsset } from '../assets';
+import { assetModels, assets, categories, manufacturers } from '../assets/schema';
 import { createCatalogue, createOrganisation, createViewer } from '../assets/testing/fixtures';
 import { getDb } from '../db';
-import { createPerson, locations, people } from '../directory';
+import { createPerson } from '../directory';
+import { locations, people } from '../directory/schema';
 import { ASSET_FIELDS, commitAssetsImport, planAssetsImport, suggestMapping } from '.';
 
 const utf8 = (text: string) => new TextEncoder().encode(text);

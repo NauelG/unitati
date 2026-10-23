@@ -2,7 +2,7 @@ import { count } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { createOrganisation, createPerson, createViewer } from '../assets/testing/fixtures';
 import { getDb } from '../db';
-import { queues, tickets } from '../service-desk';
+import { queues, tickets } from '../service-desk/schema';
 import { seedTickets } from './tickets';
 
 describe('seedTickets', () => {

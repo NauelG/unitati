@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getDb } from '#lib/server/db/index.js';
-import { notifyTaskCompleted } from '#lib/server/links/notify-task-completed.js';
-import { ticketTask } from '#lib/server/links/index.js';
+import { notifyTaskCompleted } from '#lib/server/links/testing/notify.js';
+import { ticketTask } from '#lib/server/links/schema.js';
 import {
 	createProjectRow,
 	createTaskRow,

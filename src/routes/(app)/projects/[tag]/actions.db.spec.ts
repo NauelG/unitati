@@ -10,7 +10,8 @@ import {
 	statesByGroup
 } from '#lib/server/projects/testing/fixtures.js';
 import { listActivity } from '#lib/server/activity/index.js';
-import { getProject, listTasks, projectMembers, projects } from '#lib/server/projects/index.js';
+import { getProject, listTasks } from '#lib/server/projects/index.js';
+import { projectMembers, projects } from '#lib/server/projects/schema.js';
 import { actionEvent, outcomeOf } from '#lib/server/projects/testing/action-event.js';
 import { linkTicketToProject, linkTicketToTask, relatedTo } from '#lib/server/links/index.js';
 import { createQueue, createTicket } from '#lib/server/service-desk/testing/fixtures.js';

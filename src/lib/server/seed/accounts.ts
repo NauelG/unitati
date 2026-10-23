@@ -4,7 +4,8 @@ import type { SessionUser } from '../auth/guards';
 import { provisionFirstAdmin } from '../auth/provision';
 import { users, type UserRole } from '../auth/schema';
 import { getDb } from '../db';
-import { organisations, people, resolveSessionUser } from '../directory';
+import { resolveSessionUser } from '../directory';
+import { organisations, people } from '../directory/schema';
 import { emailFor, DEMO_ACCOUNTS } from './plan';
 
 /**

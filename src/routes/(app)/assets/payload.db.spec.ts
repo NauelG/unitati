@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getDb } from '#lib/server/db/index.js';
-import { assets } from '#lib/server/assets/index.js';
+import { assets } from '#lib/server/assets/schema.js';
 import {
 	createAsset,
 	createCatalogue,

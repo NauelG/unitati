@@ -15,7 +15,8 @@ import {
 	returnCustody
 } from '../assets';
 import type { SessionUser } from '../auth/guards';
-import { listLocations, listPeople, locations, people } from '../directory';
+import { listLocations, listPeople } from '../directory';
+import { locations, people } from '../directory/schema';
 import {
 	archiveProject,
 	createProject,
@@ -28,7 +29,7 @@ import {
 	setAssignees
 } from '../projects';
 import { escalateTicket, relatedTo, type EscalationTarget } from '../links';
-import { tickets } from '../service-desk';
+import { tickets } from '../service-desk/schema';
 import type { EscalationsPlan, InventoryPlan, ProjectsPlan } from './plan';
 
 /**
