@@ -32,6 +32,8 @@ export interface FullAssetView {
 	locationId: string | null;
 	/** The full path (`Barcelona office › Floor 1`); see ADR 0027. */
 	locationPath: string | null;
+	/** Set when the record was archived as a mistake; only the detail page reads an archived asset. */
+	archivedAt: Date | null;
 }
 
 /**

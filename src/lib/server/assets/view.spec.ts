@@ -35,6 +35,7 @@ const row = (overrides: Partial<FullAssetView> = {}): FullAssetView => ({
 	custodianName: null,
 	locationId: 'location-1',
 	locationPath: 'Edifici › Planta 2',
+	archivedAt: null,
 	...overrides
 });
 

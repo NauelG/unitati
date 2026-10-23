@@ -43,6 +43,12 @@ export function activitySentence(entry: ActivityEntry): string {
 				? m.activity_asset_created_imported()
 				: m.activity_asset_created();
 
+		case 'asset.archived':
+			return m.activity_asset_archived();
+
+		case 'asset.unarchived':
+			return m.activity_asset_unarchived();
+
 		case 'custody.assigned':
 			return m.activity_custody_assigned({ personName: entry.payload.toPersonName });
 

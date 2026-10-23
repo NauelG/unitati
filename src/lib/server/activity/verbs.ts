@@ -14,6 +14,8 @@
 /** Slices 2 to 7's verbs: the directory's three arrive with global search (#12). */
 export const ACTIVITY_VERBS = [
 	'asset.created',
+	'asset.archived',
+	'asset.unarchived',
 	'custody.assigned',
 	'custody.returned',
 	'handover.issued',
