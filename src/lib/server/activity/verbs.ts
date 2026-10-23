@@ -40,6 +40,8 @@ export const ACTIVITY_VERBS = [
 	'link.task.removed',
 	'link.project.added',
 	'link.project.removed',
+	'link.page.added',
+	'link.page.removed',
 	'project.created',
 	'project.archived',
 	'project.unarchived',

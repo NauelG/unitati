@@ -267,6 +267,13 @@
       "when": 1792744042141,
       "tag": "0037_page_comments",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792744790265,
+      "tag": "0038_knowledge_citations",
+      "breakpoints": true
     }
   ]
 }

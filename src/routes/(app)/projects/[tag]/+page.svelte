@@ -35,6 +35,7 @@
 	import ProjectProgress from '#lib/components/unitati/ProjectProgress.svelte';
 	import Tooltip from '#lib/components/unitati/Tooltip.svelte';
 	import RecordAttachments from '#lib/components/unitati/RecordAttachments.svelte';
+	import PageCitePanel from '#lib/components/unitati/PageCitePanel.svelte';
 	import RelatedRecords from '#lib/components/unitati/RelatedRecords.svelte';
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
 	import RollingNumber from '#lib/components/unitati/RollingNumber.svelte';
@@ -519,10 +520,24 @@
 		/>
 		<RelatedRecords
 			groups={data.related}
-			unlinkAction={data.canUnlink ? '?/unlinkTicket' : undefined}
-			unlinkable={['handles']}
-			error={failureFor('unlinkTicket')}
+			unlinkActions={{
+				...(data.canUnlink ? { ticket: '?/unlinkTicket' } : {}),
+				...(data.canManage ? { page: '?/undocumentPage' } : {})
+			}}
+			unlinkable={['handles', 'documented_by']}
+			error={failureFor('unlinkTicket') ?? failureFor('undocumentPage')}
 		/>
+		{#if writable}
+			<PageCitePanel
+				heading={m.project_docs_panel_title()}
+				label={m.project_docs_add_field()}
+				placeholder={m.project_docs_add_placeholder()}
+				submitLabel={m.project_docs_add_submit()}
+				action="?/documentPage"
+				searchUrl="/knowledge/pages/pick?format=options"
+				error={failureFor('documentPage')}
+			/>
+		{/if}
 
 		{#await data.timeline}
 			<WorkPanel heading={m.timeline_title()}>

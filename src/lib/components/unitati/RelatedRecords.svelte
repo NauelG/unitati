@@ -163,21 +163,26 @@
 			() => m.related_resolves_via_tasks()
 		],
 		fulfilled_by: [() => m.related_fulfilled_by(), () => m.related_fulfilled_by()],
-		fulfils: [() => m.related_fulfils(), () => m.related_fulfils()]
+		fulfils: [() => m.related_fulfils(), () => m.related_fulfils()],
+		cites: [() => m.related_cites(), () => m.related_cites()],
+		cited_by: [() => m.related_cited_by(), () => m.related_cited_by()],
+		documented_by: [() => m.related_documented_by(), () => m.related_documented_by()],
+		documents: [() => m.related_documents(), () => m.related_documents()]
 	} as const satisfies Record<RelationName, readonly [() => string, () => string]>;
 
 	function label(group: RelatedGroup, count: number): string {
 		const [one, other] = LABELS[group.relation];
-		return count === 1 ? one() : other();
+		const text = count === 1 ? one() : other();
+		// "Tickets que la citan (3)": how widely a page is cited is what its reader scans for (#327).
+		return group.relation === 'cited_by' ? `${text} (${count})` : text;
 	}
 
 	/** The action that unlinks this item, or nothing: the requester, or a kind without one cannot. */
 	function actionFor(group: RelatedGroup, item: RelatedItem): string | undefined {
 		if (requester) return undefined;
+		if (unlinkable && !unlinkable.includes(group.relation)) return undefined;
 		if (unlinkActions) return unlinkActions[item.ref.kind];
-		return unlinkAction && (!unlinkable || unlinkable.includes(group.relation))
-			? unlinkAction
-			: undefined;
+		return unlinkAction;
 	}
 
 	/** What is drawn: the groups as they come, or for the requester the work ones merged into one. */
@@ -224,6 +229,9 @@
 	/** The question the confirmation asks: losing an asset's context is not losing a task's. */
 	function ask(group: RelatedGroup, tag: string): string {
 		if (group.relation === 'fulfilled_by') return m.related_unlink_ask_handover({ tag });
+		if (group.relation === 'cites' || group.relation === 'documented_by') {
+			return m.related_unlink_ask_page({ tag });
+		}
 		return group.relation === 'affects' || group.relation === 'affected_by'
 			? m.related_unlink_ask({ tag })
 			: m.related_unlink_ask_work({ tag });
@@ -244,9 +252,30 @@
 		return item.ref.kind === 'handover';
 	}
 
+	/** A page's state is not a status key either: draft, published, archived. */
+	const PAGE_BADGES = {
+		draft: ['warning', () => m.related_page_draft()],
+		published: ['success', () => m.related_page_published()],
+		archived: ['neutral', () => m.related_page_archived()]
+	} as const;
+
+	function isPage(item: RelatedItem): item is Extract<RelatedItem, { ref: { kind: 'page' } }> {
+		return item.ref.kind === 'page';
+	}
+
+	/** The wording of the remove control: a page is taken off ("Quitar"), not unlinked. */
+	function removeLabel(item: RelatedItem): string {
+		return item.ref.kind === 'page' ? m.related_page_remove() : m.related_unlink();
+	}
+
 	/** A task or a project is not a status key: the badge takes the state's own name. */
 	function projectArchived(item: RelatedItem): boolean {
-		return typeof item.status === 'object' && 'archived' in item.status && item.status.archived;
+		return (
+			item.status !== null &&
+			typeof item.status === 'object' &&
+			'archived' in item.status &&
+			item.status.archived
+		);
 	}
 
 	/** The record whose unlink POST is in flight: blocks Cancel/Escape on its dialog. */
@@ -326,7 +355,7 @@
 					{@const unlinkHere = actionFor(group, item)}
 					<li class={styles.item()}>
 						{#if item.ref.href === null}
-							<!-- A handover has no page yet: its code, nowhere to go. -->
+							<!-- A handover has no page yet, and a page the viewer cannot read has only its code: nowhere to go. -->
 							<span class="inline-flex min-w-0 items-center gap-[var(--space-1)] text-small">
 								<span class="shrink-0 font-mono text-xs font-semibold">{item.ref.tag}</span>
 								<span class="min-w-0 truncate text-[var(--ink)]">{item.ref.title}</span>
@@ -335,9 +364,18 @@
 							<RecordRef record={{ ...item.ref, href: item.ref.href }} />
 						{/if}
 
-						{#if isHandover(item)}
+						{#if isPage(item)}
+							{#if item.status === null}
+								<span class={badge({ tone: 'neutral' })}>{m.related_page_unreadable()}</span>
+							{:else}
+								{@const [tone, text] = PAGE_BADGES[item.status]}
+								<span class={badge({ tone })}>{text()}</span>
+							{/if}
+						{:else if isHandover(item)}
 							{@const [tone, text] = HANDOVER_BADGES[item.status]}
 							<span class={badge({ tone })}>{text()}</span>
+						{:else if item.status === null}
+							<!-- Only a page the viewer cannot read has no state, and it is handled above. -->
 						{:else if typeof item.status === 'string'}
 							<StatusBadge status={item.status} />
 						{:else if 'group' in item.status}
@@ -365,8 +403,8 @@
 								size="sm"
 								iconOnly
 								class="ml-auto text-[var(--danger)] hover:bg-[var(--danger-soft)]"
-								title={m.related_unlink()}
-								aria-label="{m.related_unlink()} {item.ref.tag}"
+								title={removeLabel(item)}
+								aria-label="{removeLabel(item)} {item.ref.tag}"
 								onclick={() => (confirming = item.ref.id)}
 							>
 								<Unlink class="size-4" aria-hidden="true" />
@@ -377,9 +415,11 @@
 								onOpenChange={(next) => {
 									if (!next) confirming = null;
 								}}
-								title={m.related_unlink()}
+								title={removeLabel(item)}
 								description={ask(group, item.ref.tag)}
-								confirmLabel={m.related_unlink_confirm()}
+								confirmLabel={item.ref.kind === 'page'
+									? m.related_page_remove_confirm()
+									: m.related_unlink_confirm()}
 								pending={pendingId === item.ref.id}
 								error={confirming === item.ref.id ? error : null}
 							>

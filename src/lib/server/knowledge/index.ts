@@ -80,6 +80,9 @@ export type {
 
 export { readablePages, readableSpaces, requireSpaceScope } from './scope';
 
+export { pageSummaries, readablePagesByTag } from './citations';
+export type { CitablePage, PageSummary } from './citations';
+
 export {
 	archiveSpace,
 	changeSpaceAudience,

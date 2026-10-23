@@ -92,3 +92,20 @@ export function isSpaceColour(value: unknown): value is SpaceColour {
 export function spaceColourVar(colour: string): string {
 	return `var(--kb-${isSpaceColour(colour) ? colour : DEFAULT_SPACE_COLOUR})`;
 }
+
+/**
+ * The pages a markdown body links to, as upper-case `DOC-####` tags in order of
+ * first appearance (#327). Only links in the canonical, relative form the page
+ * picker inserts count: `[Title](/knowledge/DOC-0012)`, optionally with a
+ * section (`#heading`). A tag mentioned in plain text, or a link to another
+ * host's `/knowledge/...`, is not a citation.
+ */
+export function pageTagsIn(markdown: string): string[] {
+	const tags = new Set<string>();
+	for (const match of markdown.matchAll(
+		/\]\(\s*<?\/knowledge\/(DOC-\d{4,})(?:#[^)\s>]*)?>?\s*\)/gi
+	)) {
+		tags.add(match[1].toUpperCase());
+	}
+	return [...tags];
+}

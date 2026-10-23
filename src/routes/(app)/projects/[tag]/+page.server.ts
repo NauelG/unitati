@@ -13,9 +13,11 @@ import type { SessionUser } from '#lib/server/auth/guards.js';
 import { renderMarkdown } from '#lib/server/shared/markdown.js';
 import { listPeople } from '#lib/server/directory/index.js';
 import {
+	documentProject,
 	openTicketCount,
 	projectTimeline,
 	relatedTo,
+	undocumentProject,
 	unlinkProject
 } from '#lib/server/links/index.js';
 import {
@@ -289,6 +291,47 @@ export const actions: Actions = {
 			return rejected('unlinkTicket', m.related_unlink_failed());
 		}
 		return { action: 'unlinkTicket' as const };
+	},
+
+	// Documentation: the pages that explain this project (#327). `projects.manage`
+	// and a project the actor can see, both checked by the domain.
+	documentPage: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const parsed = z
+			.string()
+			.trim()
+			.min(1)
+			.safeParse((await fieldsOf(request)).get('pageTag'));
+		if (!parsed.success) return rejected('documentPage', m.project_docs_error_invalid());
+
+		const project = await targetOf(user, params.tag);
+		const outcome = await documentProject(user, project.id, parsed.data);
+		if (!outcome.ok) {
+			if (outcome.error === 'forbidden' || outcome.error === 'project_not_found') {
+				error(404, 'Not found');
+			}
+			return rejected(
+				'documentPage',
+				outcome.error === 'project_archived'
+					? m.project_docs_error_archived()
+					: m.project_docs_error_not_found()
+			);
+		}
+		return { action: 'documentPage' as const };
+	},
+
+	undocumentPage: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const parsed = z.uuid().safeParse((await fieldsOf(request)).get('recordId'));
+		if (!parsed.success) return rejected('undocumentPage', m.related_unlink_failed());
+
+		const project = await targetOf(user, params.tag);
+		const outcome = await undocumentProject(user, project.id, parsed.data);
+		// Already gone, e.g. a second tab removed it first: the reload shows the truth.
+		if (!outcome.ok && outcome.error !== 'link_not_found') {
+			return rejected('undocumentPage', m.related_unlink_failed());
+		}
+		return { action: 'undocumentPage' as const };
 	},
 
 	addComment: async ({ request, locals, params }) => {

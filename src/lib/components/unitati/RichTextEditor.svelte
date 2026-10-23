@@ -126,7 +126,7 @@
 		/** What the text may contain; the server renders it with the same profile. */
 		profile?: MarkdownProfile;
 		/**
-		 * The pages the `document` picker (`[[` and its button) offers, asked as
+		 * The pages the picker (`[[` and its button) offers, asked as
 		 * the person types. The server decides which pages may be linked; without
 		 * a source there is no picker, as `@` without a `mentionSource`.
 		 */
@@ -184,7 +184,7 @@
 				}),
 				Markdown,
 				...(asDocument ? [TableKit.configure({ table: { resizable: false } })] : []),
-				...(asDocument && pageSource
+				...(pageSource
 					? [
 							pageLinkExtension(pageSource, {
 								list: m.richtext_page_link_list(),
@@ -380,6 +380,17 @@
 		run: openPagePicker
 	};
 
+	/**
+	 * In a comment the picker is the same `[[` list behind a button of its own
+	 * (#327): the ticket composer offers it, a task description does not.
+	 */
+	const pageInsertTool: Tool = {
+		id: 'pageInsert',
+		icon: FileSymlink,
+		label: m.richtext_page_insert,
+		run: openPagePicker
+	};
+
 	/** What a document adds after the shared tools; the page picker only with a source. */
 	const documentTools: Tool[] = $derived([
 		...(pageSource ? [pageLinkTool] : []),
@@ -468,6 +479,9 @@
 		{#each tools as tool (tool.id)}
 			{@render toolButton(tool, active(tool.id))}
 		{/each}
+		{#if !isDocument && pageSource}
+			{@render toolButton(pageInsertTool, undefined)}
+		{/if}
 		{#if isDocument}
 			<span class={styles.separator()} aria-hidden="true"></span>
 			{#each documentTools as tool (tool.id)}

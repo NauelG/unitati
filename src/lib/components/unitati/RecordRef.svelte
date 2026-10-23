@@ -2,6 +2,7 @@
 	import { tv } from '#lib/tv.js';
 
 	import FileSignature from '@lucide/svelte/icons/file-signature';
+	import FileText from '@lucide/svelte/icons/file-text';
 	import FolderKanban from '@lucide/svelte/icons/folder-kanban';
 	import Laptop from '@lucide/svelte/icons/laptop';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
@@ -13,7 +14,8 @@
 		ticket: Ticket,
 		project: FolderKanban,
 		task: ListChecks,
-		handover: FileSignature
+		handover: FileSignature,
+		page: FileText
 	};
 
 	/**
@@ -48,6 +50,10 @@
 				},
 				task: {
 					root: 'bg-[var(--project-soft)] text-[var(--project)] focus-visible:outline-[var(--project)]'
+				},
+				// A knowledge page: the knowledge palette is per space, so a neutral chip.
+				page: {
+					root: 'bg-[var(--surface-2)] text-[var(--ink)] focus-visible:outline-[var(--brand)]'
 				}
 			}
 		}
@@ -60,7 +66,7 @@
 	interface Props {
 		/** The record, as `relatedTo` returns it: `kind`, `tag`, `title`, `href`. */
 		record: {
-			kind: 'asset' | 'ticket' | 'project' | 'task';
+			kind: 'asset' | 'ticket' | 'project' | 'task' | 'page';
 			tag: string;
 			title: string;
 			/** `null` for a record the viewer may know of but not open: drawn as plain text, not a link. */

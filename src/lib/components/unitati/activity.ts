@@ -167,6 +167,16 @@ export function activitySentence(entry: ActivityEntry): string {
 				project: `${entry.payload.projectTag} ${entry.payload.projectName}`
 			});
 
+		case 'link.page.added':
+			return m.activity_link_page_added({
+				page: `${entry.payload.pageTag} ${entry.payload.pageTitle}`
+			});
+
+		case 'link.page.removed':
+			return m.activity_link_page_removed({
+				page: `${entry.payload.pageTag} ${entry.payload.pageTitle}`
+			});
+
 		case 'project.created':
 			return m.activity_project_created();
 
