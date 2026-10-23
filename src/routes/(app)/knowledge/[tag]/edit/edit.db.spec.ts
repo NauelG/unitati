@@ -142,7 +142,7 @@ describe('/knowledge/[tag]/revisions/[n] ?/restore', () => {
 			)
 		);
 
-		expect(returned?.status).toBe(400);
+		expect(returned?.status).toBe(409);
 		expect(returned?.data?.message).toContain('2');
 		expect(await revisions(page.id)).toHaveLength(2);
 	});

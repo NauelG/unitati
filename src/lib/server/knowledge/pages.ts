@@ -1,5 +1,10 @@
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
-import type { SpaceAudience, SpaceColour, SpaceIcon } from '#lib/domain/knowledge.js';
+import {
+	PAGE_PICK_LIMIT,
+	type SpaceAudience,
+	type SpaceColour,
+	type SpaceIcon
+} from '#lib/domain/knowledge.js';
 import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
@@ -217,9 +222,6 @@ export async function getPageByTag(
 
 /** A page the editor's picker offers to link to (#324). */
 export type PagePick = { tag: string; title: string; spaceName: string; status: PageStatus };
-
-/** At most this many pages are offered. */
-export const PAGE_PICK_LIMIT = 8;
 
 function likePattern(query: string): string {
 	return `%${query.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;

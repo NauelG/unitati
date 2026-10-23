@@ -15,9 +15,11 @@
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import RichTextEditor from '#lib/components/unitati/RichTextEditor.svelte';
+	import { fetchPages } from '#lib/components/unitati/page-source.js';
 	import { PAGE_BODY_MAX_LENGTH, PAGE_TITLE_MAX } from '#lib/domain/knowledge.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import type { PageProps } from './$types';
+	import { pageTrail } from '../../trail.js';
 
 	let { data, form }: PageProps = $props();
 
@@ -26,6 +28,9 @@
 	// Read once: from here on the form owns them (a refusal must not reset them).
 	let title = $state(untrack(() => form?.title ?? data.page.title));
 	let body = $state(untrack(() => form?.body ?? data.page.body));
+	// After a refusal the base stays the one the user started from, so saving
+	// again is refused again: the screen never overwrites a version the user has
+	// not seen (#324). Reopening the editor starts from the current one.
 	const baseRevision = $derived(form?.baseRevision ?? String(data.page.revision));
 
 	let saving = $state(false);
@@ -72,16 +77,7 @@
 
 <PageLayout variant="form" class="flex flex-col gap-[var(--space-5)]">
 	<Breadcrumbs
-		segments={[
-			{ label: m.knowledge_title(), href: '/knowledge' },
-			{ label: data.space.name, href: `/knowledge/spaces/${data.space.id}` },
-			...data.path.map((ancestor) => ({
-				label: ancestor.title,
-				href: `/knowledge/${ancestor.tag}`
-			})),
-			{ label: data.page.title, href: `/knowledge/${data.page.tag}` },
-			{ label: m.knowledge_page_edit() }
-		]}
+		segments={pageTrail(data.space, data.path, data.page, [{ label: m.knowledge_page_edit() }])}
 	/>
 
 	<PageHeader
@@ -156,6 +152,7 @@
 			label={m.knowledge_page_field_body()}
 			placeholder={m.knowledge_page_body_placeholder()}
 			profile="document"
+			pageSource={(query) => fetchPages('/knowledge/pages/pick', query)}
 			maxLength={PAGE_BODY_MAX_LENGTH}
 			bind:value={body}
 			disabled={saving}

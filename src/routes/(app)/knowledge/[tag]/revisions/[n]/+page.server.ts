@@ -69,11 +69,14 @@ export const actions: Actions = {
 			baseRevision: parsed.data.baseRevision
 		});
 		if (!outcome.ok) {
-			const message =
-				typeof outcome.error === 'object'
-					? m.knowledge_error_stale_restore({ revision: outcome.error.revision })
-					: failureMessage(outcome.error);
-			return fail(400, { action: 'restore', message });
+			// The page moved on while the user decided: a conflict, as a stale save is.
+			if (typeof outcome.error === 'object') {
+				return fail(409, {
+					action: 'restore',
+					message: m.knowledge_error_stale_restore({ revision: outcome.error.revision })
+				});
+			}
+			return fail(400, { action: 'restore', message: failureMessage(outcome.error) });
 		}
 		redirect(303, `/knowledge/${found.value.tag}`);
 	}

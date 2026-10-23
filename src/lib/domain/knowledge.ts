@@ -75,6 +75,9 @@ export const PAGE_TITLE_MAX = 200;
  * (`body_too_long`), not by the database.
  */
 export const PAGE_BODY_MAX_LENGTH = 200_000;
+
+/** At most this many pages are offered by the editor's page picker: the server caps the query, the editor the list. */
+export const PAGE_PICK_LIMIT = 8;
 export const SPACE_DESCRIPTION_MAX = 280;
 
 export function isSpaceIcon(value: unknown): value is SpaceIcon {

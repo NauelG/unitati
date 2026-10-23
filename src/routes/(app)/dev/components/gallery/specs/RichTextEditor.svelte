@@ -87,8 +87,8 @@
 		{
 			name: 'pageSource',
 			type: '(query: string) => Promise<PageOption[]>',
-			default: 'GET /knowledge/pages/pick',
-			description: 'Las páginas que ofrece el selector del perfil document.'
+			description:
+				'Las páginas que ofrece el selector del perfil document ([[ y su botón). Sin ella no hay selector. En la app: fetchPages("/knowledge/pages/pick", q).'
 		}
 	]}
 	usage={`<RichTextEditor name="body" label="Respuesta" bind:value={body} />

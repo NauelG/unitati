@@ -25,6 +25,7 @@
 	import KnowledgeTree from '../KnowledgeTree.svelte';
 	import MovePageDialog from '../MovePageDialog.svelte';
 	import type { PageProps } from './$types';
+	import { pageTrail } from '../trail.js';
 
 	let { data, form }: PageProps = $props();
 
@@ -45,18 +46,7 @@
 </svelte:head>
 
 <PageLayout variant="record">
-	<Breadcrumbs
-		class="mb-[var(--space-5)]"
-		segments={[
-			{ label: m.knowledge_title(), href: '/knowledge' },
-			{ label: data.space.name, href: `/knowledge/spaces/${data.space.id}` },
-			...data.path.map((ancestor) => ({
-				label: ancestor.title,
-				href: `/knowledge/${ancestor.tag}`
-			})),
-			{ label: data.page.title }
-		]}
-	/>
+	<Breadcrumbs class="mb-[var(--space-5)]" segments={pageTrail(data.space, data.path, data.page)} />
 
 	<PageHeader title={data.page.title} level="record" code={data.page.tag}>
 		{#snippet summary()}

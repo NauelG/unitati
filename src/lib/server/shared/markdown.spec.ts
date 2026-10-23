@@ -113,27 +113,31 @@ describe('renderMarkdown, document profile (#324)', () => {
 	const doc = (source: string) => renderMarkdown(source, 'document');
 
 	it('renders h2 to h4, an h1 as h2 and anything deeper as h4', () => {
-		expect(doc('## Dos')).toBe('<h2 id="dos">Dos</h2>\n');
-		expect(doc('### Tres')).toBe('<h3 id="tres">Tres</h3>\n');
-		expect(doc('#### Cuatro')).toBe('<h4 id="cuatro">Cuatro</h4>\n');
-		expect(doc('# Uno')).toBe('<h2 id="uno">Uno</h2>\n');
-		expect(doc('###### Seis')).toBe('<h4 id="seis">Seis</h4>\n');
+		expect(doc('## Dos')).toBe('<h2 id="h-dos">Dos</h2>\n');
+		expect(doc('### Tres')).toBe('<h3 id="h-tres">Tres</h3>\n');
+		expect(doc('#### Cuatro')).toBe('<h4 id="h-cuatro">Cuatro</h4>\n');
+		expect(doc('# Uno')).toBe('<h2 id="h-uno">Uno</h2>\n');
+		expect(doc('###### Seis')).toBe('<h4 id="h-seis">Seis</h4>\n');
 		expect(doc('# Uno')).not.toMatch(/<h1|<h5|<h6/);
 	});
 
-	it('gives headings a slug of their text, deduplicated, as id', () => {
+	it('gives headings a prefixed slug of their text, deduplicated, as id', () => {
 		const html = doc('## Configuración del **correo**\n\n## Paso 1\n\n## Paso 1\n\n## ¿?');
 		expect(html).toContain(
-			'<h2 id="configuracion-del-correo">Configuración del <strong>correo</strong></h2>'
+			'<h2 id="h-configuracion-del-correo">Configuración del <strong>correo</strong></h2>'
 		);
-		expect(html).toContain('<h2 id="paso-1">Paso 1</h2>');
-		expect(html).toContain('<h2 id="paso-1-2">Paso 1</h2>');
-		expect(html).toContain('<h2 id="seccion">¿?</h2>');
+		expect(html).toContain('<h2 id="h-paso-1">Paso 1</h2>');
+		expect(html).toContain('<h2 id="h-paso-1-2">Paso 1</h2>');
+		expect(html).toContain('<h2 id="h-seccion">¿?</h2>');
+	});
+
+	it('never mints an id the app shell uses', () => {
+		expect(doc('## Main')).toBe('<h2 id="h-main">Main</h2>\n');
 	});
 
 	it('starts the deduplication afresh on every call', () => {
-		expect(doc('## Paso')).toContain('id="paso"');
-		expect(doc('## Paso')).toContain('id="paso"');
+		expect(doc('## Paso')).toContain('id="h-paso"');
+		expect(doc('## Paso')).toContain('id="h-paso"');
 	});
 
 	it('renders GFM tables with their alignment', () => {
@@ -155,10 +159,10 @@ describe('renderMarkdown, document profile (#324)', () => {
 
 	it('opens a link to a page in the same tab, and any other link in a new one', () => {
 		const html = doc(
-			'[VPN](/knowledge/DOC-0012) [paso](/knowledge/DOC-0012#paso-2) [x](https://example.com)'
+			'[VPN](/knowledge/DOC-0012) [paso](/knowledge/DOC-0012#h-paso-2) [x](https://example.com)'
 		);
 		expect(html).toContain('<a href="/knowledge/DOC-0012">VPN</a>');
-		expect(html).toContain('<a href="/knowledge/DOC-0012#paso-2">paso</a>');
+		expect(html).toContain('<a href="/knowledge/DOC-0012#h-paso-2">paso</a>');
 		expect(html).toContain(
 			'<a href="https://example.com" rel="noopener noreferrer" target="_blank">x</a>'
 		);
@@ -189,7 +193,7 @@ describe('renderMarkdown, document profile (#324)', () => {
 		expect(html).toContain('raw heading');
 		expect(html).toContain('raw cell');
 		expect(html).toContain('@Fake');
-		expect(html).toContain('<h2 id="titulo">Título');
+		expect(html).toContain('<h2 id="h-titulo">Título');
 	});
 
 	it('renders no task list checkbox', () => {

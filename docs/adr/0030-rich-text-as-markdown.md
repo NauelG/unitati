@@ -85,8 +85,9 @@ the renderer's choices and the allow-list picked by the profile of the call.
   §10): `comment` **minus** mentions (a token renders as plain `@Name` and the editor offers no
   picker) **plus** headings h2–h4 (`#` reads as h2, five or more `#` as h4: the page title is the
   only h1), GFM tables (`align` on cells, `left`, `center` or `right` only), the horizontal rule,
-  and links to pages. A heading gets an `id`, the slug of its text deduplicated within the
-  document, so a section can be linked (`/knowledge/DOC-0012#paso-2`). A link to a page, or to a
+  and links to pages. A heading gets an `id`, `h-` and the slug of its text, deduplicated
+  within the document, so a section can be linked (`/knowledge/DOC-0012#h-paso-2`); the prefix keeps
+  a page from minting an id the app uses (`main`, the skip link's target). A link to a page, or to a
   section, stays in the tab; every other link opens a new one as before. **No raw HTML at all**:
   where a comment drops the tags outside its list, a document drops every tag typed by hand, even
   `<h2>` or `<table>`, keeping the text; only the markdown makes them. No images and no task lists.

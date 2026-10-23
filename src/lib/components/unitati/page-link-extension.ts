@@ -1,6 +1,7 @@
 import { Extension } from '@tiptap/core';
 import { PluginKey } from '@tiptap/pm/state';
 import Suggestion from '@tiptap/suggestion';
+import { PAGE_PICK_LIMIT } from '#lib/domain/knowledge.js';
 import { pageLink } from '#lib/domain/markdown-profiles.js';
 import { suggestionPopup, type SuggestionLabels } from './suggestion-popup.js';
 
@@ -16,9 +17,6 @@ export type PageSource = (query: string) => Promise<PageOption[]>;
 
 /** What opens the picker. */
 export const PAGE_LINK_TRIGGER = '[[';
-
-/** At most this many pages are listed. The server caps at the same number. */
-export const PAGE_LIST_MAX = 8;
 
 const pageLinkKey = new PluginKey('pageLink');
 
@@ -38,7 +36,7 @@ export function pageLinkExtension(source: PageSource, labels: SuggestionLabels) 
 					allowedPrefixes: null,
 					items: async ({ query }) =>
 						(await source(query))
-							.slice(0, PAGE_LIST_MAX)
+							.slice(0, PAGE_PICK_LIMIT)
 							.map((page) => ({ ...page, label: page.title, hint: page.hint ?? page.tag })),
 					command: ({ editor, range, props }) => {
 						editor
@@ -64,17 +62,4 @@ export function pageLinkExtension(source: PageSource, labels: SuggestionLabels) 
 			];
 		}
 	});
-}
-
-/** Asks the knowledge base which pages may be linked (`GET /knowledge/pages/pick`). A failure offers none. */
-export async function fetchPages(query: string): Promise<PageOption[]> {
-	try {
-		const response = await fetch(`/knowledge/pages/pick?${new URLSearchParams({ q: query })}`, {
-			headers: { accept: 'application/json' }
-		});
-		if (!response.ok) return [];
-		return (await response.json()) as PageOption[];
-	} catch {
-		return [];
-	}
 }

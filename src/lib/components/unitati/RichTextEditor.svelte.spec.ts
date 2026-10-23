@@ -142,11 +142,22 @@ describe('RichTextEditor', () => {
 		});
 
 		it('offers a heading menu, a page picker, the rule and tables', () => {
-			render(RichTextEditor, { name: 'body', label: 'Respuesta', profile: 'document' });
+			render(RichTextEditor, {
+				name: 'body',
+				label: 'Respuesta',
+				profile: 'document',
+				pageSource: async () => []
+			});
 			expect(screen.getByRole('combobox', { name: 'Estilo del párrafo' })).toBeTruthy();
 			for (const name of ['Enlazar una página', 'Línea separadora', 'Insertar tabla']) {
 				expect(screen.getByRole('button', { name })).toBeTruthy();
 			}
+		});
+
+		it('has no page picker without a source', () => {
+			render(RichTextEditor, { name: 'body', label: 'Respuesta', profile: 'document' });
+			expect(screen.queryByRole('button', { name: 'Enlazar una página' })).toBeNull();
+			expect(screen.getByRole('button', { name: 'Insertar tabla' })).toBeTruthy();
 		});
 
 		it('inserts a table and offers row and column tools inside it', async () => {

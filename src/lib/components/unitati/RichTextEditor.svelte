@@ -103,12 +103,7 @@
 	import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import { mentionExtension, type MentionSource } from './mention-extension.js';
-	import {
-		fetchPages,
-		PAGE_LINK_TRIGGER,
-		pageLinkExtension,
-		type PageSource
-	} from './page-link-extension.js';
+	import { PAGE_LINK_TRIGGER, pageLinkExtension, type PageSource } from './page-link-extension.js';
 
 	interface Props {
 		/** Name of the hidden input that carries the markdown in a form post. */
@@ -131,8 +126,9 @@
 		/** What the text may contain; the server renders it with the same profile. */
 		profile?: MarkdownProfile;
 		/**
-		 * The pages the `document` picker offers. Defaults to the knowledge base's
-		 * own endpoint; the gallery and the tests pass their own.
+		 * The pages the `document` picker (`[[` and its button) offers, asked as
+		 * the person types. The server decides which pages may be linked; without
+		 * a source there is no picker, as `@` without a `mentionSource`.
 		 */
 		pageSource?: PageSource;
 		class?: string;
@@ -148,7 +144,7 @@
 		onsubmitshortcut,
 		mentionSource,
 		profile = 'comment',
-		pageSource = fetchPages,
+		pageSource,
 		class: className
 	}: Props = $props();
 
@@ -187,9 +183,9 @@
 					}
 				}),
 				Markdown,
-				...(asDocument
+				...(asDocument ? [TableKit.configure({ table: { resizable: false } })] : []),
+				...(asDocument && pageSource
 					? [
-							TableKit.configure({ table: { resizable: false } }),
 							pageLinkExtension(pageSource, {
 								list: m.richtext_page_link_list(),
 								empty: m.richtext_page_link_empty()
@@ -377,14 +373,16 @@
 		}
 	];
 
-	/** What a document adds after the shared tools. */
-	const documentTools: Tool[] = [
-		{
-			id: 'pageLink',
-			icon: FileSymlink,
-			label: m.richtext_page_link,
-			run: openPagePicker
-		},
+	const pageLinkTool: Tool = {
+		id: 'pageLink',
+		icon: FileSymlink,
+		label: m.richtext_page_link,
+		run: openPagePicker
+	};
+
+	/** What a document adds after the shared tools; the page picker only with a source. */
+	const documentTools: Tool[] = $derived([
+		...(pageSource ? [pageLinkTool] : []),
 		{
 			id: 'horizontalRule',
 			icon: SeparatorHorizontal,
@@ -398,7 +396,7 @@
 			run: () =>
 				editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
 		}
-	];
+	]);
 
 	/** Shown while the caret is inside a table. */
 	const tableTools: Tool[] = [

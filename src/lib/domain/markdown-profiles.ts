@@ -8,9 +8,7 @@
  *   headings h2–h4 (an `#` h1 reads as h2), GFM tables, the horizontal rule and
  *   links to other pages. No images, no raw HTML, no task lists.
  */
-export const MARKDOWN_PROFILES = ['comment', 'document'] as const;
-
-export type MarkdownProfile = (typeof MARKDOWN_PROFILES)[number];
+export type MarkdownProfile = 'comment' | 'document';
 
 /** The heading levels a `document` renders; a deeper or shallower heading is clamped into it. */
 export const DOCUMENT_HEADING_LEVELS = [2, 3, 4] as const;

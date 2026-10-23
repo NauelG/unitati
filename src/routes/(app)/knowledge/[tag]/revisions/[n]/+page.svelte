@@ -17,6 +17,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import RevisionList from '../RevisionList.svelte';
 	import type { PageProps } from './$types';
+	import { pageTrail } from '../../../trail.js';
 
 	let { data, form }: PageProps = $props();
 
@@ -39,17 +40,10 @@
 
 <PageLayout variant="record">
 	<Breadcrumbs
-		segments={[
-			{ label: m.knowledge_title(), href: '/knowledge' },
-			{ label: data.space.name, href: `/knowledge/spaces/${data.space.id}` },
-			...data.path.map((ancestor) => ({
-				label: ancestor.title,
-				href: `/knowledge/${ancestor.tag}`
-			})),
-			{ label: data.page.title, href: `/knowledge/${data.page.tag}` },
+		segments={pageTrail(data.space, data.path, data.page, [
 			{ label: m.knowledge_page_history(), href: `/knowledge/${data.page.tag}/revisions` },
 			{ label: m.knowledge_page_revision({ n: data.revision.number }) }
-		]}
+		])}
 	/>
 
 	<PageHeader title={data.revision.title} level="record" code={data.page.tag}>

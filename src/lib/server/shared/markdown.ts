@@ -45,16 +45,26 @@ const TEXT_ONLY: sanitizeHtml.IOptions = {
 	nonTextTags: ['script', 'style', 'iframe', 'textarea', 'noscript']
 };
 
-/** A heading's id: its words without accents or punctuation, unique within the document. */
+/**
+ * Every heading id starts with this, so no page can mint an id the app shell
+ * already uses (`main`, the skip link's target) or one Svelte generates.
+ */
+export const HEADING_ID_PREFIX = 'h-';
+
+/**
+ * A heading's id: the prefix and its words without accents or punctuation,
+ * unique within the document (`## Paso 2` is `h-paso-2`).
+ */
 function headingId(html: string): string {
 	const text = decodeEntities(html.replace(/<[^>]*>/g, ''));
-	const base =
+	const words =
 		text
 			.normalize('NFD')
 			.replace(/[\u0300-\u036f]/g, '')
 			.toLowerCase()
 			.replace(/[^a-z0-9]+/g, '-')
 			.replace(/^-+|-+$/g, '') || 'seccion';
+	const base = `${HEADING_ID_PREFIX}${words}`;
 	let slug = base;
 	for (let n = 2; pass.slugs.has(slug); n++) slug = `${base}-${n}`;
 	pass.slugs.add(slug);

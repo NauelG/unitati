@@ -1,5 +1,6 @@
 import { asc, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { PAGE_PICK_LIMIT } from '#lib/domain/knowledge.js';
 import { activity } from '../activity/schema';
 import { getDb } from '../db';
 import {
@@ -9,7 +10,6 @@ import {
 	getPageByTag,
 	listSpaceTree,
 	movePage,
-	PAGE_PICK_LIMIT,
 	pickPages,
 	previewMove,
 	publishPage,

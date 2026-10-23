@@ -7,6 +7,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import RevisionList from './RevisionList.svelte';
 	import type { PageProps } from './$types';
+	import { pageTrail } from '../../trail.js';
 
 	let { data }: PageProps = $props();
 </script>
@@ -17,16 +18,7 @@
 
 <PageLayout variant="index" class="flex flex-col gap-[var(--space-5)]">
 	<Breadcrumbs
-		segments={[
-			{ label: m.knowledge_title(), href: '/knowledge' },
-			{ label: data.space.name, href: `/knowledge/spaces/${data.space.id}` },
-			...data.path.map((ancestor) => ({
-				label: ancestor.title,
-				href: `/knowledge/${ancestor.tag}`
-			})),
-			{ label: data.page.title, href: `/knowledge/${data.page.tag}` },
-			{ label: m.knowledge_page_history() }
-		]}
+		segments={pageTrail(data.space, data.path, data.page, [{ label: m.knowledge_page_history() }])}
 	/>
 
 	<PageHeader

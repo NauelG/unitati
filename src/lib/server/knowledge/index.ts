@@ -22,7 +22,6 @@ export {
 	getPageByTag,
 	listSpaceTree,
 	movePage,
-	PAGE_PICK_LIMIT,
 	pickPages,
 	previewMove,
 	publishPage,
