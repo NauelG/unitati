@@ -5,6 +5,14 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.118.6] - 2026-10-24
+
+### Changed
+
+- Svelte components in the dev gallery import server types through the `links` and
+  `service-desk` barrels instead of deep files, and ADR 0048 records that dependency-cruiser
+  cannot see type-only imports in `.svelte` files (#353). No behaviour change.
+
 ## [0.118.4] - 2026-10-23
 
 ### Changed
