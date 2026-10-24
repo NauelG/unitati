@@ -179,10 +179,10 @@ describe('the OpenAPI document built from the real registry', () => {
 			expect(document.paths['/locations/{id}'].get.responses['409']).toBeUndefined();
 		});
 
-		it('keeps the generic responses of an endpoint that has no table', () => {
-			expect(document.paths['/tickets'].post.responses['409'].content).toEqual({
-				'application/json': { schema: { $ref: '#/components/schemas/Error' } }
-			});
+		it('documents only a 404 for a read that refuses nothing, and no 409', () => {
+			const list = document.paths['/tickets'].get.responses;
+			expect(list['409']).toBeUndefined();
+			expect(list['404']).toBeDefined();
 		});
 
 		it('leaves no error-code prose in the migrated descriptions', () => {
@@ -397,6 +397,71 @@ describe('the OpenAPI document built from the real registry', () => {
 					continue;
 				expect(operation.description, operation.operationId).not.toMatch(
 					/\b(409|400|project_archived|same_project|assignees_not_members|duplicate_\w+)\b/
+				);
+			}
+		});
+	});
+
+	/** The refusal tables of the service desk endpoints are the source of these responses (ADR 0047). */
+	describe('the error responses derived from the service desk refusal tables', () => {
+		type Narrowed = {
+			description: string;
+			content: {
+				'application/json': {
+					schema: {
+						allOf: [
+							unknown,
+							{ properties: { error: { properties: { code: { enum: string[] } } } } }
+						];
+					};
+				};
+			};
+		};
+		const codesOf = (response: unknown): string[] =>
+			(response as Narrowed).content['application/json'].schema.allOf[1].properties.error.properties
+				.code.enum;
+		const responsesOf = (path: string, method: string) =>
+			document.paths[path][method].responses as unknown as Record<string, Narrowed>;
+
+		it('lists the codes of ticket create, with the requester as a field and no attachment codes', () => {
+			const create = responsesOf('/tickets', 'post');
+			expect(codesOf(create['409'])).toEqual(['duplicate_ticket_tag']);
+			expect(create['400'].description).toContain('`requesterPersonId`');
+			expect(create['403']).toBeUndefined();
+			expect(JSON.stringify(create)).not.toContain('attachments_too');
+		});
+
+		it('lists the transition conflict, and no 409 on the writes that cannot conflict', () => {
+			expect(codesOf(responsesOf('/tickets/{tag}/status', 'post')['409'])).toEqual([
+				'invalid_transition'
+			]);
+			for (const path of ['priority', 'assignee', 'queue']) {
+				expect(responsesOf(`/tickets/${'{tag}'}/${path}`, 'post')['409'], path).toBeUndefined();
+			}
+			expect(responsesOf('/tickets/{tag}/assets', 'post')['409']).toBeUndefined();
+			expect(responsesOf('/tickets/{tag}/assets/{assetTag}', 'delete')['409']).toBeUndefined();
+		});
+
+		it('turns an over-long comment into a 400 on body, and keeps the citation conflicts', () => {
+			const comment = responsesOf('/tickets/{tag}/comments', 'post');
+			expect(comment['400'].description).toContain('`body`');
+			expect(codesOf(comment['409'])).toEqual(['page_not_public', 'page_not_citable']);
+			expect(JSON.stringify(comment)).not.toContain('body_too_long');
+			expect(JSON.stringify(comment)).not.toContain('attachments_too');
+		});
+
+		it('lists the escalation refusals by status', () => {
+			const escalate = responsesOf('/tickets/{tag}/escalations', 'post');
+			expect(codesOf(escalate['403'])).toEqual(['forbidden_create']);
+			expect(codesOf(escalate['409'])).toEqual(['project_archived']);
+			expect(codesOf(escalate['422'])).toEqual(['invalid_input']);
+		});
+
+		it('leaves no error-code prose in the migrated descriptions', () => {
+			for (const operation of operations.map((item) => item.operation)) {
+				if (!/^tickets\.(create|status|escalate)$/.test(operation.operationId)) continue;
+				expect(operation.description, operation.operationId).not.toMatch(
+					/\b(409|403|422|invalid_transition|project_archived)\b/
 				);
 			}
 		});

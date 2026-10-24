@@ -166,6 +166,18 @@ describe('the endpoint registry', () => {
 		expect(new Set(routes).size).toBe(routes.length);
 	});
 
+	it('derives every refusal from a table: no name-based mapper, no status-only list (ADR 0047)', () => {
+		const directory = new URL('.', import.meta.url);
+		const files = readdirSync(directory).filter(
+			(file) => file.endsWith('.ts') && !file.endsWith('.spec.ts')
+		);
+
+		for (const file of files) {
+			const source = readFileSync(new URL(file, directory), 'utf8');
+			expect(source, file).not.toMatch(/endsWith\('_not_found'\)|\brefusal\(|\brefusals:/);
+		}
+	});
+
 	it('keeps the endpoints an adapter: none imports a table or the database (ADR 0022)', () => {
 		const directory = new URL('.', import.meta.url);
 		const files = readdirSync(directory).filter(

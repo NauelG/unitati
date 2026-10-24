@@ -8,6 +8,7 @@ import {
 	createViewer
 } from '../assets/testing/fixtures';
 import { getDb } from '../db';
+import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 import { relatedTo } from '../links';
 import { ticketAsset } from '../links/schema';
 import { createComment, createQueue, createTicket } from '../service-desk/testing/fixtures';
@@ -288,6 +289,24 @@ describe('the ticket thread', () => {
 			['On it.', 'public'],
 			['Hmm', 'internal']
 		]);
+	});
+
+	it('answers an over-long comment with 400 invalid_input and an issue on body', async () => {
+		const { organisation, technician, queue, requester } = await workspace();
+		const ticket = await createTicket(organisation.id, queue.id, requester.id);
+		const key = await keyFor(technician, ['tickets.view']);
+
+		const { response, body } = await send(
+			'POST',
+			`/api/v1/tickets/${ticket.ticketTag}/comments`,
+			key,
+			{ body: 'a'.repeat(RICH_TEXT_MAX_LENGTH + 1) }
+		);
+
+		expect(response.status).toBe(400);
+		expect(body.error.code).toBe('invalid_input');
+		expect(body.error.issues).toHaveLength(1);
+		expect(body.error.issues[0].path).toEqual(['body']);
 	});
 });
 
