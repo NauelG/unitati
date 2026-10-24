@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ComponentDocPage from '../ComponentDocPage.svelte';
 	import TicketThread from '#lib/components/unitati/TicketThread.svelte';
-	import type { ThreadItem } from '#lib/server/service-desk/comments.js';
+	import type { ThreadItem } from '#lib/server/service-desk/index.js';
 
 	const attachmentHref = (id: string) => `/attachments/${id}`;
 

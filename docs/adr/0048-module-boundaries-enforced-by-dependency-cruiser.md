@@ -97,8 +97,12 @@ landed, so the rules can be `error` from day one. The policy:
   baseline.
 - **Type-only cycles** (`notifications/follows ↔ notify`, `projects/tasks ↔ members`, …) are
   allowed: they have no runtime effect.
-- **Client components** that import server types are not checked; SvelteKit already refuses
-  runtime `$lib/server` imports from client code at build time.
+- **Type-only imports in `.svelte` files are invisible.** dependency-cruiser compiles Svelte to
+  JavaScript before reading imports, which erases `import type`, so a deep type import from a
+  component (for example `#lib/server/links/related.js`) is not reported. Runtime imports are
+  seen, and SvelteKit already refuses runtime `$lib/server` imports from client code at build
+  time. Components import server types through the domain barrel (`<module>/index.js`); no
+  second enforcement mechanism is added.
 - Only the rules above are encoded. There is no whitelist of every allowed module edge: a new edge
   that breaks no rule needs no config change.
 

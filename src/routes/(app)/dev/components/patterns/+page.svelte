@@ -7,8 +7,8 @@
 	import TicketDetailLayout from '#lib/components/unitati/TicketDetailLayout.svelte';
 	import TicketThread from '#lib/components/unitati/TicketThread.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
-	import type { AssetRelatedGroup } from '#lib/server/links/related.js';
-	import type { ThreadItem } from '#lib/server/service-desk/comments.js';
+	import type { AssetRelatedGroup } from '#lib/server/links/index.js';
+	import type { ThreadItem } from '#lib/server/service-desk/index.js';
 
 	interface Pattern {
 		title: string;

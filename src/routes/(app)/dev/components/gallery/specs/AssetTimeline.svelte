@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ComponentDocPage from '../ComponentDocPage.svelte';
 	import AssetTimeline from '#lib/components/unitati/AssetTimeline.svelte';
-	import type { AssetTimelineItem } from '#lib/server/links/timeline.js';
+	import type { AssetTimelineItem } from '#lib/server/links/index.js';
 
 	const full: AssetTimelineItem[] = [
 		{

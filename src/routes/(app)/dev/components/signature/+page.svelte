@@ -11,7 +11,7 @@
 	import { springIn } from '#lib/motion.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import { countToken, rollingSummary } from '#lib/rolling.js';
-	import type { AssetRelatedGroup } from '#lib/server/links/related.js';
+	import type { AssetRelatedGroup } from '#lib/server/links/index.js';
 
 	/**
 	 * The signature moments (#91), each with the one causal relation it
