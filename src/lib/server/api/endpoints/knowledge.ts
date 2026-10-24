@@ -16,15 +16,19 @@ import {
 	searchPages,
 	unarchivePage,
 	type PageView,
+	type PageCreateFailure,
+	type PageMoveConfirmationFailure,
+	type PagePublishFailure,
+	type PageSaveFailure,
+	type PageUnarchiveFailure,
 	type Placement,
-	type StaleRevision,
 	type TreeEntry
 } from '../../knowledge';
 import { pageWindow } from '../../shared/pagination';
 import type { ApiPrincipal } from '../keys';
-import { ApiError, created, defineEndpoint, notFound, type Endpoint } from '../registry';
+import { created, defineEndpoint, notFound, refusalTable, type Endpoint } from '../registry';
 import { named, paginationMetaSchema, toMeta } from '../shared-schemas';
-import { invalidField, refusal } from './refusals';
+import { invalidField } from './refusals';
 
 /**
  * The knowledge base use cases (ADR 0022, ADR 0031). Pages are addressed by their
@@ -206,26 +210,109 @@ async function tagToId(actor: ApiPrincipal, field: string, pageTag: string): Pro
 	return found.value.id;
 }
 
-const FIELD_FAILURES: Record<string, readonly [string, string]> = {
-	space_not_found: ['spaceId', 'Space not found.'],
-	parent_not_found: ['parentTag', 'Parent page not found.'],
-	body_too_long: ['body', 'The body is too long.']
+/**
+ * How the API answers each failure of the knowledge write use cases (ADR 0047).
+ * A failure that names a value in the body is a `400` on the field that carried it;
+ * a page tag in the path that cannot be read is answered before the domain call.
+ */
+const pageNotFound = { as: 'not_found' } as const;
+const spaceNotFound = { as: 'field', path: 'spaceId', message: 'Space not found.' } as const;
+const parentNotFound = {
+	as: 'field',
+	path: 'parentTag',
+	message: 'Parent page not found.'
+} as const;
+const bodyTooLong = { as: 'field', path: 'body', message: 'The body is too long.' } as const;
+const conflict = { as: 'conflict' } as const;
+
+const createRefusals = refusalTable<PageCreateFailure>({
+	space_not_found: spaceNotFound,
+	space_archived: conflict,
+	parent_not_found: parentNotFound,
+	parent_archived: conflict,
+	body_too_long: bodyTooLong
+});
+
+const updateRefusals = refusalTable<PageSaveFailure>({
+	not_found: pageNotFound,
+	archived: conflict,
+	body_too_long: bodyTooLong,
+	stale_revision: {
+		as: 'conflict',
+		message: 'The page changed since it was read.',
+		details: ({ revision, authorName, savedAt }) => ({
+			revision,
+			authorName,
+			savedAt: savedAt.toISOString()
+		}),
+		describe:
+			'`error.details` carries the `revision`, `authorName` and `savedAt` of the newer save.'
+	}
+});
+
+/**
+ * The domain answers a bare code when the move needs confirming; the handler
+ * recomputes the subtree and refuses with these richer members of its own.
+ */
+type MoveFacts = {
+	subtreeCount: number;
+	fromAudience: string;
+	toAudience: string;
 };
+type MoveConfirmation<K extends 'confirmation_required' | 'count_changed'> = {
+	kind: K;
+} & MoveFacts;
+type MoveRefusal =
+	| Exclude<PageMoveConfirmationFailure, 'confirmation_required' | 'count_changed'>
+	| MoveConfirmation<'confirmation_required'>
+	| MoveConfirmation<'count_changed'>;
 
-/** A domain failure as the envelope's refusal; the ones that name a body field are a `400` on it. */
-function writeRefusal(failure: string): ApiError {
-	if (failure === 'not_found') return notFound();
-	const field = FIELD_FAILURES[failure];
-	return field ? invalidField(field[0], field[1]) : refusal(failure);
-}
+const moveDetails = ({ subtreeCount, fromAudience, toAudience }: MoveFacts) => ({
+	subtreeCount,
+	fromAudience,
+	toAudience
+});
+const MOVE_DETAILS = '`error.details` carries the `subtreeCount`, `fromAudience` and `toAudience`.';
 
-function staleRevision(stale: StaleRevision): ApiError {
-	return new ApiError(409, 'stale_revision', 'The page changed since it was read.', undefined, {
-		revision: stale.revision,
-		authorName: stale.authorName,
-		savedAt: stale.savedAt.toISOString()
-	});
-}
+const moveRefusals = refusalTable<MoveRefusal>({
+	not_found: pageNotFound,
+	archived: conflict,
+	space_not_found: spaceNotFound,
+	space_archived: conflict,
+	parent_not_found: parentNotFound,
+	parent_archived: conflict,
+	cycle: conflict,
+	parent_unpublished: conflict,
+	not_siblings: conflict,
+	confirmation_required: {
+		as: 'conflict',
+		message: 'The move changes who can read the pages; confirm the count.',
+		details: moveDetails,
+		describe: MOVE_DETAILS
+	},
+	count_changed: {
+		as: 'conflict',
+		message: 'The subtree changed since it was counted.',
+		details: moveDetails,
+		describe: MOVE_DETAILS
+	}
+});
+
+const publishRefusals = refusalTable<PagePublishFailure>({
+	not_found: pageNotFound,
+	archived: conflict,
+	parent_unpublished: conflict
+});
+
+/** `archived` is the state asked for, so the handler answers it with a re-read and never refuses with it. */
+const archiveRefusals = refusalTable<'not_found'>({ not_found: pageNotFound });
+
+/** Likewise `not_archived`. */
+const unarchiveRefusals = refusalTable<Exclude<PageUnarchiveFailure, 'not_archived'>>({
+	not_found: pageNotFound,
+	space_archived: conflict,
+	parent_archived: conflict
+});
 
 /* -------------------------------------------------------------------------- */
 /* Reads                                                                      */
@@ -398,9 +485,10 @@ export const createPageEndpoint = defineEndpoint({
 	path: '/pages',
 	summary: 'Create a draft page.',
 	description:
-		'Creates a **draft** at the end of its siblings, with revision 1. There is no publish flag: publish with `POST /pages/{tag}/publish`, so a create cannot half-succeed. `parentTag` is `null` (the default) for the space root. An unknown space is a `400` on `spaceId`, an unknown parent a `400` on `parentTag`, a body over the limit a `400` on `body`; an archived space or parent is `409`. Answers `201` with the page and a `Location` header.',
+		'Creates a **draft** at the end of its siblings, with revision 1. There is no publish flag: publish with `POST /pages/{tag}/publish`, so a create cannot half-succeed. `parentTag` is `null` (the default) for the space root. Answers `201` with the page and a `Location` header.',
 	example: { spaceId: '0c1f6a0e-3f3a-4c5e-9d58-6f7a2f1b9a10', title: 'VPN setup', body: '# VPN' },
 	status: 201,
+	refusalTable: createRefusals,
 	permissions: MANAGE,
 	input: z.object({
 		spaceId: z.uuid(),
@@ -409,7 +497,7 @@ export const createPageEndpoint = defineEndpoint({
 		body: z.string().default('')
 	}),
 	output: pageResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const parentId =
 			input.parentTag === null ? null : await tagToId(actor, 'parentTag', input.parentTag);
@@ -420,7 +508,7 @@ export const createPageEndpoint = defineEndpoint({
 			title: input.title,
 			body: input.body
 		});
-		if (!outcome.ok) throw writeRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 
 		return created(await writtenPage(actor, outcome.value.tag), `/pages/${outcome.value.tag}`);
 	}
@@ -432,8 +520,9 @@ export const updatePageEndpoint = defineEndpoint({
 	path: '/pages/{tag}',
 	summary: "Edit a page's title and body.",
 	description:
-		'Saves `title` and/or `body` as a new revision; the field left out keeps its current value, and at least one must be present. `baseRevision` is required: the `revision` the client read. If the page moved on, the answer is `409 stale_revision` with `details: { revision, authorName, savedAt }` and nothing is written (ADR 0046). Saving content identical to the current one writes no revision and answers `200` with the same `revision`. A published page stays published; an archived page is `409 archived`.',
+		'Saves `title` and/or `body` as a new revision; the field left out keeps its current value, and at least one must be present. `baseRevision` is required: the `revision` the client read. If the page moved on, nothing is written (ADR 0046). Saving content identical to the current one writes no revision and answers `200` with the same `revision`. A published page stays published.',
 	example: { title: 'VPN setup (v2)', body: '# VPN\n\nUse the new gateway.', baseRevision: 3 },
+	refusalTable: updateRefusals,
 	permissions: MANAGE,
 	input: z
 		.object({
@@ -446,7 +535,7 @@ export const updatePageEndpoint = defineEndpoint({
 			message: 'Send a title, a body, or both.'
 		}),
 	output: pageResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const current = await pageOf(actor, input.tag);
 
@@ -455,10 +544,7 @@ export const updatePageEndpoint = defineEndpoint({
 			body: input.body ?? current.body,
 			baseRevision: input.baseRevision
 		});
-		if (!outcome.ok) {
-			if (typeof outcome.error === 'object') throw staleRevision(outcome.error);
-			throw writeRefusal(outcome.error);
-		}
+		if (!outcome.ok) throw refuse(outcome.error);
 
 		return writtenPage(actor, current.tag);
 	}
@@ -475,12 +561,13 @@ export const movePageEndpoint = defineEndpoint({
 	path: '/pages/{tag}/move',
 	summary: 'Move or reorder a page.',
 	description:
-		'Moves the page with its whole subtree under `parentTag` (`null` is the space root) in `spaceId`, across spaces too. Without `position` it lands last among its new siblings; `{ "before": tag }` or `{ "after": tag }` puts it next to a sibling. Reordering is the same call with the current `spaceId` and `parentTag`. When the move changes the audience (`staff` and `portal`) and `confirmedCount` is absent, the answer is `409 confirmation_required` with `details: { subtreeCount, fromAudience, toAudience }`; repeat the call with `confirmedCount: subtreeCount`. If the subtree changed in between, `409 count_changed` with the same details recomputed. A move under the page itself or a descendant is `409 cycle`; a `position` that is not a sibling is `409 not_siblings`. No revision is written.',
+		'Moves the page with its whole subtree under `parentTag` (`null` is the space root) in `spaceId`, across spaces too. Without `position` it lands last among its new siblings; `{ "before": tag }` or `{ "after": tag }` puts it next to a sibling. Reordering is the same call with the current `spaceId` and `parentTag`. When the move changes the audience (`staff` and `portal`) and `confirmedCount` is absent, it is refused until you repeat the call with `confirmedCount: subtreeCount`. A move under the page itself or a descendant is refused. No revision is written.',
 	example: {
 		spaceId: '0c1f6a0e-3f3a-4c5e-9d58-6f7a2f1b9a10',
 		parentTag: 'DOC-0001',
 		position: { after: 'DOC-0002' }
 	},
+	refusalTable: moveRefusals,
 	permissions: MANAGE,
 	input: z.object({
 		tag,
@@ -490,7 +577,7 @@ export const movePageEndpoint = defineEndpoint({
 		confirmedCount: z.number().int().min(0).optional()
 	}),
 	output: pageResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await pageOf(actor, input.tag);
 		const parentId =
@@ -512,24 +599,21 @@ export const movePageEndpoint = defineEndpoint({
 			{ confirmedCount: input.confirmedCount }
 		);
 		if (!outcome.ok) {
-			if (outcome.error === 'confirmation_required' || outcome.error === 'count_changed') {
-				const preview = await previewMove(actor, target.id, destination);
-				if (!preview.ok) throw writeRefusal(preview.error);
-				throw new ApiError(
-					409,
-					outcome.error,
-					outcome.error === 'count_changed'
-						? 'The subtree changed since it was counted.'
-						: 'The move changes who can read the pages; confirm the count.',
-					undefined,
-					{
-						subtreeCount: preview.value.subtreeCount,
-						fromAudience: preview.value.fromAudience,
-						toAudience: preview.value.toAudience
-					}
-				);
+			if (outcome.error !== 'confirmation_required' && outcome.error !== 'count_changed') {
+				throw refuse(outcome.error);
 			}
-			throw writeRefusal(outcome.error);
+			const preview = await previewMove(actor, target.id, destination);
+			if (!preview.ok) throw refuse(preview.error);
+			const facts = {
+				subtreeCount: preview.value.subtreeCount,
+				fromAudience: preview.value.fromAudience,
+				toAudience: preview.value.toAudience
+			};
+			throw refuse(
+				outcome.error === 'count_changed'
+					? { kind: 'count_changed', ...facts }
+					: { kind: 'confirmation_required', ...facts }
+			);
 		}
 
 		return writtenPage(actor, target.tag);
@@ -542,15 +626,16 @@ export const publishPageEndpoint = defineEndpoint({
 	path: '/pages/{tag}/publish',
 	summary: 'Publish a draft page.',
 	description:
-		'Makes a draft readable by everyone the space reaches, and answers `200` with the page. Publishing a published page changes nothing. A page under a draft parent is `409 parent_unpublished`; an archived page is `409 archived`. There is no unpublish.',
+		'Makes a draft readable by everyone the space reaches, and answers `200` with the page. Publishing a published page changes nothing. There is no unpublish.',
+	refusalTable: publishRefusals,
 	permissions: MANAGE,
 	input: z.object({ tag }),
 	output: pageResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await pageOf(actor, input.tag);
 		const outcome = await publishPage(actor, target.id);
-		if (!outcome.ok) throw writeRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return writtenPage(actor, target.tag);
 	}
 });
@@ -562,15 +647,16 @@ export const archivePageEndpoint = defineEndpoint({
 	summary: 'Archive a page and its subtree.',
 	description:
 		'Archives the page and every page below it, and answers `200` with the page. Archiving an archived page changes nothing. `DELETE` on the same address brings back the subtree archived with it.',
+	refusalTable: archiveRefusals,
 	permissions: MANAGE,
 	input: z.object({ tag }),
 	output: pageResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await pageOf(actor, input.tag);
 		const outcome = await archivePage(actor, target.id);
 		// Already archived: the state asked for, so a re-read.
-		if (!outcome.ok && outcome.error !== 'archived') throw writeRefusal(outcome.error);
+		if (!outcome.ok && outcome.error !== 'archived') throw refuse(outcome.error);
 		return writtenPage(actor, target.tag);
 	}
 });
@@ -581,15 +667,16 @@ export const unarchivePageEndpoint = defineEndpoint({
 	path: '/pages/{tag}/archive',
 	summary: 'Bring an archived page back.',
 	description:
-		'Restores the page and the pages archived with it (a branch archived on its own earlier stays archived), and answers `200` with the page. Unarchiving a page that is not archived changes nothing. A page whose parent or space is still archived is `409` (`parent_archived`, `space_archived`).',
+		'Restores the page and the pages archived with it (a branch archived on its own earlier stays archived), and answers `200` with the page. Unarchiving a page that is not archived changes nothing.',
+	refusalTable: unarchiveRefusals,
 	permissions: MANAGE,
 	input: z.object({ tag }),
 	output: pageResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await pageOf(actor, input.tag);
 		const outcome = await unarchivePage(actor, target.id);
-		if (!outcome.ok && outcome.error !== 'not_archived') throw writeRefusal(outcome.error);
+		if (!outcome.ok && outcome.error !== 'not_archived') throw refuse(outcome.error);
 		return writtenPage(actor, target.tag);
 	}
 });
