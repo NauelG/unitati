@@ -2,8 +2,28 @@
 
 All notable changes to Unitati are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
-[Semantic Versioning](https://semver.org/): while the product is pre-1.0,
-minor bumps carry features and patch bumps carry fixes.
+[Semantic Versioning](https://semver.org/): from 1.0.0, breaking changes to the data model,
+the API or the configuration bump the major version, features the minor and fixes the patch.
+Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
+
+## [1.0.0] - 2026-10-24
+
+### Added
+
+- First stable release. v1 is what `docs/roadmap-v1.md` defines: everything shipped through 0.118
+  plus the knowledge base.
+- The knowledge base is complete (#17): spaces, page tree, revisions, attachments, staff comments,
+  ticket citations, project documentation, the employee portal, global search and portal
+  suggestions, and its use cases under `/api/v1` (#234).
+
+### Changed
+
+- From this version the `/api/v1` contract is stable. Every endpoint that refuses declares its
+  error table (ADR 0047), so a status or an `error.code` can no longer change by accident; a
+  change to one is a breaking change and bumps the major version (ADR 0003).
+- Module boundaries are enforced by dependency-cruiser (ADR 0048). `links` reads assets, handovers,
+  categories and tickets through their owners' functions, `assets/index.ts` is split into a barrel
+  and its implementation, and first-run provisioning lives outside `auth`.
 
 ## [0.118.10] - 2026-10-24
 
