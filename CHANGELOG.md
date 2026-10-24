@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.118.9] - 2026-10-24
+
+### Changed
+
+- API: the projects and tasks endpoints declare their refusals per endpoint (ADR 0047, #350).
+  The OpenAPI document now lists, for each of their writes, the exact `error.code` values of every
+  error status and the body fields that can be rejected, and no longer advertises a `409` on
+  writes that cannot conflict (project archive and unarchive). `assignees_not_members` is a table
+  entry with a computed message, and the project body mapper is gone. Statuses, codes, messages
+  and `details` are unchanged.
+
 ## [0.118.8] - 2026-10-24
 
 ### Changed

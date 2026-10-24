@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.118.8-1d5cf0" alt="Version 0.118.8" />
+  <img src="https://img.shields.io/badge/version-0.118.9-1d5cf0" alt="Version 0.118.9" />
   <img src="https://img.shields.io/badge/status-evaluation-f59e0b" alt="Status: evaluation" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0--only-1d5cf0" alt="License: AGPL-3.0-only" /></a>
 </p>
