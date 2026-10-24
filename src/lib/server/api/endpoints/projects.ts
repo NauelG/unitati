@@ -5,6 +5,7 @@ import {
 	canManageMembers,
 	createProject,
 	createProjectInput,
+	type CreateProjectFailure,
 	getProject,
 	listProjects,
 	projectProgress,
@@ -13,14 +14,18 @@ import {
 	setProjectVisibility,
 	unarchiveProject,
 	updateProject,
-	updateProjectInput
+	updateProjectInput,
+	type MembershipFailure,
+	type UpdateProjectFailure
 } from '../../projects';
-import { created, defineEndpoint, notFound, Reply, type Endpoint } from '../registry';
+import { created, defineEndpoint, notFound, refusalTable, Reply, type Endpoint } from '../registry';
 import { paginationMetaSchema, toMeta } from '../shared-schemas';
 import {
-	bodyRefusal,
+	conflicting,
+	ownerNotFound,
 	PROJECT_MANAGE,
 	PROJECT_READS,
+	projectNotFound,
 	projectOf,
 	projectSchema,
 	projectToWire,
@@ -28,7 +33,6 @@ import {
 	withReads,
 	writtenProject
 } from './project-wire';
-import { refusal } from './refusals';
 import { timelineEntrySchema, timelineToWire } from './timeline-wire';
 
 /**
@@ -41,6 +45,23 @@ import { timelineEntrySchema, timelineToWire } from './timeline-wire';
  */
 
 const projectResponse = z.object({ data: projectSchema });
+
+/** How the API answers each failure of the project write use cases (ADR 0047). */
+const createRefusals = refusalTable<CreateProjectFailure>({
+	owner_not_found: ownerNotFound,
+	duplicate_project_tag: conflicting
+});
+
+const updateRefusals = refusalTable<UpdateProjectFailure | MembershipFailure>({
+	project_not_found: projectNotFound,
+	project_archived: conflicting,
+	owner_not_found: ownerNotFound,
+	duplicate_project_tag: conflicting,
+	// Only an owner or an admin switches visibility; anybody else must not learn the project is there.
+	forbidden: { as: 'not_found' }
+});
+
+const archiveRefusals = refusalTable<'project_not_found'>({ project_not_found: projectNotFound });
 
 export const listProjectsEndpoint = defineEndpoint({
 	id: 'projects.list',
@@ -123,16 +144,17 @@ export const createProjectEndpoint = defineEndpoint({
 	path: '/projects',
 	summary: 'Create a project.',
 	description:
-		'Creates a project. `projectTag` is optional: when omitted the next `PRJ-####` is generated, and an explicit one is accepted (ADR 0010). `ownerPersonId` and `dueDate` (`YYYY-MM-DD`) are optional. `visibility` is `organisation` (the default) or `members`; a members-only project starts with the owner and the creator as its members, and an API key with no person has no member to add, so only an admin key sees it afterwards. Answers `201` with the project and a `Location` header. A tag already in use is `409` (`duplicate_project_tag`); an unknown `ownerPersonId` is a `400` on that field.',
+		'Creates a project. `projectTag` is optional: when omitted the next `PRJ-####` is generated, and an explicit one is accepted (ADR 0010). `ownerPersonId` and `dueDate` (`YYYY-MM-DD`) are optional. `visibility` is `organisation` (the default) or `members`; a members-only project starts with the owner and the creator as its members, and an API key with no person has no member to add, so only an admin key sees it afterwards. Answers `201` with the project and a `Location` header.',
 	example: { name: 'Office move', description: 'Floor 2 to floor 4', dueDate: '2026-12-01' },
 	status: 201,
 	permissions: PROJECT_MANAGE,
+	refusalTable: createRefusals,
 	input: createProjectInput,
 	output: projectResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const outcome = await createProject(actor, input);
-		if (!outcome.ok) throw bodyRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 
 		return created(
 			await writtenProject(actor, outcome.value.projectTag),
@@ -147,12 +169,13 @@ export const updateProjectEndpoint = defineEndpoint({
 	path: '/projects/{tag}',
 	summary: "Edit a project's details.",
 	description:
-		"Edits `name`, `description`, `ownerPersonId`, `dueDate`, `projectTag` and `visibility`; every field is optional, and `null` clears the owner, the description or the due date. A change of owner, due date or visibility is recorded in the history. Switching `visibility` to `members` adds the owner, the key's owner and everyone assigned to a task as members; only the project's owner and admins may change it (anybody else gets `404`). Changing the owner of a members-only project adds the new owner as a member. Archiving has its own endpoint. If `projectTag` changes, the response carries the new tag and a `Location` header; the old URL is `404` from then on, with no redirect. A tag already in use is `409`; an archived project is `409 project_archived`.",
+		"Edits `name`, `description`, `ownerPersonId`, `dueDate`, `projectTag` and `visibility`; every field is optional, and `null` clears the owner, the description or the due date. A change of owner, due date or visibility is recorded in the history. Switching `visibility` to `members` adds the owner, the key's owner and everyone assigned to a task as members; only the project's owner and admins may change it (anybody else gets `404`). Changing the owner of a members-only project adds the new owner as a member. Archiving has its own endpoint. If `projectTag` changes, the response carries the new tag and a `Location` header; the old URL is `404` from then on, with no redirect.",
 	example: { name: 'Office move (phase 2)', dueDate: '2027-01-15' },
 	permissions: PROJECT_MANAGE,
+	refusalTable: updateRefusals,
 	input: updateProjectInput.extend({ tag, visibility: z.enum(PROJECT_VISIBILITIES).optional() }),
 	output: projectResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const { tag: currentTag, visibility, ...changes } = input;
 		const target = await projectOf(actor, currentTag);
@@ -160,14 +183,14 @@ export const updateProjectEndpoint = defineEndpoint({
 		// Authorise before writing anything, so a refusal leaves nothing half-applied.
 		// The fields go first because they are what can fail on their own (a tag in
 		// use, an unknown owner); once they are in, switching visibility cannot fail.
-		if (visibility !== undefined && !canManageMembers(actor, target)) throw refusal('forbidden');
+		if (visibility !== undefined && !canManageMembers(actor, target)) throw refuse('forbidden');
 
 		const outcome = await updateProject(actor, target.id, changes);
-		if (!outcome.ok) throw bodyRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 
 		if (visibility !== undefined) {
 			const changed = await setProjectVisibility(actor, target.id, visibility);
-			if (!changed.ok) throw refusal(changed.error);
+			if (!changed.ok) throw refuse(changed.error);
 		}
 
 		const newTag = changes.projectTag ?? currentTag;
@@ -186,13 +209,14 @@ export const archiveProjectEndpoint = defineEndpoint({
 	description:
 		'Makes the project, and its tasks, read-only, and answers `200` with the project. There is no deletion. Archiving an archived project changes nothing and writes no event. `DELETE` on the same address brings it back.',
 	permissions: PROJECT_MANAGE,
+	refusalTable: archiveRefusals,
 	input: z.object({ tag }),
 	output: projectResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await projectOf(actor, input.tag);
 		const outcome = await archiveProject(actor, target.id);
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return writtenProject(actor, input.tag);
 	}
 });
@@ -205,13 +229,14 @@ export const unarchiveProjectEndpoint = defineEndpoint({
 	description:
 		'Makes the project writable again and answers `200` with the project. Unarchiving an active project changes nothing and writes no event.',
 	permissions: PROJECT_MANAGE,
+	refusalTable: archiveRefusals,
 	input: z.object({ tag }),
 	output: projectResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await projectOf(actor, input.tag);
 		const outcome = await unarchiveProject(actor, target.id);
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return writtenProject(actor, input.tag);
 	}
 });

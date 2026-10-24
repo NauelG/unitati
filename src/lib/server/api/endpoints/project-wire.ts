@@ -12,7 +12,6 @@ import {
 import type { ApiPrincipal } from '../keys';
 import { notFound } from '../registry';
 import { named } from '../shared-schemas';
-import { invalidField, refusal } from './refusals';
 
 /**
  * What the project, task and state endpoints share (ADR 0022): the wire shapes,
@@ -189,15 +188,22 @@ export async function writtenTask(actor: ApiPrincipal, taskTag: string) {
 	return { data: taskToWire(task.value, await statePositions(actor)) };
 }
 
-/** Domain failures that name a value in the body, mapped to the field that carried it. */
-const FIELD_FAILURES: Record<string, readonly [string, string]> = {
-	owner_not_found: ['ownerPersonId', 'Person not found.'],
-	state_not_found: ['stateId', 'State not found.'],
-	person_not_found: ['personId', 'Person not found.']
-};
-
-/** A refusal of a write whose body can name a record: that is the field's fault, not a missing page. */
-export function bodyRefusal(failure: string) {
-	const field = FIELD_FAILURES[failure];
-	return field ? invalidField(field[0], field[1]) : refusal(failure);
-}
+/**
+ * Table entries the project and task endpoints share (ADR 0047). A failure that
+ * names a value in the body is a `400` on the field that carried it; a record
+ * the caller addressed in the path, or may not see, is a `404`.
+ */
+export const projectNotFound = { as: 'not_found' } as const;
+export const taskNotFound = { as: 'not_found' } as const;
+export const ownerNotFound = {
+	as: 'field',
+	path: 'ownerPersonId',
+	message: 'Person not found.'
+} as const;
+export const stateNotFound = { as: 'field', path: 'stateId', message: 'State not found.' } as const;
+export const personNotFound = {
+	as: 'field',
+	path: 'personId',
+	message: 'Person not found.'
+} as const;
+export const conflicting = { as: 'conflict' } as const;
