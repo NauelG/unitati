@@ -74,7 +74,7 @@ is one source of truth.
 
 - Adding a failure to a domain union stops every endpoint that surfaces it from compiling until
   someone decides how the API answers it.
-- The migration is incremental: endpoints without a table keep the name-based mapper and the
-  status-only `refusals` list until they are migrated; a final step removes both and makes the
-  table mandatory for any endpoint that refuses.
+- The migration is complete: the name-based mapper, the local mappers and the status-only
+  `refusals` list are gone. An endpoint with no table refuses nothing (`refuse` accepts no
+  failure), so the table is mandatory for any endpoint that refuses.
 - The MCP server (#51) can read the table to describe each use case's failure modes.

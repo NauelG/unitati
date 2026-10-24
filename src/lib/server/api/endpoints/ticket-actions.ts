@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { PRIORITIES, TICKET_STATUSES } from '#lib/domain/status.js';
-import { linkAssetToTicket, unlinkAsset } from '../../links';
+import {
+	linkAssetToTicket,
+	unlinkAsset,
+	type LinkAssetFailure,
+	type UnlinkAssetFailure
+} from '../../links';
 import { resolveAssetTags } from '../../assets';
 import {
 	assignTicket,
@@ -9,6 +14,7 @@ import {
 	getWrittenTicket,
 	createTicket,
 	moveTicketToQueue,
+	type CreateTicketFailure,
 	setTicketPriority,
 	MAX_AFFECTED_ASSETS
 } from '../../service-desk';
@@ -19,10 +25,10 @@ import {
 	defineEndpoint,
 	noContent,
 	notFound,
+	refusalTable,
 	Reply,
 	type Endpoint
 } from '../registry';
-import { refusal } from './refusals';
 import { ticketSchema, toWire } from './tickets';
 
 /**
@@ -49,6 +55,57 @@ function withAssetReads(principal: ApiPrincipal): ApiPrincipal {
 const tag = z.string().min(1);
 const ticketResponse = z.object({ data: ticketSchema });
 
+/** How the API answers each failure of the ticket write use cases (ADR 0047). */
+const ticketNotFound = { as: 'not_found' } as const;
+
+const NO_INBOUND_ATTACHMENTS = 'The API accepts no inbound attachments.';
+
+const createRefusals = refusalTable<CreateTicketFailure>({
+	queue_not_found: { as: 'not_found' },
+	requester_not_found: { as: 'not_found' },
+	// A principal with no person (a service account) has nobody to default to: the
+	// fix is a field the caller can send.
+	requester_required: {
+		as: 'field',
+		path: 'requesterPersonId',
+		message: 'The requester is required.'
+	},
+	attachments_too_many: { as: 'unreachable', why: NO_INBOUND_ATTACHMENTS },
+	attachments_too_large: { as: 'unreachable', why: NO_INBOUND_ATTACHMENTS },
+	asset_not_found: { as: 'not_found' },
+	ticket_not_found: ticketNotFound,
+	category_not_found: { as: 'not_found' },
+	duplicate_ticket_tag: { as: 'conflict' }
+});
+
+const statusRefusals = refusalTable<'ticket_not_found' | 'invalid_transition'>({
+	ticket_not_found: ticketNotFound,
+	invalid_transition: { as: 'conflict', describe: 'The lifecycle does not allow that move.' }
+});
+
+const priorityRefusals = refusalTable<'ticket_not_found'>({ ticket_not_found: ticketNotFound });
+
+const assignRefusals = refusalTable<'ticket_not_found' | 'assignee_not_found'>({
+	ticket_not_found: ticketNotFound,
+	assignee_not_found: { as: 'not_found' }
+});
+
+const queueRefusals = refusalTable<'ticket_not_found' | 'queue_not_found'>({
+	ticket_not_found: ticketNotFound,
+	queue_not_found: { as: 'not_found' }
+});
+
+// `already_linked` is turned into a success by the handler, so it is not a refusal.
+const linkRefusals = refusalTable<Exclude<LinkAssetFailure, 'already_linked'>>({
+	ticket_not_found: ticketNotFound,
+	asset_not_found: { as: 'not_found' }
+});
+
+const unlinkRefusals = refusalTable<UnlinkAssetFailure>({
+	forbidden: { as: 'not_found' },
+	not_linked: { as: 'not_found' }
+});
+
 /** The ticket after a write, in the wire shape. The write has already succeeded, so a miss is a bug, not a 404. */
 async function written(principal: ApiPrincipal, ticketTag: string) {
 	const outcome = await getWrittenTicket(principal, ticketTag);
@@ -72,11 +129,12 @@ export const createTicketEndpoint = defineEndpoint({
 	},
 	status: 201,
 	permissions: ['tickets.create'],
+	refusalTable: createRefusals,
 	input: createTicketInput.omit({ assetIds: true }).extend({
 		assetTags: z.array(z.string().min(1)).max(MAX_AFFECTED_ASSETS).optional()
 	}),
 	output: ticketResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withAssetReads(principal);
 		const tags = [...new Set(input.assetTags ?? [])];
 		const resolved = await resolveAssetTags(actor, tags);
@@ -97,7 +155,7 @@ export const createTicketEndpoint = defineEndpoint({
 			requesterPersonId: input.requesterPersonId,
 			assetIds: tags.map((assetTag) => resolved.get(assetTag)!)
 		});
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 
 		return created(
 			await written(principal, outcome.value.ticketTag),
@@ -111,15 +169,15 @@ export const changeStatusEndpoint = defineEndpoint({
 	method: 'POST',
 	path: '/tickets/{tag}/status',
 	summary: 'Move a ticket to another status, if the lifecycle allows it.',
-	description:
-		'Moves the ticket to another status. An illegal transition is a `409` with `code: "invalid_transition"`.',
+	description: 'Moves the ticket to another status.',
 	example: { status: 'in_progress' },
 	permissions: MANAGE,
+	refusalTable: statusRefusals,
 	input: z.object({ tag, status: z.enum(TICKET_STATUSES) }),
 	output: ticketResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const outcome = await changeTicketStatus(principal, input.tag, input.status);
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return written(principal, input.tag);
 	}
 });
@@ -132,11 +190,12 @@ export const setPriorityEndpoint = defineEndpoint({
 	description: "Sets the ticket's priority and records the change in its history.",
 	example: { priority: 'high' },
 	permissions: MANAGE,
+	refusalTable: priorityRefusals,
 	input: z.object({ tag, priority: z.enum(PRIORITIES) }),
 	output: ticketResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const outcome = await setTicketPriority(principal, input.tag, input.priority);
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return written(principal, input.tag);
 	}
 });
@@ -149,11 +208,12 @@ export const assignTicketEndpoint = defineEndpoint({
 	description: 'Assigns the ticket to a person, or unassigns it when `personId` is `null`.',
 	example: { personId: '00000000-0000-4000-8000-000000000000' },
 	permissions: MANAGE,
+	refusalTable: assignRefusals,
 	input: z.object({ tag, personId: z.uuid().nullable() }),
 	output: ticketResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const outcome = await assignTicket(principal, input.tag, input.personId);
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return written(principal, input.tag);
 	}
 });
@@ -166,11 +226,12 @@ export const moveQueueEndpoint = defineEndpoint({
 	description: 'Moves the ticket to another queue. List the available queues with `queues.list`.',
 	example: { queueId: '00000000-0000-4000-8000-000000000000' },
 	permissions: MANAGE,
+	refusalTable: queueRefusals,
 	input: z.object({ tag, queueId: z.uuid() }),
 	output: ticketResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const outcome = await moveTicketToQueue(principal, input.tag, input.queueId);
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return written(principal, input.tag);
 	}
 });
@@ -194,9 +255,10 @@ export const linkAssetEndpoint = defineEndpoint({
 	example: { assetTag: 'AST-0001' },
 	status: 201,
 	permissions: MANAGE,
+	refusalTable: linkRefusals,
 	input: z.object({ tag, assetTag: z.string().min(1) }),
 	output: z.object({ data: z.object({ ticket: z.string(), assetTag: z.string() }) }),
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withAssetReads(principal);
 		const pair = await pairOf(actor, input.tag, input.assetTag);
 		const outcome = await linkAssetToTicket(actor, pair);
@@ -205,7 +267,7 @@ export const linkAssetEndpoint = defineEndpoint({
 		if (outcome.ok) return created(body, `/tickets/${input.tag}`);
 		// Idempotent: the asked-for state already holds.
 		if (outcome.error === 'already_linked') return new Reply(200, body);
-		throw refusal(outcome.error);
+		throw refuse(outcome.error);
 	}
 });
 
@@ -217,13 +279,14 @@ export const unlinkAssetEndpoint = defineEndpoint({
 	description:
 		'Removes the link between the ticket and the asset. Answers `204` with no body; an asset that is not linked is a `404`.',
 	permissions: MANAGE,
+	refusalTable: unlinkRefusals,
 	input: z.object({ tag, assetTag: z.string().min(1) }),
 	output: z.null(),
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withAssetReads(principal);
 		const pair = await pairOf(actor, input.tag, input.assetTag);
 		const outcome = await unlinkAsset(actor, pair);
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return noContent();
 	}
 });
