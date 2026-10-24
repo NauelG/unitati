@@ -5,6 +5,16 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.118.7] - 2026-10-24
+
+### Changed
+
+- Internal: first-run provisioning (`provisionFirstAdmin`) moves from `auth/` to
+  `src/lib/server/provisioning.ts`, so that `auth`, which is infrastructure, no longer imports the
+  `assets` and `projects` domains (ADR 0002, #354). A new boundary rule, `direction-infrastructure`
+  (ADR 0048), keeps `auth`, `access`, `db`, `shared` and `settings` from importing business modules.
+  No behaviour change: same signature, same single transaction, same results.
+
 ## [0.118.6] - 2026-10-24
 
 ### Changed
