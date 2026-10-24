@@ -321,6 +321,87 @@ describe('the OpenAPI document built from the real registry', () => {
 		});
 	});
 
+	/** The refusal tables of the project and task endpoints are the source of these responses (ADR 0047). */
+	describe('the error responses derived from the project and task refusal tables', () => {
+		type Narrowed = {
+			description: string;
+			content: {
+				'application/json': {
+					schema: {
+						allOf: [
+							unknown,
+							{ properties: { error: { properties: { code: { enum: string[] } } } } }
+						];
+					};
+				};
+			};
+		};
+		const codesOf = (response: unknown): string[] =>
+			(response as Narrowed).content['application/json'].schema.allOf[1].properties.error.properties
+				.code.enum;
+		const responsesOf = (path: string, method: string) =>
+			document.paths[path][method].responses as unknown as Record<string, Narrowed>;
+
+		it('lists the exact 409 codes of the task writes, and the fields a 400 names', () => {
+			const assign = responsesOf('/tasks/{tag}/assignees', 'post');
+			expect(codesOf(assign['409'])).toEqual(['project_archived', 'not_a_member']);
+			expect(assign['400'].description).toContain('`personId`');
+			expect(codesOf(responsesOf('/projects/{tag}/tasks', 'post')['409'])).toEqual([
+				'project_archived',
+				'duplicate_task_tag'
+			]);
+			expect(responsesOf('/projects/{tag}/tasks', 'post')['400'].description).toContain(
+				'`stateId`'
+			);
+			expect(codesOf(responsesOf('/tasks/{tag}/state', 'post')['409'])).toEqual([
+				'project_archived',
+				'invalid_neighbours'
+			]);
+		});
+
+		it('lists the reparent conflicts, with the computed assignees_not_members', () => {
+			const reparent = responsesOf('/tasks/{tag}/project', 'post');
+			expect(codesOf(reparent['409'])).toEqual([
+				'project_archived',
+				'same_project',
+				'assignees_not_members'
+			]);
+			expect(reparent['409'].description).toContain('members-only');
+		});
+
+		it('answers a person in the path as 404 and stops advertising a 400 field for it', () => {
+			const unassign = responsesOf('/tasks/{tag}/assignees/{personId}', 'delete');
+			expect(codesOf(unassign['404'])).toEqual(['not_found']);
+			expect(codesOf(unassign['409'])).toEqual(['project_archived', 'not_a_member']);
+			expect(unassign['400'].description).not.toContain('`personId`');
+		});
+
+		it('lists the project writes, and no 409 where nothing can conflict', () => {
+			expect(codesOf(responsesOf('/projects', 'post')['409'])).toEqual(['duplicate_project_tag']);
+			expect(responsesOf('/projects', 'post')['400'].description).toContain('`ownerPersonId`');
+			expect(codesOf(responsesOf('/projects/{tag}', 'patch')['409'])).toEqual([
+				'project_archived',
+				'duplicate_project_tag'
+			]);
+			expect(responsesOf('/projects/{tag}/archive', 'post')['409']).toBeUndefined();
+			expect(responsesOf('/projects/{tag}/archive', 'delete')['409']).toBeUndefined();
+		});
+
+		it('leaves no error-code prose in the migrated descriptions', () => {
+			for (const operation of operations.map((item) => item.operation)) {
+				if (
+					!/^(projects\.(create|update)|tasks\.(create|update|move|reparent|assign|unassign))$/.test(
+						operation.operationId
+					)
+				)
+					continue;
+				expect(operation.description, operation.operationId).not.toMatch(
+					/\b(409|400|project_archived|same_project|assignees_not_members|duplicate_\w+)\b/
+				);
+			}
+		});
+	});
+
 	it('takes path parameters, query and body from the input schema', () => {
 		const list = document.paths['/tickets'].get;
 		expect(list.parameters?.map((parameter) => [parameter.name, parameter.in])).toEqual(
