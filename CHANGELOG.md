@@ -5,6 +5,21 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.118.10] - 2026-10-24
+
+### Changed
+
+- API: the service desk endpoints (ticket create, status, priority, assignee, queue, asset links,
+  thread, comment, escalation and work unlinks) declare their refusals per endpoint (ADR 0047,
+  #350). The OpenAPI document lists, for each of them, the exact `error.code` values of every
+  error status and the body fields that can be rejected, and no longer advertises a `409` on
+  writes that cannot conflict. The migration is complete: the name-based refusal mapper, the
+  status-only `refusals` list and the ad-hoc failure branches are gone, and an endpoint that
+  refuses must declare a table. A ticket comment whose body is too long is declared as
+  `400 invalid_input` with an issue on `body`, like the rest of the API (the input schema
+  already rejected it that way, so the response does not change). Every other status, code,
+  message and `details` is unchanged.
+
 ## [0.118.9] - 2026-10-24
 
 ### Changed
