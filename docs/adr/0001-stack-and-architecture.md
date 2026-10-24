@@ -19,6 +19,7 @@ A **modular monolith** in **SvelteKit**, deployed as one Node container plus Pos
 | Database           | PostgreSQL 17 via `compose.yaml`            | installed         |
 | ORM                | Drizzle ORM + `postgres` (postgres.js)      | installed         |
 | Lint / format      | ESLint 10 + Prettier 3                      | installed         |
+| Module boundaries  | dependency-cruiser (ADR 0048)               | installed         |
 | Unit tests         | Vitest 4                                    | installed         |
 | UI components      | shadcn-svelte + bits-ui                     | planned (slice 1) |
 | Auth               | better-auth                                 | planned (slice 1) |

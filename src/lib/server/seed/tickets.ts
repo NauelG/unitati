@@ -11,9 +11,9 @@ import {
 	createTicket,
 	listQueues,
 	setTicketPriority,
-	tickets,
 	type Deps
 } from '../service-desk';
+import { tickets } from '../service-desk/schema';
 
 /**
  * A small, believable service desk: three queues and a spread of tickets in

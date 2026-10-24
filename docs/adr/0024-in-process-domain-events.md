@@ -29,7 +29,7 @@ A small typed registry, `server/shared/events.ts`: `on(name, handler)` returns a
 3. **One registration point.** `server/subscriptions.ts` wires every handler; `hooks.server.ts`
    calls it once at startup, and a guard makes a second call (dev HMR) a no-op.
 4. **Emitters never know subscribers.** `projects` imports `shared/events.ts` and nothing from
-   `links` or `service-desk`; an ESLint `no-restricted-imports` rule enforces it.
+   `links` or `service-desk`; dependency-cruiser enforces it ([ADR 0048](0048-module-boundaries-enforced-by-dependency-cruiser.md)).
 
 `task.completed` is emitted by `moveTask` when the task's **state group** goes from anything other
 than `completed` to `completed`. Completed → completed, moves into `cancelled`, no-op moves and

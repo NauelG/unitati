@@ -3,7 +3,6 @@
  * `/api/v1` endpoint registry. Routes and the hook import from here.
  */
 
-export { apiKeys } from './schema';
 export type { ApiKey } from './schema';
 
 export { createApiKey, listApiKeys, revokeApiKey, authenticateApiKey } from './keys';
@@ -26,7 +25,6 @@ export type {
 	CreateServiceAccountKeyFailure,
 	ServiceAccountView
 } from './service-accounts';
-export { serviceAccounts } from './schema';
 export type { ServiceAccount } from './schema';
 
 export {

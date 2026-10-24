@@ -9,19 +9,6 @@
  * and scope tenancy only.
  */
 
-export {
-	queues,
-	requestForms,
-	requestFormKind,
-	tickets,
-	ticketComments,
-	attachments,
-	ticketStatus,
-	ticketPriority,
-	ticketChannel,
-	commentVisibility,
-	ticketCodeSequence
-} from './schema';
 export type { Queue, RequestForm, Ticket, TicketComment, Attachment } from './schema';
 
 export {

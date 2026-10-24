@@ -6,7 +6,6 @@ import type { SessionUser } from '../auth/guards';
 import { locationPaths } from './locations';
 import { departments, organisations, people, teams } from './schema';
 
-export { organisations, people, departments, locations, teams } from './schema';
 export {
 	countLocationChildren,
 	countPeopleByLocation,

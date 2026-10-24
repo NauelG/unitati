@@ -29,7 +29,7 @@ in between, which is acceptable for a courtesy mail and not for an inbox that pe
    read when the thing happened, even if the record is renamed. Rows cascade away with the record.
 6. **Exactly one target**, with typed foreign keys and a `CHECK`, as in ADR 0009. The module imports
    the tables of `service-desk`, `projects` and `knowledge` for those keys and calls none of their
-   functions; no domain imports its tables (ESLint enforces both). The target may also be a
+   functions; no domain imports its tables (dependency-cruiser enforces both, [ADR 0048](0048-module-boundaries-enforced-by-dependency-cruiser.md)). The target may also be a
    knowledge page (#326): a `mention` in a page comment, anchored to the comment through the
    snapshot's `commentId`, for recipients holding `knowledge.manage` only. Pages are not followed.
 7. **Polling, not push.** The bell polls `GET /notifications/unread` every 60 s while the tab is

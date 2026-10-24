@@ -7,8 +7,8 @@ import {
 	createPerson,
 	createViewer
 } from '../assets/testing/fixtures';
-import { ticketAsset } from '../links';
-import { ensureDefaultStates } from '../projects/defaults';
+import { ticketAsset } from '../links/schema';
+import { ensureDefaultStates } from '../projects';
 import { createProjectRow, createTaskRow, statesByGroup } from '../projects/testing/fixtures';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
 import { search, type SearchGroup, type SearchResult } from '.';

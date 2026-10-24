@@ -8,7 +8,8 @@ import {
 	createViewer
 } from '../assets/testing/fixtures';
 import { getDb } from '../db';
-import { relatedTo, ticketAsset } from '../links';
+import { relatedTo } from '../links';
+import { ticketAsset } from '../links/schema';
 import { createComment, createQueue, createTicket } from '../service-desk/testing/fixtures';
 import { listActivity } from '../activity';
 import { authenticateRequest } from './authenticate-request';

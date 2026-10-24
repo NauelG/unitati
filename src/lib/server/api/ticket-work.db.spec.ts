@@ -9,7 +9,7 @@ import {
 } from '../assets/testing/fixtures';
 import { listActivity } from '../activity';
 import { getDb } from '../db';
-import { ticketAsset, ticketHandover, ticketProject, ticketTask } from '../links';
+import { ticketAsset, ticketHandover, ticketProject, ticketTask } from '../links/schema';
 import { projects, tasks } from '../projects/schema';
 import {
 	createProjectRow,

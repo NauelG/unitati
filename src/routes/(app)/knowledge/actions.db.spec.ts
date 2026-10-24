@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { getDb } from '#lib/server/db/index.js';
-import { pages } from '#lib/server/knowledge/index.js';
+import { pages } from '#lib/server/knowledge/schema.js';
 import {
 	createPageRow,
 	createSpaceRow,

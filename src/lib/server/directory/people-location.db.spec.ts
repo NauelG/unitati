@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { getDb } from '../db';
 import { activity } from '../activity/schema';
 import { createOrganisation, createPerson, createViewer } from '../assets/testing/fixtures';
-import { createLocation, listPeople, people, personLocation, setPersonLocation } from '.';
+import { createLocation, listPeople, personLocation, setPersonLocation } from '.';
+import { people } from './schema';
 import type { SessionUser } from '../auth/guards';
 
 async function setup() {

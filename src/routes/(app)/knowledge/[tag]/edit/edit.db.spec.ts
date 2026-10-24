@@ -1,7 +1,8 @@
 import { asc, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { getDb } from '#lib/server/db/index.js';
-import { createPage, pageRevisionsTable, pages, savePage } from '#lib/server/knowledge/index.js';
+import { createPage, savePage } from '#lib/server/knowledge/index.js';
+import { pageRevisions as pageRevisionsTable, pages } from '#lib/server/knowledge/schema.js';
 import { createSpaceRow, createWorkspace } from '#lib/server/knowledge/testing/fixtures.js';
 import { actionEvent, outcomeOf } from '#lib/server/projects/testing/action-event.js';
 import { GET as pick } from '../../pages/pick/+server';

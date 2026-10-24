@@ -11,7 +11,8 @@ import {
 } from '../projects/testing/fixtures';
 import { tickets } from '../service-desk/schema';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
-import { escalateTicket, ticketProject, ticketTask } from './index';
+import { escalateTicket } from './index';
+import { ticketProject, ticketTask } from './schema';
 
 /**
  * One function, four targets (#149). Whatever the target, the ticket row stays

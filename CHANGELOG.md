@@ -5,6 +5,16 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.118.4] - 2026-10-23
+
+### Changed
+
+- Module boundaries (ADR 0002) are enforced by dependency-cruiser over the whole server graph
+  instead of four ESLint blocks (ADR 0048, #353): public entries, who may import which tables,
+  direction between domains, routes without database access, fixtures out of production and no
+  runtime import cycles. Module barrels no longer re-export tables; consumers import
+  `<module>/schema`. No behaviour change.
+
 ## [0.118.3] - 2026-10-23
 
 ### Changed

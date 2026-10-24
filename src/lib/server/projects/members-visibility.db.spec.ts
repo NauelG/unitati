@@ -9,9 +9,9 @@ import { load as loadTask } from '../../../routes/(app)/tasks/[taskTag]/+page.se
 import { load as loadTasks } from '../../../routes/(app)/tasks/+page.server';
 import { activitySentence } from '../../components/unitati/activity';
 import { listActivity, listRecentActivity } from '../activity';
-import { authenticateRequest } from '../api/authenticate-request';
-import { handleApiRequest } from '../api/dispatch';
-import { createApiKey } from '../api/keys';
+import { authenticateRequest } from '../api';
+import { handleApiRequest } from '../api';
+import { createApiKey } from '../api';
 import { createViewer } from '../assets/testing/fixtures';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';

@@ -2,7 +2,8 @@ import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { getDb } from '../db';
 import { createOrganisation, createPerson, createViewer } from '../assets/testing/fixtures';
-import { deactivatePerson, people, reactivatePerson, resolveSessionUser } from '../directory';
+import { deactivatePerson, reactivatePerson, resolveSessionUser } from '../directory';
+import { people } from '../directory/schema';
 import { getAuth } from '.';
 import {
 	changeAccessEmail,

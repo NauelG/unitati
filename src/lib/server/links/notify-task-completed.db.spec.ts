@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '../db';
-import { people } from '../directory';
+import { people } from '../directory/schema';
 import { createViewer } from '../assets/testing/fixtures';
 import { moveTask } from '../projects';
 import {

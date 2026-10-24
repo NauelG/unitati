@@ -9,7 +9,7 @@ import {
 	createOrganisation,
 	createPerson
 } from '../assets/testing/fixtures';
-import { ensureDefaultStates } from '../projects/defaults';
+import { ensureDefaultStates } from '../projects';
 import { createProjectRow, createTaskRow, statesByGroup } from '../projects/testing/fixtures';
 import { createPageRow, createSpaceRow } from '../knowledge/testing/fixtures';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';

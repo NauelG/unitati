@@ -1,20 +1,15 @@
 import { asc, count, eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { STATE_GROUPS } from '#lib/domain/status.js';
-import { activity } from '../activity';
-import { advanceAssetTagSequence, assets, listAssets, registerAsset } from '../assets';
+import { activity } from '../activity/schema';
+import { advanceAssetTagSequence, listAssets, registerAsset } from '../assets';
+import { assets } from '../assets/schema';
 import { createCatalogue, createOrganisation, createViewer } from '../assets/testing/fixtures';
 import { getDb } from '../db';
-import { listLocations, people } from '../directory';
-import {
-	ensureDefaultStates,
-	listProjects,
-	listStates,
-	listTasks,
-	projects,
-	renameState,
-	tasks
-} from '../projects';
+import { listLocations } from '../directory';
+import { people } from '../directory/schema';
+import { ensureDefaultStates, listProjects, listStates, listTasks, renameState } from '../projects';
+import { projects, tasks } from '../projects/schema';
 import { applyPlan, applyProjects } from './apply';
 import { buildPlan, buildProjectsPlan, emailFor } from './plan';
 

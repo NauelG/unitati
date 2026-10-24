@@ -4,15 +4,6 @@
  * from here, never from a file inside.
  */
 
-export {
-	ticketAsset,
-	ticketTask,
-	ticketProject,
-	ticketHandover,
-	ticketCategory,
-	ticketPage,
-	projectPage
-} from './schema';
 export type {
 	TicketAsset,
 	TicketTask,
