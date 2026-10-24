@@ -5,6 +5,17 @@ All notable changes to Unitati are documented here. The format follows
 [Semantic Versioning](https://semver.org/): while the product is pre-1.0,
 minor bumps carry features and patch bumps carry fixes.
 
+## [0.118.8] - 2026-10-24
+
+### Changed
+
+- API: the assets and knowledge endpoints declare their refusals per endpoint (ADR 0047, #350).
+  The OpenAPI document now lists, for each of their writes, the exact `error.code` values of every
+  error status and the body fields that can be rejected, and no longer advertises a `409` on
+  writes that cannot conflict (asset state, location and notes; page archive). The local
+  failure mappers of both endpoint modules are gone. Statuses, codes, messages and `details` are
+  unchanged.
+
 ## [0.118.7] - 2026-10-24
 
 ### Changed
