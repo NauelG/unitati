@@ -175,6 +175,20 @@ module.exports = {
 			}
 		},
 		{
+			name: 'direction-infrastructure',
+			comment:
+				'ADR 0002, ADR 0048 rule 4: auth, access, db, shared and settings are infrastructure and import no business module, except directory (its index.ts and schema.ts, which everybody may depend on) and db/schema.ts, which aggregates every module\u2019s schema.ts. Specs and testing/ folders follow rule 6 instead. First-run provisioning, which needs several domains, lives in src/lib/server/provisioning.ts (#354).',
+			severity: 'error',
+			from: {
+				path: `${SERVER}/${alt(INFRASTRUCTURE)}/`,
+				pathNot: [SPEC_OR_TESTING, `${SERVER}/db/schema\\.ts$`]
+			},
+			to: {
+				path: `${SERVER}/${BIZ}/`,
+				pathNot: `${SERVER}/directory/(?:index|schema)\\.ts$`
+			}
+		},
+		{
 			name: 'direction-directory',
 			comment:
 				'ADR 0002, ADR 0048 rule 4: directory is what every domain depends on, so it depends on no business module but activity (it logs its own changes).',

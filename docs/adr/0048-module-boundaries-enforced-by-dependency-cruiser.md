@@ -65,6 +65,9 @@ module. Closing them (functions only) would touch 30+ files and is not decided h
    - `assets`, `service-desk`, `projects` and `knowledge` do not import each other; what crosses
      goes through `links` or `shared/events.ts`.
    - `directory` imports no business module except `activity`.
+   - `auth`, `access`, `db`, `shared` and `settings` (infrastructure) import no business module,
+     except `directory`'s `index.ts` and `schema.ts` and, in `db/schema.ts`, every module's
+     `schema.ts` (`direction-infrastructure`); specs and `testing/` folders follow rule 6.
 5. **Routes** (`routes-no-db`, `routes-no-schema`). Non-spec files under `src/routes/` import no
    `db` module at runtime (a type-only edge such as `import type { Transaction }` queries nothing)
    and no `*/schema.ts` at all.
