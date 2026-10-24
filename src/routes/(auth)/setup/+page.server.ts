@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { APIError } from 'better-auth/api';
 import { getAuth, MIN_PASSWORD_LENGTH } from '#lib/server/auth/index.js';
 import { applyAuthCookies } from '#lib/server/auth/cookies.js';
-import { provisionFirstAdmin } from '#lib/server/auth/provision.js';
+import { provisionFirstAdmin } from '#lib/server/provisioning.js';
 import { needsSetup } from '#lib/server/directory/index.js';
 import { m } from '#lib/paraglide/messages.js';
 import type { Actions, PageServerLoad } from './$types';
