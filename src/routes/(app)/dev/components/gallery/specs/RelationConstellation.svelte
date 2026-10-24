@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ComponentDocPage from '../ComponentDocPage.svelte';
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
-	import type { AssetRelatedGroup, RelatedGroup } from '#lib/server/links/related.js';
+	import type { AssetRelatedGroup, RelatedGroup } from '#lib/server/links/index.js';
 
 	const linkedAt = new Date('2026-01-01T10:00:00Z');
 
