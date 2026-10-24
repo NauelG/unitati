@@ -14,19 +14,16 @@ import {
 	updateAssetDetails,
 	updateAssetDetailsInput,
 	type AssetView,
-	type FullAssetView
+	type DeliverFailure,
+	type FullAssetView,
+	type RegisterAssetFailure,
+	type ReturnCustodyFailure,
+	type UpdateAssetFailure
 } from '../../assets';
+import type { CommentBodyFailure } from '../../shared/comments';
 import type { ApiPrincipal } from '../keys';
-import {
-	type ApiError,
-	created,
-	defineEndpoint,
-	notFound,
-	Reply,
-	type Endpoint
-} from '../registry';
+import { created, defineEndpoint, notFound, refusalTable, Reply, type Endpoint } from '../registry';
 import { named, paginationMetaSchema } from '../shared-schemas';
-import { invalidField, refusal } from './refusals';
 import { entryToWire, timelineEntrySchema } from './timeline-wire';
 
 /**
@@ -140,19 +137,72 @@ async function written(actor: ApiPrincipal, tag: string) {
 	return { data: toWire(found.value) };
 }
 
-/** Domain failures that name a value in the body, mapped to the field that carried it. */
-const FIELD_FAILURES: Record<string, readonly [string, string]> = {
-	model_not_found: ['assetModelId', 'Asset model not found.'],
-	location_not_found: ['locationId', 'Location not found.'],
-	person_not_found: ['personId', 'Person not found.'],
-	empty_comment: ['text', 'The note cannot be empty.'],
-	comment_too_long: ['text', 'The note is too long.']
-};
+/**
+ * How the API answers each failure of the asset write use cases (ADR 0047).
+ * A failure that names a value in the body is a `400` on the field that carried it.
+ */
+const assetNotFound = { as: 'not_found' } as const;
+const modelNotFound = {
+	as: 'field',
+	path: 'assetModelId',
+	message: 'Asset model not found.'
+} as const;
+const locationNotFound = {
+	as: 'field',
+	path: 'locationId',
+	message: 'Location not found.'
+} as const;
+const personNotFound = { as: 'field', path: 'personId', message: 'Person not found.' } as const;
+const conflict = { as: 'conflict' } as const;
 
-function assetRefusal(failure: string): ApiError {
-	const field = FIELD_FAILURES[failure];
-	return field ? invalidField(field[0], field[1]) : refusal(failure);
-}
+const registerRefusals = refusalTable<RegisterAssetFailure>({
+	duplicate_asset_tag: conflict,
+	duplicate_serial: conflict,
+	model_not_found: modelNotFound,
+	location_not_found: locationNotFound
+});
+
+const updateRefusals = refusalTable<UpdateAssetFailure>({
+	asset_not_found: assetNotFound,
+	duplicate_asset_tag: conflict,
+	duplicate_serial: conflict,
+	model_not_found: modelNotFound
+});
+
+const WAIVER_NEVER_OFFERED = 'The API never offers a waiver (#277).';
+
+const assignRefusals = refusalTable<DeliverFailure>({
+	no_assets: { as: 'unreachable', why: 'The endpoint always delivers exactly one asset.' },
+	asset_not_found: assetNotFound,
+	person_not_found: personNotFound,
+	already_in_custody: conflict,
+	no_delivery_template: {
+		as: 'conflict',
+		describe:
+			'The asset category requires a handover and no delivery template is configured. Nothing is written.'
+	},
+	waive_forbidden: { as: 'unreachable', why: WAIVER_NEVER_OFFERED },
+	waive_not_required: { as: 'unreachable', why: WAIVER_NEVER_OFFERED },
+	invalid_waive_reason: { as: 'unreachable', why: WAIVER_NEVER_OFFERED }
+});
+
+const returnRefusals = refusalTable<ReturnCustodyFailure>({
+	asset_not_found: assetNotFound,
+	not_in_custody: conflict
+});
+
+const stateRefusals = refusalTable<'asset_not_found'>({ asset_not_found: assetNotFound });
+
+const locationRefusals = refusalTable<'asset_not_found' | 'location_not_found'>({
+	asset_not_found: assetNotFound,
+	location_not_found: locationNotFound
+});
+
+const noteRefusals = refusalTable<'asset_not_found' | CommentBodyFailure>({
+	asset_not_found: assetNotFound,
+	empty_comment: { as: 'field', path: 'text', message: 'The note cannot be empty.' },
+	comment_too_long: { as: 'field', path: 'text', message: 'The note is too long.' }
+});
 
 const tag = z.string().min(1);
 
@@ -249,7 +299,7 @@ export const registerAssetEndpoint = defineEndpoint({
 	path: '/assets',
 	summary: 'Register an asset.',
 	description:
-		'Registers an asset and opens its history. `assetTag` is optional: when omitted the next `AST-####` is generated, and an explicit one is accepted (ADR 0010). `serial` is optional. Answers `201` with the asset and a `Location` header. A tag or serial already in use is `409` (`duplicate_asset_tag`, `duplicate_serial`); an unknown `assetModelId` or `locationId` is a `400` on that field. Models and locations are managed in the application; take their ids from there.',
+		'Registers an asset and opens its history. `assetTag` is optional: when omitted the next `AST-####` is generated, and an explicit one is accepted (ADR 0010). `serial` is optional. Answers `201` with the asset and a `Location` header. Models and locations are managed in the application; take their ids from there.',
 	example: {
 		name: 'MacBook Pro 14"',
 		assetTag: 'AST-0142',
@@ -259,12 +309,13 @@ export const registerAssetEndpoint = defineEndpoint({
 	},
 	status: 201,
 	permissions: MANAGE,
+	refusalTable: registerRefusals,
 	input: registerBody,
 	output: assetResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const outcome = await registerAsset(actor, input);
-		if (!outcome.ok) throw assetRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 
 		return created(
 			await written(actor, outcome.value.assetTag),
@@ -279,18 +330,19 @@ export const updateAssetEndpoint = defineEndpoint({
 	path: '/assets/{tag}',
 	summary: "Correct an asset's details.",
 	description:
-		'Edits `name`, `assetTag`, `serial`, `assetModelId` and `shared`; every field is optional. This is a correction, not an event: nothing is added to the history. State, custody and location have their own endpoints. If `assetTag` changes, the response carries the new tag and a `Location` header with the new URL; the old URL is `404` from then on, with no redirect. A tag or serial already in use is `409`.',
+		'Edits `name`, `assetTag`, `serial`, `assetModelId` and `shared`; every field is optional. This is a correction, not an event: nothing is added to the history. State, custody and location have their own endpoints. If `assetTag` changes, the response carries the new tag and a `Location` header with the new URL; the old URL is `404` from then on, with no redirect.',
 	example: { name: 'MacBook Pro 14" (spare)', serial: 'C02XK0ABJGH5' },
 	permissions: MANAGE,
+	refusalTable: updateRefusals,
 	input: updateAssetDetailsInput.extend({ tag }),
 	output: assetResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const { tag: currentTag, ...changes } = input;
 		const target = await targetOf(actor, currentTag);
 
 		const outcome = await updateAssetDetails(actor, target.id, changes);
-		if (!outcome.ok) throw assetRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 
 		const newTag = changes.assetTag ?? currentTag;
 		const body = await written(actor, newTag);
@@ -306,18 +358,19 @@ export const assignCustodyEndpoint = defineEndpoint({
 	path: '/assets/{tag}/custody',
 	summary: 'Hand an asset to a person.',
 	description:
-		"Records that the asset is now in the custody of `personId`. An asset already in someone's custody is not reassigned silently: return it first. An unknown `personId` is a `400` on that field. If the asset's category requires a handover, a pending delivery handover is issued and its code is returned as `handoverCode` (otherwise `null`); the signing link is mailed to the person when mail is on, and is never part of the response. With no delivery template configured the request is refused with `409` `no_delivery_template` and nothing is written.",
+		"Records that the asset is now in the custody of `personId`. An asset already in someone's custody is not reassigned silently: return it first. If the asset's category requires a handover, a pending delivery handover is issued and its code is returned as `handoverCode` (otherwise `null`); the signing link is mailed to the person when mail is on, and is never part of the response.",
 	example: { personId: '00000000-0000-4000-8000-000000000000' },
 	permissions: CHECKOUT,
+	refusalTable: assignRefusals,
 	input: z.object({ tag, personId: z.uuid() }),
 	output: z.object({ data: assetSchema, handoverCode: z.string().nullable() }),
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await targetOf(actor, input.tag);
 		// The one door to custody for a person's action, so a required handover cannot be skipped.
 		// No waive option here: a service account never waives a handover (#277).
 		const outcome = await deliver(actor, { personId: input.personId, assetIds: [target.id] });
-		if (!outcome.ok) throw assetRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return {
 			...(await written(actor, input.tag)),
 			handoverCode: outcome.value.handover?.code ?? null
@@ -330,16 +383,16 @@ export const returnCustodyEndpoint = defineEndpoint({
 	method: 'DELETE',
 	path: '/assets/{tag}/custody',
 	summary: 'Take an asset back from whoever holds it.',
-	description:
-		'Ends the current custody and answers `200` with the updated asset. An asset nobody holds is `409` with `code: "not_in_custody"`.',
+	description: 'Ends the current custody and answers `200` with the updated asset.',
 	permissions: CHECKOUT,
+	refusalTable: returnRefusals,
 	input: z.object({ tag }),
 	output: assetResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await targetOf(actor, input.tag);
 		const outcome = await returnCustody(actor, target.id);
-		if (!outcome.ok) throw assetRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return written(actor, input.tag);
 	}
 });
@@ -353,13 +406,14 @@ export const changeStateEndpoint = defineEndpoint({
 		'Moves the asset to `in_use`, `in_repair`, `in_stock` or `retired` and records the change. State is independent of custody. Setting the state the asset already has changes nothing and writes no event.',
 	example: { state: 'in_repair' },
 	permissions: MANAGE,
+	refusalTable: stateRefusals,
 	input: z.object({ tag, state: z.enum(ASSET_STATES) }),
 	output: assetResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await targetOf(actor, input.tag);
 		const outcome = await changeState(actor, target.id, input.state);
-		if (!outcome.ok) throw assetRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return written(actor, input.tag);
 	}
 });
@@ -370,16 +424,17 @@ export const changeLocationEndpoint = defineEndpoint({
 	path: '/assets/{tag}/location',
 	summary: 'Move an asset to another location, or clear it.',
 	description:
-		"Sets the asset's own location (not its custodian's) and records the move. Send `locationId: null` to clear it. An unknown `locationId` is a `400` on that field.",
+		"Sets the asset's own location (not its custodian's) and records the move. Send `locationId: null` to clear it.",
 	example: { locationId: '00000000-0000-4000-8000-000000000000' },
 	permissions: MANAGE,
+	refusalTable: locationRefusals,
 	input: z.object({ tag, locationId: z.uuid().nullable() }),
 	output: assetResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await targetOf(actor, input.tag);
 		const outcome = await changeLocation(actor, target.id, input.locationId);
-		if (!outcome.ok) throw assetRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return written(actor, input.tag);
 	}
 });
@@ -389,18 +444,18 @@ export const addNoteEndpoint = defineEndpoint({
 	method: 'POST',
 	path: '/assets/{tag}/notes',
 	summary: "Add a note to an asset's timeline.",
-	description:
-		"Adds a free-text entry to the asset's history and answers `201` with the asset. An empty `text` is a `400` on that field.",
+	description: "Adds a free-text entry to the asset's history and answers `201` with the asset.",
 	example: { text: 'Keyboard replaced under warranty.' },
 	status: 201,
 	permissions: MANAGE,
+	refusalTable: noteRefusals,
 	input: z.object({ tag, text: z.string() }),
 	output: assetResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await targetOf(actor, input.tag);
 		const outcome = await addAssetComment(actor, target.id, input.text);
-		if (!outcome.ok) throw assetRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return created(await written(actor, input.tag), `/assets/${input.tag}/timeline`);
 	}
 });
