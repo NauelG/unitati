@@ -71,7 +71,7 @@ export type RefusalEntry<M = never> =
 	/** `409`, whose code is the failure's own name. */
 	| {
 			as: 'conflict';
-			/** Defaults to the code as a sentence, as `refusal()` always did. */
+			/** Defaults to the code as a sentence. */
 			message?: string | ((failure: M) => string);
 			/** Structured facts, serialised as `error.details`. */
 			details?: (failure: M) => Record<string, unknown>;
@@ -185,15 +185,9 @@ export interface Endpoint<
 	/** The success status. `200` unless it creates something; `204` is implied by a `z.null()` output. */
 	status?: 200 | 201;
 	/**
-	 * Refusals beyond the ones every operation can raise (`400`, `401`, `404`,
-	 * `409`, `429`), so the documentation lists them: `403` for an act the key may
-	 * name but not do, `422` for input that parses and that the domain rejects.
-	 */
-	refusals?: readonly (403 | 422)[];
-	/**
 	 * Every failure the handler refuses with, each mapped to one answer (ADR 0047).
-	 * When present, the documentation derives the error responses from it and
-	 * `refusals` is ignored. Endpoints not yet migrated keep the generic behaviour.
+	 * Mandatory for an endpoint that refuses: without a table `refuse` accepts
+	 * nothing, and the documentation derives its error responses from the table.
 	 */
 	refusalTable?: RefusalTable<F>;
 	/** "Any of", like `requireAnyPermission`. Never empty. */

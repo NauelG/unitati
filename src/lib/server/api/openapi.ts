@@ -350,24 +350,15 @@ function operationOf(endpoint: Endpoint, schemas: Record<string, JsonSchema>): O
 			content: { 'application/json': { schema: output.schema } }
 		};
 	}
-	if (endpoint.refusalTable) {
-		const derived = tableResponses(
-			endpoint.refusalTable.entries,
-			parameters.length > 0 || body !== undefined
-		);
-		if (derived['400']) responses['400'] = derived['400'];
-		responses['401'] = errorResponse('401');
-		for (const status of ['403', '404', '409', '422']) {
-			if (derived[status]) responses[status] = derived[status];
-		}
-	} else {
-		if (parameters.length > 0 || body) responses['400'] = errorResponse('400');
-		responses['401'] = errorResponse('401');
-		responses['404'] = errorResponse('404');
-		if (endpoint.method !== 'GET') responses['409'] = errorResponse('409');
-		for (const status of endpoint.refusals ?? []) {
-			responses[String(status)] = errorResponse(String(status) as '403' | '422');
-		}
+	// An endpoint with no table refuses nothing: it still answers 404 for what the key cannot see.
+	const derived = tableResponses(
+		endpoint.refusalTable?.entries ?? {},
+		parameters.length > 0 || body !== undefined
+	);
+	if (derived['400']) responses['400'] = derived['400'];
+	responses['401'] = errorResponse('401');
+	for (const status of ['403', '404', '409', '422']) {
+		if (derived[status]) responses[status] = derived[status];
 	}
 	responses['429'] = errorResponse('429');
 

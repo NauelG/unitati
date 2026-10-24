@@ -6,17 +6,26 @@ import {
 	relatedTo,
 	unlinkProject,
 	unlinkTask,
+	type EscalateFailure,
 	type EscalationTarget,
 	type RelatedGroup,
 	type RelatedItem,
-	type RelationName
+	type RelationName,
+	type UnlinkFailure
 } from '../../links';
 import { getProject, getTask, readsProjects } from '../../projects';
 import { getTicketByTag, getWrittenTicket } from '../../service-desk';
 import type { ApiPrincipal } from '../keys';
-import { created, defineEndpoint, noContent, notFound, Reply, type Endpoint } from '../registry';
+import {
+	created,
+	defineEndpoint,
+	noContent,
+	notFound,
+	refusalTable,
+	Reply,
+	type Endpoint
+} from '../registry';
 import { named } from '../shared-schemas';
-import { refusal } from './refusals';
 
 /**
  * Turning a ticket into work, and reading it back (ADR 0022, #153). The
@@ -43,6 +52,24 @@ function withProjectReads(principal: ApiPrincipal): ApiPrincipal {
 }
 
 const tag = z.string().min(1);
+
+/** How the API answers each failure of the escalate and unlink use cases (ADR 0047). */
+const escalateRefusals = refusalTable<EscalateFailure>({
+	// An act the key may not do and a record it may not see are one answer (ADR 0007).
+	forbidden: { as: 'not_found' },
+	ticket_not_found: { as: 'not_found' },
+	task_not_found: { as: 'not_found' },
+	project_not_found: { as: 'not_found' },
+	project_archived: { as: 'conflict' },
+	// The `new_*` targets also need `projects.manage` on the key.
+	forbidden_create: { as: 'forbidden' },
+	invalid_input: { as: 'unprocessable' }
+});
+
+const unlinkRefusals = refusalTable<UnlinkFailure>({
+	forbidden: { as: 'not_found' },
+	link_not_found: { as: 'not_found' }
+});
 
 /* -------------------------------------------------------------------------- */
 /* Tags to ids                                                                */
@@ -130,20 +157,20 @@ export const escalateEndpoint = defineEndpoint({
 	path: '/tickets/{tag}/escalations',
 	summary: 'Escalate a ticket to a task or a project, existing or new.',
 	description:
-		'Links the ticket to the work that resolves it, or creates that work and links it, as one act. `target` picks the shape of the body: `existing_task` (`taskTag`), `new_task` (`projectTag`, `title`, optional `description`), `existing_project` (`projectTag`) or `new_project` (`name`, optional `ownerPersonId`). Everything is addressed by tag. Answers `201` when something was created or linked and `200`, with the same body, when the ticket was already linked to that task or project and nothing was written. The `new_*` targets also need `projects.manage` on the key (`403` without it); an archived project is a `409`; an empty title or name is a `422`. Any ticket status can be escalated.',
+		'Links the ticket to the work that resolves it, or creates that work and links it, as one act. `target` picks the shape of the body: `existing_task` (`taskTag`), `new_task` (`projectTag`, `title`, optional `description`), `existing_project` (`projectTag`) or `new_project` (`name`, optional `ownerPersonId`). Everything is addressed by tag. Answers `201` when something was created or linked and `200`, with the same body, when the ticket was already linked to that task or project and nothing was written. The `new_*` targets also need `projects.manage` on the key. Any ticket status can be escalated.',
 	example: { target: 'new_task', projectTag: 'PRJ-0003', title: 'Replace the printer' },
 	status: 201,
-	refusals: [403, 422],
 	permissions: MANAGE,
+	refusalTable: escalateRefusals,
 	input: escalationInput,
 	output: escalationResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withProjectReads(principal);
 		const ticketId = await ticketIdOf(actor, input.tag);
 		const target = await targetOf(actor, input);
 
 		const outcome = await escalateTicket(actor, ticketId, target);
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 
 		const { kind, tag: workTag } = outcome.value;
 		const body = {
@@ -172,16 +199,17 @@ export const unlinkTaskEndpoint = defineEndpoint({
 	description:
 		'Removes the link between the ticket and the task. Answers `204` with no body; a task that is not linked is a `404`. The task itself is untouched.',
 	permissions: MANAGE,
+	refusalTable: unlinkRefusals,
 	input: z.object({ tag, taskTag: tag }),
 	output: z.null(),
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withProjectReads(principal);
 		const pair = {
 			ticketId: await ticketIdOf(actor, input.tag),
 			taskId: await taskIdOf(actor, input.taskTag)
 		};
 		const outcome = await unlinkTask(actor, pair);
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return noContent();
 	}
 });
@@ -194,16 +222,17 @@ export const unlinkProjectEndpoint = defineEndpoint({
 	description:
 		'Removes the link between the ticket and the project. Answers `204` with no body; a project that is not linked is a `404`. The project itself is untouched.',
 	permissions: MANAGE,
+	refusalTable: unlinkRefusals,
 	input: z.object({ tag, projectTag: tag }),
 	output: z.null(),
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withProjectReads(principal);
 		const pair = {
 			ticketId: await ticketIdOf(actor, input.tag),
 			projectId: await projectIdOf(actor, input.projectTag)
 		};
 		const outcome = await unlinkProject(actor, pair);
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return noContent();
 	}
 });

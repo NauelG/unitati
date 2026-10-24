@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { refusalTable, resolveRefusal, defineEndpoint, ApiError } from '../registry';
 import { z } from 'zod';
 import { ENDPOINTS } from './index';
+import { reparentTaskEndpoint } from './tasks';
 
 /** The registry is the one description of the API (ADR 0022): an entry that is not described cannot ship. */
 describe('the endpoint registry', () => {
@@ -165,6 +166,18 @@ describe('the endpoint registry', () => {
 		expect(new Set(routes).size).toBe(routes.length);
 	});
 
+	it('derives every refusal from a table: no name-based mapper, no status-only list (ADR 0047)', () => {
+		const directory = new URL('.', import.meta.url);
+		const files = readdirSync(directory).filter(
+			(file) => file.endsWith('.ts') && !file.endsWith('.spec.ts')
+		);
+
+		for (const file of files) {
+			const source = readFileSync(new URL(file, directory), 'utf8');
+			expect(source, file).not.toMatch(/endsWith\('_not_found'\)|\brefusal\(|\brefusals:/);
+		}
+	});
+
 	it('keeps the endpoints an adapter: none imports a table or the database (ADR 0022)', () => {
 		const directory = new URL('.', import.meta.url);
 		const files = readdirSync(directory).filter(
@@ -274,5 +287,22 @@ describe('the refusal table', () => {
 		const error = resolveRefusal('w', unreachable, 'a');
 		expect(error).not.toBeInstanceOf(ApiError);
 		expect(error.message).toContain('Never sent.');
+	});
+});
+
+describe('the task reparent table', () => {
+	it('computes the message of assignees_not_members from the people in the way', () => {
+		const error = resolveRefusal('tasks.reparent', reparentTaskEndpoint.refusalTable, {
+			kind: 'assignees_not_members',
+			people: [
+				{ personId: 'a', fullName: 'Ada Lovelace' },
+				{ personId: 'b', fullName: 'Alan Turing' }
+			]
+		});
+		expect(error).toMatchObject({
+			status: 409,
+			code: 'assignees_not_members',
+			message: 'Add as members or unassign before moving the task: Ada Lovelace, Alan Turing.'
+		});
 	});
 });

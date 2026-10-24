@@ -1,8 +1,14 @@
 import { z } from 'zod';
 import type { TimelineEntry } from '../../activity';
-import { addComment, addCommentInput, ticketThread, type ThreadItem } from '../../service-desk';
-import { created, defineEndpoint } from '../registry';
-import { refusal } from './refusals';
+import type { CitationRefusal } from '../../links';
+import {
+	addComment,
+	addCommentInput,
+	ticketThread,
+	type AddCommentFailure,
+	type ThreadItem
+} from '../../service-desk';
+import { created, defineEndpoint, refusalTable } from '../registry';
 
 /**
  * A ticket's conversation: comments merged with the events of its history. What
@@ -85,6 +91,22 @@ function threadItemToWire(item: ThreadItem): z.input<typeof threadItem> {
 const VIEW = ['tickets.view', 'tickets.view.own'] as const;
 const tag = z.string().min(1);
 
+/** How the API answers each failure of the thread use cases (ADR 0047). */
+const threadRefusals = refusalTable<'ticket_not_found'>({ ticket_not_found: { as: 'not_found' } });
+
+const NO_INBOUND_ATTACHMENTS = 'The API accepts no inbound attachments.';
+
+const commentRefusals = refusalTable<AddCommentFailure | CitationRefusal>({
+	ticket_not_found: { as: 'not_found' },
+	// An internal note the caller may not write is a note they may not know exists (ADR 0007).
+	internal_not_allowed: { as: 'not_found' },
+	attachments_too_many: { as: 'unreachable', why: NO_INBOUND_ATTACHMENTS },
+	attachments_too_large: { as: 'unreachable', why: NO_INBOUND_ATTACHMENTS },
+	body_too_long: { as: 'field', path: 'body', message: 'The body is too long.' },
+	page_not_public: { as: 'conflict' },
+	page_not_citable: { as: 'conflict' }
+});
+
 export const ticketThreadEndpoint = defineEndpoint({
 	id: 'tickets.thread',
 	method: 'GET',
@@ -93,11 +115,12 @@ export const ticketThreadEndpoint = defineEndpoint({
 	description:
 		"Returns the ticket's conversation, oldest first: comments merged with the events of its history (status changes, assignments...). Internal notes are included only when the key holds `tickets.comment.internal`.",
 	permissions: VIEW,
+	refusalTable: threadRefusals,
 	input: z.object({ tag }),
 	output: z.object({ data: z.array(threadItem) }),
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const outcome = await ticketThread(principal, input.tag);
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return { data: outcome.value.map(threadItemToWire) };
 	}
 });
@@ -112,18 +135,18 @@ export const commentEndpoint = defineEndpoint({
 	example: { body: 'The printer on the second floor is out of toner.', visibility: 'public' },
 	status: 201,
 	permissions: VIEW,
+	refusalTable: commentRefusals,
 	input: addCommentInput.extend({
 		tag,
 		visibility: addCommentInput.shape.visibility.default('public')
 	}),
 	output: z.object({ data: z.object({ id: z.string() }) }),
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const outcome = await addComment(principal, input.tag, {
 			body: input.body,
 			visibility: input.visibility
 		});
-		if (!outcome.ok)
-			throw refusal(typeof outcome.error === 'string' ? outcome.error : outcome.error.kind);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return created({ data: { id: outcome.value.commentId } }, `/tickets/${input.tag}/comments`);
 	}
 });

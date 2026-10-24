@@ -12,25 +12,34 @@ import {
 	moveTaskToProject,
 	unassign,
 	updateTask,
-	updateTaskInput
+	updateTaskInput,
+	type AssignFailure,
+	type CreateTaskFailure,
+	type MoveTaskFailure,
+	type MoveTaskToProjectFailure,
+	type UpdateTaskFailure
 } from '../../projects';
 import { page, pageWindow } from '../../shared/pagination';
-import { conflict, created, defineEndpoint, notFound, Reply, type Endpoint } from '../registry';
+import { created, defineEndpoint, notFound, refusalTable, Reply, type Endpoint } from '../registry';
 import { paginationMetaSchema, toMeta } from '../shared-schemas';
 import {
-	bodyRefusal,
+	conflicting,
+	personNotFound,
 	PROJECT_MANAGE,
 	PROJECT_READS,
+	projectNotFound,
 	projectOf,
 	statePositions,
+	stateNotFound,
 	tag,
+	taskNotFound,
 	taskOf,
 	taskSchema,
 	taskToWire,
 	withReads,
 	writtenTask
 } from './project-wire';
-import { invalidField, refusal } from './refusals';
+import { invalidField } from './refusals';
 import { timelineEntrySchema, timelineToWire } from './timeline-wire';
 
 /**
@@ -43,6 +52,56 @@ import { timelineEntrySchema, timelineToWire } from './timeline-wire';
  */
 
 const taskResponse = z.object({ data: taskSchema });
+
+/** How the API answers each failure of the task write use cases (ADR 0047). */
+const createRefusals = refusalTable<CreateTaskFailure>({
+	project_not_found: projectNotFound,
+	project_archived: conflicting,
+	state_not_found: stateNotFound,
+	duplicate_task_tag: conflicting
+});
+
+const updateRefusals = refusalTable<UpdateTaskFailure>({
+	task_not_found: taskNotFound,
+	project_archived: conflicting,
+	duplicate_task_tag: conflicting
+});
+
+const moveRefusals = refusalTable<MoveTaskFailure>({
+	task_not_found: taskNotFound,
+	project_archived: conflicting,
+	state_not_found: stateNotFound,
+	invalid_neighbours: conflicting
+});
+
+const reparentRefusals = refusalTable<MoveTaskToProjectFailure>({
+	task_not_found: taskNotFound,
+	project_not_found: projectNotFound,
+	project_archived: conflicting,
+	same_project: conflicting,
+	// Moving never grants access (ADR 0042): say who is in the way.
+	assignees_not_members: {
+		as: 'conflict',
+		message: ({ people }) =>
+			`Add as members or unassign before moving the task: ${people.map((person) => person.fullName).join(', ')}.`,
+		describe: 'The target project is members-only and some assignees of the task are not members.'
+	}
+});
+
+const assignRefusals = refusalTable<AssignFailure>({
+	task_not_found: taskNotFound,
+	project_archived: conflicting,
+	person_not_found: personNotFound,
+	not_a_member: conflicting
+});
+
+// The person is addressed in the path here, so an unknown one is a missing page and not a bad field.
+const unassignRefusals = refusalTable<AssignFailure>({
+	task_not_found: taskNotFound,
+	project_archived: conflicting,
+	person_not_found: { as: 'not_found' },
+	not_a_member: conflicting
+});
 
 export const listTasksEndpoint = defineEndpoint({
 	id: 'tasks.list',
@@ -128,19 +187,20 @@ export const createTaskEndpoint = defineEndpoint({
 	path: '/projects/{tag}/tasks',
 	summary: 'Add a task to a project.',
 	description:
-		'Creates a task in the project, at the end of the column of `stateId` or, when omitted, of the first open state. `taskTag` is optional: when omitted the next `TSK-####` is generated (ADR 0010). `description` and `dueDate` (`YYYY-MM-DD`) are optional. Assignees are not part of the body: assign them afterwards, one act per call. Answers `201` with the task and a `Location` header. A tag already in use is `409` (`duplicate_task_tag`); an unknown `stateId` is a `400` on that field; an archived project is `409 project_archived`.',
+		'Creates a task in the project, at the end of the column of `stateId` or, when omitted, of the first open state. `taskTag` is optional: when omitted the next `TSK-####` is generated (ADR 0010). `description` and `dueDate` (`YYYY-MM-DD`) are optional. Assignees are not part of the body: assign them afterwards, one act per call. Answers `201` with the task and a `Location` header.',
 	example: { title: 'Book the van', dueDate: '2026-11-20' },
 	status: 201,
 	permissions: PROJECT_MANAGE,
+	refusalTable: createRefusals,
 	input: createTaskInput.extend({ tag }),
 	output: taskResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const { tag: projectTag, ...values } = input;
 		const project = await projectOf(actor, projectTag);
 
 		const outcome = await createTask(actor, project.id, values);
-		if (!outcome.ok) throw bodyRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 
 		return created(
 			await writtenTask(actor, outcome.value.taskTag),
@@ -155,18 +215,19 @@ export const updateTaskEndpoint = defineEndpoint({
 	path: '/tasks/{tag}',
 	summary: "Edit a task's details.",
 	description:
-		'Edits `title`, `description`, `dueDate` and `taskTag`; every field is optional, and `null` clears the description or the due date. A change of due date is recorded in the history. State, project and assignees have their own endpoints. If `taskTag` changes, the response carries the new tag and a `Location` header; the old URL is `404` from then on, with no redirect. A tag already in use is `409`; a task of an archived project is `409 project_archived`.',
+		'Edits `title`, `description`, `dueDate` and `taskTag`; every field is optional, and `null` clears the description or the due date. A change of due date is recorded in the history. State, project and assignees have their own endpoints. If `taskTag` changes, the response carries the new tag and a `Location` header; the old URL is `404` from then on, with no redirect.',
 	example: { title: 'Book the van for Friday', dueDate: '2026-11-21' },
 	permissions: PROJECT_MANAGE,
+	refusalTable: updateRefusals,
 	input: updateTaskInput.extend({ tag }),
 	output: taskResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const { tag: currentTag, ...changes } = input;
 		const target = await taskOf(actor, currentTag);
 
 		const outcome = await updateTask(actor, target.id, changes);
-		if (!outcome.ok) throw bodyRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 
 		const newTag = changes.taskTag ?? currentTag;
 		const body = await writtenTask(actor, newTag);
@@ -182,16 +243,17 @@ export const moveTaskEndpoint = defineEndpoint({
 	path: '/tasks/{tag}/state',
 	summary: 'Move a task to a state.',
 	description:
-		'Moves the task to the end of the column of `stateId` (take the ids from `GET /states`) and records the change. Setting the state the task already has changes nothing and writes no event. Moving a task into a `completed` state notifies the requesters of the tickets linked to it. Where the task sits between two cards is not part of the API. An unknown `stateId` is a `400` on that field; a task of an archived project is `409 project_archived`.',
+		'Moves the task to the end of the column of `stateId` (take the ids from `GET /states`) and records the change. Setting the state the task already has changes nothing and writes no event. Moving a task into a `completed` state notifies the requesters of the tickets linked to it. Where the task sits between two cards is not part of the API.',
 	example: { stateId: '00000000-0000-4000-8000-000000000000' },
 	permissions: PROJECT_MANAGE,
+	refusalTable: moveRefusals,
 	input: z.object({ tag, stateId: z.uuid() }),
 	output: taskResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await taskOf(actor, input.tag);
 		const outcome = await moveTask(actor, target.id, input.stateId);
-		if (!outcome.ok) throw bodyRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return writtenTask(actor, input.tag);
 	}
 });
@@ -202,29 +264,20 @@ export const reparentTaskEndpoint = defineEndpoint({
 	path: '/tasks/{tag}/project',
 	summary: 'Move a task to another project.',
 	description:
-		"Moves the task to the project `projectTag`, at the end of its state's column there; tag, state, assignees and history stay. A project that does not exist, or that the key cannot see, is a `400` on `projectTag`. The same project is `409 same_project`; an archived source or target is `409 project_archived`. Into a members-only project every assignee of the task must already be a member, otherwise `409 assignees_not_members`.",
+		"Moves the task to the project `projectTag`, at the end of its state's column there; tag, state, assignees and history stay. A project that does not exist, or that the key cannot see, is rejected on `projectTag`. Into a members-only project every assignee of the task must already be a member.",
 	example: { projectTag: 'PRJ-0008' },
 	permissions: PROJECT_MANAGE,
+	refusalTable: reparentRefusals,
 	input: z.object({ tag, projectTag: z.string().min(1) }),
 	output: taskResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const task = await taskOf(actor, input.tag);
 		const target = await getProject(actor, input.projectTag);
 		if (!target.ok) throw invalidField('projectTag', 'Project not found.');
 
 		const outcome = await moveTaskToProject(actor, task.id, target.value.id);
-		if (!outcome.ok) {
-			if (typeof outcome.error === 'object') {
-				// Moving never grants access (ADR 0042): say who is in the way.
-				const names = outcome.error.people.map((person) => person.fullName).join(', ');
-				throw conflict(
-					'assignees_not_members',
-					`Add as members or unassign before moving the task: ${names}.`
-				);
-			}
-			throw refusal(outcome.error);
-		}
+		if (!outcome.ok) throw refuse(outcome.error);
 		return writtenTask(actor, input.tag);
 	}
 });
@@ -235,16 +288,17 @@ export const assignTaskEndpoint = defineEndpoint({
 	path: '/tasks/{tag}/assignees',
 	summary: 'Assign a person to a task.',
 	description:
-		'Adds `personId` to the assignees and answers `200` with the task. Assigning someone already on the task changes nothing and writes no event. One person per call: the list is never replaced as a whole. An unknown `personId` is a `400` on that field; a task of an archived project is `409 project_archived`.',
+		'Adds `personId` to the assignees and answers `200` with the task. Assigning someone already on the task changes nothing and writes no event. One person per call: the list is never replaced as a whole.',
 	example: { personId: '00000000-0000-4000-8000-000000000000' },
 	permissions: PROJECT_MANAGE,
+	refusalTable: assignRefusals,
 	input: z.object({ tag, personId: z.uuid() }),
 	output: taskResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await taskOf(actor, input.tag);
 		const outcome = await assign(actor, target.id, input.personId);
-		if (!outcome.ok) throw bodyRefusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return writtenTask(actor, input.tag);
 	}
 });
@@ -255,15 +309,16 @@ export const unassignTaskEndpoint = defineEndpoint({
 	path: '/tasks/{tag}/assignees/{personId}',
 	summary: 'Take a person off a task.',
 	description:
-		'Removes `personId` from the assignees and answers `200` with the task. Removing someone who is not on the task changes nothing and writes no event. A person that does not exist is `404`; a task of an archived project is `409 project_archived`.',
+		'Removes `personId` from the assignees and answers `200` with the task. Removing someone who is not on the task changes nothing and writes no event.',
 	permissions: PROJECT_MANAGE,
+	refusalTable: unassignRefusals,
 	input: z.object({ tag, personId: z.uuid() }),
 	output: taskResponse,
-	handler: async ({ principal, input }) => {
+	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);
 		const target = await taskOf(actor, input.tag);
 		const outcome = await unassign(actor, target.id, input.personId);
-		if (!outcome.ok) throw refusal(outcome.error);
+		if (!outcome.ok) throw refuse(outcome.error);
 		return writtenTask(actor, input.tag);
 	}
 });
