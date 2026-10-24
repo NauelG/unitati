@@ -198,6 +198,129 @@ describe('the OpenAPI document built from the real registry', () => {
 		});
 	});
 
+	/** The refusal tables of the assets and knowledge endpoints are the source of these responses (ADR 0047). */
+	describe('the error responses derived from the assets and knowledge refusal tables', () => {
+		type Narrowed = {
+			description: string;
+			content: {
+				'application/json': {
+					schema: {
+						allOf: [
+							unknown,
+							{ properties: { error: { properties: { code: { enum: string[] } } } } }
+						];
+					};
+				};
+			};
+		};
+		const codesOf = (response: unknown): string[] =>
+			(response as Narrowed).content['application/json'].schema.allOf[1].properties.error.properties
+				.code.enum;
+		const responsesOf = (path: string, method: string) =>
+			document.paths[path][method].responses as unknown as Record<string, Narrowed>;
+
+		it('lists the exact 409 codes of the asset writes', () => {
+			expect(codesOf(responsesOf('/assets', 'post')['409'])).toEqual([
+				'duplicate_asset_tag',
+				'duplicate_serial'
+			]);
+			expect(codesOf(responsesOf('/assets/{tag}/custody', 'post')['409'])).toEqual([
+				'already_in_custody',
+				'no_delivery_template'
+			]);
+			expect(codesOf(responsesOf('/assets/{tag}/custody', 'delete')['409'])).toEqual([
+				'not_in_custody'
+			]);
+		});
+
+		it('names the body fields a 400 can reject', () => {
+			expect(responsesOf('/assets', 'post')['400'].description).toMatch(
+				/`assetModelId`.*`locationId`/
+			);
+			expect(responsesOf('/assets/{tag}/custody', 'post')['400'].description).toContain(
+				'`personId`'
+			);
+			expect(responsesOf('/assets/{tag}/notes', 'post')['400'].description).toContain('`text`');
+			expect(responsesOf('/pages', 'post')['400'].description).toMatch(
+				/`spaceId`.*`parentTag`.*`body`/
+			);
+		});
+
+		it('stops advertising a 409 on asset writes that cannot conflict', () => {
+			expect(responsesOf('/assets/{tag}/state', 'post')['409']).toBeUndefined();
+			expect(responsesOf('/assets/{tag}/location', 'post')['409']).toBeUndefined();
+			expect(responsesOf('/assets/{tag}/notes', 'post')['409']).toBeUndefined();
+		});
+
+		it('never advertises the waiver failures, which the API cannot reach', () => {
+			const codes = codesOf(responsesOf('/assets/{tag}/custody', 'post')['409']);
+			expect(codes).not.toContain('waive_forbidden');
+			expect(codes).not.toContain('no_assets');
+		});
+
+		it('lists the 409 codes of the page writes, with the details of the keyed ones', () => {
+			expect(codesOf(responsesOf('/pages/{tag}', 'patch')['409'])).toEqual([
+				'archived',
+				'stale_revision'
+			]);
+			expect(responsesOf('/pages/{tag}', 'patch')['409'].description).toContain('`savedAt`');
+			const move = responsesOf('/pages/{tag}/move', 'post')['409'];
+			expect(codesOf(move)).toEqual([
+				'archived',
+				'space_archived',
+				'parent_archived',
+				'cycle',
+				'parent_unpublished',
+				'not_siblings',
+				'confirmation_required',
+				'count_changed'
+			]);
+			expect(move.description).toContain('`subtreeCount`');
+			expect(codesOf(responsesOf('/pages/{tag}/archive', 'post')['404'])).toEqual(['not_found']);
+			expect(responsesOf('/pages/{tag}/archive', 'post')['409']).toBeUndefined();
+			expect(codesOf(responsesOf('/pages/{tag}/archive', 'delete')['409'])).toEqual([
+				'space_archived',
+				'parent_archived'
+			]);
+		});
+
+		it('lists the remaining 409 and 400 enums of the asset and page writes', () => {
+			expect(codesOf(responsesOf('/assets/{tag}', 'patch')['409'])).toEqual([
+				'duplicate_asset_tag',
+				'duplicate_serial'
+			]);
+			expect(responsesOf('/assets/{tag}', 'patch')['400'].description).toContain('`assetModelId`');
+			expect(responsesOf('/assets/{tag}/location', 'post')['400'].description).toContain(
+				'`locationId`'
+			);
+			expect(codesOf(responsesOf('/pages', 'post')['409'])).toEqual([
+				'space_archived',
+				'parent_archived'
+			]);
+			expect(codesOf(responsesOf('/pages/{tag}/publish', 'post')['409'])).toEqual([
+				'archived',
+				'parent_unpublished'
+			]);
+			expect(codesOf(responsesOf('/pages/{tag}/archive', 'delete')['409'])).not.toContain(
+				'not_archived'
+			);
+		});
+
+		it('leaves no error-code prose in the migrated descriptions', () => {
+			for (const operation of operations.map((item) => item.operation)) {
+				if (
+					!/^(assets\.(register|update|custody|state|location|note)|knowledge\.pages\.(create|update|move|publish|archive|unarchive))/.test(
+						operation.operationId
+					)
+				)
+					continue;
+				expect(operation.description, operation.operationId).not.toMatch(
+					/\b(409|400|stale_revision|not_in_custody|no_delivery_template|duplicate_\w+|parent_unpublished)\b/
+				);
+			}
+		});
+	});
+
 	it('takes path parameters, query and body from the input schema', () => {
 		const list = document.paths['/tickets'].get;
 		expect(list.parameters?.map((parameter) => [parameter.name, parameter.in])).toEqual(
