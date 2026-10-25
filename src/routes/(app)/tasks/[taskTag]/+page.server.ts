@@ -5,21 +5,16 @@ import { attachmentFailureMessage } from '#lib/attachment-errors.js';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
-import { listPeople } from '#lib/server/directory/index.js';
-import { relatedTo, taskTimeline, unlinkTask } from '#lib/server/links/index.js';
+import { unlinkTask } from '#lib/server/links/index.js';
+import { taskScreen } from '#lib/server/screens/index.js';
 import {
 	addTaskAttachments,
 	addTaskComment,
-	listTaskComments,
 	fieldsOf,
 	firstField,
 	orNull,
 	rejected,
 	getTask,
-	listProjectMembers,
-	listProjects,
-	listTaskAttachments,
-	listStates,
 	moveTask,
 	moveTaskToProject,
 	readAttachmentForm,
@@ -34,69 +29,21 @@ import {
 	type MoveTaskToProjectFailure,
 	type UpdateTaskFailure
 } from '#lib/server/projects/index.js';
-import { followState } from '#lib/server/notifications/index.js';
 import { followActions } from '../../follow-actions';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
 	const user = requireProjectRead(locals.user);
 
-	const found = await getTask(user, params.taskTag);
-	if (!found.ok) error(404, 'Not found');
-	const task = found.value;
-
-	// An archived project is read-only: its tasks render no write affordance.
-	const canManage = can(user, 'projects.manage') && !task.projectArchived;
-
-	const [attachments, comments] = await Promise.all([
-		listTaskAttachments(user, task.id),
-		listTaskComments(user, task.id)
-	]);
-	if (!attachments.ok || !comments.ok) error(404, 'Not found');
-
-	const [states, people, projects] = canManage
-		? await Promise.all([listStates(user), listPeople(user.organisationId), listProjects(user)])
-		: [[], [], []];
-
-	// On a members-only project only its members can be put on the task (ADR 0042),
-	// so the picker offers nobody else; the domain refuses the rest regardless.
-	const members =
-		canManage && task.projectVisibility === 'members'
-			? await listProjectMembers(user, task.projectId)
-			: null;
-	const listed = members?.ok ? new Set(members.value.map((member) => member.personId)) : null;
-	const assignable = listed ? people.filter((person) => listed.has(person.id)) : people;
+	const screen = await taskScreen(user, params.taskTag);
+	if (!screen.ok) error(404, 'Not found');
+	const { value } = screen;
 
 	return {
-		task,
-		descriptionHtml: renderMarkdown(task.description ?? ''),
-		canManage,
-		follow: await followState(user, { taskId: task.id }),
-		attachments: attachments.value,
-		comments: comments.value,
-		states: states.map(({ id, name, group }) => ({ id, name, group })),
-		people: assignable
-			.filter((person) => person.active)
-			.map(({ id, fullName }) => ({ id, fullName })),
-		// The destinations of "Mover a proyecto": active, in scope, and not this one.
-		projects: projects
-			.filter((project) => project.id !== task.projectId)
-			.map(({ id, projectTag, name }) => ({ id, projectTag, name })),
-		// Unlinking concerns the ticket, not the project: it asks for
-		// `tickets.manage`, and an archived project does not take it away (#151).
-		canUnlink: can(user, 'tickets.manage'),
-		// Streamed: nothing above waits for the history. The live half — the
-		// tickets linked to this task, with the status they have today — is merged
-		// in at read time and writes nothing on the task (ADR 0009).
-		timelineRail: timelineRailOf(user, task.id)
+		...value,
+		descriptionHtml: renderMarkdown(value.task.description ?? '')
 	};
 };
-
-async function timelineRailOf(user: SessionUser, taskId: string) {
-	const related = await relatedTo(user, { kind: 'task', id: taskId });
-
-	return { timeline: await taskTimeline(user, taskId, related), related };
-}
 
 /** The task an action targets. Gone, or out of the viewer's scope, reads as missing. */
 async function targetOf(user: SessionUser, taskTag: string) {

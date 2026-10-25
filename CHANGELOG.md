@@ -6,6 +6,15 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.0.1] - 2026-10-25
+
+### Changed
+
+- The task page's read policy moved out of its route into `src/lib/server/screens/` (ADR 0049,
+  #360). `taskScreen` splits the old `canManage` into the acts the controls perform (edit, change
+  state, assign, move, comment, attach) and keeps unlinking a ticket open on an archived project.
+  The page reads `data.may.<act>`. No visible behaviour changes.
+
 ## [1.0.0] - 2026-10-24
 
 ### Added

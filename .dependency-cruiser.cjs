@@ -33,7 +33,7 @@
 //
 // Module classes (ADR 0048):
 //   business:       assets, service-desk, projects, knowledge, links, directory,
-//                   activity, notifications, imports, search, api, seed
+//                   activity, notifications, imports, search, api, seed, screens
 //   infrastructure: auth, access, db, shared, settings
 //   root files of src/lib/server/ (subscriptions.ts) are composition code and
 //   follow the rules for code outside a module.
@@ -52,7 +52,8 @@ const BUSINESS = [
 	'imports',
 	'search',
 	'api',
-	'seed'
+	'seed',
+	'screens'
 ];
 const INFRASTRUCTURE = ['auth', 'access', 'db', 'shared', 'settings'];
 
@@ -195,6 +196,15 @@ module.exports = {
 			severity: 'error',
 			from: { path: `${SERVER}/directory/`, pathNot: SPEC_OR_TESTING },
 			to: { path: `${SERVER}/${BIZ}/`, pathNot: [`${SERVER}/(?:directory|activity)/`] }
+		},
+
+		{
+			name: 'screens-are-a-leaf',
+			comment:
+				'ADR 0049 rule 9: screens/ composes the record reads of the app and only app routes import it. No other server module, the API included, depends on it.',
+			severity: 'error',
+			from: { path: `${SERVER}/`, pathNot: [`${SERVER}/screens/`] },
+			to: { path: `${SERVER}/screens/` }
 		},
 
 		// ---------------------------------------------------------------- 5 --

@@ -15,7 +15,7 @@ import { linkTicketToTask, relatedTo } from '#lib/server/links/index.js';
 import { createQueue, createTicket } from '#lib/server/service-desk/testing/fixtures.js';
 import { getDb } from '#lib/server/db/index.js';
 import { projectMembers, projects } from '#lib/server/projects/schema.js';
-import { actions, load } from './+page.server';
+import { actions } from './+page.server';
 
 async function setup() {
 	const workspace = await createWorkspace();
@@ -242,19 +242,6 @@ describe('unlinking a ticket from a task record', () => {
 		expect(returned).toMatchObject({ action: 'unlinkTicket' });
 		expect(await relatedTo(technician, { kind: 'task', id: task.id })).toEqual([]);
 	});
-
-	it('shows the assigned employee only their own tickets', async () => {
-		const { employee, technician, organisation, queue, task, ticket } = await linked();
-		const colleague = await createViewer(organisation.id, 'employee', 'Colleague');
-		const theirs = await createTicket(organisation.id, queue.id, colleague.personId!, {
-			subject: 'Not yours'
-		});
-		await linkTicketToTask(technician, { ticketId: theirs.id, taskId: task.id });
-
-		const groups = await relatedTo(employee, { kind: 'task', id: task.id });
-
-		expect(groups.flatMap((group) => group.items.map((item) => item.ref.id))).toEqual([ticket.id]);
-	});
 });
 
 describe('a task of a members-only project', () => {
@@ -291,26 +278,5 @@ describe('a task of a members-only project', () => {
 			action: 'setAssignees',
 			message: expect.stringContaining('miembro')
 		});
-	});
-
-	it('offers only the members in the assignee picker', async () => {
-		const { technician, member, outsider, params } = await closedSetup();
-
-		const data = (await load({
-			locals: { user: technician },
-			params
-		} as never)) as { people: { id: string }[] };
-
-		const ids = data.people.map((person) => person.id);
-		expect(ids).toContain(member.personId);
-		expect(ids).not.toContain(outsider.personId);
-	});
-
-	it('answers 404 to a technician who is not a member', async () => {
-		const { outsider, params } = await closedSetup();
-
-		const { thrown } = await outcomeOf(() => load({ locals: { user: outsider }, params } as never));
-
-		expect(thrown?.status).toBe(404);
 	});
 });
