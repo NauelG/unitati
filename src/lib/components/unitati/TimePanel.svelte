@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
-	import { decimalHours, formatMinutes } from '#lib/domain/time.js';
+	import { decimalHours, formatMinutes, suggestedMinutes } from '#lib/domain/time.js';
 	import { m } from '#lib/paraglide/messages.js';
 	import Button from './Button.svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
@@ -42,11 +42,14 @@
 		canLog: boolean;
 		/** A refusal of one of the three actions, placed in the open form. */
 		error?: string | null;
-		/** What the timer's stop prefills; opens the form on mount. */
-		prefill?: { minutes: number; action?: string } | null;
+		/** The viewer's running timer; `here` when it counts on this record. */
+		timer?: { startedAt: string; here: boolean; tag: string; href: string } | null;
 	}
 
-	let { entries, totalMinutes, types, canLog, error = null, prefill = null }: Props = $props();
+	let { entries, totalMinutes, types, canLog, error = null, timer = null }: Props = $props();
+
+	/** The form is the timer's stop (prefilled, saved or cancelled) rather than a plain entry. */
+	let stopping = $state(false);
 
 	const defaultTypeId = $derived(types.find((type) => type.isDefault)?.id ?? types[0]?.id ?? null);
 
@@ -69,6 +72,7 @@
 
 	function openCreate(minutes?: number) {
 		editing = null;
+		stopping = false;
 		duration = minutes ? formatMinutes(minutes) : '';
 		workDate = today();
 		typeId = defaultTypeId;
@@ -76,23 +80,22 @@
 		open = true;
 	}
 
+	/** Stopping opens the form with the elapsed time, rounded to the minute (minimum 1). */
+	function openStop() {
+		if (!timer) return;
+		openCreate(suggestedMinutes(new Date(timer.startedAt), new Date()));
+		stopping = true;
+	}
+
 	function openEdit(row: TimeEntryRow) {
 		editing = row;
+		stopping = false;
 		duration = formatMinutes(row.minutes);
 		workDate = row.workDate;
 		typeId = row.typeId;
 		note = row.note ?? '';
 		open = true;
 	}
-
-	// Stopping a timer lands here with the elapsed time already typed in.
-	let prefilled = false;
-	$effect(() => {
-		if (prefill && !prefilled) {
-			prefilled = true;
-			openCreate(prefill.minutes);
-		}
-	});
 
 	const typeOptions = $derived.by(() => {
 		const offered = types.map((type) => ({ value: type.id, label: type.name }));
@@ -111,6 +114,33 @@
 			</Button>
 		{/if}
 	{/snippet}
+
+	{#if canLog || timer}
+		<div class="mb-[var(--space-3)] text-sm">
+			{#if timer?.here}
+				<p class="m-0 mb-[var(--space-2)] text-[var(--ink-muted)]">
+					{m.time_timer_running_here({
+						time: new Date(timer.startedAt).toLocaleTimeString([], {
+							hour: '2-digit',
+							minute: '2-digit'
+						})
+					})}
+				</p>
+				<Button size="sm" onclick={openStop}>{m.time_timer_stop()}</Button>
+			{:else if timer}
+				<p class="m-0 text-[var(--ink-muted)]">
+					{m.time_timer_running_elsewhere({ tag: timer.tag })}
+					<a class="text-[var(--brand)] hover:underline" href={timer.href}>
+						{m.time_timer_go_to({ tag: timer.tag })}
+					</a>
+				</p>
+			{:else if canLog}
+				<form method="POST" action="?/startTimer" use:enhance>
+					<Button type="submit" size="sm" variant="secondary">{m.time_timer_start()}</Button>
+				</form>
+			{/if}
+		</div>
+	{/if}
 
 	<p class="m-0 text-sm text-[var(--ink-muted)]" data-testid="time-total">
 		{m.time_panel_total({
@@ -201,11 +231,15 @@
 <Dialog
 	{open}
 	onOpenChange={(next) => (open = next)}
-	title={editing ? m.time_panel_edit_title() : m.time_panel_log()}
+	title={editing
+		? m.time_panel_edit_title()
+		: stopping
+			? m.time_timer_stop_title()
+			: m.time_panel_log()}
 >
 	<form
 		method="POST"
-		action={editing ? '?/editTime' : (prefill?.action ?? '?/logTime')}
+		action={editing ? '?/editTime' : stopping ? '?/saveTimer' : '?/logTime'}
 		use:enhance={() => {
 			saving = true;
 			return async ({ result, update }) => {
@@ -242,9 +276,16 @@
 		{/if}
 
 		<div class="flex justify-end gap-[var(--space-2)]">
-			<Button type="button" variant="ghost" size="sm" onclick={() => (open = false)}>
-				{m.form_cancel()}
-			</Button>
+			{#if stopping}
+				<!-- Cancelling the stop form discards the timer (ADR 0051). -->
+				<Button type="submit" variant="ghost" size="sm" formaction="?/discardTimer" formnovalidate>
+					{m.time_timer_discard()}
+				</Button>
+			{:else}
+				<Button type="button" variant="ghost" size="sm" onclick={() => (open = false)}>
+					{m.form_cancel()}
+				</Button>
+			{/if}
 			<Button type="submit" size="sm" busy={saving}>{m.catalogue_save()}</Button>
 		</div>
 	</form>

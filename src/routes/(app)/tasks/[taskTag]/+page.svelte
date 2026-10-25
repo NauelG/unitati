@@ -38,7 +38,11 @@
 
 	/** A refusal of one of the Time section's actions, placed in its form. */
 	const timeError = $derived(
-		form && ['logTime', 'editTime', 'deleteTime'].includes(form.action) && 'message' in form
+		form &&
+			['logTime', 'editTime', 'deleteTime', 'startTimer', 'saveTimer', 'discardTimer'].includes(
+				form.action
+			) &&
+			'message' in form
 			? String(form.message)
 			: null
 	);
@@ -408,6 +412,7 @@
 				totalMinutes={data.time.totalMinutes}
 				types={data.time.types}
 				canLog={data.time.canLog}
+				timer={data.time.timer}
 				error={timeError}
 			/>
 		{/if}

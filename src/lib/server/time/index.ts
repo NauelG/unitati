@@ -33,3 +33,6 @@ export type {
 
 export { projectTime } from './totals';
 export type { ProjectTime } from './totals';
+
+export { startTimer, getRunningTimer, saveTimer, discardTimer } from './timers';
+export type { SaveTimerFailure, StartTimerFailure, TimerView } from './timers';

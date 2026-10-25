@@ -2092,5 +2092,16 @@
 	"time_error_not_found": "Ese registro ya no existe.",
 	"time_error_stale": "El registro cambió mientras lo editabas.",
 
-	"time_project_empty": "Ninguna tarea del proyecto tiene tiempo registrado."
+	"time_project_empty": "Ninguna tarea del proyecto tiene tiempo registrado.",
+
+	"time_error_timer_running": "Ya tienes un cronómetro en marcha.",
+	"time_error_no_timer": "No hay ningún cronómetro en marcha.",
+	"time_timer_start": "Iniciar cronómetro",
+	"time_timer_stop": "Parar cronómetro",
+	"time_timer_running_here": "Cronómetro en marcha desde las {time}.",
+	"time_timer_running_elsewhere": "Tienes un cronómetro en marcha en {tag}.",
+	"time_timer_go_to": "Ir a {tag}",
+	"time_timer_stop_title": "Guardar el tiempo del cronómetro",
+	"time_timer_discard": "Descartar cronómetro",
+	"time_shell_timer": "Cronómetro en marcha en {tag}: {elapsed}"
 }

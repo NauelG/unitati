@@ -20,6 +20,7 @@
 	} from '#lib/components/unitati/app-shell-nav.js';
 	import Tooltip from '#lib/components/unitati/Tooltip.svelte';
 	import NotificationBell from '#lib/components/unitati/NotificationBell.svelte';
+	import RunningTimer from '#lib/components/unitati/RunningTimer.svelte';
 	import UserMenu from '#lib/components/unitati/UserMenu.svelte';
 	import { Toaster } from '#lib/components/ui/sonner/index.js';
 	import {
@@ -174,6 +175,9 @@
 	settings={showSettings ? settingsLink : undefined}
 >
 	{#snippet topbarEnd()}
+		{#if data.timer}
+			<RunningTimer {...data.timer} />
+		{/if}
 		<NotificationBell count={data.unreadNotifications} inboxHref="/notifications" />
 		<UserMenu name={data.user.name} email={data.user.email} />
 	{/snippet}

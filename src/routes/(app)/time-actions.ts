@@ -4,15 +4,20 @@ import { m } from '#lib/paraglide/messages.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 import {
 	deleteEntry,
+	discardTimer,
 	editEntry,
 	logTime,
+	saveTimer,
+	startTimer,
 	type EditFailure,
 	type TimeTarget
 } from '#lib/server/time/index.js';
 import { fieldsOf, rejected } from './assets/form-data';
 
 /** What the person is told for each refusal of a time write. */
-export function timeFailureMessage(failure: EditFailure): string {
+export function timeFailureMessage(
+	failure: EditFailure | 'timer_already_running' | 'no_timer'
+): string {
 	const key = typeof failure === 'string' ? failure : failure.kind;
 	switch (key) {
 		case 'time_tracking_disabled':
@@ -34,6 +39,10 @@ export function timeFailureMessage(failure: EditFailure): string {
 			return m.time_error_not_found();
 		case 'stale_revision':
 			return m.time_error_stale();
+		case 'timer_already_running':
+			return m.time_error_timer_running();
+		case 'no_timer':
+			return m.time_error_no_timer();
 		default:
 			return m.time_error_forbidden();
 	}
@@ -97,6 +106,34 @@ export function timeActions<
 			const outcome = await editEntry(read_.user, id, read_.input);
 			if (!outcome.ok) return rejected('editTime', timeFailureMessage(outcome.error));
 			return { action: 'editTime' as const };
+		},
+
+		startTimer: async (event: Event) => {
+			const user = requireViewer(event.locals.user);
+			const target = await resolve(user, event);
+			if (!target) error(404, 'Not found');
+
+			const outcome = await startTimer(user, target);
+			if (!outcome.ok) return rejected('startTimer', timeFailureMessage(outcome.error));
+			return { action: 'startTimer' as const };
+		},
+
+		/** Stopping, saved: the form's values become the entry and the timer goes. */
+		saveTimer: async (event: Event) => {
+			const read_ = await read(event, 'saveTimer');
+			if ('rejection' in read_) return read_.rejection;
+
+			const outcome = await saveTimer(read_.user, read_.input);
+			if (!outcome.ok) return rejected('saveTimer', timeFailureMessage(outcome.error));
+			return { action: 'saveTimer' as const };
+		},
+
+		/** Stopping, cancelled: the timer is discarded and nothing is logged. */
+		discardTimer: async (event: Event) => {
+			const user = requireViewer(event.locals.user);
+			const outcome = await discardTimer(user);
+			if (!outcome.ok) error(403, 'Forbidden');
+			return { action: 'discardTimer' as const };
 		},
 
 		deleteTime: async (event: Event) => {

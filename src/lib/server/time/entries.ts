@@ -77,7 +77,7 @@ function validDay(value: string): boolean {
 	return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
 }
 
-function checkValues(input: EntryInput, clock: Clock): EntryFailure | null {
+export function checkValues(input: EntryInput, clock: Clock): EntryFailure | null {
 	if (!Number.isInteger(input.minutes) || input.minutes < 1 || input.minutes > MAX_ENTRY_MINUTES) {
 		return 'invalid_minutes';
 	}
@@ -95,7 +95,7 @@ const cleanNote = (note: string | null | undefined) => {
 };
 
 /** The gate every write shares: `time.log`, a person to author as, tracking on. */
-async function gate(actor: SessionUser): Promise<EntryFailure | null> {
+export async function gate(actor: SessionUser): Promise<EntryFailure | null> {
 	if (!can(actor, 'time.log') || actor.personId === null) return 'forbidden';
 	if (!(await isTimeTrackingEnabled(actor.organisationId))) return 'time_tracking_disabled';
 	return null;
@@ -170,42 +170,54 @@ export async function logTime(
 	if (refused) return failure(refused);
 	const invalid = checkValues(input, clock);
 	if (invalid) return failure(invalid);
+
+	return getDb().transaction((tx) => insertEntry(tx, actor, target, input));
+}
+
+/**
+ * The write of a new entry and its history, inside the caller's transaction:
+ * what `logTime` and saving a stopped timer (`timers.ts`) have in common. The
+ * values and the gate are checked by the caller.
+ */
+export async function insertEntry(
+	tx: Transaction,
+	actor: SessionUser,
+	target: TimeTarget,
+	input: EntryInput
+): Promise<Outcome<{ id: string }, EntryFailure>> {
 	const personId = actor.personId!;
+	const blocked = await checkTarget(tx, actor.organisationId, target);
+	if (blocked) return failure(blocked);
+	const type = await offeredType(tx, actor.organisationId, input.typeId);
+	if (!type) return failure('invalid_type');
 
-	return getDb().transaction(async (tx) => {
-		const blocked = await checkTarget(tx, actor.organisationId, target);
-		if (blocked) return failure(blocked);
-		const type = await offeredType(tx, actor.organisationId, input.typeId);
-		if (!type) return failure('invalid_type');
-
-		const [entry] = await tx
-			.insert(timeEntries)
-			.values({
-				organisationId: actor.organisationId,
-				...targetColumns(target),
-				personId,
-				typeId: type.id,
-				minutes: input.minutes,
-				workDate: input.workDate,
-				note: cleanNote(input.note)
-			})
-			.returning({ id: timeEntries.id });
-
-		await recordActivity(tx, {
+	const [entry] = await tx
+		.insert(timeEntries)
+		.values({
 			organisationId: actor.organisationId,
-			...actorColumns(actor),
-			target: targetColumns(target),
-			verb: 'time.logged',
-			payload: {
-				authorPersonId: personId,
-				authorName: await nameOf(tx, personId),
-				typeName: type.name,
-				minutes: input.minutes,
-				workDate: input.workDate
-			}
-		});
-		return success(entry);
+			...targetColumns(target),
+			personId,
+			typeId: type.id,
+			minutes: input.minutes,
+			workDate: input.workDate,
+			note: cleanNote(input.note)
+		})
+		.returning({ id: timeEntries.id });
+
+	await recordActivity(tx, {
+		organisationId: actor.organisationId,
+		...actorColumns(actor),
+		target: targetColumns(target),
+		verb: 'time.logged',
+		payload: {
+			authorPersonId: personId,
+			authorName: await nameOf(tx, personId),
+			typeName: type.name,
+			minutes: input.minutes,
+			workDate: input.workDate
+		}
 	});
+	return success(entry);
 }
 
 /** The entry, locked, with the record it is on; absent for another organisation's. */
