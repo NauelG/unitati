@@ -6,6 +6,16 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.0.4] - 2026-10-25
+
+### Changed
+
+- The asset page's read policy moved out of its route into `assetScreen` (ADR 0049, #360). `may`
+  names the acts `assets.manage` and `assets.checkout` gate, with the full/shared union and the
+  archived state already applied (deliver only while nobody holds the asset, take-back only while
+  somebody does), plus `waiveHandover` and `linkTickets`. The pickers and the model catalogues load
+  only when the act they serve is allowed. No visible behaviour changes.
+
 ## [1.0.3] - 2026-10-25
 
 ### Changed

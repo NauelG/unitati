@@ -4,28 +4,18 @@ import { zod4 } from 'sveltekit-superforms/adapters';
 import { z } from 'zod';
 import { attachmentFailureMessage } from '#lib/attachment-errors.js';
 import { ASSET_READ_PERMISSIONS } from '#lib/domain/access.js';
-import { HANDOVER_STATES } from '#lib/domain/handover.js';
 import { ASSET_STATES } from '#lib/domain/status.js';
 import { m } from '#lib/paraglide/messages.js';
-import { can } from '#lib/server/access/permissions.js';
 import {
 	addAssetAttachments,
 	addAssetComment,
-	assetTimeline,
-	listAssetComments,
-	custodyHandover,
 	deliver,
-	listAssetAttachments,
-	listAssetsHeldBy,
-	listHandovers,
-	listDeliverableAssets,
 	signingLinkQr,
 	archiveAsset,
 	unarchiveAsset,
 	changeLocation,
 	changeState,
 	getAssetByTag,
-	listAssetModels,
 	readAssetAttachmentForm,
 	removeAssetAttachment,
 	WAIVE_REASON_MAX,
@@ -36,105 +26,24 @@ import {
 	requirePermission,
 	type SessionUser
 } from '#lib/server/auth/guards.js';
-import { listLocations, listPeople } from '#lib/server/directory/index.js';
-import {
-	linkTicketAssets,
-	mergeAssetTimeline,
-	RECENT_MONTHS,
-	recentTicketCount,
-	assetRelations,
-	relatedTo,
-	requestedCategory,
-	unlinkAsset,
-	type AssetTimelineItem,
-	type AssetRelatedGroup
-} from '#lib/server/links/index.js';
-import { getTicketByTag } from '#lib/server/service-desk/index.js';
-import { emptyModelForm, modelCatalogues } from '../create-model.server';
+import { linkTicketAssets, unlinkAsset } from '#lib/server/links/index.js';
+import { assetScreen } from '#lib/server/screens/index.js';
+import { emptyModelForm } from '../create-model.server';
 import { editAssetForm } from '../forms';
 import { fieldsOf, rejected } from '../form-data';
 import { takeBackAction } from '../take-back-action';
 import { ticketLinkFor } from '../ticket-link';
 import type { Actions, PageServerLoad } from './$types';
 
-/**
- * The timeline rail (#89): the slowest read on this page and the one with
- * nothing else depending on it, so it streams — returned unawaited by
- * `load` below, resolved by `+page.svelte`'s `{#await}` behind a
- * `TimelineSkeleton` that matches the real rail's geometry (no CLS).
- */
-async function timelineRailOf(
-	user: SessionUser,
-	tag: string,
-	asset: { visibility: 'full' | 'shared'; id?: string }
-): Promise<{
-	timeline: AssetTimelineItem[] | null;
-	recentTickets: number;
-	/** The same `relatedTo` answer the timeline was merged from, for the constellation: no second query. */
-	related: AssetRelatedGroup[];
-}> {
-	// Gated separately inside the domain: holding `assets.view.shared` shows a
-	// shared asset's name and place, and explicitly not its history (ADR 0007).
-	const history = await assetTimeline(user, tag);
-
-	// The live half of the rail: tickets raised on this machine, with the status
-	// they have today. Asked only when the history itself is visible, and
-	// `relatedTo` withholds tickets from anybody without `tickets.view`.
-	const related =
-		history.ok && asset.visibility === 'full' && asset.id
-			? assetRelations(await relatedTo(user, { kind: 'asset', id: asset.id }))
-			: [];
-	return {
-		timeline: history.ok ? mergeAssetTimeline(history.value, related) : null,
-		recentTickets: recentTicketCount(related, new Date()),
-		related
-	};
-}
-
 export const load: PageServerLoad = async ({ locals, params, url }) => {
 	const user = requireAnyPermission(locals.user, ASSET_READ_PERMISSIONS);
 
-	const found = await getAssetByTag(user, params.tag);
-	if (!found.ok) error(404, 'Not found');
-	const asset = found.value;
-
-	const canManage = can(user, 'assets.manage');
-	const canCheckout = can(user, 'assets.checkout');
-
-	// Same gate as the history: a shared-asset visitor reads neither.
-	const comments = await listAssetComments(user, params.tag);
-
-	// The pickers feed the action forms, which only a person who can act sees.
-	const [people, locations] =
-		asset.visibility === 'full' && (canManage || canCheckout)
-			? await Promise.all([listPeople(user.organisationId), listLocations(user.organisationId)])
-			: [[], []];
-	// Coming from a ticket (#279): the dialogs preselect it and its requester.
-	// Only for someone who may link, and only a ticket they can read.
-	const ticketTag = url.searchParams.get('ticket');
-	const fromTicket =
-		ticketTag && canCheckout && can(user, 'tickets.manage')
-			? await getTicketByTag(user, ticketTag.trim().toUpperCase())
-			: null;
-	// An equipment request narrows the picker to the category it asked for (#271);
-	// the technician can still deliver anything from the asset's own page.
-	const requested =
-		fromTicket?.ok && fromTicket.value.requestFormId
-			? await requestedCategory(user.organisationId, fromTicket.value.id)
-			: null;
-	// What the delivery dialog can offer: only for someone who can hand an asset over.
-	const deliverable =
-		asset.visibility === 'full' && canCheckout && asset.custodianPersonId === null
-			? await listDeliverableAssets(
-					user.organisationId,
-					undefined,
-					requested ? { categoryId: requested.id } : {}
-				)
-			: [];
-	const heldAssets =
-		asset.visibility === 'full' && canCheckout && asset.custodianPersonId
-			? await listAssetsHeldBy(user.organisationId, asset.custodianPersonId)
-			: [];
+	const screen = await assetScreen(user, params.tag, {
+		fromTicket: url.searchParams.get('ticket')
+	});
+	if (!screen.ok) error(404, 'Not found');
+	const { value } = screen;
+	const { asset } = value;
 
 	// The contextual edit `Sheet` (ADR 0020) reuses `/assets/[tag]/edit`'s own
 	// form shape and action. `superValidate` runs unconditionally — it is a
@@ -144,14 +53,9 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 	// validation schema: that schema lives under `#lib/server/`, and
 	// importing it into a `+page.svelte` leaks server-only code into the
 	// client bundle (caught only by `npm run build`, not `svelte-check`).
-	// The model catalogue stays gated on `editable`: it is a real DB call,
-	// and only a manager viewing a non-shared row ever renders the Sheet
-	// that needs it.
-	const editable = asset.visibility === 'full' && canManage;
 	// `asset` is `FullAssetView | SharedAssetView`: only the full view carries
 	// `serial`/`assetModelId`/`shared`, so the seed narrows on `visibility`
-	// explicitly rather than relying on `editable` (which `superValidate`
-	// itself, called unconditionally below, cannot see).
+	// explicitly.
 	const editSeed =
 		asset.visibility === 'full'
 			? {
@@ -168,61 +72,12 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 					assetModelId: '',
 					shared: false
 				};
-	// Staff only: an employee holding the asset sees their own handovers in the portal.
-	const [handovers, custody] =
-		asset.visibility === 'full' && can(user, 'assets.view')
-			? await Promise.all([
-					listHandovers(user, { assetId: asset.id, states: [...HANDOVER_STATES] }),
-					custodyHandover(user, { id: asset.id, custodianPersonId: asset.custodianPersonId })
-				])
-			: [null, null];
-	// Invoices and warranties follow the serial's rule: whole-row viewers only.
-	const attachments =
-		asset.visibility === 'full' && can(user, 'assets.view')
-			? await listAssetAttachments(user, asset.id)
-			: null;
-	const [editForm, editModels, modelForm, catalogues] = await Promise.all([
+	const [editForm, modelForm] = await Promise.all([
 		superValidate(editSeed, zod4(editAssetForm)),
-		editable ? listAssetModels(user.organisationId) : Promise.resolve([]),
-		emptyModelForm(),
-		editable ? modelCatalogues(user) : Promise.resolve({ manufacturers: [], categories: [] })
+		emptyModelForm()
 	]);
 
-	return {
-		asset,
-		comments: comments.ok ? comments.value : null,
-		fromTicket: fromTicket?.ok
-			? {
-					tag: fromTicket.value.ticketTag,
-					requesterPersonId: fromTicket.value.requesterPersonId
-				}
-			: null,
-		// Unawaited on purpose (#89): SvelteKit streams this to the client as a
-		// promise, resolved by `+page.svelte`'s `{#await}` behind a skeleton.
-		timelineRail: timelineRailOf(user, params.tag, {
-			visibility: asset.visibility,
-			id: asset.visibility === 'full' ? asset.id : undefined
-		}),
-		recentMonths: RECENT_MONTHS,
-		canManage,
-		canCheckout,
-		// Only offered inside the delivery dialog, so it needs `assets.checkout` too (ADR 0035, decision 8).
-		canWaiveHandover: canCheckout && can(user, 'assets.handover.waive'),
-		waiveReasonMax: WAIVE_REASON_MAX,
-		// Links are written on the ticket, so the ticket permission decides (#168).
-		canLinkTickets: asset.visibility === 'full' && can(user, 'tickets.manage'),
-		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
-		locations,
-		deliverable,
-		heldAssets,
-		handovers,
-		custody,
-		attachments: attachments?.ok ? attachments.value : null,
-		editForm,
-		editModels,
-		modelForm,
-		...catalogues
-	};
+	return { ...value, editForm, modelForm };
 };
 
 /**

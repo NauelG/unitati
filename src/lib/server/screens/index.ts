@@ -8,3 +8,5 @@ export { projectScreen } from './project';
 export type { ProjectChoices, ProjectMay, ProjectScreen } from './project';
 export { ticketScreen } from './ticket';
 export type { TicketChoices, TicketMay, TicketScreen } from './ticket';
+export { assetScreen } from './asset';
+export type { AssetChoices, AssetContext, AssetMay, AssetRail, AssetScreen } from './asset';

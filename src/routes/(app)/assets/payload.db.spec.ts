@@ -47,11 +47,9 @@ interface ListData {
 interface DetailData {
 	asset: AssetView;
 	/** Unawaited by `load` (#89, streaming): the rail resolves after the critical payload above. */
-	timelineRail: Promise<{ timeline: unknown[] | null; recentTickets: number }>;
-	canManage: boolean;
-	canCheckout: boolean;
-	people: unknown[];
-	locations: unknown[];
+	rail: Promise<{ timeline: unknown[] | null; recentTickets: number }>;
+	may: Record<string, boolean>;
+	choices: { people: unknown[]; locations: unknown[] };
 }
 
 const loaded = async <T>(run: unknown): Promise<T> => (await run) as T;
@@ -149,7 +147,7 @@ describe('the page an employee is sent for one asset', () => {
 			'name',
 			'visibility'
 		]);
-		expect((await data.timelineRail).timeline).toBeNull();
+		expect((await data.rail).timeline).toBeNull();
 		expect(JSON.stringify(data)).not.toContain('SECRET-PRINTER-SERIAL');
 	});
 
@@ -159,7 +157,7 @@ describe('the page an employee is sent for one asset', () => {
 		const data = await loaded<DetailData>(loadDetail(detailEvent(eva, 'AST-0002')));
 
 		expect(data.asset).toMatchObject({ visibility: 'full', serial: 'EVA-OWN-SERIAL' });
-		expect((await data.timelineRail).timeline).not.toBeNull();
+		expect((await data.rail).timeline).not.toBeNull();
 	});
 
 	it('is a 404 for somebody else’s equipment, as if it did not exist', async () => {
@@ -174,10 +172,9 @@ describe('the page an employee is sent for one asset', () => {
 
 		const data = await loaded<DetailData>(loadDetail(detailEvent(eva, 'AST-0002')));
 
-		expect(data.canManage).toBe(false);
-		expect(data.canCheckout).toBe(false);
-		expect(data.people).toEqual([]);
-		expect(data.locations).toEqual([]);
+		expect(Object.values(data.may).some(Boolean)).toBe(false);
+		expect(data.choices.people).toEqual([]);
+		expect(data.choices.locations).toEqual([]);
 	});
 });
 
