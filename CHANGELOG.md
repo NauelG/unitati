@@ -6,6 +6,19 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.1.0] - 2026-10-25
+
+### Added
+
+- Staff can follow a knowledge page (ADR 0051, #330). Followers are told, as "followed activity"
+  (email off by default), when the page is published, saved, restored, archived, unarchived or
+  commented, but not when it is moved or reordered. Archiving or unarchiving a page with subpages
+  sends one notification per follower, about the root page. A save or restore leads to that
+  revision.
+- The creator of a page, whoever saves or restores a revision, whoever comments and whoever a
+  comment mentions follow it automatically (only staff with `knowledge.manage`; no backfill).
+- A follow control in the page header. Unfollowing works from the notification and from the email.
+
 ## [1.0.2] - 2026-10-25
 
 ### Changed
