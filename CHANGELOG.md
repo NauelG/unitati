@@ -6,43 +6,20 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
-## [1.0.4] - 2026-10-25
-
-### Changed
-
-- The asset page's read policy moved out of its route into `assetScreen` (ADR 0049, #360). `may`
-  names the acts `assets.manage` and `assets.checkout` gate, with the full/shared union and the
-  archived state already applied (deliver only while nobody holds the asset, take-back only while
-  somebody does), plus `waiveHandover` and `linkTickets`. The pickers and the model catalogues load
-  only when the act they serve is allowed. No visible behaviour changes.
-
-## [1.0.3] - 2026-10-25
-
-### Changed
-
-- The ticket page's read policy moved out of its route into `ticketScreen` (ADR 0049, #360).
-  `may` names the acts `tickets.manage` gates, plus `deliver`, `commentInternal`, `escalate` and
-  `escalateCreate`, and the pickers (queues, people, assets in stock for a request) load only when
-  the act they serve is allowed. No visible behaviour changes.
-
-## [1.0.2] - 2026-10-25
-
-### Changed
-
-- The project page's read policy moved out of its route into `projectScreen` (ADR 0049, #360).
-  `may` keeps archiving, unarchiving and unlinking apart from the writable acts, and the page reads
-  `data.may.<act>` instead of recombining the permission with `archivedAt`. While an archive or
-  unarchive is in flight the write controls now follow the server's answer instead of flipping with
-  the optimistic mirror.
-
 ## [1.0.1] - 2026-10-25
 
 ### Changed
 
-- The task page's read policy moved out of its route into `src/lib/server/screens/` (ADR 0049,
-  #360). `taskScreen` splits the old `canManage` into the acts the controls perform (edit, change
-  state, assign, move, comment, attach) and keeps unlinking a ticket open on an archived project.
-  The page reads `data.may.<act>`. No visible behaviour changes.
+- The read policy of the task, project, ticket and asset pages moved out of their routes into
+  `src/lib/server/screens/` (ADR 0049, #360). Each `load` is now guard, screen, 404, transport.
+  `may` names the acts the controls perform, with the record's state already applied, and the
+  pickers (`choices`) load only when the act they serve is allowed. The pages read `data.may.<act>`
+  instead of recombining permissions with record state. A dependency-cruiser rule keeps `screens/` a
+  leaf: no domain and no API module imports it.
+- On a project, while an archive or unarchive is in flight, the write controls now follow the
+  server's answer instead of flipping with the optimistic mirror.
+- On an asset, "Deliver" is no longer offered on a shared asset to someone holding `assets.checkout`
+  (the old condition forgot to check that the viewer sees the whole row).
 
 ## [1.0.0] - 2026-10-24
 
