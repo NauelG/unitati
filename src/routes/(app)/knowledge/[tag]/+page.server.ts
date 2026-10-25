@@ -1,4 +1,4 @@
-import { error, redirect } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import { z } from 'zod';
 import { attachmentFailureMessage } from '#lib/attachment-errors.js';
 import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
@@ -11,6 +11,7 @@ import {
 	addPageAttachments,
 	addPageComment,
 	editPageComment,
+	followKnowledgePage,
 	getPageByTag,
 	listPageAttachments,
 	listPageComments,
@@ -20,7 +21,9 @@ import {
 } from '#lib/server/knowledge/index.js';
 import { readAttachmentForm } from '#lib/server/projects/index.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
+import { followState } from '#lib/server/notifications/index.js';
 import { fieldsOf } from '../../assets/form-data';
+import { followActions } from '../../follow-actions';
 import {
 	archive,
 	create,
@@ -95,7 +98,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 		tree,
 		spaces: targets.map(({ id, name, audience }) => ({ id, name, audience })),
 		targetTrees: Object.fromEntries(targetTrees),
-		comments: comments.value
+		comments: comments.value,
+		follow: await followState(user, { pageId: page.id })
 	};
 };
 
@@ -181,7 +185,28 @@ const editComment: Action = async ({ locals, request, url }) => {
 	return { action: 'editComment', message: null };
 };
 
+const follows = followActions(
+	(user) => requireKnowledgeStaff(user),
+	async (user, { params }) => {
+		const found = await getPageByTag(user, params.tag);
+		return found.ok ? { pageId: found.value.id } : null;
+	}
+);
+
+/** An archived page cannot be followed (#330); unfollowing it stays possible. */
+const follow: Action = async (event) => {
+	const user = requireKnowledgeStaff(event.locals.user);
+	const page = await targetOf(user, event.params.tag);
+	const outcome = await followKnowledgePage(user, page.id);
+	if (outcome.ok) return { action: 'follow' as const };
+	if (outcome.error === 'archived') return fail(409, { action: 'follow', error: 'archived' });
+	if (outcome.error === 'forbidden') error(403, 'Forbidden');
+	error(404, 'Not found');
+};
+
 export const actions = {
+	follow,
+	unfollow: follows.unfollow,
 	addAttachments,
 	addComment,
 	archive,

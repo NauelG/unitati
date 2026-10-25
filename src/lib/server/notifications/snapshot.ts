@@ -11,7 +11,9 @@ export const snapshotSchema = z.object({
 	excerpt: z.string().max(280).optional(),
 	actorName: z.string().optional(),
 	/** The comment a notification leads to, for the targets that anchor to one (a page, #326). */
-	commentId: z.string().optional()
+	commentId: z.string().optional(),
+	/** The revision a page save or restore created, so the notification leads to its diff (#330). */
+	revision: z.number().int().positive().optional()
 });
 
 export type Snapshot = z.infer<typeof snapshotSchema>;

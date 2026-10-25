@@ -25,6 +25,7 @@ export {
 	followerIds,
 	followState,
 	followTicket,
+	followPage,
 	unfollowFromNotification
 } from './follows';
 export type { FollowTarget, FollowState, FollowFailure } from './follows';

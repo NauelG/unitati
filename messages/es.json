@@ -1810,6 +1810,32 @@
 	"follow_summary_project_unarchived": "El proyecto se ha reabierto",
 	"follow_summary_project_changed": "Han cambiado el responsable o la fecha límite",
 	"follow_summary_project_task_completed": "Se ha completado {code} · {title}",
+	"follow_summary_page_published": "La página se ha publicado",
+	"follow_summary_page_saved": "Hay una versión nueva (v{revision})",
+	"follow_summary_page_restored": "Se ha restaurado la versión v{from}",
+	"follow_summary_page_archived": "La página se ha archivado",
+	"follow_summary_page_archived_with": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "La página se ha archivado junto con {count} subpágina",
+				"countPlural=other": "La página se ha archivado junto con {count} subpáginas"
+			}
+		}
+	],
+	"follow_summary_page_unarchived": "La página se ha restaurado del archivo",
+	"follow_summary_page_unarchived_with": [
+		{
+			"declarations": ["input count", "local countPlural = count: plural"],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "La página se ha restaurado del archivo junto con {count} subpágina",
+				"countPlural=other": "La página se ha restaurado del archivo junto con {count} subpáginas"
+			}
+		}
+	],
+	"follow_summary_page_comment": "Comentario nuevo en la página",
 	"notifications_mention_label": "Mencionar a una persona",
 	"notifications_mention_empty": "Nadie coincide",
 	"notifications_settings_link": "Preferencias de notificaciones",

@@ -54,6 +54,9 @@ export function notificationHref(
 	if (row.taskId) return `/tasks/${code}`;
 	if (row.pageId) {
 		const anchor = row.snapshot.commentId ? `#comment-${row.snapshot.commentId}` : '';
+		if (!anchor && row.snapshot.revision) {
+			return `/knowledge/${code}/revisions/${row.snapshot.revision}`;
+		}
 		return `/knowledge/${code}${anchor}`;
 	}
 	return `/projects/${code}`;

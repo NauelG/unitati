@@ -50,6 +50,7 @@ export type {
 	TreeEntry
 } from './pages';
 
+export { followKnowledgePage } from './following';
 export { getRevision, listRevisions, pageRevisions, restoreRevision, savePage } from './revisions';
 export type {
 	PageSaveFailure,
