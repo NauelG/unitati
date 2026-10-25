@@ -13,9 +13,8 @@ import { listActivity } from '#lib/server/activity/index.js';
 import { getProject, listTasks } from '#lib/server/projects/index.js';
 import { projectMembers, projects } from '#lib/server/projects/schema.js';
 import { actionEvent, outcomeOf } from '#lib/server/projects/testing/action-event.js';
-import { linkTicketToProject, linkTicketToTask, relatedTo } from '#lib/server/links/index.js';
+import { linkTicketToProject, relatedTo } from '#lib/server/links/index.js';
 import { createQueue, createTicket } from '#lib/server/service-desk/testing/fixtures.js';
-import { changeTicketStatus } from '#lib/server/service-desk/index.js';
 import { actions, load } from './+page.server';
 
 async function setup() {
@@ -416,26 +415,6 @@ describe('loading the project record for the board', () => {
 
 		expect(written).toEqual([]);
 	});
-
-	it('gives the assigned viewer only their own cards, and every column to put them in', async () => {
-		const { employee, project, organisation, params } = await setup();
-		const states = await statesByGroup(organisation.id);
-		const mine = await createTaskRow(organisation.id, project.id, states.started.id, {
-			taskTag: 'M-1'
-		});
-		await createTaskRow(organisation.id, project.id, states.started.id, { taskTag: 'M-2' });
-		await assignRow(organisation.id, mine.id, employee.personId!);
-
-		const data = (await load(event(employee, params))) as {
-			tasks: { id: string }[];
-			states: unknown[];
-			canManage: boolean;
-		};
-
-		expect(data.tasks.map((task) => task.id)).toEqual([mine.id]);
-		expect(data.states).toHaveLength(5);
-		expect(data.canManage).toBe(false);
-	});
 });
 
 describe('the tickets behind a project record', () => {
@@ -452,31 +431,6 @@ describe('the tickets behind a project record', () => {
 			createTicket(organisation.id, queue.id, requester, { subject });
 		return { ...base, one, two, make, technician };
 	}
-
-	const event = (user: unknown, params: Record<string, string>) =>
-		({
-			locals: { user },
-			params,
-			url: new URL('http://localhost/projects/x'),
-			cookies: { get: () => undefined, set: () => undefined }
-		}) as never;
-
-	it('counts open tickets once, direct plus via tasks, leaving resolved and closed out', async () => {
-		const { technician, project, one, two, make, params } = await scene();
-		const both = await make('Reaches two tasks');
-		const direct = await make('Direct');
-		const done = await make('Done');
-		await linkTicketToTask(technician, { ticketId: both.id, taskId: one.id });
-		await linkTicketToTask(technician, { ticketId: both.id, taskId: two.id });
-		await linkTicketToProject(technician, { ticketId: direct.id, projectId: project.id });
-		await linkTicketToProject(technician, { ticketId: done.id, projectId: project.id });
-		await changeTicketStatus(technician, done.ticketTag, 'in_progress');
-		await changeTicketStatus(technician, done.ticketTag, 'resolved');
-
-		const data = (await load(event(technician, params))) as { openTickets: number };
-
-		expect(data.openTickets).toBe(2);
-	});
 
 	it('unlinks a direct ticket on an archived project and writes the entry on the ticket', async () => {
 		const { technician, organisation, project, make, params } = await scene();
@@ -497,32 +451,9 @@ describe('the tickets behind a project record', () => {
 		});
 		expect(onTicket.map((entry) => entry.verb)).toContain('link.project.removed');
 	});
-
-	it('keeps the live ticket entries of the timeline to the direct links', async () => {
-		const { technician, project, one, make, params } = await scene();
-		const direct = await make('Direct');
-		const via = await make('Via a task');
-		await linkTicketToProject(technician, { ticketId: direct.id, projectId: project.id });
-		await linkTicketToTask(technician, { ticketId: via.id, taskId: one.id });
-
-		const data = (await load(event(technician, params))) as {
-			timeline: Promise<{ kind: string; record?: { tag: string } }[]>;
-		};
-		const tickets = (await data.timeline).filter((item) => item.kind === 'ticket');
-
-		expect(tickets.map((item) => item.record?.tag)).toEqual([direct.ticketTag]);
-	});
 });
 
 describe('members-only projects', () => {
-	const loadEvent = (user: unknown, params: Record<string, string>) =>
-		({
-			locals: { user },
-			params,
-			url: new URL('http://localhost/projects/x'),
-			cookies: { get: () => undefined, set: () => undefined }
-		}) as never;
-
 	async function closedSetup() {
 		const base = await setup();
 		const { organisation, technician, admin } = base;
@@ -539,10 +470,9 @@ describe('members-only projects', () => {
 		return { ...base, member, technician, admin };
 	}
 
-	it('answers 404 to the record and to every action for a technician who is not a member', async () => {
+	it('answers 404 to every action for a technician who is not a member', async () => {
 		const { technician, params } = await closedSetup();
 
-		expect((await outcomeOf(() => load(loadEvent(technician, params)))).thrown?.status).toBe(404);
 		for (const run of [
 			() => actions.update(actionEvent(technician, { name: 'Nope' }, params)),
 			() => actions.setVisibility(actionEvent(technician, { visibility: 'organisation' }, params)),

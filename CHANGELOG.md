@@ -6,6 +6,16 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.0.2] - 2026-10-25
+
+### Changed
+
+- The project page's read policy moved out of its route into `projectScreen` (ADR 0049, #360).
+  `may` keeps archiving, unarchiving and unlinking apart from the writable acts, and the page reads
+  `data.may.<act>` instead of recombining the permission with `archivedAt`. While an archive or
+  unarchive is in flight the write controls now follow the server's answer instead of flipping with
+  the optimistic mirror.
+
 ## [1.0.1] - 2026-10-25
 
 ### Changed

@@ -60,12 +60,11 @@
 
 	/**
 	 * Archiving is optimistic and needs no confirmation: both directions are
-	 * reversible (#89). The mirror flips on submit and rolls back on a refusal;
-	 * every write control below hangs off it, so the moment a project reads as
-	 * archived they are gone from the DOM, not disabled.
+	 * reversible (#89). The mirror flips on submit and rolls back on a refusal. It
+	 * decides what is shown (the badge, the notice, the button's label); whether a
+	 * control exists is `data.may`, which the reload after the post brings (ADR 0049).
 	 */
 	let archived = $derived(data.project.archivedAt !== null);
-	const writable = $derived(data.canManage && !archived);
 
 	let taskOpen = $state(false);
 	/** The column a quick create was opened from; `null` is the domain's default state. */
@@ -83,7 +82,7 @@
 	let dueDate = $derived(project.dueDate);
 
 	const ownerOptions = $derived(
-		data.people.map((person) => ({ value: person.id, label: person.fullName }))
+		data.choices.people.map((person) => ({ value: person.id, label: person.fullName }))
 	);
 	const ownerName = $derived(
 		ownerPersonId === project.ownerPersonId
@@ -142,7 +141,7 @@
 			group: m.keymap_group_projects(),
 			label: m.project_new_task(),
 			permission: 'projects.manage',
-			when: () => writable,
+			when: () => data.may.createTask,
 			run: () => openTask(null)
 		});
 	});
@@ -197,7 +196,7 @@
 		placeholder={m.project_field_owner_none()}
 		action="?/update"
 		name="ownerPersonId"
-		editable={writable}
+		editable={data.may.edit}
 		optimistic={mirror(
 			() => ownerPersonId,
 			(value) => (ownerPersonId = value),
@@ -214,7 +213,7 @@
 		placeholder="—"
 		action="?/update"
 		name="dueDate"
-		editable={writable}
+		editable={data.may.edit}
 		optimistic={mirror(
 			() => dueDate,
 			(value) => (dueDate = value),
@@ -248,7 +247,7 @@
 		{#snippet codeContent()}
 			<EditableText
 				value={projectTag}
-				editable={writable}
+				editable={data.may.edit}
 				mono
 				action="?/update"
 				name="projectTag"
@@ -265,7 +264,7 @@
 		{#snippet titleContent()}
 			<EditableText
 				value={name}
-				editable={writable}
+				editable={data.may.edit}
 				action="?/update"
 				name="name"
 				label={m.project_field_name()}
@@ -314,13 +313,13 @@
 		{/snippet}
 		{#snippet actions()}
 			<FollowControl follow={data.follow} />
-			{#if writable}
+			{#if data.may.createTask}
 				<Button onclick={() => openTask(null)}>
 					<Plus class="size-4" aria-hidden="true" />
 					{m.project_new_task()}
 				</Button>
 			{/if}
-			{#if data.canManage}
+			{#if data.may.archive || data.may.unarchive}
 				<form
 					method="POST"
 					action="?/{archived ? 'unarchive' : 'archive'}"
@@ -350,10 +349,10 @@
 		<Alert tone="info" class="mt-[var(--space-4)]">{m.project_detail_archived_notice()}</Alert>
 	{/if}
 
-	{#if writable || project.description}
+	{#if data.may.edit || project.description}
 		<WorkPanel heading={m.project_field_description()} class="mt-[var(--space-6)]">
 			{#snippet actions()}
-				{#if writable && !describing && project.description}
+				{#if data.may.edit && !describing && project.description}
 					<Button variant="ghost" onclick={editDescription}>{m.project_description_edit()}</Button>
 				{/if}
 			{/snippet}
@@ -409,7 +408,7 @@
 				<TaskBoard
 					states={data.states}
 					tasks={data.tasks}
-					editable={writable}
+					editable={data.may.moveTask}
 					collapsedStates={data.collapsedStates}
 					onquickcreate={openTask}
 				/>
@@ -460,7 +459,7 @@
 			{:else}
 				<WorkPanel heading={m.project_detail_tasks()}>
 					<EmptyState
-						description={data.canManage
+						description={data.scope === 'all'
 							? m.project_detail_tasks_empty()
 							: m.project_detail_tasks_empty_limited()}
 						class="py-[var(--space-6)]"
@@ -475,7 +474,7 @@
 			id="comments"
 			comments={data.comments}
 			action="?/addComment"
-			canComment={writable}
+			canComment={data.may.comment}
 			error={failureFor('addComment')}
 		/>
 	</div>
@@ -493,8 +492,8 @@
 		<ProjectVisibilityPanel
 			visibility={project.visibility}
 			members={data.members}
-			candidates={data.memberCandidates}
-			editable={data.canEditMembers}
+			candidates={data.choices.memberCandidates}
+			editable={data.may.editMembers}
 			errors={{
 				setVisibility: failureFor('setVisibility'),
 				addMember: failureFor('addMember'),
@@ -509,7 +508,7 @@
 		<RecordAttachments
 			items={data.attachments}
 			downloadBase="/project-attachments"
-			canManage={writable}
+			canManage={data.may.attach}
 			uploadError={failureFor('addAttachments')}
 			removeError={failureFor('removeAttachment')}
 		/>
@@ -521,13 +520,13 @@
 		<RelatedRecords
 			groups={data.related}
 			unlinkActions={{
-				...(data.canUnlink ? { ticket: '?/unlinkTicket' } : {}),
-				...(data.canManage ? { page: '?/undocumentPage' } : {})
+				...(data.may.unlinkTicket ? { ticket: '?/unlinkTicket' } : {}),
+				...(data.may.undocumentPage ? { page: '?/undocumentPage' } : {})
 			}}
 			unlinkable={['handles', 'documented_by']}
 			error={failureFor('unlinkTicket') ?? failureFor('undocumentPage')}
 		/>
-		{#if writable}
+		{#if data.may.documentPage}
 			<PageCitePanel
 				heading={m.project_docs_panel_title()}
 				label={m.project_docs_add_field()}
@@ -551,7 +550,7 @@
 	{/snippet}
 </PageLayout>
 
-{#if writable}
+{#if data.may.createTask}
 	<Dialog
 		open={taskOpen}
 		onOpenChange={(next) => (taskOpen = next)}
