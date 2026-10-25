@@ -1,11 +1,10 @@
 import { and, eq } from 'drizzle-orm';
-import { pageTagsIn } from '#lib/domain/knowledge.js';
 import { actorColumns, recordActivity } from '../activity';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { pageSummaries, readablePagesByTag, type CitablePage } from '../knowledge';
-import { ticketInOrganisation } from '../service-desk';
+import { ticketInOrganisation, type CitationRefusal } from '../service-desk';
 import { failure, success, type Outcome } from '../shared/outcome';
 import type { LinkResult, UnlinkFailure } from './ticket-work';
 import { ticketPage } from './schema';
@@ -23,10 +22,6 @@ import { ticketPage } from './schema';
 
 export type CitePageFailure =
 	'forbidden' | 'ticket_not_found' | 'page_not_found' | 'page_not_citable';
-
-/** A reply was refused because of a page it links. Nothing was written. */
-export type CitationRefusal =
-	{ kind: 'page_not_public'; pageTag: string } | { kind: 'page_not_citable'; pageTag: string };
 
 /** Inserts the row and, only if it was new, the entry on the ticket's timeline. */
 async function insertCitation(
@@ -138,30 +133,18 @@ function refusalFor(
 }
 
 /**
- * Cites every page a comment body links, inside the caller's transaction (#327).
- * Called by `addComment` and `editComment` so the comment and its citations
- * commit together.
+ * Cites the pages a comment links, inside the caller's transaction (#327), so
+ * the comment and its citations commit together. This is the `citedPages` port
+ * of `service-desk` (ADR 0049), which `ticket-ports.ts` adapts.
  *
  * Every page is checked **before** anything is written, so a refusal leaves no
  * row and no entry behind: a public reply may only link published pages of a
  * `portal` space (its readers must be able to open them), an internal note
- * published pages the author can read.
+ * published pages the author can read. An edit passes only the links it adds.
  *
  * Only for somebody who may manage tickets: citing is a technician's act, and
- * an employee's reply is not a reference anybody curated. `service-desk` calls
- * this and never touches `knowledge` tables.
+ * an employee's reply is not a reference anybody curated.
  */
-export async function citePagesFromBody(
-	tx: Transaction,
-	actor: SessionUser,
-	ticketId: string,
-	body: string,
-	visibility: 'public' | 'internal'
-): Promise<Outcome<{ cited: number }, CitationRefusal>> {
-	return citePageTags(tx, actor, ticketId, pageTagsIn(body), visibility);
-}
-
-/** `citePagesFromBody` for tags already parsed: an edit cites only the links it adds. */
 export async function citePageTags(
 	tx: Transaction,
 	actor: SessionUser,

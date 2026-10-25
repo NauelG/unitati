@@ -5,7 +5,6 @@ import type { Priority, TicketStatus } from '#lib/domain/status.js';
 import { m } from '#lib/paraglide/messages.js';
 import { actorColumns, recordActivity } from '../activity';
 import { notify, sendNotificationEmails, type PendingEmail } from '../notifications';
-import { linkAsset, type LinkCategoryFailure } from '../links';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
@@ -16,12 +15,12 @@ import { page, pageWindow, type Page, type PageRequest } from '../shared/paginat
 import { runtimeMailer, runtimeOrigin, runtimeStorage } from '../shared/runtime';
 import type { Mailer } from '../shared/mail';
 import { queues, requestForms, ticketComments, tickets, attachments } from './schema';
-import type { Transaction } from '../db';
 import { notifyMentioned } from './mentions';
 import { requireTicketScope, seesInternal } from './scope';
 import { storeFiles } from '../shared/attachments';
 import type { Storage } from '../shared/storage';
 import { DEFAULT_TICKET_ORDER, type TicketOrder } from './ticket-order';
+import { ticketPorts } from './ports';
 import { canTransition } from './transitions';
 import {
 	attachmentProblem,
@@ -389,7 +388,7 @@ export type CreateTicketFailure =
 	| 'attachments_too_many'
 	| 'attachments_too_large'
 	| 'asset_not_found'
-	| LinkCategoryFailure
+	| 'category_not_found'
 	| 'duplicate_ticket_tag';
 
 /**
@@ -399,8 +398,8 @@ export type CreateTicketFailure =
  */
 export interface TicketOrigin {
 	requestFormId: string;
-	/** Runs in the opening transaction, after the ticket and its comment exist. */
-	inTransaction?: (tx: Transaction, ticket: { id: string }) => Promise<void>;
+	/** The asset category the request is for; linked in the opening transaction. */
+	categoryId?: string;
 }
 
 /**
@@ -409,22 +408,14 @@ export interface TicketOrigin {
  * by the time an asset is found to be off-limits, and a ticket opened "about
  * nothing" is not what the person asked for.
  *
- * Carries `linkAsset`'s own reason. Only `asset_not_found` is an expected
- * outcome here; anything else is a broken assumption and propagates as the
- * error it is.
- *
  * Known cost: the `TCK-####` sequence is not transactional, so a refused
  * request still consumes a number. Checking the assets first would need the
- * visibility rule outside `links`, and a gap in the numbering is cheaper.
+ * visibility rule outside the port, and a gap in the numbering is cheaper.
  */
 class AssetRefused extends Error {}
 
 /** Same reasoning as `AssetRefused`: the request's category was found off-limits mid-transaction. */
-export class CategoryRefused extends Error {
-	constructor(readonly reason: LinkCategoryFailure) {
-		super(reason);
-	}
-}
+class CategoryRefused extends Error {}
 
 /** A foreign key proves a row exists, not that it belongs to the actor's organisation. */
 async function sameOrganisation(organisationId: string, queueId: string, personId: string) {
@@ -546,12 +537,19 @@ export async function openTicket(
 			});
 
 			// A form can post the same id twice; the link is a set.
-			for (const assetId of new Set(values.assetIds ?? [])) {
-				const linked = await linkAsset(tx, actor, { ticketId: ticket.id, assetId });
-				if (!linked.ok) throw new AssetRefused(linked.error);
-			}
+			const assets = await ticketPorts().affectedAssets(tx, actor, {
+				ticketId: ticket.id,
+				assetIds: [...new Set(values.assetIds ?? [])]
+			});
+			if (!assets.ok) throw new AssetRefused(assets.error);
 
-			await origin?.inTransaction?.(tx, ticket);
+			if (origin?.categoryId !== undefined) {
+				const category = await ticketPorts().requestedCategory(tx, actor, {
+					ticketId: ticket.id,
+					categoryId: origin.categoryId
+				});
+				if (!category.ok) throw new CategoryRefused(category.error);
+			}
 
 			// The opening message may @mention staff (#303); whoever the actor may not
 			// reach is dropped by the same rule as in a comment.
@@ -573,10 +571,8 @@ export async function openTicket(
 		// The bytes were written before the transaction; do not orphan them.
 		await Promise.all(stored.map((file) => storage.delete(file.row.storageKey)));
 
-		if (error instanceof AssetRefused && error.message === 'asset_not_found') {
-			return failure('asset_not_found');
-		}
-		if (error instanceof CategoryRefused) return failure(error.reason);
+		if (error instanceof AssetRefused) return failure('asset_not_found');
+		if (error instanceof CategoryRefused) return failure('category_not_found');
 
 		if (uniqueConstraintName(error) === 'tickets_org_tag') return failure('duplicate_ticket_tag');
 		throw error;

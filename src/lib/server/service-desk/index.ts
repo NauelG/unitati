@@ -37,6 +37,9 @@ export type {
 	TicketSummary
 } from './tickets';
 
+export { setTicketPorts } from './ports';
+export type { TicketPorts, CitationRefusal } from './ports';
+
 /** Tickets opened per day, for the KPI sparkline (#90). */
 export { ticketOpeningsSparkline } from './sparkline';
 

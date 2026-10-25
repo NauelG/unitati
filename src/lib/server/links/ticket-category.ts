@@ -20,14 +20,6 @@ export interface RequestedCategory {
 
 export type LinkCategoryFailure = 'ticket_not_found' | 'category_not_found';
 
-/** The category, if it belongs to the actor's organisation; the one check a form's posted id needs. */
-export async function categoryInOrganisation(
-	actor: SessionUser,
-	categoryId: string
-): Promise<RequestedCategory | null> {
-	return findCategory(getDb(), actor.organisationId, categoryId);
-}
-
 /**
  * Links a category to a ticket inside the caller's transaction, so the ticket
  * and the request commit together. Idempotent. The ticket is the caller's to

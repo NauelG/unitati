@@ -6,7 +6,6 @@ import { getDb } from '../db';
 import { people } from '../directory/schema';
 import { pageTagsIn } from '#lib/domain/knowledge.js';
 import { extractMentions } from '#lib/domain/mentions.js';
-import { citePageTags, citePagesFromBody, redactLinkEvents, type CitationRefusal } from '../links';
 import { m } from '#lib/paraglide/messages.js';
 import {
 	followTicket,
@@ -20,6 +19,7 @@ import { failure, success, type Outcome } from '../shared/outcome';
 import { allowedMentions, commentSnapshot, followMentioned, notifyMentioned } from './mentions';
 import { attachments, ticketComments, tickets } from './schema';
 import { requireTicketScope, seesInternal } from './scope';
+import { ticketPorts, type CitationRefusal } from './ports';
 import { compareThreadItems } from './thread-order';
 import { runtimeMailer, runtimeOrigin } from '../shared/runtime';
 import { storeFiles } from '../shared/attachments';
@@ -142,7 +142,7 @@ export async function ticketThread(
 				.orderBy(asc(attachments.createdAt))
 		: [];
 
-	const events = await redactLinkEvents(
+	const events = await ticketPorts().visibleHistory(
 		viewer,
 		(
 			await listActivity({ organisationId: viewer.organisationId, target: { ticketId: ticket.id } })
@@ -251,7 +251,11 @@ export async function addComment(
 	try {
 		({ commentId, emails } = await getDb().transaction(async (tx) => {
 			// First, so a refusal happens before any row is written.
-			const cited = await citePagesFromBody(tx, actor, ticket.id, values.body, values.visibility);
+			const cited = await ticketPorts().citedPages(tx, actor, {
+				ticketId: ticket.id,
+				pageTags: pageTagsIn(values.body),
+				visibility: values.visibility
+			});
 			if (!cited.ok) {
 				refusal = cited.error;
 				return { commentId: '', emails: [] };
@@ -396,10 +400,12 @@ export async function editComment(
 			// block fixing a typo around it (#327).
 			const already = new Set(pageTagsIn(comment.body));
 			const added = pageTagsIn(values.body).filter((tag) => !already.has(tag));
-			if (added.length > 0) {
-				const cited = await citePageTags(tx, actor, comment.ticketId, added, comment.visibility);
-				if (!cited.ok) return failure(cited.error);
-			}
+			const cited = await ticketPorts().citedPages(tx, actor, {
+				ticketId: comment.ticketId,
+				pageTags: added,
+				visibility: comment.visibility
+			});
+			if (!cited.ok) return failure(cited.error);
 
 			const now = new Date();
 			await tx
