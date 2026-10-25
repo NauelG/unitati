@@ -3,7 +3,7 @@ import type { SessionUser } from '#lib/server/auth/guards.js';
 import { follow, unfollow, type FollowTarget } from '#lib/server/notifications/index.js';
 
 /**
- * The `?/follow` and `?/unfollow` actions of a ticket, task or project route
+ * The `?/follow` and `?/unfollow` actions of a ticket, task, project or knowledge page route
  * (#57). `resolve` reads the record through the viewer's scope, so one they
  * cannot see is a 404 and the domain only has to check the permission.
  */

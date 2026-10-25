@@ -4,9 +4,17 @@ import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { people } from '../directory/schema';
+import { m } from '#lib/paraglide/messages.js';
+import { type PendingEmail } from '../notifications';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { page as pageOf, type Page, type PageWindow } from '../shared/pagination';
 import { authorColumns, withAuthorNames } from './authors';
+import {
+	autoFollowPage,
+	notifyPageFollowers,
+	sendPageMails,
+	type PageNotifyDeps
+} from './following';
 import { readablePages, requirePagesManage } from './scope';
 import { pageRevisions as revisionsTable, pages } from './schema';
 
@@ -142,12 +150,14 @@ async function appendRevision(
 export async function savePage(
 	actor: SessionUser,
 	pageId: string,
-	input: PageSaveInput
+	input: PageSaveInput,
+	deps: PageNotifyDeps = {}
 ): Promise<Outcome<SaveResult, PageSaveFailure>> {
 	requirePagesManage(actor);
 	if (input.body.length > PAGE_BODY_MAX_LENGTH) return failure('body_too_long');
 
-	return getDb().transaction(async (tx) => {
+	let emails: PendingEmail[] = [];
+	const outcome = await getDb().transaction(async (tx) => {
 		const page = await lockPage(tx, actor.organisationId, pageId);
 		if (!page) return failure('not_found');
 		if (page.archivedAt) return failure('archived');
@@ -158,8 +168,18 @@ export async function savePage(
 		if (page.revision !== input.baseRevision) return failure(await staleRevision(tx, page));
 
 		const revision = await appendRevision(tx, actor, page, input);
+		// Saving follows the page, and tells whoever already does (#330). Drafts too.
+		await autoFollowPage(tx, actor.organisationId, page.id, [actor.personId]);
+		emails = await notifyPageFollowers(
+			tx,
+			actor,
+			{ id: page.id, pageTag: page.pageTag, title: input.title },
+			{ summary: m.follow_summary_page_saved({ revision }), revision }
+		);
 		return success({ revision, changed: true });
 	});
+	sendPageMails(emails, deps);
+	return outcome;
 }
 
 /** The pages a revision read may reach: staff, archived pages included (their history stays readable). */
@@ -237,10 +257,12 @@ export async function restoreRevision(
 	actor: SessionUser,
 	pageId: string,
 	number: number,
-	options: { baseRevision: number }
+	options: { baseRevision: number },
+	deps: PageNotifyDeps = {}
 ): Promise<Outcome<SaveResult, RevisionRestoreFailure>> {
 	requirePagesManage(actor);
-	return getDb().transaction(async (tx) => {
+	let emails: PendingEmail[] = [];
+	const outcome = await getDb().transaction(async (tx) => {
 		const page = await lockPage(tx, actor.organisationId, pageId);
 		if (!page) return failure('not_found');
 		if (page.archivedAt) return failure('archived');
@@ -260,6 +282,15 @@ export async function restoreRevision(
 			verb: 'page.revision.restored',
 			payload: { from: number, to: revision }
 		});
+		await autoFollowPage(tx, actor.organisationId, page.id, [actor.personId]);
+		emails = await notifyPageFollowers(
+			tx,
+			actor,
+			{ id: page.id, pageTag: page.pageTag, title: restored.title },
+			{ summary: m.follow_summary_page_restored({ from: number }), revision }
+		);
 		return success({ revision, changed: true });
 	});
+	sendPageMails(emails, deps);
+	return outcome;
 }

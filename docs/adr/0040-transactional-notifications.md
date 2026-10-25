@@ -3,6 +3,7 @@
 - **Status:** accepted
 - **Date:** 2026-10-21
 - **Issue:** [#33](../../../issues/33), [#301](../../../issues/301), [#302](../../../issues/302)
+- **Amended by:** [ADR 0051](0051-following-knowledge-pages.md) — knowledge pages can be followed.
 
 ## Context
 

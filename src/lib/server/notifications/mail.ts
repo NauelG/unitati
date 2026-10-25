@@ -22,8 +22,17 @@ function trimOrigin(origin: string): string {
 }
 
 /** The absolute link to the record, where this recipient reads it: the portal without `tickets.view`. */
-function recordUrl(email: PendingEmail, origin: string): string {
-	const { target, snapshot } = email;
+function recordUrl(
+	email: PendingEmail,
+	origin: string,
+	options: { forControls?: boolean } = {}
+): string {
+	const { target } = email;
+	// A page's follow control lives on the page, not on a revision or a comment (#330).
+	const snapshot =
+		options.forControls && 'pageId' in target
+			? { ...email.snapshot, revision: undefined, commentId: undefined }
+			: email.snapshot;
 	const href = notificationHref(
 		{
 			ticketId: 'ticketId' in target ? target.ticketId : null,
@@ -57,7 +66,7 @@ export function notificationMail(email: PendingEmail, origin: string): MailMessa
 		recordUrl(email, origin),
 		// A follower stops following from the record itself (#57).
 		email.type === 'followed.activity'
-			? m.follow_mail_unfollow({ link: recordUrl(email, origin) })
+			? m.follow_mail_unfollow({ link: recordUrl(email, origin, { forControls: true }) })
 			: undefined,
 		footer(origin)
 	]

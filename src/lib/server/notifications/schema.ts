@@ -96,12 +96,13 @@ export const follows = pgTable(
 		ticketId: uuid('ticket_id').references(() => tickets.id, { onDelete: 'cascade' }),
 		taskId: uuid('task_id').references(() => tasks.id, { onDelete: 'cascade' }),
 		projectId: uuid('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+		pageId: uuid('page_id').references(() => pages.id, { onDelete: 'cascade' }),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 	},
 	(table) => [
 		check(
 			'follows_exactly_one_target',
-			sql`num_nonnulls(${table.ticketId}, ${table.taskId}, ${table.projectId}) = 1`
+			sql`num_nonnulls(${table.ticketId}, ${table.taskId}, ${table.projectId}, ${table.pageId}) = 1`
 		),
 		uniqueIndex('follows_person_ticket')
 			.on(table.personId, table.ticketId)
@@ -111,7 +112,10 @@ export const follows = pgTable(
 			.where(sql`${table.taskId} is not null`),
 		uniqueIndex('follows_person_project')
 			.on(table.personId, table.projectId)
-			.where(sql`${table.projectId} is not null`)
+			.where(sql`${table.projectId} is not null`),
+		uniqueIndex('follows_person_page')
+			.on(table.personId, table.pageId)
+			.where(sql`${table.pageId} is not null`)
 	]
 );
 

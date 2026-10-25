@@ -7,11 +7,13 @@ import { userRole, users } from '../auth/schema';
 import { getDb, type Executor, type Transaction } from '../db';
 import { people } from '../directory/schema';
 import { notify, sendNotificationEmails, type PendingEmail } from '../notifications';
+import { m } from '#lib/paraglide/messages.js';
 import { renderMarkdown } from '../shared/markdown';
 import { likePattern, MENTION_PICKER_LIMIT, mentionSnapshot } from '../shared/mentions';
 import { failure, success, type Outcome } from '../shared/outcome';
 import type { Mailer } from '../shared/mail';
 import { runtimeMailer, runtimeOrigin } from '../shared/runtime';
+import { autoFollowPage } from './following';
 import { readablePages, requirePagesManage } from './scope';
 import { pageComments, pages } from './schema';
 
@@ -20,8 +22,8 @@ import { pageComments, pages } from './schema';
  * them, in `staff` and `portal` spaces alike; an employee never receives them,
  * not even a count. A flat list, oldest first. The author may edit
  * (`edited_at`); nobody deletes. They are not part of the page's content or
- * history: no revision, no activity, no follow rows, and the page's author is
- * not told.
+ * history: no revision, no activity. Since #330 a comment follows the page for
+ * its author and the people it names, and tells the page's followers.
  *
  * A mention notifies with the `mention` type, targeting the page. **Never trust
  * the client**: a token only becomes a notification when `mentionablesForPage`
@@ -130,17 +132,24 @@ async function readablePage(executor: Executor, actor: SessionUser, pageId: stri
 	return page;
 }
 
-/** Notifies the people named in `candidates` and allowed; returns the mails for after commit. */
+/**
+ * Notifies the people named in `candidates` and allowed, and starts them
+ * following the page (#330). A new comment (`followers`) also tells whoever
+ * follows it; an edit only tells the people it newly names. Returns the mails
+ * for after commit.
+ */
 async function notifyMentioned(
 	tx: Transaction,
 	actor: SessionUser,
 	page: { id: string; pageTag: string; title: string },
 	commentId: string,
 	body: string,
-	candidates: string[]
+	candidates: string[],
+	options: { followers: boolean }
 ): Promise<PendingEmail[]> {
 	const mentioned = await allowedMentions(tx, actor, candidates);
-	if (mentioned.length === 0) return [];
+	await autoFollowPage(tx, actor.organisationId, page.id, mentioned);
+	if (mentioned.length === 0 && !options.followers) return [];
 	return notify(tx, {
 		organisationId: actor.organisationId,
 		actorPersonId: actor.personId,
@@ -149,7 +158,9 @@ async function notifyMentioned(
 			...mentionSnapshot({ code: page.pageTag, title: page.title }, actor, body),
 			commentId
 		},
-		recipients: mentioned.map((personId) => ({ personId, type: 'mention' as const }))
+		recipients: mentioned.map((personId) => ({ personId, type: 'mention' as const })),
+		followers: options.followers,
+		followerSummary: m.follow_summary_page_comment()
 	});
 }
 
@@ -230,7 +241,11 @@ export async function addPageComment(
 				})
 				.returning({ id: pageComments.id });
 
-			emails = await notifyMentioned(tx, actor, page, comment.id, text, extractMentions(text));
+			// Commenting follows the page (#330).
+			await autoFollowPage(tx, actor.organisationId, page.id, [actor.personId]);
+			emails = await notifyMentioned(tx, actor, page, comment.id, text, extractMentions(text), {
+				followers: true
+			});
 			return success({ commentId: comment.id });
 		}
 	);
@@ -286,7 +301,8 @@ export async function editPageComment(
 				page,
 				comment.id,
 				text,
-				addedMentions(comment.body, text)
+				addedMentions(comment.body, text),
+				{ followers: false }
 			);
 			return success(undefined);
 		}

@@ -288,6 +288,13 @@
       "when": 1792754875338,
       "tag": "0040_knowledge_service_account_authorship",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792924683899,
+      "tag": "0041_follow_knowledge_pages",
+      "breakpoints": true
     }
   ]
 }

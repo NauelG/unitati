@@ -14,6 +14,7 @@
 	import Button from '#lib/components/unitati/Button.svelte';
 	import ConfirmDialog from '#lib/components/unitati/ConfirmDialog.svelte';
 	import { confirmSubmit } from '#lib/components/unitati/confirm-submit.js';
+	import FollowControl from '#lib/components/unitati/FollowControl.svelte';
 	import EmptyState from '#lib/components/unitati/EmptyState.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
@@ -67,6 +68,10 @@
 			</span>
 		{/snippet}
 		{#snippet actions()}
+			<!-- Nobody can start following an archived page, but a follower may still stop (#330). -->
+			{#if status !== 'archived' || (data.follow.canFollow && data.follow.following)}
+				<FollowControl follow={data.follow} />
+			{/if}
 			{#if status !== 'archived'}
 				<!-- Publishing is a draft's main action; editing is everybody else's. -->
 				<Button
