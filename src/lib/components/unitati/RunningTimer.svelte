@@ -5,7 +5,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 
 	/**
-	 * The running timer in the app shell (ADR 0051): the record code and the time
+	 * The running timer in the app shell (ADR 0052): the record code and the time
 	 * elapsed, linking to the record. The timer lives on the server, so it shows
 	 * on every device; this re-reads it now and then so a timer started or
 	 * stopped elsewhere appears here without a reload.

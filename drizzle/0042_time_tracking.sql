@@ -1,3 +1,6 @@
+ALTER TYPE "public"."activity_verb" ADD VALUE 'time.logged';--> statement-breakpoint
+ALTER TYPE "public"."activity_verb" ADD VALUE 'time.edited';--> statement-breakpoint
+ALTER TYPE "public"."activity_verb" ADD VALUE 'time.removed';--> statement-breakpoint
 CREATE TABLE "running_timers" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organisation_id" uuid NOT NULL,

@@ -47,7 +47,7 @@ export const load: LayoutServerLoad = async ({ locals, url, depends }) => {
 			getRunningTimer(user)
 		]);
 
-	// The `/time` link exists only for whoever may open it, and while tracking is on (ADR 0051).
+	// The `/time` link exists only for whoever may open it, and while tracking is on (ADR 0052).
 	const timeEnabled =
 		permissions.includes('time.manage') && (await isTimeTrackingEnabled(user.organisationId));
 

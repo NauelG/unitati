@@ -159,7 +159,7 @@ module.exports = {
 		{
 			name: 'direction-time',
 			comment:
-				'ADR 0051, ADR 0048 rule 4: time is cross-cutting like activity and notifications. It reads the schema.ts of the records its entries point at (service-desk, projects, directory) and writes history through activity; it calls no other module\u2019s functions. Who may see a record is the caller\u2019s read policy (ADR 0050).',
+				'ADR 0052, ADR 0048 rule 4: time is cross-cutting like activity and notifications. It reads the schema.ts of the records its entries point at (service-desk, projects, directory) and writes history through activity; it calls no other module\u2019s functions. Who may see a record is the caller\u2019s read policy (ADR 0050).',
 			severity: 'error',
 			from: { path: `${SERVER}/time/`, pathNot: SPEC_OR_TESTING },
 			to: {

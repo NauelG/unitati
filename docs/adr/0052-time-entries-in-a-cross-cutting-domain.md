@@ -1,4 +1,4 @@
-# 0051. Time entries live in a cross-cutting domain
+# 0052. Time entries live in a cross-cutting domain
 
 - **Status:** accepted
 - **Date:** 2026-10-25

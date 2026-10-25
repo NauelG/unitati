@@ -61,7 +61,7 @@ export const PERMISSIONS = [
 	'api.keys.manage',
 	'api.keys.manage.all',
 
-	// Time tracking (ADR 0051). `.log` is a person's own entries and timer; `.manage`
+	// Time tracking (ADR 0052). `.log` is a person's own entries and timer; `.manage`
 	// is everyone's entries, the report and export, and the catalogue.
 	'time.log',
 	'time.manage'

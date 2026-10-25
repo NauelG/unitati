@@ -7,7 +7,7 @@ import { timeEntries, timeEntryTypes } from './schema';
 import { isTimeTrackingEnabled } from './settings';
 
 /**
- * A project's time (ADR 0051): the sum of the entries of **every task in it**,
+ * A project's time (ADR 0052): the sum of the entries of **every task in it**,
  * subtasks and completed tasks included, broken down by type. Tickets linked to
  * the project do not add to it. Computed on read, never stored, so a task moved
  * to another project carries its time along.

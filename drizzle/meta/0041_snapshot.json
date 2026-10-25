@@ -1,5 +1,5 @@
 {
-  "id": "def95487-38c8-4b4f-852d-56960204c37b",
+  "id": "699a78f3-0f23-474a-a16b-09b01f288717",
   "prevId": "7160e9c0-f785-4663-a718-d9be527e957d",
   "version": "7",
   "dialect": "postgresql",
@@ -753,13 +753,6 @@
         },
         "technicians_edit_directory": {
           "name": "technicians_edit_directory",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "time_tracking_enabled": {
-          "name": "time_tracking_enabled",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -6514,6 +6507,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "page_id": {
+          "name": "page_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -6588,6 +6587,28 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "follows_person_page": {
+          "name": "follows_person_page",
+          "columns": [
+            {
+              "expression": "person_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "page_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"follows\".\"page_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -6655,6 +6676,19 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
+        },
+        "follows_page_id_pages_id_fk": {
+          "name": "follows_page_id_pages_id_fk",
+          "tableFrom": "follows",
+          "tableTo": "pages",
+          "columnsFrom": [
+            "page_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -6663,7 +6697,7 @@
       "checkConstraints": {
         "follows_exactly_one_target": {
           "name": "follows_exactly_one_target",
-          "value": "num_nonnulls(\"follows\".\"ticket_id\", \"follows\".\"task_id\", \"follows\".\"project_id\") = 1"
+          "value": "num_nonnulls(\"follows\".\"ticket_id\", \"follows\".\"task_id\", \"follows\".\"project_id\", \"follows\".\"page_id\") = 1"
         }
       },
       "isRLSEnabled": false
@@ -7697,482 +7731,6 @@
         "pages_at_most_one_creator": {
           "name": "pages_at_most_one_creator",
           "value": "num_nonnulls(\"pages\".\"created_by_person_id\", \"pages\".\"created_by_service_account_id\") <= 1"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.running_timers": {
-      "name": "running_timers",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "organisation_id": {
-          "name": "organisation_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "person_id": {
-          "name": "person_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "ticket_id": {
-          "name": "ticket_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "task_id": {
-          "name": "task_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "started_at": {
-          "name": "started_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "running_timers_organisation_id_organisations_id_fk": {
-          "name": "running_timers_organisation_id_organisations_id_fk",
-          "tableFrom": "running_timers",
-          "tableTo": "organisations",
-          "columnsFrom": [
-            "organisation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "running_timers_person_id_people_id_fk": {
-          "name": "running_timers_person_id_people_id_fk",
-          "tableFrom": "running_timers",
-          "tableTo": "people",
-          "columnsFrom": [
-            "person_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "running_timers_ticket_id_tickets_id_fk": {
-          "name": "running_timers_ticket_id_tickets_id_fk",
-          "tableFrom": "running_timers",
-          "tableTo": "tickets",
-          "columnsFrom": [
-            "ticket_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "running_timers_task_id_tasks_id_fk": {
-          "name": "running_timers_task_id_tasks_id_fk",
-          "tableFrom": "running_timers",
-          "tableTo": "tasks",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "running_timers_person_id_unique": {
-          "name": "running_timers_person_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "person_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "running_timers_exactly_one_target": {
-          "name": "running_timers_exactly_one_target",
-          "value": "num_nonnulls(\"running_timers\".\"ticket_id\", \"running_timers\".\"task_id\") = 1"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.time_entries": {
-      "name": "time_entries",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "organisation_id": {
-          "name": "organisation_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "ticket_id": {
-          "name": "ticket_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "task_id": {
-          "name": "task_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "person_id": {
-          "name": "person_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "type_id": {
-          "name": "type_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "minutes": {
-          "name": "minutes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "work_date": {
-          "name": "work_date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "note": {
-          "name": "note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "revision": {
-          "name": "revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "time_entries_org_work_date": {
-          "name": "time_entries_org_work_date",
-          "columns": [
-            {
-              "expression": "organisation_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "work_date",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "time_entries_ticket": {
-          "name": "time_entries_ticket",
-          "columns": [
-            {
-              "expression": "ticket_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "time_entries_task": {
-          "name": "time_entries_task",
-          "columns": [
-            {
-              "expression": "task_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "time_entries_person_work_date": {
-          "name": "time_entries_person_work_date",
-          "columns": [
-            {
-              "expression": "person_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "work_date",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "time_entries_organisation_id_organisations_id_fk": {
-          "name": "time_entries_organisation_id_organisations_id_fk",
-          "tableFrom": "time_entries",
-          "tableTo": "organisations",
-          "columnsFrom": [
-            "organisation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "time_entries_ticket_id_tickets_id_fk": {
-          "name": "time_entries_ticket_id_tickets_id_fk",
-          "tableFrom": "time_entries",
-          "tableTo": "tickets",
-          "columnsFrom": [
-            "ticket_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "time_entries_task_id_tasks_id_fk": {
-          "name": "time_entries_task_id_tasks_id_fk",
-          "tableFrom": "time_entries",
-          "tableTo": "tasks",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "time_entries_person_id_people_id_fk": {
-          "name": "time_entries_person_id_people_id_fk",
-          "tableFrom": "time_entries",
-          "tableTo": "people",
-          "columnsFrom": [
-            "person_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "time_entries_type_id_time_entry_types_id_fk": {
-          "name": "time_entries_type_id_time_entry_types_id_fk",
-          "tableFrom": "time_entries",
-          "tableTo": "time_entry_types",
-          "columnsFrom": [
-            "type_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "time_entries_minutes_positive": {
-          "name": "time_entries_minutes_positive",
-          "value": "\"time_entries\".\"minutes\" > 0"
-        },
-        "time_entries_exactly_one_target": {
-          "name": "time_entries_exactly_one_target",
-          "value": "num_nonnulls(\"time_entries\".\"ticket_id\", \"time_entries\".\"task_id\") = 1"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.time_entry_types": {
-      "name": "time_entry_types",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "organisation_id": {
-          "name": "organisation_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "position": {
-          "name": "position",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_default": {
-          "name": "is_default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "archived_at": {
-          "name": "archived_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "time_entry_types_org_name": {
-          "name": "time_entry_types_org_name",
-          "columns": [
-            {
-              "expression": "organisation_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "lower(\"name\")",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"time_entry_types\".\"archived_at\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "time_entry_types_org_default": {
-          "name": "time_entry_types_org_default",
-          "columns": [
-            {
-              "expression": "organisation_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"time_entry_types\".\"is_default\" and \"time_entry_types\".\"archived_at\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "time_entry_types_organisation_id_organisations_id_fk": {
-          "name": "time_entry_types_organisation_id_organisations_id_fk",
-          "tableFrom": "time_entry_types",
-          "tableTo": "organisations",
-          "columnsFrom": [
-            "organisation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "time_entry_types_name_not_empty": {
-          "name": "time_entry_types_name_not_empty",
-          "value": "length(trim(\"time_entry_types\".\"name\")) > 0"
         }
       },
       "isRLSEnabled": false

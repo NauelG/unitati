@@ -6,7 +6,7 @@ import { filtersFrom } from './filters';
 import type { PageServerLoad } from './$types';
 
 /**
- * Everybody's time (ADR 0051), `time.manage` only. While tracking is off the
+ * Everybody's time (ADR 0052), `time.manage` only. While tracking is off the
  * screen does not exist: it answers 404 like a route the viewer cannot reach.
  */
 export const load: PageServerLoad = async ({ locals, url }) => {

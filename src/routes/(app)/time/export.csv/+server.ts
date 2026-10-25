@@ -4,7 +4,7 @@ import { reportAll, timeEntriesCsv } from '#lib/server/time/index.js';
 import { filtersFrom } from '../filters';
 import type { RequestHandler } from './$types';
 
-/** The filtered list of `/time` as a CSV, for the organisation's own billing or chargeback tool (ADR 0051). */
+/** The filtered list of `/time` as a CSV, for the organisation's own billing or chargeback tool (ADR 0052). */
 export const GET: RequestHandler = async ({ locals, url }) => {
 	const user = requirePermission(locals.user, 'time.manage', url);
 

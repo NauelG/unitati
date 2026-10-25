@@ -20,7 +20,7 @@ import { runningTimers } from './schema';
 import { isTimeTrackingEnabled } from './settings';
 
 /**
- * The timer (ADR 0051): one per person, bound to one ticket or one task and
+ * The timer (ADR 0052): one per person, bound to one ticket or one task and
  * stored server-side, so it survives reloads and devices. Stopping is not a
  * write of its own: it opens the entry form prefilled with the elapsed time, and
  * saving that form turns the timer into an entry. Cancelling discards it. There

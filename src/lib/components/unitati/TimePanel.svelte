@@ -16,7 +16,7 @@
 	import WorkPanel from './WorkPanel.svelte';
 
 	/**
-	 * The **Time** section of a ticket's or task's side rail (ADR 0051): the
+	 * The **Time** section of a ticket's or task's side rail (ADR 0052): the
 	 * record's total, its entries, and the form to log or correct one. Purely
 	 * presentational: the page owns the `logTime`, `editTime` and `deleteTime`
 	 * actions, and decides through `may` whether any control exists.
@@ -277,7 +277,7 @@
 
 		<div class="flex justify-end gap-[var(--space-2)]">
 			{#if stopping}
-				<!-- Cancelling the stop form discards the timer (ADR 0051). -->
+				<!-- Cancelling the stop form discards the timer (ADR 0052). -->
 				<Button type="submit" variant="ghost" size="sm" formaction="?/discardTimer" formnovalidate>
 					{m.time_timer_discard()}
 				</Button>

@@ -10,9 +10,17 @@ import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
 import { organisations, people } from '../directory/schema';
+import { m } from '#lib/paraglide/messages.js';
+import { type PendingEmail } from '../notifications';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { placeBetween, spread } from '../shared/position';
 import { authorColumns, withAuthorNames } from './authors';
+import {
+	autoFollowPage,
+	notifyPageFollowers,
+	sendPageMails,
+	type PageNotifyDeps
+} from './following';
 import { readablePages, requirePagesManage } from './scope';
 import { knowledgeSpaces, pageRevisions, pages } from './schema';
 import { lockSpace } from './spaces';
@@ -463,6 +471,8 @@ export async function createPage(
 			verb: 'page.created',
 			payload: { title: input.title }
 		});
+		// The creator follows their page (#330); a service account has no person.
+		await autoFollowPage(tx, actor.organisationId, created.id, [author.personId]);
 		return success(created);
 	});
 }
@@ -649,10 +659,12 @@ export async function movePage(
 /** Draft to published. Already published is a no-op. */
 export async function publishPage(
 	actor: SessionUser,
-	pageId: string
+	pageId: string,
+	deps: PageNotifyDeps = {}
 ): Promise<Outcome<void, PagePublishFailure>> {
 	requirePagesManage(actor);
-	return getDb().transaction(async (tx) => {
+	let emails: PendingEmail[] = [];
+	const outcome = await getDb().transaction(async (tx) => {
 		await lockOrganisation(tx, actor.organisationId);
 		const page = await loadPage(tx, actor.organisationId, pageId);
 		if (!page) return failure('not_found');
@@ -673,17 +685,27 @@ export async function publishPage(
 			verb: 'page.published',
 			payload: {}
 		});
+		emails = await notifyPageFollowers(
+			tx,
+			actor,
+			{ id: page.id, pageTag: page.pageTag, title: page.title },
+			{ summary: m.follow_summary_page_published() }
+		);
 		return success(undefined);
 	});
+	sendPageMails(emails, deps);
+	return outcome;
 }
 
 /** The page and its subtree, in one transaction. Pages already archived keep their own date. */
 export async function archivePage(
 	actor: SessionUser,
-	pageId: string
+	pageId: string,
+	deps: PageNotifyDeps = {}
 ): Promise<Outcome<{ subtreeCount: number }, PageArchiveFailure>> {
 	requirePagesManage(actor);
-	return getDb().transaction(async (tx) => {
+	let emails: PendingEmail[] = [];
+	const outcome = await getDb().transaction(async (tx) => {
 		await lockOrganisation(tx, actor.organisationId);
 		const page = await loadPage(tx, actor.organisationId, pageId);
 		if (!page) return failure('not_found');
@@ -702,8 +724,24 @@ export async function archivePage(
 			verb: 'page.archived',
 			payload: { subtreeCount: archived.length }
 		});
+		// One notification per follower of any page archived with it, about the root (#330).
+		const subpages = archived.length - 1;
+		emails = await notifyPageFollowers(
+			tx,
+			actor,
+			{ id: page.id, pageTag: page.pageTag, title: page.title },
+			{
+				summary:
+					subpages > 0
+						? m.follow_summary_page_archived_with({ count: subpages })
+						: m.follow_summary_page_archived(),
+				pageIds: archived.map((row) => row.id)
+			}
+		);
 		return success({ subtreeCount: archived.length });
 	});
+	sendPageMails(emails, deps);
+	return outcome;
 }
 
 /**
@@ -713,10 +751,12 @@ export async function archivePage(
  */
 export async function unarchivePage(
 	actor: SessionUser,
-	pageId: string
+	pageId: string,
+	deps: PageNotifyDeps = {}
 ): Promise<Outcome<{ subtreeCount: number }, PageUnarchiveFailure>> {
 	requirePagesManage(actor);
-	return getDb().transaction(async (tx) => {
+	let emails: PendingEmail[] = [];
+	const outcome = await getDb().transaction(async (tx) => {
 		await lockOrganisation(tx, actor.organisationId);
 		const page = await loadPage(tx, actor.organisationId, pageId);
 		if (!page) return failure('not_found');
@@ -743,6 +783,21 @@ export async function unarchivePage(
 			verb: 'page.unarchived',
 			payload: { subtreeCount: restored.length }
 		});
+		const subpages = restored.length - 1;
+		emails = await notifyPageFollowers(
+			tx,
+			actor,
+			{ id: page.id, pageTag: page.pageTag, title: page.title },
+			{
+				summary:
+					subpages > 0
+						? m.follow_summary_page_unarchived_with({ count: subpages })
+						: m.follow_summary_page_unarchived(),
+				pageIds: restored.map((row) => row.id)
+			}
+		);
 		return success({ subtreeCount: restored.length });
 	});
+	sendPageMails(emails, deps);
+	return outcome;
 }

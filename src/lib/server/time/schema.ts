@@ -17,7 +17,7 @@ import { tasks } from '../projects/schema';
 import { tickets } from '../service-desk/schema';
 
 /**
- * Time tracking's tables (ADR 0051). Cross-cutting like `activity`: typed
+ * Time tracking's tables (ADR 0052). Cross-cutting like `activity`: typed
  * nullable foreign keys to the two records time can be logged on, and a `CHECK`
  * that exactly one is set, so the database refuses an entry on nothing or on two
  * records and a ticket or task cannot be left with entries pointing at it.

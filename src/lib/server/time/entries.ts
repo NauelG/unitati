@@ -14,7 +14,7 @@ import { timeEntries, timeEntryTypes } from './schema';
 import { isTimeTrackingEnabled } from './settings';
 
 /**
- * Time entries (ADR 0051). An entry is first-person: a person with `time.log`
+ * Time entries (ADR 0052). An entry is first-person: a person with `time.log`
  * creates entries only for themselves and edits or deletes only their own;
  * `time.manage` corrects anybody's. Nobody authors on behalf of someone else.
  *

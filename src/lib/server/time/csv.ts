@@ -2,7 +2,7 @@ import { decimalHours } from '#lib/domain/time.js';
 import type { ReportRow } from './report';
 
 /**
- * The CSV export of the filtered time list (ADR 0051): UTF-8, a header row, one
+ * The CSV export of the filtered time list (ADR 0052): UTF-8, a header row, one
  * row per entry. Pure, so the escaping is provable without a database.
  */
 

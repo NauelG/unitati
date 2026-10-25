@@ -2,6 +2,7 @@
 
 - **Status:** accepted
 - **Date:** 2026-10-18
+- **Amended by:** [ADR 0051](0051-following-knowledge-pages.md) — page comments now create follows and notify followers.
 
 ## Context
 

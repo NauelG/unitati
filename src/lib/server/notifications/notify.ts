@@ -3,7 +3,7 @@ import { can } from '../access/permissions';
 import { users, type UserRole } from '../auth/schema';
 import type { Transaction } from '../db';
 import { people } from '../directory/schema';
-import { followerIds } from './follows';
+import { followerIds, followPermission, pageFollowerIds } from './follows';
 import { notificationPreferences, notifications } from './schema';
 import type { Snapshot } from './snapshot';
 import { snapshotSchema } from './snapshot';
@@ -39,6 +39,12 @@ export type NotifyInput = {
 	 * they were told.
 	 */
 	followerSummary?: string;
+	/**
+	 * For a page target: the pages whose followers hear about it. A subtree
+	 * archive or unarchive names the whole subtree and targets its root, so each
+	 * follower gets one notification (#330). Defaults to the target page alone.
+	 */
+	followerPageIds?: string[];
 };
 
 /** A mail the caller sends after commit, with `sendNotificationEmails` (#302). */
@@ -74,13 +80,15 @@ async function addFollowers(
 	input: NotifyInput,
 	candidates: Map<string, NotificationType>
 ): Promise<Map<string, NotificationType>> {
-	// Pages cannot be followed (#326); the comment thread is staff-only.
-	if (!input.followers || 'pageId' in input.target) return candidates;
+	if (!input.followers) return candidates;
 
-	const ids = await followerIds(tx, input.target);
+	const ids =
+		'pageId' in input.target
+			? await pageFollowerIds(tx, input.followerPageIds ?? [input.target.pageId])
+			: await followerIds(tx, input.target);
 	if (ids.length === 0) return candidates;
 
-	const permission = 'ticketId' in input.target ? 'tickets.view' : 'projects.view';
+	const permission = followPermission(input.target);
 	const rows = await tx
 		.select({ id: people.id, role: users.role })
 		.from(people)

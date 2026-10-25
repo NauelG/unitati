@@ -11,7 +11,7 @@ import { timeEntries, timeEntryTypes } from './schema';
 import { isTimeTrackingEnabled } from './settings';
 
 /**
- * The organisation's time, across tickets and tasks (ADR 0051): what `/time`,
+ * The organisation's time, across tickets and tasks (ADR 0052): what `/time`,
  * the CSV export and `GET /api/v1/time-entries` all read. `time.manage` only,
  * because it shows everybody's entries.
  *

@@ -106,7 +106,7 @@ export async function projectScreen(viewer: SessionUser, projectTag: string) {
 		choices,
 		// How much of the project the viewer sees: everything, or only the work assigned to them.
 		scope: can(viewer, 'projects.view') ? ('all' as const) : ('assigned' as const),
-		// The sum of its tasks' time, by type; null while tracking is off (ADR 0051).
+		// The sum of its tasks' time, by type; null while tracking is off (ADR 0052).
 		time: await projectTime(viewer, project.id),
 		follow: await followState(viewer, { projectId: project.id }),
 		tasks,

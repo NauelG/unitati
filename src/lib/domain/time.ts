@@ -1,5 +1,5 @@
 /**
- * Time tracking's pure rules (ADR 0051): how a duration is typed, shown and
+ * Time tracking's pure rules (ADR 0052): how a duration is typed, shown and
  * rounded. Shared by the server (which stores whole minutes) and the forms
  * (which accept `1h 30m`), so the two cannot read the same text differently.
  */
@@ -7,7 +7,7 @@
 /**
  * An overflow guard on the `integer` column, not a product limit: about 1,900
  * years of minutes are refused long before Postgres would. A forgotten timer is
- * corrected in the form, not capped (ADR 0051).
+ * corrected in the form, not capped (ADR 0052).
  */
 export const MAX_ENTRY_MINUTES = 1_000_000;
 

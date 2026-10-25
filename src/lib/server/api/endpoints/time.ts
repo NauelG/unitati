@@ -31,7 +31,7 @@ import { invalidField } from './refusals';
 import { named, paginationMetaSchema, toMeta } from '../shared-schemas';
 
 /**
- * Time entries over the API (ADR 0051, ADR 0022). Entries are first-person: a
+ * Time entries over the API (ADR 0052, ADR 0022). Entries are first-person: a
  * key acts as the person behind it, creates entries only for them, and edits or
  * deletes only their own, unless the role holds `time.manage`. The timer is an
  * interactive affordance and has no endpoints; integrations write finished

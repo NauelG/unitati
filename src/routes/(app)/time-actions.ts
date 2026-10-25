@@ -50,7 +50,7 @@ export function timeFailureMessage(
 
 /**
  * The `?/logTime`, `?/editTime` and `?/deleteTime` actions of a ticket or task
- * route (ADR 0051). `resolve` reads the record through its owning domain's
+ * route (ADR 0052). `resolve` reads the record through its owning domain's
  * read policy, so one the viewer cannot see is a 404 before `time` is asked
  * anything (ADR 0050).
  */

@@ -8,7 +8,7 @@ import { failure, success, type Outcome } from '../shared/outcome';
 import { runningTimers, timeEntryTypes } from './schema';
 
 /**
- * The organisation's time tracking switch (ADR 0051). Off by default, and while
+ * The organisation's time tracking switch (ADR 0052). Off by default, and while
  * off nothing about time is shown or written. The column lives on
  * `organisations` (the directory owns that table, as it does for
  * `technicians_edit_directory`), but the switch has consequences only this

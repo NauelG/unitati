@@ -9,7 +9,7 @@ import {
 	type TimeTarget
 } from '../time';
 
-/** The Time section of a record's rail (ADR 0051), as the screens hand it to the page. */
+/** The Time section of a record's rail (ADR 0052), as the screens hand it to the page. */
 export interface TimeSection extends RecordTime {
 	/** The types an entry may be put on. */
 	types: { id: string; name: string; isDefault: boolean }[];

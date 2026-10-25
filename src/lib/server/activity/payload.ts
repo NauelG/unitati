@@ -96,7 +96,7 @@ const spaceAudience = z.enum(SPACE_AUDIENCES);
 const pageCount = z.number().int().nonnegative();
 const nullableNumber = z.number().nullable();
 
-/** What every time entry verb says about the entry (ADR 0051). */
+/** What every time entry verb says about the entry (ADR 0052). */
 const timeEntryFacts = z.object({
 	authorPersonId: z.uuid(),
 	authorName: presentName,
@@ -448,7 +448,7 @@ export const PAYLOAD_SCHEMAS = {
 
 	'page.attachment.removed': z.object({ filename: presentName }),
 
-	// Time tracking (ADR 0051). The entry's author is named by id and snapshot; when
+	// Time tracking (ADR 0052). The entry's author is named by id and snapshot; when
 	// somebody else corrects it, the actor of the row differs and `actorName` says who.
 	'time.logged': timeEntryFacts,
 	'time.removed': timeEntryFacts,

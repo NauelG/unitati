@@ -14,7 +14,7 @@
 </script>
 
 <!--
-	The follow toggle of a ticket, task or project (#57). Staff who are not
+	The follow toggle of a ticket, task, project or knowledge page (#57, #330). Staff who are not
 	participants get a "Seguir" / "Siguiendo" toggle; a participant gets a disabled
 	"Participas" with the reason, because they already hear about it. Nobody else
 	sees anything: an employee cannot follow, and does not see the count.

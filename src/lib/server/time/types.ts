@@ -9,7 +9,7 @@ import { timeEntries, timeEntryTypes, type TimeEntryType } from './schema';
 import { isTimeTrackingEnabled } from './settings';
 
 /**
- * The entry-type catalogue (ADR 0051): what kind of work an hour was spent on.
+ * The entry-type catalogue (ADR 0052): what kind of work an hour was spent on.
  * Shared by tickets and tasks, which is why it lives with time and not with
  * either of them. Managed by `time.manage`, read by anyone who logs time.
  *
@@ -85,7 +85,7 @@ export async function listOfferedTypes(
 		.map(({ id, name, isDefault }) => ({ id, name, isDefault }));
 }
 
-/** The gate of every catalogue write: `time.manage`, with tracking on (ADR 0051). */
+/** The gate of every catalogue write: `time.manage`, with tracking on (ADR 0052). */
 async function allowed(actor: SessionUser): Promise<CatalogueFailure | null> {
 	if (!can(actor, 'time.manage')) return 'forbidden';
 	if (!(await isTimeTrackingEnabled(actor.organisationId))) return 'time_tracking_disabled';

@@ -1,6 +1,6 @@
 {
-  "id": "5776da2b-7671-4370-82c6-5b351b52958c",
-  "prevId": "def95487-38c8-4b4f-852d-56960204c37b",
+  "id": "7148e563-7199-4e18-8355-448ef77a8e9e",
+  "prevId": "699a78f3-0f23-474a-a16b-09b01f288717",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -6514,6 +6514,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "page_id": {
+          "name": "page_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -6588,6 +6594,28 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "follows_person_page": {
+          "name": "follows_person_page",
+          "columns": [
+            {
+              "expression": "person_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "page_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"follows\".\"page_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -6655,6 +6683,19 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
+        },
+        "follows_page_id_pages_id_fk": {
+          "name": "follows_page_id_pages_id_fk",
+          "tableFrom": "follows",
+          "tableTo": "pages",
+          "columnsFrom": [
+            "page_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -6663,7 +6704,7 @@
       "checkConstraints": {
         "follows_exactly_one_target": {
           "name": "follows_exactly_one_target",
-          "value": "num_nonnulls(\"follows\".\"ticket_id\", \"follows\".\"task_id\", \"follows\".\"project_id\") = 1"
+          "value": "num_nonnulls(\"follows\".\"ticket_id\", \"follows\".\"task_id\", \"follows\".\"project_id\", \"follows\".\"page_id\") = 1"
         }
       },
       "isRLSEnabled": false

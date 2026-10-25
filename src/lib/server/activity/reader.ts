@@ -42,7 +42,7 @@ export type TimelineEntry = ActivityEntry & {
 };
 
 /**
- * Time entries are omitted while the organisation has tracking off (ADR 0051):
+ * Time entries are omitted while the organisation has tracking off (ADR 0052):
  * the rows stay, and reappear when it is switched back on.
  */
 const TIME_VISIBLE = sql`(${activity.verb}::text not like 'time.%' or exists (select 1 from ${organisations} where ${organisations.id} = ${activity.organisationId} and ${organisations.timeTrackingEnabled}))`;

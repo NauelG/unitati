@@ -19,7 +19,7 @@ import type { Actions, PageServerLoad } from './$types';
 const SECTION = '/settings/time';
 
 /**
- * Time tracking's settings (ADR 0051): the organisation's switch and the
+ * Time tracking's settings (ADR 0052): the organisation's switch and the
  * entry-type catalogue. The catalogue is only there while tracking is on: every
  * write is refused otherwise, and the page offers the switch alone.
  */

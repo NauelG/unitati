@@ -1,5 +1,5 @@
 /**
- * The time module's entry point (ADR 0002, ADR 0051): callers import from here,
+ * The time module's entry point (ADR 0002, ADR 0052): callers import from here,
  * never from a file inside. Cross-cutting like `activity`: it owns the
  * entry-type catalogue, the time entries and the running timers of tickets and
  * tasks, and a caller resolves the record through its owning domain first.
