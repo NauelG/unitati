@@ -1,6 +1,5 @@
 import { BETTER_AUTH_URL } from '$app/env/private';
-import { notifyHandoverDecided } from './links/notify-handover-decided';
-import { notifyTaskCompleted } from './links/notify-task-completed';
+import { notifyHandoverDecided, notifyTaskCompleted } from './links';
 import { runtimeMailer } from './shared/runtime';
 import { on } from './shared/events';
 

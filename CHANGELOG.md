@@ -6,6 +6,15 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.0.1] - 2026-10-25
+
+### Changed
+
+- Internal: `service-desk` no longer imports `links`, which removes the last import cycle in the
+  server. What a ticket write shares its transaction with (affected assets, the requested category,
+  cited pages) is a port that `service-desk` declares and `links` implements, registered at startup
+  (ADR 0049). No behaviour change.
+
 ## [1.0.0] - 2026-10-24
 
 ### Added

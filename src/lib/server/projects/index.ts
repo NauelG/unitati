@@ -17,6 +17,7 @@ export type { State, Project, Task, TaskAssignee } from './schema';
 export { requireProjectScope, requireTaskScope, seesAllProjects } from './scope';
 export { findTaskInScope, findProjectInScope, taskSnapshot, projectSnapshot } from './link-targets';
 export type { TaskLinkTarget, ProjectLinkTarget } from './link-targets';
+export { redactWorkEntries } from './work-entries';
 export { taskSummaries, tasksOfProject, projectSummaries, readsProjects } from './summaries';
 export type { TaskSummary, ProjectSummary } from './summaries';
 export { requireProjectRead, requireProjectWrite } from './guards';

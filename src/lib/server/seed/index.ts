@@ -1,5 +1,6 @@
 import { DATABASE_URL } from '$app/env/private';
 import { advanceAssetTagSequence } from '../assets';
+import { registerPorts } from '../ports';
 import { applyEscalations, applyPlan, applyProjects } from './apply';
 import { DEMO_PASSWORD, ensureDemoLogins, ensureWorkspace } from './accounts';
 import { assertLocalDatabase } from './guard';
@@ -17,6 +18,8 @@ import { seedTickets } from './tickets';
  */
 export async function run(): Promise<void> {
 	assertLocalDatabase(DATABASE_URL);
+	// Before any write: the tickets below are opened through `service-desk`.
+	registerPorts();
 
 	const workspace = await ensureWorkspace();
 	const plan = buildPlan();

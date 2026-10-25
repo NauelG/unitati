@@ -8,6 +8,7 @@ import { passwordChangeRedirect } from '#lib/server/auth/guards.js';
 import { getAuth } from '#lib/server/auth/index.js';
 import { closeDb } from '#lib/server/db/index.js';
 import { resolveSessionUser } from '#lib/server/directory/index.js';
+import { registerPorts } from '#lib/server/ports.js';
 import { registerSubscriptions } from '#lib/server/subscriptions.js';
 
 /**
@@ -34,7 +35,10 @@ if (!building) {
  * The one place domain events get their listeners (ADR 0024). Not at build:
  * analysing the app sends no mail and has no database.
  */
-if (!building) registerSubscriptions();
+if (!building) {
+	registerPorts();
+	registerSubscriptions();
+}
 
 // `event.request` is readonly in SvelteKit 3, so the request is not swapped as
 // older examples do. The middleware already binds the locale for the duration

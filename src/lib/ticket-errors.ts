@@ -9,7 +9,7 @@ import type {
 	RequestFormEditFailure,
 	SubmitRequestFailure
 } from '#lib/server/service-desk/index.js';
-import type { CitationRefusal } from '#lib/server/links/index.js';
+import type { CitationRefusal } from '#lib/server/service-desk/index.js';
 
 /**
  * One sentence per domain failure, shared by the staff screens and the
