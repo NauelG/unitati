@@ -59,7 +59,12 @@ export const PERMISSIONS = [
 	// API keys (ADR 0022). `.manage` is a person's own keys; `.manage.all` is every
 	// key in the organisation.
 	'api.keys.manage',
-	'api.keys.manage.all'
+	'api.keys.manage.all',
+
+	// Time tracking (ADR 0051). `.log` is a person's own entries and timer; `.manage`
+	// is everyone's entries, the report and export, and the catalogue.
+	'time.log',
+	'time.manage'
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -92,7 +97,8 @@ const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
 		'projects.manage',
 		'knowledge.view',
 		'knowledge.manage',
-		'api.keys.manage'
+		'api.keys.manage',
+		'time.log'
 	],
 	employee: [
 		'assets.view.own',

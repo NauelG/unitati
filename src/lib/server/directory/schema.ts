@@ -37,6 +37,8 @@ export const organisations = pgTable('organisations', {
 	slug: text('slug').notNull().unique(),
 	/** ADR 0044: lends `people.edit` to the technician role. Off unless an admin turns it on. */
 	techniciansEditDirectory: boolean('technicians_edit_directory').notNull().default(false),
+	/** ADR 0051: time tracking is off until an admin turns it on. The `time` domain owns what it switches. */
+	timeTrackingEnabled: boolean('time_tracking_enabled').notNull().default(false),
 	...timestamps
 });
 

@@ -1,0 +1,22 @@
+/**
+ * The time module's entry point (ADR 0002, ADR 0051): callers import from here,
+ * never from a file inside. Cross-cutting like `activity`: it owns the
+ * entry-type catalogue, the time entries and the running timers of tickets and
+ * tasks, and a caller resolves the record through its owning domain first.
+ */
+
+export type { TimeEntryType } from './schema';
+
+export { isTimeTrackingEnabled, setTimeTracking, SEEDED_TYPE_NAME } from './settings';
+
+export {
+	createType,
+	renameType,
+	moveType,
+	setDefaultType,
+	removeType,
+	listTypes,
+	listOfferedTypes,
+	MAX_TYPE_NAME_LENGTH
+} from './types';
+export type { CatalogueFailure, TypeView } from './types';
