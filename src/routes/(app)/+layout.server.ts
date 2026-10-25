@@ -11,7 +11,7 @@ import { countActive } from '#lib/server/assets/index.js';
 import { countOpen } from '#lib/server/service-desk/index.js';
 import { unreadCount } from '#lib/server/notifications/index.js';
 import { countActiveProjects, countOpenTasks } from '#lib/server/projects/index.js';
-import { getRunningTimer } from '#lib/server/time/index.js';
+import { getRunningTimer, isTimeTrackingEnabled } from '#lib/server/time/index.js';
 import type { Permission } from '#lib/server/access/permissions.js';
 import type { LayoutServerLoad } from './$types';
 
@@ -47,6 +47,10 @@ export const load: LayoutServerLoad = async ({ locals, url, depends }) => {
 			getRunningTimer(user)
 		]);
 
+	// The `/time` link exists only for whoever may open it, and while tracking is on (ADR 0051).
+	const timeEnabled =
+		permissions.includes('time.manage') && (await isTimeTrackingEnabled(user.organisationId));
+
 	// Sent to the client so navigation can hide what the user cannot reach.
 	// Hiding is a convenience; every route still guards itself server-side.
 	return {
@@ -54,6 +58,7 @@ export const load: LayoutServerLoad = async ({ locals, url, depends }) => {
 		permissions,
 		unreadNotifications,
 		counts: { assets, serviceDesk, directory, projects, tasks },
+		timeEnabled,
 		timer: timer && {
 			startedAt: timer.startedAt.toISOString(),
 			tag: timer.record.tag,

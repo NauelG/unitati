@@ -2103,5 +2103,21 @@
 	"time_timer_go_to": "Ir a {tag}",
 	"time_timer_stop_title": "Guardar el tiempo del cronómetro",
 	"time_timer_discard": "Descartar cronómetro",
-	"time_shell_timer": "Cronómetro en marcha en {tag}: {elapsed}"
+	"time_shell_timer": "Cronómetro en marcha en {tag}: {elapsed}",
+
+	"nav_time": "Tiempo",
+	"time_report_title": "Tiempo registrado",
+	"time_report_lede": "Todo el tiempo registrado en tickets y tareas. Filtra y exporta el resultado para tu herramienta de facturación o de reparto de costes.",
+	"time_report_export": "Exportar CSV",
+	"time_report_from": "Desde",
+	"time_report_to": "Hasta",
+	"time_report_person": "Persona",
+	"time_report_project": "Proyecto",
+	"time_report_record": "Ticket o tarea",
+	"time_report_any": "Todos",
+	"time_report_filter": "Filtrar",
+	"time_report_clear": "Limpiar",
+	"time_report_duration": "Duración",
+	"time_report_total": "{count} registros · Total: {duration} ({hours} h)",
+	"time_report_empty": "Ningún registro coincide con los filtros."
 }

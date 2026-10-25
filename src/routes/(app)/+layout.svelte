@@ -6,6 +6,7 @@
 	import FolderKanbanIcon from '@lucide/svelte/icons/folder-kanban';
 	import ListChecksIcon from '@lucide/svelte/icons/list-checks';
 	import UsersIcon from '@lucide/svelte/icons/users';
+	import ClockIcon from '@lucide/svelte/icons/clock';
 	import HouseIcon from '@lucide/svelte/icons/house';
 	import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
 	import AppShell, { appShell } from '#lib/components/unitati/AppShell.svelte';
@@ -129,6 +130,17 @@
 			section: 'directory',
 			count: data.counts.directory
 		},
+		...(data.timeEnabled
+			? [
+					{
+						href: '/time',
+						label: m.nav_time(),
+						permission: 'time.manage' as const,
+						icon: ClockIcon,
+						section: 'directory' as const
+					}
+				]
+			: []),
 		// The component gallery, open in every environment but production. The
 		// route answers 404 there too, so hiding the entry is a convenience,
 		// not the guard.
