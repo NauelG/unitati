@@ -6,18 +6,14 @@ import { escalateFailureMessage } from '#lib/escalation-errors.js';
 import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import { requireAnyPermission, requirePermission } from '#lib/server/auth/guards.js';
-import { listDeliverableAssets } from '#lib/server/assets/index.js';
-import { listPeople, personLocation } from '#lib/server/directory/index.js';
+import { ticketScreen } from '#lib/server/screens/index.js';
 import {
 	citePage,
 	escalateTicket,
-	escalationDraft,
 	invalidField,
 	linkHandoverByCode,
 	linkTicketAssets,
 	parseEscalation,
-	relatedTo,
-	requestedCategory,
 	uncitePage,
 	unlinkAsset,
 	unlinkHandover,
@@ -33,90 +29,23 @@ import {
 	editComment,
 	editCommentInput,
 	getTicketByTag,
-	listQueues,
 	moveTicketToQueue,
-	nextStatuses,
 	readTicketForm,
 	setTicketPriority,
-	subjectInput,
-	ticketThread,
-	type ThreadItem
+	subjectInput
 } from '#lib/server/service-desk/index.js';
 import { failureMessage } from '#lib/ticket-errors.js';
-import { followState } from '#lib/server/notifications/index.js';
 import { fieldsOf, rejected } from '../../assets/form-data';
 import { followActions } from '../../follow-actions';
 import type { Actions, PageServerLoad } from './$types';
 
-/** The opening message is the thread's first comment: there is no `description` column. */
-function firstMessage(thread: ThreadItem[]): string | null {
-	const first = thread.find((item) => item.kind === 'comment');
-	return first?.kind === 'comment' ? first.body : null;
-}
-
 export const load: PageServerLoad = async ({ locals, params }) => {
 	const user = requirePermission(locals.user, 'tickets.view');
 
-	const found = await getTicketByTag(user, params.tag);
-	if (!found.ok) error(404, 'Not found');
-	const thread = await ticketThread(user, params.tag);
-	if (!thread.ok) error(404, 'Not found');
+	const screen = await ticketScreen(user, params.tag);
+	if (!screen.ok) error(404, 'Not found');
 
-	const canManage = can(user, 'tickets.manage');
-	const [queues, people] = canManage
-		? await Promise.all([listQueues(user), listPeople(user.organisationId)])
-		: [[], []];
-
-	// Staff only (#176, ADR 0007): for anyone else the value is never read.
-	const requesterLocation = can(user, 'people.view')
-		? await personLocation(user.organisationId, found.value.requesterPersonId)
-		: undefined;
-
-	// What an equipment request asked for, and the stock that could answer it (#271).
-	const requested = found.value.requestFormId
-		? await requestedCategory(user.organisationId, found.value.id)
-		: null;
-	const canDeliver = canManage && can(user, 'assets.checkout');
-	const inStock =
-		canDeliver && requested
-			? await listDeliverableAssets(user.organisationId, undefined, { categoryId: requested.id })
-			: [];
-
-	return {
-		ticket: found.value,
-		requestedCategory: requested,
-		// A short list is enough to start a delivery from; the dialog filters the rest.
-		inStockForRequest: inStock.slice(0, 5).map(({ assetTag, name }) => ({ assetTag, name })),
-		// Thread stays awaited — it's the page's point (#89's streaming note).
-		thread: thread.value,
-		// Unawaited (#89): the viewer reached this ticket through a scoped
-		// read, so what is linked to it is read on that same footing;
-		// `relatedTo` scopes the other side of each link. Streams in behind
-		// `RelatedRecords` while the rest of the page is already interactive.
-		// The whole of it: the constellation draws every relation, the panel lists them.
-		related: relatedTo(user, { kind: 'ticket', id: found.value.id }),
-		canManage,
-		follow: await followState(user, { ticketId: found.value.id }),
-		// Delivering equipment for this ticket sends the technician to the asset (#279).
-		canDeliver,
-		...(requesterLocation === undefined
-			? {}
-			: { requesterLocation: requesterLocation && { path: requesterLocation.path } }),
-		// What the escalation Sheet needs: only for someone who may escalate.
-		escalation: canManage
-			? {
-					draft: escalationDraft({
-						subject: found.value.subject,
-						description: firstMessage(thread.value)
-					}),
-					canCreate: can(user, 'projects.manage')
-				}
-			: null,
-		canInternal: can(user, 'tickets.comment.internal'),
-		nextStatuses: nextStatuses(found.value.status),
-		queues: queues.map(({ id, name, color }) => ({ id, name, color })),
-		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName }))
-	};
+	return screen.value;
 };
 
 /**

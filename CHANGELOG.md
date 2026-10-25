@@ -6,6 +6,15 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.0.3] - 2026-10-25
+
+### Changed
+
+- The ticket page's read policy moved out of its route into `ticketScreen` (ADR 0049, #360).
+  `may` names the acts `tickets.manage` gates, plus `deliver`, `commentInternal`, `escalate` and
+  `escalateCreate`, and the pickers (queues, people, assets in stock for a request) load only when
+  the act they serve is allowed. No visible behaviour changes.
+
 ## [1.0.2] - 2026-10-25
 
 ### Changed

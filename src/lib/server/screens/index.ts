@@ -6,3 +6,5 @@ export { taskScreen } from './task';
 export type { TaskChoices, TaskMay, TaskScreen } from './task';
 export { projectScreen } from './project';
 export type { ProjectChoices, ProjectMay, ProjectScreen } from './project';
+export { ticketScreen } from './ticket';
+export type { TicketChoices, TicketMay, TicketScreen } from './ticket';
