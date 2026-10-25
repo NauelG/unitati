@@ -49,8 +49,14 @@ places:
   ticket to a task or a project and keep the records connected.
 - **One directory and search:** manage people, teams, departments and locations; search across
   people, assets, tickets and project work with role-based access.
-- **Handovers and knowledge:** record equipment handovers, request signatures, and organise
-  help articles for staff and employees.
+- **Knowledge base:** write documentation once, in spaces with a page tree and revision history.
+  Staff discuss pages in comments with mentions; employees read the pages of `portal` spaces,
+  and the portal suggests relevant pages while they write a request. Tickets cite pages and
+  projects link their documentation, so runbooks, how-tos and project docs live in one place.
+- **Handovers and requests:** record equipment handovers, request signatures, and let employees
+  ask for equipment from the portal.
+- **Notifications and API:** in-app notifications with mentions and followers, and a REST API
+  (`/api/v1`, with an OpenAPI document) authenticated with API keys.
 
 The interface is **currently in Spanish only**. English code and documentation do not imply an
 English UI. See the [roadmap](docs/roadmap-v1.md) for planned work; for example, directly linking
@@ -58,8 +64,9 @@ a project to an asset batch is **post-v1**, not a current feature.
 
 ## Status
 
-**Pre-1.0 evaluation.** Inventory, service desk, projects and their ticket-based links are
-implemented. The original [MVP walkthrough](docs/mvp-scope.md#exit-criterion) is a manual check,
+**v1.0.0, still in evaluation.** Inventory, service desk, projects, the knowledge base and their
+ticket-based links are implemented, and the `/api/v1` contract is stable: a change to a status or
+an error code is a breaking change and bumps the major version. The original [MVP walkthrough](docs/mvp-scope.md#exit-criterion) is a manual check,
 not an end-to-end CI test, and the current seed does not yet reach its planned volume (15 tickets
 rather than about 80). Use the [changelog](CHANGELOG.md) for shipped changes and the
 [roadmap](docs/roadmap-v1.md) for what comes next.
