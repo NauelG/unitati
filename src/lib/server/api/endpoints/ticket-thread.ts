@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { TimelineEntry } from '../../activity';
-import type { CitationRefusal } from '../../links';
+import type { CitationRefusal } from '../../service-desk';
 import {
 	addComment,
 	addCommentInput,

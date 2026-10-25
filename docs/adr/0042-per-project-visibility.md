@@ -77,7 +77,7 @@ text.
    withdrawn). Handover references keep their shape: they are not scoped records.
 2. **History is redacted at read time.** `link.task.*` and `link.project.*` snapshot the code and
    the title when the link is made, so the scope that hides the record cannot hide the words
-   already copied. The ticket thread passes its entries through `redactLinkEvents`, which blanks
+   already copied. The ticket thread passes its entries through `redactLinkEvents` (today `projects`' `redactWorkEntries`, reached through a port, ADR 0049), which blanks
    the payload of those about work the viewer cannot see; the sentence reads "Vinculó un elemento
    restringido". The Overview feed drops, through `visibleFeed`, entries whose target is a task or
    project the viewer cannot see. The stored rows are untouched: access can be granted later and the

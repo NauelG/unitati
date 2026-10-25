@@ -1,4 +1,4 @@
-# 0049. Record screens compose the app's record reads
+# 0050. Record screens compose the app's record reads
 
 - **Status:** accepted
 - **Date:** 2026-10-25

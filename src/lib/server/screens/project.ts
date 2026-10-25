@@ -19,7 +19,7 @@ import { activePeople } from './choices';
 
 /**
  * What the viewer may do on this project, with its state already applied
- * (ADR 0049 rule 4). Archiving closes the writable acts; `archive`/`unarchive`
+ * (ADR 0050 rule 4). Archiving closes the writable acts; `archive`/`unarchive`
  * (one or the other, by state), `undocumentPage` and `unlinkTicket` stay open on
  * an archived project (#151). The domain's writes stay the authority.
  */
@@ -41,7 +41,7 @@ export interface ProjectMay {
 	unlinkTicket: boolean;
 }
 
-/** Picker data. Each list is empty unless the act it serves is allowed (ADR 0049 rule 5). */
+/** Picker data. Each list is empty unless the act it serves is allowed (ADR 0050 rule 5). */
 export interface ProjectChoices {
 	/** Active people: the owner picker and the task assignees. */
 	people: { id: string; fullName: string }[];

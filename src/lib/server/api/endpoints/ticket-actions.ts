@@ -73,7 +73,6 @@ const createRefusals = refusalTable<CreateTicketFailure>({
 	attachments_too_many: { as: 'unreachable', why: NO_INBOUND_ATTACHMENTS },
 	attachments_too_large: { as: 'unreachable', why: NO_INBOUND_ATTACHMENTS },
 	asset_not_found: { as: 'not_found' },
-	ticket_not_found: ticketNotFound,
 	category_not_found: { as: 'not_found' },
 	duplicate_ticket_tag: { as: 'conflict' }
 });

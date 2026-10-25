@@ -4,6 +4,7 @@ import { DATABASE_URL } from '$app/env/private';
 import { resetBrandCache } from '../../directory';
 import { resetSubscriptions, setDispatchMode } from '../../shared/events';
 import { resetRuntime } from '../../shared/runtime';
+import { registerPorts } from '../../ports';
 import { getDb } from '..';
 import { assertTestDatabase } from './database-url';
 import { emptyAllTablesStatement } from './tables';
@@ -26,6 +27,10 @@ import { emptyAllTablesStatement } from './tables';
 assertTestDatabase(DATABASE_URL);
 
 const statement = emptyAllTablesStatement();
+
+// Once per process and deliberately not reset below: the ports are wiring, not
+// state a test builds, and a spec that needs them absent clears them itself.
+registerPorts();
 
 beforeEach(async () => {
 	await getDb().transaction(async (tx) => {

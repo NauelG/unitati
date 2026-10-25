@@ -33,7 +33,7 @@ import { activePeople } from './choices';
 
 /**
  * What the viewer may do on this asset, with the record's state already applied
- * (ADR 0049 rule 4): a shared asset (whole-row access withheld) offers no act on
+ * (ADR 0050 rule 4): a shared asset (whole-row access withheld) offers no act on
  * its row, and an archived one is read-only apart from unarchiving. The
  * domain's writes stay the authority.
  */
@@ -57,7 +57,7 @@ export interface AssetMay {
 	linkTickets: boolean;
 }
 
-/** Picker data. Each list is empty unless the act it serves is allowed (ADR 0049 rule 5). */
+/** Picker data. Each list is empty unless the act it serves is allowed (ADR 0050 rule 5). */
 export interface AssetChoices {
 	people: { id: string; fullName: string }[];
 	locations: Awaited<ReturnType<typeof listLocations>>;
@@ -72,7 +72,7 @@ export interface AssetChoices {
 	};
 }
 
-/** What the viewer arrived with (ADR 0049 rule 7): user intent, not transport. */
+/** What the viewer arrived with (ADR 0050 rule 7): user intent, not transport. */
 export interface AssetContext {
 	/** The tag of the ticket they came from (#279). */
 	fromTicket?: string | null;

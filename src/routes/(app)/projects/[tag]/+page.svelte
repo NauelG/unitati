@@ -62,7 +62,7 @@
 	 * Archiving is optimistic and needs no confirmation: both directions are
 	 * reversible (#89). The mirror flips on submit and rolls back on a refusal. It
 	 * decides what is shown (the badge, the notice, the button's label); whether a
-	 * control exists is `data.may`, which the reload after the post brings (ADR 0049).
+	 * control exists is `data.may`, which the reload after the post brings (ADR 0050).
 	 */
 	let archived = $derived(data.project.archivedAt !== null);
 

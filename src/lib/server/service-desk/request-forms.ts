@@ -1,12 +1,12 @@
 import { and, asc, eq } from 'drizzle-orm';
 import type { RequestFormKind } from '#lib/domain/request-form.js';
-import { categoryInOrganisation, linkCategory } from '../links';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import { constraintViolation, uniqueConstraintName } from '../db/errors';
 import { failure, success, type Outcome } from '../shared/outcome';
+import { ticketPorts } from './ports';
 import { queues, requestForms } from './schema';
-import { CategoryRefused, openTicket, type CreateTicketFailure, type Deps } from './tickets';
+import { openTicket, type CreateTicketFailure, type Deps } from './tickets';
 import {
 	equipmentRequestInput,
 	requestFormEditInput,
@@ -185,7 +185,7 @@ export async function submitEquipmentRequest(
 	const form = await getActiveRequestForm(actor, request.formId);
 	if (!form || form.kind !== 'equipment') return failure('request_form_not_found');
 
-	const category = await categoryInOrganisation(actor, request.categoryId);
+	const category = await ticketPorts().categoryInOrganisation(actor, request.categoryId);
 	if (!category) return failure('category_not_found');
 
 	const body = request.neededBy
@@ -197,15 +197,6 @@ export async function submitEquipmentRequest(
 		{ subject: `${form.name}: ${category.name}`, body, queueId: form.queueId },
 		[],
 		deps,
-		{
-			requestFormId: form.id,
-			inTransaction: async (tx, ticket) => {
-				const linked = await linkCategory(tx, actor, {
-					ticketId: ticket.id,
-					categoryId: category.id
-				});
-				if (!linked.ok) throw new CategoryRefused(linked.error);
-			}
-		}
+		{ requestFormId: form.id, categoryId: category.id }
 	);
 }

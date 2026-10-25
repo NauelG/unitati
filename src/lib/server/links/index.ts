@@ -23,8 +23,13 @@ export type {
 	TicketAssetPair
 } from './ticket-asset';
 
-export { categoryInOrganisation, linkCategory, requestedCategory } from './ticket-category';
+export { linkCategory, requestedCategory } from './ticket-category';
 export type { LinkCategoryFailure, RequestedCategory } from './ticket-category';
+
+export { ticketPortsImplementation } from './ticket-ports';
+
+export { notifyHandoverDecided } from './notify-handover-decided';
+export { notifyTaskCompleted } from './notify-task-completed';
 
 export { linkHandover, linkHandoverByCode, unlinkHandover } from './ticket-handover';
 export type {
@@ -51,8 +56,8 @@ export type {
 	TicketProjectPair
 } from './ticket-work';
 
-export { citePage, citePageTags, citePagesFromBody, uncitePage } from './ticket-page';
-export type { CitationRefusal, CitePageFailure } from './ticket-page';
+export { citePage, uncitePage } from './ticket-page';
+export type { CitePageFailure } from './ticket-page';
 
 export { documentProject, undocumentProject } from './project-page';
 export type { DocumentProjectFailure } from './project-page';
@@ -86,7 +91,7 @@ export type { AssetTimelineItem } from './timeline';
 
 export { taskTimeline, projectTimeline } from './record-timelines';
 
-export { redactLinkEvents, visibleFeed } from './work-events';
+export { visibleFeed } from './work-events';
 
 export { escalateTicket } from './escalate';
 export type { EscalationTarget, EscalateFailure, Escalated } from './escalate';

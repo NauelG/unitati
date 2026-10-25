@@ -18,7 +18,7 @@ import { activePeople } from './choices';
 
 /**
  * What the viewer may do on this task, with the record's state already applied
- * (ADR 0049 rule 4). Every act but `unlinkTicket` is closed once the project is
+ * (ADR 0050 rule 4). Every act but `unlinkTicket` is closed once the project is
  * archived; unlinking concerns the ticket, so it asks for `tickets.manage` and
  * survives archiving (#151). The domain's writes stay the authority.
  */
@@ -34,7 +34,7 @@ export interface TaskMay {
 	unlinkTicket: boolean;
 }
 
-/** Picker data. Each list is empty unless the act it serves is allowed (ADR 0049 rule 5). */
+/** Picker data. Each list is empty unless the act it serves is allowed (ADR 0050 rule 5). */
 export interface TaskChoices {
 	states: { id: string; name: string; group: State['group'] }[];
 	/** Active people; on a members-only project, only its members (ADR 0042). */

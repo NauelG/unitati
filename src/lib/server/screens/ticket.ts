@@ -17,7 +17,7 @@ import { activePeople } from './choices';
 type Queue = Awaited<ReturnType<typeof listQueues>>[number];
 
 /**
- * What the viewer may do on this ticket (ADR 0049 rule 4). Most acts are the ones
+ * What the viewer may do on this ticket (ADR 0050 rule 4). Most acts are the ones
  * `tickets.manage` gates; the rest have a permission of their own. The domain's
  * writes stay the authority.
  */
@@ -42,7 +42,7 @@ export interface TicketMay {
 	escalateCreate: boolean;
 }
 
-/** Picker data. Each list is empty unless the act it serves is allowed (ADR 0049 rule 5). */
+/** Picker data. Each list is empty unless the act it serves is allowed (ADR 0050 rule 5). */
 export interface TicketChoices {
 	queues: { id: string; name: string; color: Queue['color'] }[];
 	/** Active people: the assignee picker. */

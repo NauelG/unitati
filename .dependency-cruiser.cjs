@@ -9,11 +9,8 @@
 //
 // KNOWN VIOLATIONS live in `.dependency-cruiser-known-violations.json`
 // (`npm run lint:boundaries` passes `--ignore-known`). A baseline entry is
-// never added without a justification in the pull request. Groups (21):
+// never added without a justification in the pull request. Groups (6):
 //
-//   A. `no-circular`, 13 entries: the runtime cycle links <-> service-desk.
-//      `links` calls the ticket functions and `service-desk` renders the links
-//      of a ticket. Breaking it is a separate post-v1 item (#353 out of scope).
 //   B. `no-circular`, 1 entry: DataTable.svelte <-> DataTableSkeleton.svelte.
 //      The skeleton reads `dataTable` (the tv() variants) from the table's
 //      module script. Move the variants to a shared file to remove it.
@@ -22,10 +19,6 @@
 //      from api/service-accounts. Going through api/index closes a runtime
 //      cycle (api/index -> dispatch -> endpoints -> assets|knowledge). Removed
 //      when api stops being imported by the domains it serves.
-//   D. `public-entry-from-outside`, 2 entries: subscriptions.ts imports
-//      links/notify-task-completed and links/notify-handover-decided.
-//      Re-exporting them from links/index would put both in the links <->
-//      service-desk cycle (group A). Removed with group A.
 //   E. `tables-from-module`, 2 entries: seed/apply.ts and seed/tickets.ts read
 //      the `tickets` table (idempotency check by subject, count). No
 //      service-desk function answers either question; adding them is a
@@ -35,7 +28,7 @@
 //   business:       assets, service-desk, projects, knowledge, links, directory,
 //                   activity, notifications, imports, search, api, seed, screens
 //   infrastructure: auth, access, db, shared, settings
-//   root files of src/lib/server/ (subscriptions.ts) are composition code and
+//   root files of src/lib/server/ (subscriptions.ts, ports.ts) are composition code and
 //   follow the rules for code outside a module.
 
 const SERVER = '^src/lib/server';
@@ -176,6 +169,14 @@ module.exports = {
 			}
 		},
 		{
+			name: 'direction-service-desk',
+			comment:
+				'ADR 0002, ADR 0049, ADR 0048 rule 4: service-desk does not import links; links sits above every domain. What a ticket needs from a relation it declares as a port in service-desk/ports.ts, implemented by links and registered in server/ports.ts. Specs and testing/ folders are integration fixtures nothing imports back.',
+			severity: 'error',
+			from: { path: `${SERVER}/service-desk/`, pathNot: SPEC_OR_TESTING },
+			to: { path: `${SERVER}/links/` }
+		},
+		{
 			name: 'direction-infrastructure',
 			comment:
 				'ADR 0002, ADR 0048 rule 4: auth, access, db, shared and settings are infrastructure and import no business module, except directory (its index.ts and schema.ts, which everybody may depend on) and db/schema.ts, which aggregates every module\u2019s schema.ts. Specs and testing/ folders follow rule 6 instead. First-run provisioning, which needs several domains, lives in src/lib/server/provisioning.ts (#354).',
@@ -201,7 +202,7 @@ module.exports = {
 		{
 			name: 'screens-are-a-leaf',
 			comment:
-				'ADR 0049 rule 9: screens/ composes the record reads of the app and only app routes import it. No other server module, the API included, depends on it.',
+				'ADR 0050 rule 9: screens/ composes the record reads of the app and only app routes import it. No other server module, the API included, depends on it.',
 			severity: 'error',
 			from: { path: `${SERVER}/`, pathNot: [`${SERVER}/screens/`] },
 			to: { path: `${SERVER}/screens/` }
