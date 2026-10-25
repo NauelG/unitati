@@ -14,6 +14,7 @@ import {
 	type State
 } from '../projects';
 import { failure, success } from '../shared/outcome';
+import { activePeople } from './choices';
 
 /**
  * What the viewer may do on this task, with the record's state already applied
@@ -109,9 +110,7 @@ async function choicesFor(
 
 	return {
 		states: states.map(({ id, name, group }) => ({ id, name, group })),
-		people: assignable
-			.filter((person) => person.active)
-			.map(({ id, fullName }) => ({ id, fullName })),
+		people: activePeople(assignable),
 		projects: projects
 			.filter((project) => project.id !== task.projectId)
 			.map(({ id, projectTag, name }) => ({ id, projectTag, name }))

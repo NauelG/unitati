@@ -15,6 +15,7 @@ import {
 	projectProgress
 } from '../projects';
 import { failure, success } from '../shared/outcome';
+import { activePeople } from './choices';
 
 /**
  * What the viewer may do on this project, with its state already applied
@@ -92,14 +93,10 @@ export async function projectScreen(viewer: SessionUser, projectTag: string) {
 	if (!progress.ok || !attachments.ok || !members.ok || !comments.ok) return failure('not_found');
 
 	const listed = new Set(members.value.map((member) => member.personId));
-	const active = people.filter((person) => person.active);
+	const active = activePeople(people);
 	const choices: ProjectChoices = {
-		people: active.map(({ id, fullName }) => ({ id, fullName })),
-		memberCandidates: may.editMembers
-			? active
-					.filter((person) => !listed.has(person.id))
-					.map(({ id, fullName }) => ({ id, fullName }))
-			: []
+		people: active,
+		memberCandidates: may.editMembers ? active.filter((person) => !listed.has(person.id)) : []
 	};
 
 	return success({

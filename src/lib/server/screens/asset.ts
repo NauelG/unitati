@@ -29,6 +29,7 @@ import {
 } from '../links';
 import { getTicketByTag } from '../service-desk';
 import { failure, success } from '../shared/outcome';
+import { activePeople } from './choices';
 
 /**
  * What the viewer may do on this asset, with the record's state already applied
@@ -167,7 +168,7 @@ export async function assetScreen(
 	const attachments = staff ? await listAssetAttachments(viewer, asset.id) : null;
 
 	const choices: AssetChoices = {
-		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
+		people: activePeople(people),
 		locations,
 		deliverable,
 		heldAssets,

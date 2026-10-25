@@ -12,6 +12,7 @@ import {
 	type ThreadItem
 } from '../service-desk';
 import { failure, success } from '../shared/outcome';
+import { activePeople } from './choices';
 
 type Queue = Awaited<ReturnType<typeof listQueues>>[number];
 
@@ -103,7 +104,7 @@ export async function ticketScreen(viewer: SessionUser, ticketTag: string) {
 
 	const choices: TicketChoices = {
 		queues: queues.map(({ id, name, color }) => ({ id, name, color })),
-		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
+		people: activePeople(people),
 		inStockForRequest: inStock.slice(0, 5).map(({ assetTag, name }) => ({ assetTag, name }))
 	};
 
