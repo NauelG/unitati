@@ -30,3 +30,6 @@ export type {
 	RecordTime,
 	TimeTarget
 } from './entries';
+
+export { projectTime } from './totals';
+export type { ProjectTime } from './totals';

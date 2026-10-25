@@ -15,6 +15,7 @@ import {
 	projectProgress
 } from '../projects';
 import { failure, success } from '../shared/outcome';
+import { projectTime } from '../time';
 import { activePeople } from './choices';
 
 /**
@@ -105,6 +106,8 @@ export async function projectScreen(viewer: SessionUser, projectTag: string) {
 		choices,
 		// How much of the project the viewer sees: everything, or only the work assigned to them.
 		scope: can(viewer, 'projects.view') ? ('all' as const) : ('assigned' as const),
+		// The sum of its tasks' time, by type; null while tracking is off (ADR 0051).
+		time: await projectTime(viewer, project.id),
 		follow: await followState(viewer, { projectId: project.id }),
 		tasks,
 		// Every column of the board, including the empty ones. The route resolves the

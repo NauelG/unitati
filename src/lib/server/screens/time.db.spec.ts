@@ -4,6 +4,7 @@ import { getDb } from '../db';
 import { projects } from '../projects/schema';
 import { logTime, setTimeTracking } from '../time';
 import { createTimeScene } from '../time/testing/fixtures';
+import { projectScreen } from './project';
 import { taskScreen } from './task';
 import { ticketScreen } from './ticket';
 
@@ -70,5 +71,18 @@ describe('the Time section of the record screens', () => {
 		const task = await taskScreen(scene.technician, scene.task.taskTag);
 		if (!task.ok) throw new Error('screen not found');
 		expect(task.value.time).toMatchObject({ totalMinutes: 30, canLog: false });
+	});
+
+	it('carries the project total on the project screen, and nothing once tracking is off', async () => {
+		const scene = await sceneWithTime();
+
+		const project = await projectScreen(scene.technician, scene.project.projectTag);
+		if (!project.ok) throw new Error('screen not found');
+		expect(project.value.time?.totalMinutes).toBe(30);
+
+		await setTimeTracking(scene.admin, false);
+		const off = await projectScreen(scene.technician, scene.project.projectTag);
+		if (!off.ok) throw new Error('screen not found');
+		expect(off.value.time).toBeNull();
 	});
 });

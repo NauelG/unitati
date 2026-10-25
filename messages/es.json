@@ -2090,5 +2090,7 @@
 	"time_error_project_archived": "El proyecto está archivado: no admite cambios.",
 	"time_error_forbidden": "No puedes hacer esto con el tiempo registrado.",
 	"time_error_not_found": "Ese registro ya no existe.",
-	"time_error_stale": "El registro cambió mientras lo editabas."
+	"time_error_stale": "El registro cambió mientras lo editabas.",
+
+	"time_project_empty": "Ninguna tarea del proyecto tiene tiempo registrado."
 }

@@ -46,6 +46,7 @@
 	import DateField from '#lib/components/unitati/DateField.svelte';
 	import TimelineSkeleton from '#lib/components/unitati/TimelineSkeleton.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
+	import { decimalHours, formatMinutes } from '#lib/domain/time.js';
 	import { STATE_GROUPS, type StateGroup } from '#lib/domain/status.js';
 	import { formatDay } from '#lib/format-date.js';
 	import { keymapRegistry } from '#lib/keymap.js';
@@ -504,6 +505,33 @@
 		<WorkPanel heading={m.project_detail_progress()}>
 			<ProjectProgress counts={data.progress.counts} />
 		</WorkPanel>
+
+		{#if data.time}
+			<WorkPanel heading={m.time_panel_title()}>
+				<p class="m-0 text-sm text-[var(--ink-muted)]" data-testid="project-time-total">
+					{m.time_panel_total({
+						duration: formatMinutes(data.time.totalMinutes),
+						hours: decimalHours(data.time.totalMinutes)
+					})}
+				</p>
+				{#if data.time.byType.length === 0}
+					<p class="mt-[var(--space-2)] mb-0 text-sm text-[var(--ink-muted)]">
+						{m.time_project_empty()}
+					</p>
+				{:else}
+					<ul class="m-0 mt-[var(--space-3)] list-none space-y-[var(--space-1)] p-0 text-sm">
+						{#each data.time.byType as row (row.typeId)}
+							<li class="flex justify-between gap-[var(--space-2)]">
+								<span class="text-[var(--ink)]">{row.typeName}</span>
+								<span class="text-[var(--ink-muted)] tabular-nums">
+									{formatMinutes(row.minutes)}
+								</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</WorkPanel>
+		{/if}
 
 		<RecordAttachments
 			items={data.attachments}
