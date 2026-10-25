@@ -11,15 +11,8 @@ import { m } from '#lib/paraglide/messages.js';
 import { can } from '#lib/server/access/permissions.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
 import { renderMarkdown } from '#lib/server/shared/markdown.js';
-import { listPeople } from '#lib/server/directory/index.js';
-import {
-	documentProject,
-	openTicketCount,
-	projectTimeline,
-	relatedTo,
-	undocumentProject,
-	unlinkProject
-} from '#lib/server/links/index.js';
+import { projectScreen } from '#lib/server/screens/index.js';
+import { documentProject, undocumentProject, unlinkProject } from '#lib/server/links/index.js';
 import {
 	fieldsOf,
 	firstField,
@@ -27,24 +20,17 @@ import {
 	rejected,
 	addProjectAttachments,
 	addProjectComment,
-	listProjectComments,
 	addProjectMember,
 	archiveProject,
-	canManageMembers,
 	createTask,
 	createTaskInput,
 	getProject,
-	listProjectAttachments,
-	listProjectMembers,
 	PROJECT_VISIBILITIES,
 	readAttachmentForm,
 	removeProjectAttachment,
 	removeProjectMember,
 	setProjectVisibility,
-	listStates,
-	listTasks,
 	moveTask,
-	projectProgress,
 	readBoardPreference,
 	requireProjectRead,
 	requireProjectWrite,
@@ -58,42 +44,15 @@ import {
 	type RemoveMemberFailure,
 	type UpdateProjectFailure
 } from '#lib/server/projects/index.js';
-import { followState } from '#lib/server/notifications/index.js';
 import { followActions } from '../../follow-actions';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params, url, cookies }) => {
 	const user = requireProjectRead(locals.user);
 
-	const found = await getProject(user, params.tag);
-	if (!found.ok) error(404, 'Not found');
-	const project = found.value;
-
-	const canManage = can(user, 'projects.manage');
-	// Owner and admins change visibility and members (ADR 0042); an archived
-	// project is read-only like the rest of it.
-	const canEditMembers =
-		canManage && canManageMembers(user, project) && project.archivedAt === null;
-
-	// What the viewer can see of the project: an employee gets their own tasks
-	// and counts of exactly those (the domain scopes both from the same viewer).
-	const [tasks, states, progress, people, related, attachments, members, comments] =
-		await Promise.all([
-			listTasks(user, { projectId: project.id }),
-			listStates(user),
-			projectProgress(user, project.id),
-			canManage && project.archivedAt === null
-				? listPeople(user.organisationId)
-				: Promise.resolve([]),
-			// The tickets behind this project, already scoped to what the viewer may
-			// see: an employee gets their own, and every count below follows suit.
-			relatedTo(user, { kind: 'project', id: project.id }),
-			listProjectAttachments(user, project.id),
-			listProjectMembers(user, project.id),
-			listProjectComments(user, project.id)
-		]);
-	if (!progress.ok || !attachments.ok || !members.ok || !comments.ok) error(404, 'Not found');
-	const listed = new Set(members.value.map((member) => member.personId));
+	const screen = await projectScreen(user, params.tag);
+	if (!screen.ok) error(404, 'Not found');
+	const { value } = screen;
 
 	// The person's board preference (#127), cleaned of anything the cookie should
 	// not carry. An explicit ?view= wins over it, and is never stored: opening
@@ -101,7 +60,7 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 	const rawPreference = cookies.get(BOARD_COOKIE);
 	const preference = readBoardPreference(
 		rawPreference,
-		states.map(({ id }) => id)
+		value.states.map(({ id }) => id)
 	);
 	if (rawPreference !== undefined && rawPreference !== serializeBoardPreference(preference)) {
 		cookies.set(BOARD_COOKIE, serializeBoardPreference(preference), {
@@ -113,42 +72,11 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 	}
 
 	return {
-		project,
-		follow: await followState(user, { projectId: project.id }),
-		descriptionHtml: renderMarkdown(project.description ?? ''),
-		tasks,
-		// Every column of the board, including the empty ones.
-		states: states.map(({ id, name, group, position }) => ({ id, name, group, position })),
-		progress: progress.value,
+		...value,
+		descriptionHtml: renderMarkdown(value.project.description ?? ''),
 		// The board and the list are two views of the same data; the board is the default (#125).
 		view: resolveView(url.searchParams.get('view'), preference.view),
-		collapsedStates: preference.states,
-		// The permission alone. The page also needs the project not to be archived
-		// before it renders any write control: an archived project shows none,
-		// not disabled ones.
-		canManage,
-		people: people.filter((person) => person.active).map(({ id, fullName }) => ({ id, fullName })),
-		members: members.value,
-		canEditMembers,
-		// Who can still be added: an active person who is not on the list yet.
-		memberCandidates: canEditMembers
-			? people
-					.filter((person) => person.active)
-					.filter((person) => !listed.has(person.id))
-					.map(({ id, fullName }) => ({ id, fullName }))
-			: [],
-		related,
-		attachments: attachments.value,
-		comments: comments.value,
-		// The header's summary value: direct plus via tasks, resolved and closed left out.
-		openTickets: openTicketCount(related),
-		// Unlinking concerns the ticket, so it is `tickets.manage` and it survives
-		// the project being archived (#151).
-		canUnlink: can(user, 'tickets.manage'),
-		// Streamed: nothing above waits for the history. Its live half is the
-		// tickets linked to the project itself; the ones that arrive through a
-		// task are on that task's rail, not here.
-		timeline: projectTimeline(user, project.id, related)
+		collapsedStates: preference.states
 	};
 };
 

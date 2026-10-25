@@ -54,13 +54,30 @@ function pageData(canManage: boolean) {
 		},
 		thread: [],
 		related: Promise.resolve([]),
-		canManage,
+		may: {
+			editSubject: canManage,
+			assign: canManage,
+			moveToQueue: canManage,
+			setPriority: canManage,
+			changeStatus: canManage,
+			link: canManage,
+			unlink: canManage,
+			citePage: canManage,
+			linkHandover: canManage,
+			deliver: false,
+			commentInternal: false,
+			escalate: false,
+			escalateCreate: false
+		},
 		follow: { canFollow: false as const },
-		escalation: null,
-		canInternal: false,
+		escalationDraft: null,
 		nextStatuses: ['in_progress', 'closed'],
-		queues: canManage ? [{ id: 'q1', name: 'Hardware', color: null }] : [],
-		people: canManage ? [{ id: 'p1', fullName: 'Tech' }] : []
+		choices: {
+			queues: canManage ? [{ id: 'q1', name: 'Hardware', color: null }] : [],
+			people: canManage ? [{ id: 'p1', fullName: 'Tech' }] : [],
+			inStockForRequest: []
+		},
+		requestedCategory: null
 	};
 }
 

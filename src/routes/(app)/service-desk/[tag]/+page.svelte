@@ -101,10 +101,10 @@
 		}))
 	);
 	const queueOptions = $derived(
-		data.queues.map((queue) => ({ value: queue.id, label: queue.name }))
+		data.choices.queues.map((queue) => ({ value: queue.id, label: queue.name }))
 	);
 	const peopleOptions = $derived(
-		data.people.map((person) => ({ value: person.id, label: person.fullName }))
+		data.choices.people.map((person) => ({ value: person.id, label: person.fullName }))
 	);
 
 	function optimisticSubject(formData: FormData) {
@@ -141,7 +141,7 @@
 		const nextId = typeof personId === 'string' && personId !== '' ? personId : null;
 		localAssigneePersonId = nextId;
 		localAssigneeName = nextId
-			? (data.people.find((candidate) => candidate.id === nextId)?.fullName ?? previousName)
+			? (data.choices.people.find((candidate) => candidate.id === nextId)?.fullName ?? previousName)
 			: null;
 		return () => {
 			localAssigneePersonId = previousId;
@@ -155,7 +155,7 @@
 		const previousName = localQueueName;
 		const previousColor = localQueueColor;
 		if (typeof queueId === 'string') {
-			const next = data.queues.find((candidate) => candidate.id === queueId);
+			const next = data.choices.queues.find((candidate) => candidate.id === queueId);
 			localQueueId = queueId;
 			localQueueName = next?.name ?? previousName;
 			localQueueColor = next?.color ?? previousColor;
@@ -191,7 +191,7 @@
 	 * all open this one. It is only wired up for someone who may manage tickets.
 	 */
 	let escalateOpen = $state(false);
-	const escalation = $derived(data.escalation);
+	const escalation = $derived(data.may.escalate ? data.escalationDraft : null);
 
 	$effect(() => {
 		if (!escalation) return;
@@ -217,7 +217,7 @@
 	// The palette's "Vincular activo" opens the panel's own dialog (#79).
 	let linkOpen = $state(false);
 	$effect(() => {
-		if (!data.canManage) return;
+		if (!data.may.link) return;
 		const open = () => (linkOpen = true);
 		window.addEventListener(LINK_ASSET_EVENT, open);
 		return () => window.removeEventListener(LINK_ASSET_EVENT, open);
@@ -252,13 +252,13 @@
 		options={peopleOptions}
 		action="?/assign"
 		name="personId"
-		editable={data.canManage}
+		editable={data.may.assign}
 		optimistic={optimisticAssignee}
 	/>
 {/snippet}
 
 {#snippet queueValue()}
-	{#if data.canManage}
+	{#if data.may.moveToQueue}
 		<EditableDetailRow
 			kind="select"
 			label={m.ticket_detail_queue()}
@@ -297,7 +297,7 @@
 			{#snippet subjectEditor(className)}
 				<EditableText
 					value={localSubject}
-					editable={data.canManage}
+					editable={data.may.editSubject}
 					action="?/subject"
 					name="subject"
 					optimistic={optimisticSubject}
@@ -313,7 +313,7 @@
 					options={statusOptions}
 					action="?/status"
 					name="status"
-					editable={data.canManage && data.nextStatuses.length > 0}
+					editable={data.may.changeStatus}
 					optimistic={optimisticStatus}
 					openOnHash="#action-status"
 					label={m.ticket_detail_status()}
@@ -325,7 +325,7 @@
 					options={priorityOptions}
 					action="?/priority"
 					name="priority"
-					editable={data.canManage}
+					editable={data.may.setPriority}
 					optimistic={optimisticPriority}
 					label={m.ticket_detail_priority()}
 				/>
@@ -354,9 +354,9 @@
 
 	<TicketComposer
 		action="?/reply"
-		allowInternal={data.canInternal}
+		allowInternal={data.may.commentInternal}
 		mentionsUrl={`/service-desk/${ticket.ticketTag}/mentions`}
-		pagesUrl={data.canManage ? '/knowledge/pages/pick' : undefined}
+		pagesUrl={data.may.citePage ? '/knowledge/pages/pick' : undefined}
 		error={replyError}
 		placeholder={m.composer_placeholder_reply({ name: ticket.requesterName })}
 		onOptimisticSend={(formData) => {
@@ -423,7 +423,7 @@
 			{@const assetGroups = relatedGroups.filter((group) => group.relation === 'affects')}
 			<RelatedRecords
 				groups={relatedGroups}
-				unlinkActions={data.canManage
+				unlinkActions={data.may.unlink
 					? {
 							asset: '?/unlinkAsset',
 							task: '?/unlinkTask',
@@ -433,7 +433,7 @@
 						}
 					: {}}
 				error={unlinkError}
-				linkAction={data.canManage ? '?/linkAssets' : undefined}
+				linkAction={data.may.link ? '?/linkAssets' : undefined}
 				linkLabel={m.related_link_asset()}
 				linkDescription={m.related_link_asset_lede()}
 				linkFieldLabel={m.related_link_asset_field()}
@@ -448,7 +448,7 @@
 				linkedIds={assetGroups.flatMap((group) => group.items.map((item) => item.ref.id))}
 				bind:linkOpen
 			/>
-			{#if data.canManage}
+			{#if data.may.citePage}
 				<PageCitePanel
 					heading={m.ticket_page_cite_title()}
 					label={m.ticket_page_cite_field()}
@@ -458,17 +458,19 @@
 					searchUrl="/knowledge/pages/pick?format=options&citable=internal"
 					error={citeError}
 				/>
+			{/if}
+			{#if data.may.linkHandover}
 				<WorkPanel heading={m.ticket_handover_title()}>
 					<div class="space-y-[var(--space-3)]">
-						{#if data.canDeliver && data.requestedCategory}
+						{#if data.may.deliver && data.requestedCategory}
 							<!-- An equipment request: the in-stock assets of the category asked for. -->
-							{#if data.inStockForRequest.length === 0}
+							{#if data.choices.inStockForRequest.length === 0}
 								<p class="m-0 text-sm text-[var(--ink-muted)]">
 									{m.ticket_request_deliver_none({ category: data.requestedCategory.name })}
 								</p>
 							{:else}
 								<ul class="m-0 list-none space-y-[var(--space-1)] p-0 text-sm">
-									{#each data.inStockForRequest as stocked (stocked.assetTag)}
+									{#each data.choices.inStockForRequest as stocked (stocked.assetTag)}
 										<li>
 											<a
 												class="text-[var(--brand)] hover:underline"
@@ -484,7 +486,7 @@
 								</ul>
 							{/if}
 						{/if}
-						{#if data.canDeliver}
+						{#if data.may.deliver}
 							<ul class="m-0 list-none space-y-[var(--space-1)] p-0 text-sm">
 								{#each assetGroups.flatMap((group) => group.items) as item (item.ref.id)}
 									<li>
@@ -534,9 +536,9 @@
 			statusLabel: statusLabel(localStatus),
 			assigneeName: localAssigneeName
 		}}
-		draft={escalation.draft}
+		draft={escalation}
 		projectName={ticket.subject}
-		canCreate={escalation.canCreate}
+		canCreate={data.may.escalateCreate}
 		people={peopleOptions}
 		defaultOwnerId={data.user.personId}
 		searchBase="/service-desk/{encodeURIComponent(ticket.ticketTag)}/escalate"

@@ -53,7 +53,7 @@
 	// The palette offers "mover tarea" only while this record can be moved, and
 	// opens this same dialog (#120).
 	$effect(() => {
-		if (!data.canManage) return;
+		if (!data.may.moveToProject) return;
 		paletteContext.movableTaskTag = data.task.taskTag;
 		const open = () => (moveOpen = true);
 		window.addEventListener(MOVE_TASK_EVENT, open);
@@ -65,8 +65,8 @@
 
 	// Readers get no catalogue from the server: the chip shows the current state alone.
 	const stateOptions = $derived(
-		(data.states.length > 0
-			? data.states
+		(data.choices.states.length > 0
+			? data.choices.states
 			: [{ id: task.stateId, name: task.stateName, group: task.stateGroup }]
 		).map((entry) => ({
 			value: entry.id,
@@ -75,11 +75,11 @@
 		}))
 	);
 	const personOptions = $derived(
-		data.people.map((person) => ({ value: person.id, label: person.fullName }))
+		data.choices.people.map((person) => ({ value: person.id, label: person.fullName }))
 	);
 	// Names come from the catalogue when the viewer has it, else from the task itself.
 	const nameOf = (id: string) =>
-		data.people.find((person) => person.id === id)?.fullName ??
+		data.choices.people.find((person) => person.id === id)?.fullName ??
 		task.assignees.find((assignee) => assignee.personId === id)?.fullName ??
 		id;
 	const assigneeNames = $derived(assigneeIds.map(nameOf));
@@ -143,7 +143,7 @@
 		placeholder={m.task_detail_no_date()}
 		action="?/update"
 		name="dueDate"
-		editable={data.canManage}
+		editable={data.may.edit}
 		openOnHash="#action-due"
 		optimistic={mirror(
 			() => dueDate,
@@ -189,7 +189,7 @@
 		options={personOptions}
 		action="?/setAssignees"
 		name="personIds"
-		editable={data.canManage}
+		editable={data.may.assign}
 		openOnHash="#action-assignees"
 		optimistic={mirror(
 			() => assigneeIds,
@@ -222,7 +222,7 @@
 			>
 				<EditableText
 					value={taskTag}
-					editable={data.canManage}
+					editable={data.may.edit}
 					action="?/update"
 					name="taskTag"
 					label={m.task_detail_code()}
@@ -240,7 +240,7 @@
 				level={1}
 				class={styles.title({ class: 'mt-1' })}
 				value={title}
-				editable={data.canManage}
+				editable={data.may.edit}
 				action="?/update"
 				name="title"
 				label={m.task_field_title()}
@@ -258,7 +258,7 @@
 					action="?/changeState"
 					name="stateId"
 					label={m.task_detail_state()}
-					editable={data.canManage}
+					editable={data.may.changeState}
 					openOnHash="#action-state"
 					optimistic={mirror(
 						() => stateId,
@@ -271,7 +271,7 @@
 
 		<div class={styles.actions()}>
 			<FollowControl follow={data.follow} />
-			{#if data.canManage}
+			{#if data.may.moveToProject}
 				<Button variant="secondary" onclick={() => (moveOpen = true)}>
 					<ArrowRightLeft class="size-4" aria-hidden="true" />
 					{m.task_move_action()}
@@ -327,7 +327,7 @@
 					</div>
 				</form>
 			{:else if task.description}
-				{#if data.canManage}
+				{#if data.may.edit}
 					<!-- The click is a pointer convenience; the button beside it is the keyboard path. -->
 					<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 					<div class="group relative cursor-text" onclick={openFromProse}>
@@ -349,7 +349,7 @@
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitised by renderMarkdown on the server (ADR 0030) -->
 					<div class={prose}>{@html data.descriptionHtml}</div>
 				{/if}
-			{:else if data.canManage}
+			{:else if data.may.edit}
 				<button
 					type="button"
 					class="text-sm text-[var(--brand)] hover:underline"
@@ -367,7 +367,7 @@
 		<RecordAttachments
 			items={data.attachments}
 			downloadBase="/task-attachments"
-			canManage={data.canManage}
+			canManage={data.may.attach}
 			uploadError={failureFor('addAttachments')}
 			removeError={failureFor('removeAttachment')}
 		/>
@@ -378,7 +378,7 @@
 			id="comments"
 			comments={data.comments}
 			action="?/addComment"
-			canComment={data.canManage}
+			canComment={data.may.comment}
 			error={failureFor('addComment')}
 		/>
 	</div>
@@ -396,7 +396,7 @@
 
 		<!-- Streamed (#89): the history and the tickets linked to this task are read
 		     together, because the timeline merges both. -->
-		{#await data.timelineRail}
+		{#await data.rail}
 			<WorkPanel heading={m.timeline_title()}>
 				<TimelineSkeleton />
 			</WorkPanel>
@@ -404,7 +404,7 @@
 			<RelationConstellation centre={{ kind: 'task', tag: task.taskTag }} groups={rail.related} />
 			<RelatedRecords
 				groups={rail.related}
-				unlinkAction={data.canUnlink ? '?/unlinkTicket' : undefined}
+				unlinkAction={data.may.unlinkTicket ? '?/unlinkTicket' : undefined}
 				error={failureFor('unlinkTicket')}
 			/>
 			<WorkPanel heading={m.timeline_title()}>
@@ -414,11 +414,11 @@
 	{/snippet}
 </PageLayout>
 
-{#if data.canManage}
+{#if data.may.moveToProject}
 	<MoveTaskDialog
 		open={moveOpen}
 		onOpenChange={(next) => (moveOpen = next)}
 		task={{ taskTag: task.taskTag, projectId: task.projectId }}
-		projects={data.projects}
+		projects={data.choices.projects}
 	/>
 {/if}

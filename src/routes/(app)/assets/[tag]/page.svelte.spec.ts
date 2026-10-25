@@ -53,28 +53,54 @@ const asset = {
 };
 
 function pageData(permissions: { canManage: boolean; canCheckout: boolean }) {
+	const { canManage, canCheckout } = permissions;
 	return {
 		asset,
-		...permissions,
-		canWaiveHandover: false,
+		may: {
+			printLabel: canManage,
+			edit: canManage,
+			changeLocation: canManage,
+			changeState: canManage,
+			archive: canManage,
+			unarchive: false,
+			comment: canManage,
+			attach: canManage,
+			deliver: false,
+			takeBack: canCheckout,
+			waiveHandover: false,
+			linkTickets: false
+		},
+		choices: {
+			people: [
+				{ id: 'p-1', fullName: 'Anna Puig' },
+				{ id: 'p-2', fullName: 'Bernat Soler' }
+			],
+			locations: [],
+			deliverable: [],
+			heldAssets: [],
+			models: [],
+			catalogues: { manufacturers: [], categories: [] }
+		},
+		context: { fromTicket: null },
 		waiveReasonMax: 500,
-		canLinkTickets: false,
 		recentMonths: 6,
-		people: [
-			{ id: 'p-1', fullName: 'Anna Puig' },
-			{ id: 'p-2', fullName: 'Bernat Soler' }
-		],
-		locations: [],
-		deliverable: [],
-		heldAssets: [],
-		editModels: [],
-		manufacturers: [],
-		categories: [],
 		editForm: {},
 		modelForm: {},
 		comments: [],
-		timelineRail: Promise.resolve({ timeline: [], recentTickets: 0, related: [] })
+		rail: Promise.resolve({ timeline: [], recentTickets: 0, related: [] })
 	} as never;
+}
+
+type Mutable = {
+	asset: unknown;
+	may: Record<string, boolean>;
+	choices: Record<string, unknown>;
+};
+
+/** The asset nobody holds: the page offers the delivery instead of the take-back. */
+function unheld(data: Mutable, canCheckout: boolean) {
+	data.asset = { ...asset, custodianPersonId: null, custodianName: null };
+	data.may = { ...data.may, deliver: canCheckout, takeBack: false };
 }
 
 const renderPage = (permissions: { canManage: boolean; canCheckout: boolean }) =>
@@ -82,8 +108,10 @@ const renderPage = (permissions: { canManage: boolean; canCheckout: boolean }) =
 
 describe('asset record in-place editing', () => {
 	it('opens the take-back dialog, listing what the custodian holds', async () => {
-		const data = pageData({ canManage: true, canCheckout: true }) as Record<string, unknown>;
-		data.heldAssets = [{ id: 'a-1', assetTag: 'AST-1', name: 'Laptop', requiresHandover: true }];
+		const data = pageData({ canManage: true, canCheckout: true }) as unknown as Mutable;
+		data.choices.heldAssets = [
+			{ id: 'a-1', assetTag: 'AST-1', name: 'Laptop', requiresHandover: true }
+		];
 		render(Page, { data, form: null } as never);
 
 		await fireEvent.click(screen.getByRole('button', { name: 'Recuperar…' }));
@@ -92,9 +120,11 @@ describe('asset record in-place editing', () => {
 	});
 
 	it('offers the delivery dialog instead of a select when nobody holds the asset', async () => {
-		const data = pageData({ canManage: true, canCheckout: true }) as Record<string, unknown>;
-		data.asset = { ...asset, custodianPersonId: null, custodianName: null };
-		data.deliverable = [{ id: 'a-1', assetTag: 'AST-1', name: 'Laptop', requiresHandover: true }];
+		const data = pageData({ canManage: true, canCheckout: true }) as unknown as Mutable;
+		unheld(data, true);
+		data.choices.deliverable = [
+			{ id: 'a-1', assetTag: 'AST-1', name: 'Laptop', requiresHandover: true }
+		];
 		render(Page, { data, form: null } as never);
 
 		await fireEvent.click(screen.getByRole('button', { name: 'Entregar…' }));
@@ -104,10 +134,10 @@ describe('asset record in-place editing', () => {
 
 	describe('waiving the handover (ADR 0035, decision 8)', () => {
 		function openDelivery(options: { canWaiveHandover: boolean; requiresHandover: boolean }) {
-			const data = pageData({ canManage: true, canCheckout: true }) as Record<string, unknown>;
-			data.asset = { ...asset, custodianPersonId: null, custodianName: null };
-			data.canWaiveHandover = options.canWaiveHandover;
-			data.deliverable = [
+			const data = pageData({ canManage: true, canCheckout: true }) as unknown as Mutable;
+			unheld(data, true);
+			data.may.waiveHandover = options.canWaiveHandover;
+			data.choices.deliverable = [
 				{
 					id: 'a-1',
 					assetTag: 'AST-1',

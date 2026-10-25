@@ -34,7 +34,7 @@ where stated.
 ### Module classes
 
 - **Business modules:** `assets`, `service-desk`, `projects`, `knowledge`, `links`, `directory`,
-  `activity`, `notifications`, `imports`, `search`, `api`, `seed`.
+  `activity`, `notifications`, `imports`, `search`, `api`, `seed`, `screens` (ADR 0050).
 - **Infrastructure:** `auth`, `access`, `db`, `shared`, `settings`.
 - **Root files** of `src/lib/server/` (`subscriptions.ts`, `ports.ts`) are composition code and follow the
   rules for code outside a module.

@@ -10,7 +10,8 @@ import {
 import { actionEvent, outcomeOf } from '#lib/server/projects/testing/action-event.js';
 import { tickets } from '../../../../lib/server/service-desk/schema';
 import { createQueue, createTicket } from '#lib/server/service-desk/testing/fixtures.js';
-import { actions, load } from './+page.server';
+import { relatedTo } from '#lib/server/links/index.js';
+import { actions } from './+page.server';
 import { GET as taskSearch } from './escalate/tasks/+server';
 import { GET as linkableProjects } from './escalate/linkable-projects/+server';
 
@@ -55,10 +56,8 @@ describe('escalating from the ticket record', () => {
 		);
 		expect(returned).toMatchObject({ action: 'escalate', escalated: { kind: 'task' } });
 
-		const page = (await load({ locals: { user: technician }, params } as never)) as {
-			related: Promise<{ relation: string; items: { ref: { title: string } }[] }[]>;
-		};
-		const resolved = (await page.related).find((group) => group.relation === 'resolved_in');
+		const groups = await relatedTo(technician, { kind: 'ticket', id: ticket.id });
+		const resolved = groups.find((group) => group.relation === 'resolved_in');
 		expect(resolved?.items[0].ref.title).toBe('Edited title');
 
 		const after = await ticketRow(ticket.id);
@@ -81,10 +80,7 @@ describe('escalating from the ticket record', () => {
 			expect(returned).toMatchObject({ action: 'escalate' });
 		}
 
-		const page = (await load({ locals: { user: technician }, params } as never)) as {
-			related: Promise<{ relation: string; items: unknown[] }[]>;
-		};
-		const groups = await page.related;
+		const groups = await relatedTo(technician, { kind: 'ticket', id: ticket.id });
 		expect(groups.find((g) => g.relation === 'resolved_in')?.items).toHaveLength(1);
 		expect(groups.find((g) => g.relation === 'handled_in')?.items).toHaveLength(2);
 
@@ -103,7 +99,7 @@ describe('escalating from the ticket record', () => {
 	});
 
 	it('unlinks a task after it was linked, and answers 403 to the requester', async () => {
-		const { technician, employee, task, params } = await scene();
+		const { technician, employee, task, ticket, params } = await scene();
 		await actions.escalate(
 			actionEvent(technician, { kind: 'existing_task', taskId: task.id }, params)
 		);
@@ -122,10 +118,7 @@ describe('escalating from the ticket record', () => {
 		);
 		expect(returned).toMatchObject({ action: 'unlinkTask' });
 
-		const page = (await load({ locals: { user: technician }, params } as never)) as {
-			related: Promise<unknown[]>;
-		};
-		expect(await page.related).toHaveLength(0);
+		expect(await relatedTo(technician, { kind: 'ticket', id: ticket.id })).toHaveLength(0);
 	});
 });
 

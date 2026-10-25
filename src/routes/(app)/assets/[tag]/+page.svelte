@@ -62,9 +62,9 @@
 	let takeBackOpen = $state(false);
 	$effect(() => {
 		if (
-			data.canCheckout &&
-			(location.hash === '#action-custody' || data.fromTicket) &&
-			data.deliverable.length > 0
+			data.may.deliver &&
+			(location.hash === '#action-custody' || data.context.fromTicket) &&
+			data.choices.deliverable.length > 0
 		) {
 			deliverOpen = true;
 		}
@@ -83,7 +83,7 @@
 	// The palette's "Vincular ticket" opens the panel's own dialog (#168).
 	let linkOpen = $state(false);
 	$effect(() => {
-		if (!data.canLinkTickets) return;
+		if (!data.may.linkTickets) return;
 		const open = () => (linkOpen = true);
 		paletteContext.linkableAssetTag = asset.assetTag;
 		window.addEventListener(LINK_TICKET_EVENT, open);
@@ -96,10 +96,10 @@
 		...choice,
 		tone: statusBadge(choice.value as (typeof ASSET_STATES)[number])?.tone
 	}));
-	const personOptions = $derived(options(data.people, (person) => person.fullName));
-	const locationChoices = $derived(locationOptions(data.locations));
+	const personOptions = $derived(options(data.choices.people, (person) => person.fullName));
+	const locationChoices = $derived(locationOptions(data.choices.locations));
 	const editModelOptions = $derived(
-		options(data.editModels, (entry) => `${entry.manufacturerName} · ${entry.name}`)
+		options(data.choices.models, (entry) => `${entry.manufacturerName} · ${entry.name}`)
 	);
 
 	/**
@@ -191,7 +191,7 @@
 </script>
 
 {#snippet custodianRow()}
-	{#if data.canCheckout && localCustodianPersonId === null}
+	{#if data.may.deliver}
 		<span id="action-custody" class="flex items-center gap-[var(--space-3)]">
 			<span class="text-[var(--ink-muted)]">{m.assets_no_custodian()}</span>
 			<Button type="button" size="sm" variant="secondary" onclick={() => (deliverOpen = true)}>
@@ -201,7 +201,7 @@
 	{:else}
 		<span id="action-custody" class="flex items-center gap-[var(--space-3)]">
 			<span class="text-[var(--ink-muted)]">{localCustodianName ?? m.assets_no_custodian()}</span>
-			{#if data.canCheckout && localCustodianPersonId}
+			{#if data.may.takeBack}
 				<Button type="button" size="sm" variant="secondary" onclick={() => (takeBackOpen = true)}>
 					{m.take_back_button()}
 				</Button>
@@ -221,7 +221,7 @@
 		noneLabel={m.asset_form_no_location()}
 		action="?/changeLocation"
 		name="locationId"
-		editable={data.canManage}
+		editable={data.may.changeLocation}
 		openOnHash="action-location"
 		optimistic={(formData) => {
 			const next = formData.get('locationId');
@@ -230,7 +230,8 @@
 			const nextId = typeof next === 'string' && next !== '' ? next : null;
 			localLocationId = nextId;
 			localLocationName = nextId
-				? (data.locations.find((candidate) => candidate.id === nextId)?.path ?? previousName)
+				? (data.choices.locations.find((candidate) => candidate.id === nextId)?.path ??
+					previousName)
 				: null;
 			return () => {
 				localLocationId = previousId;
@@ -256,13 +257,13 @@
 		codeViewTransitionName={toViewTransitionName('record', asset.assetTag)}
 	>
 		{#snippet actions()}
-			{#if data.canManage}
+			{#if data.may.printLabel}
 				<Button href="/assets/labels?tag={encodeURIComponent(asset.assetTag)}" variant="secondary">
 					<Printer class="size-4" aria-hidden="true" />
 					{m.labels_print_one()}
 				</Button>
 			{/if}
-			{#if data.canManage && asset.visibility === 'full'}
+			{#if data.may.edit}
 				<Button
 					href="/assets/{encodeURIComponent(asset.assetTag)}/edit"
 					variant="secondary"
@@ -272,7 +273,7 @@
 					{m.asset_detail_edit()}
 				</Button>
 			{/if}
-			{#if data.canManage && asset.visibility === 'full'}
+			{#if data.may.archive || data.may.unarchive}
 				{#if archived}
 					<form method="POST" action="?/unarchive" use:enhance>
 						<Button type="submit" variant="secondary">
@@ -303,7 +304,7 @@
 				options={stateChoices}
 				action="?/changeState"
 				name="state"
-				editable={data.canManage && !archived}
+				editable={data.may.changeState}
 				openOnHash="action-state"
 				label={m.asset_detail_state()}
 				optimistic={(formData) => {
@@ -360,7 +361,7 @@
 			<RecordAttachments
 				items={data.attachments}
 				downloadBase="/asset-attachments"
-				canManage={data.canManage}
+				canManage={data.may.attach}
 				uploadError={failureFor('addAttachments')}
 				removeError={failureFor('removeAttachment')}
 			/>
@@ -389,7 +390,7 @@
 				id="comments"
 				comments={data.comments}
 				action="?/addComment"
-				canComment={data.canManage}
+				canComment={data.may.comment}
 				error={form && 'action' in form && form.action === 'addComment' && 'message' in form
 					? form.message
 					: undefined}
@@ -407,7 +408,7 @@
 			paints after the header and the action panels above, behind a
 			skeleton sized to match the real rail exactly (no CLS when it swaps).
 		-->
-		{#await data.timelineRail}
+		{#await data.rail}
 			{#if asset.visibility === 'full'}
 				<!-- Same box as the related-tickets panel it stands in for: title, one row, no shift. -->
 				<div
@@ -425,12 +426,12 @@
 			{#if rail.timeline}
 				{#if asset.visibility === 'full'}
 					{@const ticketGroups = rail.related.filter((group) => group.relation === 'affected_by')}
-					{#if data.canLinkTickets || ticketGroups.length > 0}
+					{#if data.may.linkTickets || ticketGroups.length > 0}
 						<RelatedRecords
 							groups={ticketGroups}
-							unlinkAction={data.canLinkTickets ? '?/unlinkTicket' : undefined}
+							unlinkAction={data.may.linkTickets ? '?/unlinkTicket' : undefined}
 							error={unlinkTicketError}
-							linkAction={data.canLinkTickets ? '?/linkTickets' : undefined}
+							linkAction={data.may.linkTickets ? '?/linkTickets' : undefined}
 							linkLabel={m.related_link_ticket()}
 							linkDescription={m.related_link_ticket_lede()}
 							linkFieldLabel={m.related_link_ticket_field()}
@@ -473,7 +474,7 @@
 	{/snippet}
 </PageLayout>
 
-{#if data.canManage && asset.visibility === 'full'}
+{#if data.may.edit}
 	<Sheet
 		open={editOpen}
 		onOpenChange={requestClose}
@@ -515,8 +516,8 @@
 		onOpenChange={(next) => (modelOpen = next)}
 		action="/assets/{encodeURIComponent(asset.assetTag)}/edit?/createModel"
 		form={data.modelForm}
-		manufacturers={data.manufacturers}
-		categories={data.categories}
+		manufacturers={data.choices.catalogues.manufacturers}
+		categories={data.choices.catalogues.categories}
 		oncreated={(id) => {
 			$editValues.assetModelId = id;
 			modelOpen = false;
@@ -547,7 +548,7 @@
 	</ConfirmDialog>
 {/if}
 
-{#if asset.visibility === 'full' && data.canManage}
+{#if data.may.archive}
 	<ConfirmDialog
 		open={archiveOpen}
 		onOpenChange={(next) => (archiveOpen = next)}
@@ -576,29 +577,29 @@
 	</ConfirmDialog>
 {/if}
 
-{#if asset.visibility === 'full' && data.canCheckout && deliverOpen}
+{#if asset.visibility === 'full' && data.may.deliver && deliverOpen}
 	<DeliverDialog
 		open={deliverOpen}
 		onOpenChange={(next) => (deliverOpen = next)}
 		people={personOptions}
-		assets={data.deliverable}
+		assets={data.choices.deliverable}
 		currentId={asset.id}
-		canWaive={data.canWaiveHandover}
+		canWaive={data.may.waiveHandover}
 		waiveReasonMax={data.waiveReasonMax}
-		ticket={data.fromTicket}
+		ticket={data.context.fromTicket}
 		error={deliverError}
 	/>
 {/if}
 
-{#if asset.visibility === 'full' && data.canCheckout && takeBackOpen && localCustodianPersonId}
+{#if asset.visibility === 'full' && data.may.takeBack && takeBackOpen && localCustodianPersonId}
 	<TakeBackDialog
 		open={takeBackOpen}
 		onOpenChange={(next) => (takeBackOpen = next)}
 		person={{ id: localCustodianPersonId, fullName: localCustodianName ?? '' }}
-		assets={data.heldAssets}
+		assets={data.choices.heldAssets}
 		currentId={asset.id}
 		action="?/takeBack"
-		ticket={data.fromTicket}
+		ticket={data.context.fromTicket}
 		error={takeBackError}
 	/>
 {/if}

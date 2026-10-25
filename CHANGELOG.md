@@ -6,6 +6,21 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.0.2] - 2026-10-25
+
+### Changed
+
+- The read policy of the task, project, ticket and asset pages moved out of their routes into
+  `src/lib/server/screens/` (ADR 0050, #360). Each `load` is now guard, screen, 404, transport.
+  `may` names the acts the controls perform, with the record's state already applied, and the
+  pickers (`choices`) load only when the act they serve is allowed. The pages read `data.may.<act>`
+  instead of recombining permissions with record state. A dependency-cruiser rule keeps `screens/` a
+  leaf: no domain and no API module imports it.
+- On a project, while an archive or unarchive is in flight, the write controls now follow the
+  server's answer instead of flipping with the optimistic mirror.
+- On an asset, "Deliver" is no longer offered on a shared asset to someone holding `assets.checkout`
+  (the old condition forgot to check that the viewer sees the whole row).
+
 ## [1.0.1] - 2026-10-25
 
 ### Changed
