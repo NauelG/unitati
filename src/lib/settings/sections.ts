@@ -25,6 +25,7 @@ export const MODULE_ORDER = [
 	'assets',
 	'service-desk',
 	'knowledge',
+	'time',
 	'directory',
 	'platform'
 ] as const;
@@ -36,6 +37,7 @@ export const MODULE_LABELS: Record<SettingsModule, () => string> = {
 	assets: m.settings_module_assets,
 	'service-desk': m.settings_module_service_desk,
 	knowledge: m.settings_module_knowledge,
+	time: m.settings_module_time,
 	directory: m.settings_module_directory,
 	/** What belongs to the installation rather than to one module: API keys, and later its siblings. */
 	platform: m.settings_module_platform
@@ -101,6 +103,12 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
 		href: '/settings/knowledge',
 		label: m.settings_section_knowledge,
 		permission: 'knowledge.spaces.manage'
+	},
+	{
+		module: 'time',
+		href: '/settings/time',
+		label: m.settings_section_time,
+		permission: 'time.manage'
 	},
 	{
 		module: 'directory',

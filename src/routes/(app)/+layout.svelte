@@ -6,6 +6,7 @@
 	import FolderKanbanIcon from '@lucide/svelte/icons/folder-kanban';
 	import ListChecksIcon from '@lucide/svelte/icons/list-checks';
 	import UsersIcon from '@lucide/svelte/icons/users';
+	import ClockIcon from '@lucide/svelte/icons/clock';
 	import HouseIcon from '@lucide/svelte/icons/house';
 	import LayoutGridIcon from '@lucide/svelte/icons/layout-grid';
 	import AppShell, { appShell } from '#lib/components/unitati/AppShell.svelte';
@@ -20,6 +21,7 @@
 	} from '#lib/components/unitati/app-shell-nav.js';
 	import Tooltip from '#lib/components/unitati/Tooltip.svelte';
 	import NotificationBell from '#lib/components/unitati/NotificationBell.svelte';
+	import RunningTimer from '#lib/components/unitati/RunningTimer.svelte';
 	import UserMenu from '#lib/components/unitati/UserMenu.svelte';
 	import { Toaster } from '#lib/components/ui/sonner/index.js';
 	import {
@@ -128,6 +130,17 @@
 			section: 'directory',
 			count: data.counts.directory
 		},
+		...(data.timeEnabled
+			? [
+					{
+						href: '/time',
+						label: m.nav_time(),
+						permission: 'time.manage' as const,
+						icon: ClockIcon,
+						section: 'directory' as const
+					}
+				]
+			: []),
 		// The component gallery, open in every environment but production. The
 		// route answers 404 there too, so hiding the entry is a convenience,
 		// not the guard.
@@ -174,6 +187,9 @@
 	settings={showSettings ? settingsLink : undefined}
 >
 	{#snippet topbarEnd()}
+		{#if data.timer}
+			<RunningTimer {...data.timer} />
+		{/if}
 		<NotificationBell count={data.unreadNotifications} inboxHref="/notifications" />
 		<UserMenu name={data.user.name} email={data.user.email} />
 	{/snippet}

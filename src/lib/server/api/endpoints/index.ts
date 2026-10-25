@@ -6,6 +6,7 @@ import { PROJECT_ENDPOINTS } from './projects';
 import { listQueuesEndpoint } from './queues';
 import { listStatesEndpoint } from './states';
 import { TASK_ENDPOINTS } from './tasks';
+import { TIME_ENDPOINTS } from './time';
 import { TICKET_ACTION_ENDPOINTS } from './ticket-actions';
 import { TICKET_WORK_ENDPOINTS } from './ticket-work';
 import { commentEndpoint, ticketThreadEndpoint } from './ticket-thread';
@@ -28,5 +29,6 @@ export const ENDPOINTS: readonly Endpoint[] = [
 	...PROJECT_ENDPOINTS,
 	...TASK_ENDPOINTS,
 	...KNOWLEDGE_ENDPOINTS,
+	...TIME_ENDPOINTS,
 	listStatesEndpoint
 ];

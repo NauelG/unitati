@@ -30,6 +30,7 @@ import {
 	type UpdateTaskFailure
 } from '#lib/server/projects/index.js';
 import { followActions } from '../../follow-actions';
+import { timeActions } from '../../time-actions';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
@@ -98,6 +99,10 @@ const assignFailures: Record<Exclude<AssignFailure, 'task_not_found'>, () => str
 };
 
 export const actions: Actions = {
+	...timeActions(requireProjectRead, async (user, { params }) => {
+		const found = await getTask(user, params.taskTag);
+		return found.ok ? { taskId: found.value.id } : null;
+	}),
 	...followActions(requireProjectRead, async (user, { params }) => {
 		const found = await getTask(user, params.taskTag);
 		return found.ok ? { taskId: found.value.id } : null;

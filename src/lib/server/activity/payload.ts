@@ -96,6 +96,17 @@ const spaceAudience = z.enum(SPACE_AUDIENCES);
 const pageCount = z.number().int().nonnegative();
 const nullableNumber = z.number().nullable();
 
+/** What every time entry verb says about the entry (ADR 0052). */
+const timeEntryFacts = z.object({
+	authorPersonId: z.uuid(),
+	authorName: presentName,
+	/** Who acted, when it is not the author: an admin correcting somebody else's entry. */
+	actorName: presentName.nullable().optional(),
+	typeName: presentName,
+	minutes: z.number().int().positive(),
+	workDate: isoDate
+});
+
 /**
  * The compile-time gate is the `satisfies` below: a verb added to
  * `ACTIVITY_VERBS` without an entry here is a missing property, reported on
@@ -435,7 +446,20 @@ export const PAYLOAD_SCHEMAS = {
 
 	'page.attachment.added': z.object({ filename: presentName }),
 
-	'page.attachment.removed': z.object({ filename: presentName })
+	'page.attachment.removed': z.object({ filename: presentName }),
+
+	// Time tracking (ADR 0052). The entry's author is named by id and snapshot; when
+	// somebody else corrects it, the actor of the row differs and `actorName` says who.
+	'time.logged': timeEntryFacts,
+	'time.removed': timeEntryFacts,
+	'time.edited': timeEntryFacts.extend({
+		changes: z.object({
+			minutes: fieldChange(z.number().int().positive()).optional(),
+			workDate: fieldChange(isoDate).optional(),
+			typeName: fieldChange(presentName).optional(),
+			note: fieldChange(nullableText).optional()
+		})
+	})
 } satisfies Record<ActivityVerb, z.ZodType>;
 
 /** The payload belonging to one verb, inferred from its schema. */

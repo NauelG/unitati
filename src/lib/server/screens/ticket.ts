@@ -13,6 +13,7 @@ import {
 } from '../service-desk';
 import { failure, success } from '../shared/outcome';
 import { activePeople } from './choices';
+import { timeSection } from './time';
 
 type Queue = Awaited<ReturnType<typeof listQueues>>[number];
 
@@ -121,6 +122,7 @@ export async function ticketScreen(viewer: SessionUser, ticketTag: string) {
 		escalationDraft: may.escalate
 			? escalationDraft({ subject: ticket.subject, description: firstMessage(thread.value) })
 			: null,
+		time: await timeSection(viewer, { ticketId: ticket.id }, true),
 		follow: await followState(viewer, { ticketId: ticket.id }),
 		// Awaited: the thread is the page's point (#89's streaming note).
 		thread: thread.value,

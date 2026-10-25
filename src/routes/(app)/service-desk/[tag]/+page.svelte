@@ -24,6 +24,7 @@
 	import TicketThread, {
 		type PendingThreadItem
 	} from '#lib/components/unitati/TicketThread.svelte';
+	import TimePanel from '#lib/components/unitati/TimePanel.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { keymapRegistry } from '#lib/keymap.js';
 	import {
@@ -40,6 +41,17 @@
 	let { data, form }: PageProps = $props();
 
 	const ticket = $derived(data.ticket);
+
+	/** A refusal of one of the Time section's actions, placed in its form. */
+	const timeError = $derived(
+		form &&
+			['logTime', 'editTime', 'deleteTime', 'startTimer', 'saveTimer', 'discardTimer'].includes(
+				form.action
+			) &&
+			'message' in form
+			? String(form.message)
+			: null
+	);
 
 	/**
 	 * Optimistic mirrors (#89), same shape as the asset detail page: each
@@ -401,6 +413,17 @@
 				]}
 			/>
 		</WorkPanel>
+
+		{#if data.time}
+			<TimePanel
+				entries={data.time.entries}
+				totalMinutes={data.time.totalMinutes}
+				types={data.time.types}
+				canLog={data.time.canLog}
+				timer={data.time.timer}
+				error={timeError}
+			/>
+		{/if}
 
 		<!-- Streamed (#89): `related` is read on the same scoped footing as the
 		     ticket itself but nothing above it needs the answer first. -->

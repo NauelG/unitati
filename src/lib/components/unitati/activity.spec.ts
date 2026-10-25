@@ -471,5 +471,22 @@ describe('activitySentence for locations', () => {
 		expect(
 			activitySentence({ verb: 'page.attachment.removed', payload: { filename: 'a.pdf' } })
 		).toBe('Quitó el adjunto «a.pdf»');
+
+		const facts = {
+			authorPersonId: '0c1f6a0e-3f3a-4c5e-9d58-6f7a2f1b9a10',
+			authorName: 'Tom',
+			typeName: 'Soporte',
+			minutes: 90,
+			workDate: '2026-10-20'
+		};
+		expect(activitySentence({ verb: 'time.logged', payload: facts })).toBe(
+			'Registró 1h 30m de «Soporte» el 2026-10-20'
+		);
+		expect(
+			activitySentence({ verb: 'time.removed', payload: { ...facts, actorName: 'Ada' } })
+		).toBe('Ada eliminó el registro de 1h 30m de «Soporte» de Tom del 2026-10-20');
+		expect(activitySentence({ verb: 'time.edited', payload: { ...facts, changes: {} } })).toBe(
+			'Corrigió su registro de tiempo de «Soporte» del 2026-10-20 (1h 30m)'
+		);
 	});
 });

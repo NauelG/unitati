@@ -80,7 +80,10 @@ export const ACTIVITY_VERBS = [
 	'page.unarchived',
 	'page.revision.restored',
 	'page.attachment.added',
-	'page.attachment.removed'
+	'page.attachment.removed',
+	'time.logged',
+	'time.edited',
+	'time.removed'
 ] as const;
 
 export type ActivityVerb = (typeof ACTIVITY_VERBS)[number];

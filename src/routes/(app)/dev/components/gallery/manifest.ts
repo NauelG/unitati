@@ -706,6 +706,16 @@ export const GALLERY_EXCEPTIONS: GalleryException[] = [
 			"Bound to one record: its composer posts to the page's own `addComment` action, so it cannot submit outside the asset, task, project and person pages. Its parts are in the gallery: WorkPanel, TextAreaField and Button."
 	},
 	{
+		sourceFile: 'TimePanel.svelte',
+		reason:
+			"Bound to one record: its forms post to the ticket's or task's own `logTime`, `editTime` and `deleteTime` actions (ADR 0052), so it cannot submit outside those pages. Its parts are in the gallery: WorkPanel, Dialog, ConfirmDialog, DateField, SelectField, TextAreaField and Button."
+	},
+	{
+		sourceFile: 'RunningTimer.svelte',
+		reason:
+			"A link in the app shell's top bar that exists only while the signed-in person has a running timer (ADR 0052); it reads the layout's `timer`, so it has no states of its own to show. It is covered by its component spec."
+	},
+	{
 		sourceFile: 'HandoverStateBadge.svelte',
 		reason:
 			"A handover state drawn with StatusBadge's own `badge` variants: the tones are the StatusBadge entry's. Which state a handover is in comes from the domain's `deriveHandoverState`, so the component has no states of its own to show."

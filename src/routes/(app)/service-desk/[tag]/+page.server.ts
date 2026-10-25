@@ -37,6 +37,7 @@ import {
 import { failureMessage } from '#lib/ticket-errors.js';
 import { fieldsOf, rejected } from '../../assets/form-data';
 import { followActions } from '../../follow-actions';
+import { timeActions } from '../../time-actions';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
@@ -87,6 +88,13 @@ async function unlinkWork(
 }
 
 export const actions: Actions = {
+	...timeActions(
+		(user) => requirePermission(user, 'tickets.view'),
+		async (user, { params }) => {
+			const found = await getTicketByTag(user, params.tag);
+			return found.ok ? { ticketId: found.value.id } : null;
+		}
+	),
 	...followActions(
 		(user) => requirePermission(user, 'tickets.view'),
 		async (user, { params }) => {

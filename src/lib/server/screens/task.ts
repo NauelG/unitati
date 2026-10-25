@@ -15,6 +15,7 @@ import {
 } from '../projects';
 import { failure, success } from '../shared/outcome';
 import { activePeople } from './choices';
+import { timeSection } from './time';
 
 /**
  * What the viewer may do on this task, with the record's state already applied
@@ -76,6 +77,8 @@ export async function taskScreen(viewer: SessionUser, taskTag: string) {
 		task,
 		may,
 		choices,
+		// Time is logged by `time.log`, not `projects.manage`; only an archived project closes it.
+		time: await timeSection(viewer, { taskId: task.id }, !task.projectArchived),
 		follow: await followState(viewer, { taskId: task.id }),
 		attachments: attachments.value,
 		comments: comments.value,

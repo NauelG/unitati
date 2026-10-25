@@ -23,6 +23,7 @@
 	import RichTextEditor from '#lib/components/unitati/RichTextEditor.svelte';
 	import { stateGroupBadge } from '#lib/components/unitati/status.js';
 	import TimelineSkeleton from '#lib/components/unitati/TimelineSkeleton.svelte';
+	import TimePanel from '#lib/components/unitati/TimePanel.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
 	import { Calendar } from '#lib/components/ui/calendar/index.js';
 	import { parseIsoDate, toIsoDate } from '#lib/domain/calendar-date.js';
@@ -34,6 +35,17 @@
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	/** A refusal of one of the Time section's actions, placed in its form. */
+	const timeError = $derived(
+		form &&
+			['logTime', 'editTime', 'deleteTime', 'startTimer', 'saveTimer', 'discardTimer'].includes(
+				form.action
+			) &&
+			'message' in form
+			? String(form.message)
+			: null
+	);
 
 	const task = $derived(data.task);
 
@@ -393,6 +405,17 @@
 				]}
 			/>
 		</WorkPanel>
+
+		{#if data.time}
+			<TimePanel
+				entries={data.time.entries}
+				totalMinutes={data.time.totalMinutes}
+				types={data.time.types}
+				canLog={data.time.canLog}
+				timer={data.time.timer}
+				error={timeError}
+			/>
+		{/if}
 
 		<!-- Streamed (#89): the history and the tickets linked to this task are read
 		     together, because the timeline merges both. -->

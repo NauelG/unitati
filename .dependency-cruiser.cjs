@@ -26,7 +26,7 @@
 //
 // Module classes (ADR 0048):
 //   business:       assets, service-desk, projects, knowledge, links, directory,
-//                   activity, notifications, imports, search, api, seed, screens
+//                   activity, notifications, time, imports, search, api, seed, screens
 //   infrastructure: auth, access, db, shared, settings
 //   root files of src/lib/server/ (subscriptions.ts, ports.ts) are composition code and
 //   follow the rules for code outside a module.
@@ -42,6 +42,7 @@ const BUSINESS = [
 	'directory',
 	'activity',
 	'notifications',
+	'time',
 	'imports',
 	'search',
 	'api',
@@ -59,6 +60,7 @@ const TABLE_OWNERS = [
 	'links',
 	'activity',
 	'notifications',
+	'time',
 	'api'
 ];
 
@@ -103,11 +105,11 @@ module.exports = {
 		{
 			name: 'tables-from-module',
 			comment:
-				"ADR 0002 rule 3, ADR 0009, ADR 0040, ADR 0048 rule 2: a module's tables are imported from its own module, from another schema.ts (foreign keys), from db/schema.ts, and from activity and notifications (the records they point at). directory/schema.ts and auth/schema.ts are the shared kernel, open to every server module.",
+				"ADR 0002 rule 3, ADR 0009, ADR 0040, ADR 0048 rule 2: a module's tables are imported from its own module, from another schema.ts (foreign keys), from db/schema.ts, and from activity, notifications and time (the records they point at). directory/schema.ts and auth/schema.ts are the shared kernel, open to every server module.",
 			severity: 'error',
 			from: {
 				path: `${SERVER}/([^/]+)/`,
-				pathNot: ['/schema\\.ts$', `${SERVER}/(?:activity|notifications)/`, SPEC_OR_TESTING]
+				pathNot: ['/schema\\.ts$', `${SERVER}/(?:activity|notifications|time)/`, SPEC_OR_TESTING]
 			},
 			to: { path: `${SERVER}/${OWNERS}/schema\\.ts$`, pathNot: `${SERVER}/$1/` }
 		},
@@ -152,6 +154,17 @@ module.exports = {
 			to: {
 				path: `${SERVER}/${BIZ}/`,
 				pathNot: ['/schema\\.ts$', `${SERVER}/(?:activity|notifications)/`]
+			}
+		},
+		{
+			name: 'direction-time',
+			comment:
+				'ADR 0052, ADR 0048 rule 4: time is cross-cutting like activity and notifications. It reads the schema.ts of the records its entries point at (service-desk, projects, directory) and writes history through activity; it calls no other module\u2019s functions. Who may see a record is the caller\u2019s read policy (ADR 0050).',
+			severity: 'error',
+			from: { path: `${SERVER}/time/`, pathNot: SPEC_OR_TESTING },
+			to: {
+				path: `${SERVER}/${BIZ}/`,
+				pathNot: ['/schema\\.ts$', `${SERVER}/(?:activity|time)/`]
 			}
 		},
 		{

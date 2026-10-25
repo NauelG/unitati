@@ -27,6 +27,7 @@
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import PackagePlus from '@lucide/svelte/icons/package-plus';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+	import Clock from '@lucide/svelte/icons/clock';
 	import Ticket from '@lucide/svelte/icons/ticket';
 	import Undo2 from '@lucide/svelte/icons/undo-2';
 	import Unlink from '@lucide/svelte/icons/unlink';
@@ -143,7 +144,10 @@
 		'page.unarchived': ArchiveRestore,
 		'page.revision.restored': History,
 		'page.attachment.added': Paperclip,
-		'page.attachment.removed': FileText
+		'page.attachment.removed': FileText,
+		'time.logged': Clock,
+		'time.edited': Clock,
+		'time.removed': Clock
 	};
 </script>
 

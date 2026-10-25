@@ -6,6 +6,28 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.2.0] - 2026-10-25
+
+### Added
+
+- Time tracking on tickets and tasks (#45, ADR 0052). Off by default; an admin switches it on in
+  Settings → Time, which seeds a default entry type, `General`, and holds the catalogue of types
+  (create, rename, reorder, default; a type in use is archived instead of deleted).
+- Technicians log time on a ticket or a task from a **Time** section in the side rail: duration
+  (`1h 30m`, `45m`, `1.5h`), work date, type and an optional note. They edit and delete their own
+  entries; admins correct anyone's. Logging is refused on tasks of an archived project.
+- A server-side timer, one per person, started from a ticket or task and shown in the app shell with
+  the record code and elapsed time. Stopping it opens the entry form prefilled; cancelling discards it.
+- A project shows the total time of its tasks, broken down by type.
+- `/time` (admins) lists everybody's entries filtered by date range, person, type, project and
+  record, with the filtered total, and exports the list as CSV.
+- REST: `GET`/`POST /api/v1/time-entries`, `PATCH`/`DELETE /api/v1/time-entries/{id}` (`PATCH`
+  takes `baseRevision`) and `GET /api/v1/time-entry-types`.
+- Permissions `time.log` (technician, admin) and `time.manage` (admin). The activity log gains
+  `time.logged`, `time.edited` and `time.removed`, internal and hidden from the requester's view.
+- Database migration `0042` (time tables, `organisations.time_tracking_enabled`, activity verbs).
+  Nothing is backfilled.
+
 ## [1.1.0] - 2026-10-25
 
 ### Added

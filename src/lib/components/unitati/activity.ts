@@ -1,6 +1,7 @@
 import { m } from '#lib/paraglide/messages.js';
 import type { ActivityEntry } from '#lib/server/activity/index.js';
 import type { Priority } from '#lib/domain/status.js';
+import { formatMinutes } from '#lib/domain/time.js';
 import { statusLabel } from './status.js';
 
 /** `normal` has no badge, but a sentence about changing from it needs the word. */
@@ -20,6 +21,24 @@ function spaceAudienceLabel(audience: 'staff' | 'portal'): string {
 
 function pagesCount(count: number): string {
 	return count === 1 ? m.knowledge_pages_one() : m.knowledge_pages_other({ count });
+}
+
+/** The words of a time entry sentence: its duration, type, day and author. */
+function timeFacts(payload: {
+	minutes: number;
+	typeName: string;
+	workDate: string;
+	authorName: string;
+	actorName?: string | null;
+}) {
+	return {
+		duration: formatMinutes(payload.minutes),
+		type: payload.typeName,
+		date: payload.workDate,
+		author: payload.authorName,
+		// Present only when somebody other than the author acted.
+		by: payload.actorName ?? ''
+	};
 }
 
 /**
@@ -362,6 +381,19 @@ export function activitySentence(entry: ActivityEntry): string {
 
 		case 'page.attachment.removed':
 			return m.activity_page_attachment_removed({ filename: entry.payload.filename });
+
+		case 'time.logged':
+			return m.activity_time_logged(timeFacts(entry.payload));
+
+		case 'time.removed':
+			return entry.payload.actorName
+				? m.activity_time_removed_by_other(timeFacts(entry.payload))
+				: m.activity_time_removed(timeFacts(entry.payload));
+
+		case 'time.edited':
+			return entry.payload.actorName
+				? m.activity_time_edited_by_other(timeFacts(entry.payload))
+				: m.activity_time_edited(timeFacts(entry.payload));
 
 		default: {
 			const unhandled: never = entry;
