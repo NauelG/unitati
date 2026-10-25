@@ -20,3 +20,13 @@ export {
 	MAX_TYPE_NAME_LENGTH
 } from './types';
 export type { CatalogueFailure, TypeView } from './types';
+
+export { logTime, editEntry, deleteEntry, listEntriesFor, MAX_NOTE_LENGTH } from './entries';
+export type {
+	EditFailure,
+	EntryFailure,
+	EntryInput,
+	EntryView,
+	RecordTime,
+	TimeTarget
+} from './entries';

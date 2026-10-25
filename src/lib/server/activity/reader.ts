@@ -2,7 +2,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { assets } from '../assets/schema';
 import { tickets } from '../service-desk/schema';
-import { people } from '../directory/schema';
+import { organisations, people } from '../directory/schema';
 import { serviceAccounts } from '../api/schema';
 import { activity } from './schema';
 import type { ActivityEntry } from './payload';
@@ -41,6 +41,12 @@ export type TimelineEntry = ActivityEntry & {
 	actorName: string | null;
 };
 
+/**
+ * Time entries are omitted while the organisation has tracking off (ADR 0051):
+ * the rows stay, and reappear when it is switched back on.
+ */
+const TIME_VISIBLE = sql`(${activity.verb}::text not like 'time.%' or exists (select 1 from ${organisations} where ${organisations.id} = ${activity.organisationId} and ${organisations.timeTrackingEnabled}))`;
+
 /** The person's current name, or the service account's: at most one of the two is joined. */
 const ACTOR_NAME = sql<string | null>`coalesce(${people.fullName}, ${serviceAccounts.name})`;
 
@@ -78,7 +84,9 @@ export async function listActivity(query: ActivityQuery): Promise<TimelineEntry[
 		.leftJoin(serviceAccounts, eq(activity.actorServiceAccountId, serviceAccounts.id))
 		// Scoped by organisation as well as by target (ADR 0004): the target id is
 		// a uuid and effectively unguessable, but "effectively" is not a boundary.
-		.where(and(eq(activity.organisationId, query.organisationId), eq(activity[column], id)))
+		.where(
+			and(eq(activity.organisationId, query.organisationId), eq(activity[column], id), TIME_VISIBLE)
+		)
 		// `occurred_at` alone is not a total order: two entries written in the same
 		// transaction share it to the microsecond, and a timeline that reorders
 		// between two reads of the same rows looks broken. `id` breaks the tie.
@@ -144,7 +152,7 @@ export async function listRecentActivity(
 		.leftJoin(serviceAccounts, eq(activity.actorServiceAccountId, serviceAccounts.id))
 		.leftJoin(assets, eq(activity.assetId, assets.id))
 		.leftJoin(tickets, eq(activity.ticketId, tickets.id))
-		.where(eq(activity.organisationId, organisationId))
+		.where(and(eq(activity.organisationId, organisationId), TIME_VISIBLE))
 		.orderBy(desc(activity.occurredAt), desc(activity.id))
 		.limit(limit);
 
