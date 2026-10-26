@@ -103,7 +103,13 @@ export function timeActions<
 			const id = read_.fields.id;
 			if (!id)
 				return fail(400, { action: 'editTime', message: m.time_error_not_found(), id: null });
-			const outcome = await editEntry(read_.user, id, read_.input);
+			// The revision the form was opened on (ADR 0046). Required: a form that
+			// lost it must not turn into a silent last-write-wins.
+			const base = Number(read_.fields.baseRevision);
+			if (!Number.isInteger(base) || base < 1) {
+				return rejected('editTime', m.time_error_stale());
+			}
+			const outcome = await editEntry(read_.user, id, { ...read_.input, baseRevision: base });
 			if (!outcome.ok) return rejected('editTime', timeFailureMessage(outcome.error));
 			return { action: 'editTime' as const };
 		},

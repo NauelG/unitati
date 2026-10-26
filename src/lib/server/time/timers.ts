@@ -17,7 +17,7 @@ import {
 	type TimeTarget
 } from './entries';
 import { runningTimers } from './schema';
-import { isTimeTrackingEnabled } from './settings';
+import { isTimeTrackingEnabled, lockOrganisation } from './settings';
 
 /**
  * The timer (ADR 0052): one per person, bound to one ticket or one task and
@@ -46,6 +46,12 @@ export async function startTimer(
 	if (refused) return failure(refused);
 
 	return getDb().transaction(async (tx): Promise<Outcome<void, StartTimerFailure>> => {
+		// Shared, so starts do not queue behind each other but a switch-off (which
+		// takes it exclusively before discarding the timers) cannot interleave: the
+		// switch read outside this transaction may already be stale.
+		if (!(await lockOrganisation(tx, actor.organisationId, 'share'))) {
+			return failure('time_tracking_disabled');
+		}
 		const blocked = await checkTarget(tx, actor.organisationId, target);
 		if (blocked) return failure(blocked);
 

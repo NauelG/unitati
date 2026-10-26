@@ -57,6 +57,8 @@ function failureMessage(failure: CatalogueFailure): string {
 			return m.time_settings_error_default();
 		case 'time_tracking_disabled':
 			return m.time_error_disabled();
+		case 'conflict':
+			return m.time_settings_error_conflict();
 		case 'forbidden':
 		case 'type_not_found':
 			return m.time_settings_error_not_found();
@@ -69,7 +71,12 @@ export const actions: Actions = {
 		const enabled = (await request.formData()).get('enabled') === 'true';
 
 		const outcome = await setTimeTracking(user, enabled);
-		if (!outcome.ok) return fail(403);
+		if (!outcome.ok) {
+			if (outcome.error === 'conflict') {
+				return rejected('toggle', m.time_settings_error_conflict());
+			}
+			return fail(403);
+		}
 		return { action: 'toggle' as const, message: null, id: null, enabled: outcome.value };
 	},
 
