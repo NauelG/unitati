@@ -46,4 +46,4 @@ export type { SaveTimerFailure, StartTimerFailure, TimerView } from './timers';
 
 export { reportEntries, reportAll, getEntry } from './report';
 export type { ReportFailure, ReportFilters, ReportPage, ReportRow } from './report';
-export { timeEntriesCsv, CSV_COLUMNS } from './csv';
+export { timeEntriesCsv, parseCsvSeparator, CSV_COLUMNS } from './csv';

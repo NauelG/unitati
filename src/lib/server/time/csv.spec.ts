@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { csvCell, timeEntriesCsv, CSV_COLUMNS } from './csv';
+import { BOM, csvCell, parseCsvSeparator, timeEntriesCsv, CSV_COLUMNS } from './csv';
 import type { ReportRow } from './report';
 
 const row: ReportRow = {
@@ -37,14 +37,58 @@ describe('csvCell', () => {
 		expect(csvCell('two\nlines')).toBe('"two\nlines"');
 	});
 
+	it('quotes the active separator, not the other one', () => {
+		expect(csvCell('a; b', ';')).toBe('"a; b"');
+		expect(csvCell('a, b', ';')).toBe('a, b');
+		expect(csvCell('a; b')).toBe('a; b');
+	});
+
 	it('escapes first and quotes after, so a formula with a comma stays inert', () => {
 		expect(csvCell('=HYPERLINK("x","y")')).toBe(`"'=HYPERLINK(""x"",""y"")"`);
 	});
 });
 
+describe('parseCsvSeparator', () => {
+	it('selects the semicolon only for `semicolon`; everything else keeps the comma', () => {
+		expect(parseCsvSeparator('semicolon')).toBe(';');
+		expect(parseCsvSeparator(null)).toBe(',');
+		expect(parseCsvSeparator('foo')).toBe(',');
+	});
+});
+
 describe('timeEntriesCsv', () => {
+	it('starts with a UTF-8 byte-order mark so Excel reads the accents', () => {
+		expect(timeEntriesCsv([row])[0]).toBe(BOM);
+		expect(timeEntriesCsv([row], ';')[0]).toBe('\uFEFF');
+		expect(timeEntriesCsv([])[0]).toBe('\uFEFF');
+	});
+
+	it('uses the semicolon as separator for the Excel variant', () => {
+		const [header, line] = timeEntriesCsv([row], ';').slice(BOM.length).split('\r\n');
+
+		expect(header).toBe(CSV_COLUMNS.join(';'));
+		expect(line).toBe(
+			'2026-10-24;Tom Technician;General;90;1.50;TSK-0001;Pack the boxes;PRJ-0001;Office move;Swapped the toner'
+		);
+	});
+
+	it('quotes only cells that contain the active separator', () => {
+		const noted: ReportRow = { ...row, note: 'toner; paper, ink' };
+
+		expect(timeEntriesCsv([noted], ';').split('\r\n')[1]).toMatch(/;"toner; paper, ink"$/);
+		expect(timeEntriesCsv([noted]).split('\r\n')[1]).toMatch(/,"toner; paper, ink"$/);
+		expect(timeEntriesCsv([{ ...row, note: 'a; b' }]).split('\r\n')[1]).toMatch(/,a; b$/);
+		expect(timeEntriesCsv([{ ...row, note: 'a, b' }], ';').split('\r\n')[1]).toMatch(/;a, b$/);
+	});
+
+	it('still escapes formulas with the semicolon separator', () => {
+		const ticket: ReportRow = { ...row, project: null, note: '@evil' };
+
+		expect(timeEntriesCsv([ticket], ';').split('\r\n')[1]).toMatch(/;'@evil$/);
+	});
+
 	it('writes a header and one row per entry with minutes and two-place hours', () => {
-		const [header, line, end] = timeEntriesCsv([row]).split('\r\n');
+		const [header, line, end] = timeEntriesCsv([row]).slice(BOM.length).split('\r\n');
 
 		expect(header).toBe(CSV_COLUMNS.join(','));
 		expect(line).toBe(
@@ -67,6 +111,6 @@ describe('timeEntriesCsv', () => {
 	});
 
 	it('is just the header when there is nothing to export', () => {
-		expect(timeEntriesCsv([])).toBe(`${CSV_COLUMNS.join(',')}\r\n`);
+		expect(timeEntriesCsv([])).toBe(`\uFEFF${CSV_COLUMNS.join(',')}\r\n`);
 	});
 });

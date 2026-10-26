@@ -125,7 +125,9 @@ describe('the organisation’s time report', () => {
 		const all = await reportAll(scene.admin, {});
 		if (!all.ok) throw new Error('report refused');
 
-		const [header, ...lines] = timeEntriesCsv(all.value).trimEnd().split('\r\n');
+		const csv = timeEntriesCsv(all.value);
+		expect(csv.startsWith('\uFEFF')).toBe(true);
+		const [header, ...lines] = csv.slice(1).trimEnd().split('\r\n');
 		expect(header).toBe(
 			'work_date,person,type,minutes,hours,record_code,record_title,project_code,project_name,note'
 		);
