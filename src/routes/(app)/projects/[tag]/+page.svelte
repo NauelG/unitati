@@ -7,7 +7,8 @@
 	import Plus from '@lucide/svelte/icons/plus';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
-	import { navigating } from '$app/state';
+	import { navigating, page } from '$app/state';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import {
 		readStoredBoardPreference,
 		resolveView,
@@ -31,6 +32,7 @@
 	import SegmentedControl from '#lib/components/unitati/SegmentedControl.svelte';
 	import PageHeader from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
+	import Pager from '#lib/components/unitati/Pager.svelte';
 	import ProjectVisibilityPanel from '#lib/components/unitati/ProjectVisibilityPanel.svelte';
 	import ProjectProgress from '#lib/components/unitati/ProjectProgress.svelte';
 	import Tooltip from '#lib/components/unitati/Tooltip.svelte';
@@ -46,6 +48,7 @@
 	import DateField from '#lib/components/unitati/DateField.svelte';
 	import TimelineSkeleton from '#lib/components/unitati/TimelineSkeleton.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
+	import { taskHref } from '#lib/domain/routes.js';
 	import { decimalHours, formatMinutes } from '#lib/domain/time.js';
 	import { STATE_GROUPS, type StateGroup } from '#lib/domain/status.js';
 	import { formatDay } from '#lib/format-date.js';
@@ -58,6 +61,13 @@
 	let { data, form }: PageProps = $props();
 
 	const project = $derived(data.project);
+
+	/** A page of the rail's time entries: the rest of the query string (`?view=`) kept, the panel scrolled to. */
+	function timePageHref(next: number): string {
+		const params = new SvelteURLSearchParams(page.url.search);
+		params.set('timePage', String(next));
+		return `?${params}#project-time`;
+	}
 
 	/**
 	 * Archiving is optimistic and needs no confirmation: both directions are
@@ -507,7 +517,16 @@
 		</WorkPanel>
 
 		{#if data.time}
-			<WorkPanel heading={m.time_panel_title()}>
+			<WorkPanel id="project-time" heading={m.time_panel_title()}>
+				{#snippet actions()}
+					{#if data.may.openTimeReport}
+						<a
+							class="text-sm text-[var(--brand)] hover:underline"
+							href="/time?project={encodeURIComponent(project.projectTag)}"
+							data-testid="project-time-report">{m.time_project_open_report()}</a
+						>
+					{/if}
+				{/snippet}
 				<p class="m-0 text-sm text-[var(--ink-muted)]" data-testid="project-time-total">
 					{m.time_panel_total({
 						duration: formatMinutes(data.time.totalMinutes),
@@ -529,6 +548,53 @@
 							</li>
 						{/each}
 					</ul>
+
+					<h3 class="mt-[var(--space-4)] mb-0 text-xs font-semibold text-[var(--ink-muted)]">
+						{m.time_project_entries()}
+					</h3>
+					<ul
+						class="m-0 mt-[var(--space-2)] list-none divide-y divide-[var(--border)] p-0 text-sm"
+						data-testid="project-time-entries"
+					>
+						{#each data.time.entries.rows as entry (entry.id)}
+							<li class="py-[var(--space-2)]">
+								<div class="flex items-baseline justify-between gap-[var(--space-2)]">
+									<a class="group min-w-0 truncate" href={taskHref(entry.record.tag)}>
+										<span class="text-record-id text-[var(--ink-muted)]" translate="no">
+											{entry.record.tag}
+										</span>
+										{#if entry.record.title !== null}
+											<span class="text-[var(--ink)] group-hover:underline">
+												{entry.record.title}
+											</span>
+										{/if}
+									</a>
+									<span class="shrink-0 text-[var(--ink)] tabular-nums">
+										{formatMinutes(entry.minutes)}
+									</span>
+								</div>
+								<p class="m-0 text-xs text-[var(--ink-muted)]">
+									<span class="tabular-nums">{formatDay(entry.workDate)}</span>
+									· {entry.personName} · {entry.typeName}
+								</p>
+								{#if entry.note}
+									<p class="m-0 mt-[var(--space-1)] text-xs whitespace-pre-line text-[var(--ink)]">
+										{entry.note}
+									</p>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+					{#if data.time.entries.pageCount > 1}
+						<Pager
+							class="mt-[var(--space-2)]"
+							page={data.time.entries.page}
+							pageCount={data.time.entries.pageCount}
+							perPage={data.time.entries.perPage}
+							total={data.time.entries.total}
+							href={timePageHref}
+						/>
+					{/if}
 				{/if}
 			</WorkPanel>
 		{/if}

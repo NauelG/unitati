@@ -2,7 +2,7 @@ import { PROJECT_READ_PERMISSIONS } from '#lib/domain/access.js';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { listPeople } from '../directory';
-import { openTicketCount, projectTimeline, relatedTo } from '../links';
+import { openTicketCount, projectTimeline, redactTimeRows, relatedTo } from '../links';
 import { followState } from '../notifications';
 import {
 	canManageMembers,
@@ -15,7 +15,14 @@ import {
 	projectProgress
 } from '../projects';
 import { failure, success } from '../shared/outcome';
-import { projectTime } from '../time';
+import type { Page, PageRequest } from '../shared/pagination';
+import {
+	projectEntries,
+	projectTime,
+	reportScope,
+	type ProjectTime,
+	type ReportRow
+} from '../time';
 import { activePeople } from './choices';
 
 /**
@@ -40,6 +47,8 @@ export interface ProjectMay {
 	unarchive: boolean;
 	undocumentPage: boolean;
 	unlinkTicket: boolean;
+	/** Following the project into `/time`, everybody's time: `time.manage`, while tracking is on (#379). */
+	openTimeReport: boolean;
 }
 
 /** Picker data. Each list is empty unless the act it serves is allowed (ADR 0050 rule 5). */
@@ -50,7 +59,36 @@ export interface ProjectChoices {
 	memberCandidates: { id: string; fullName: string }[];
 }
 
-export async function projectScreen(viewer: SessionUser, projectTag: string) {
+/** The Time section of the project's rail (ADR 0052, #379), as the screen hands it to the page. */
+export interface ProjectTimeSection extends ProjectTime {
+	/**
+	 * One page of the entries behind the total, read-only: they are edited on
+	 * the task screen. Titles the viewer cannot read are blanked (ADR 0050).
+	 */
+	entries: Page<ReportRow>;
+}
+
+/** The rail is narrow: a short page of entries, the rest a click away. */
+export const PROJECT_TIME_PER_PAGE = 10;
+
+async function projectTimeSection(
+	viewer: SessionUser,
+	projectId: string,
+	request: PageRequest
+): Promise<ProjectTimeSection | null> {
+	const [time, entries] = await Promise.all([
+		projectTime(viewer, projectId),
+		projectEntries(viewer, projectId, { perPage: PROJECT_TIME_PER_PAGE, ...request })
+	]);
+	if (!time || !entries) return null;
+	return { ...time, entries: { ...entries, rows: await redactTimeRows(viewer, entries.rows) } };
+}
+
+export async function projectScreen(
+	viewer: SessionUser,
+	projectTag: string,
+	options: { time?: PageRequest } = {}
+) {
 	if (!PROJECT_READ_PERMISSIONS.some((permission) => can(viewer, permission))) {
 		return failure('not_found');
 	}
@@ -58,6 +96,13 @@ export async function projectScreen(viewer: SessionUser, projectTag: string) {
 	const found = await getProject(viewer, projectTag);
 	if (!found.ok) return failure('not_found');
 	const project = found.value;
+
+	// The sum of its tasks' time, by type, and the entries behind it; null while
+	// tracking is off (ADR 0052). Everybody's entries, notes included: whoever reads
+	// the project with `time.log` already reads each one on its task, because every
+	// role that logs time also holds `projects.view` (pinned in `permissions.spec.ts`).
+	// A title the viewer cannot read is still blanked (#379).
+	const time = await projectTimeSection(viewer, project.id, options.time ?? {});
 
 	const manages = can(viewer, 'projects.manage');
 	const archived = project.archivedAt !== null;
@@ -73,7 +118,8 @@ export async function projectScreen(viewer: SessionUser, projectTag: string) {
 		archive: manages && !archived,
 		unarchive: manages && archived,
 		undocumentPage: manages,
-		unlinkTicket: can(viewer, 'tickets.manage')
+		unlinkTicket: can(viewer, 'tickets.manage'),
+		openTimeReport: time !== null && reportScope(viewer) === 'all'
 	};
 
 	// What the viewer can see of the project: an employee gets their own tasks
@@ -106,8 +152,7 @@ export async function projectScreen(viewer: SessionUser, projectTag: string) {
 		choices,
 		// How much of the project the viewer sees: everything, or only the work assigned to them.
 		scope: can(viewer, 'projects.view') ? ('all' as const) : ('assigned' as const),
-		// The sum of its tasks' time, by type; null while tracking is off (ADR 0052).
-		time: await projectTime(viewer, project.id),
+		time,
 		follow: await followState(viewer, { projectId: project.id }),
 		tasks,
 		// Every column of the board, including the empty ones. The route resolves the

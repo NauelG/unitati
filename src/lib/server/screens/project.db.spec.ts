@@ -40,7 +40,9 @@ const NO_ACTS = {
 	archive: false,
 	unarchive: false,
 	undocumentPage: false,
-	unlinkTicket: false
+	unlinkTicket: false,
+	// Time tracking is off in this scene: nothing to follow into `/time` (see `time.db.spec.ts`).
+	openTimeReport: false
 };
 
 describe('the project screen, per role', () => {

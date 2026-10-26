@@ -72,6 +72,15 @@ describe('permissions', () => {
 		});
 	});
 
+	// The project screen lists everybody's entries on every task of the project, notes
+	// included, to whoever reads it with `time.log` (#379). That widens nothing only
+	// while every role that logs time also reads every task of a project it can open.
+	it('gives time.log only to roles that read every task of a project', () => {
+		for (const role of ['admin', 'technician', 'employee'] as const) {
+			if (roleCan(role, 'time.log')) expect(roleCan(role, 'projects.view'), role).toBe(true);
+		}
+	});
+
 	describe('grants (ADR 0044: an organisation setting lends a role one permission)', () => {
 		const lent = { role: 'technician' as const, grants: ['people.edit'] as const };
 

@@ -3,7 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { getDb } from '../db';
 import { tasks } from '../projects/schema';
 import { createProjectRow, createTaskRow } from '../projects/testing/fixtures';
-import { createType, logTime, projectTime, removeType, setTimeTracking } from './index';
+import {
+	createType,
+	logTime,
+	projectEntries,
+	projectTime,
+	removeType,
+	setTimeTracking
+} from './index';
 import { createTimeScene } from './testing/fixtures';
 
 const clock = { now: new Date('2026-10-25T12:00:00Z') };
@@ -77,5 +84,74 @@ describe('a project’s time', () => {
 
 		await setTimeTracking(scene.admin, false);
 		expect(await projectTime(scene.technician, scene.project.id)).toBeNull();
+	});
+});
+
+describe('a project’s entries', () => {
+	async function sceneWithEntries() {
+		const scene = await createTimeScene();
+		const done = await createTaskRow(
+			scene.organisation.id,
+			scene.project.id,
+			scene.states.completed.id,
+			{ title: 'Already shipped' }
+		);
+		const elsewhere = await createProjectRow(scene.organisation.id, { name: 'Elsewhere' });
+		const foreign = await createTaskRow(
+			scene.organisation.id,
+			elsewhere.id,
+			scene.states.unstarted.id
+		);
+		const log = (
+			by: typeof scene.technician,
+			target: { taskId: string } | { ticketId: string },
+			workDate: string,
+			minutes = 30
+		) => logTime(by, target, { minutes, workDate, note: `on ${workDate}` }, clock);
+
+		await log(scene.technician, { taskId: scene.task.id }, '2026-10-20');
+		await log(scene.colleague, { taskId: done.id }, '2026-10-23', 45);
+		await log(scene.technician, { taskId: scene.task.id }, '2026-10-22');
+		await log(scene.technician, { ticketId: scene.ticket.id }, '2026-10-24', 500);
+		await log(scene.technician, { taskId: foreign.id }, '2026-10-24', 500);
+		return { ...scene, done };
+	}
+
+	it('lists everybody’s entries on every task of the project, completed ones included, newest work first', async () => {
+		const scene = await sceneWithEntries();
+
+		const entries = await projectEntries(scene.technician, scene.project.id);
+		expect(entries).toMatchObject({ total: 3, page: 1, pageCount: 1 });
+		expect(
+			entries?.rows.map((row) => [row.workDate, row.personName, row.record.tag, row.minutes])
+		).toEqual([
+			['2026-10-23', 'Carla Colleague', scene.done.taskTag, 45],
+			['2026-10-22', scene.technician.name, scene.task.taskTag, 30],
+			['2026-10-20', scene.technician.name, scene.task.taskTag, 30]
+		]);
+		expect(entries?.rows[0]).toMatchObject({
+			typeName: 'General',
+			note: 'on 2026-10-23',
+			record: { kind: 'task', title: 'Already shipped' }
+		});
+	});
+
+	it('pages the list', async () => {
+		const scene = await sceneWithEntries();
+
+		const second = await projectEntries(scene.technician, scene.project.id, {
+			page: 2,
+			perPage: 2
+		});
+		expect(second).toMatchObject({ total: 3, page: 2, pageCount: 2 });
+		expect(second?.rows.map((row) => row.workDate)).toEqual(['2026-10-20']);
+	});
+
+	it('is absent while tracking is off and for an employee', async () => {
+		const scene = await sceneWithEntries();
+		expect(await projectEntries(scene.employee, scene.project.id)).toBeNull();
+
+		await setTimeTracking(scene.admin, false);
+		expect(await projectEntries(scene.technician, scene.project.id)).toBeNull();
 	});
 });

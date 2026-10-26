@@ -3,6 +3,9 @@
 - **Status:** accepted
 - **Date:** 2026-10-25
 - **Issue:** [#45](../../../issues/45)
+- **Amended:** 2026-10-26 — technicians read their own time on `/time`, and a project lists the
+  entries behind its total. See
+  [Amendment](#amendment-2026-10-26-technicians-read-their-own-time-and-a-project-lists-its-entries).
 
 ## Context
 
@@ -88,3 +91,22 @@ Time entries do not fit that pattern, for three reasons:
   should count, the work is a task linked to the ticket.
 - Estimates, timesheet approval, period locking and billing flags are out of scope, and so is time
   logged directly on a project.
+
+## Amendment 2026-10-26: technicians read their own time, and a project lists its entries
+
+Decision 6 kept `/time`, its export and `GET /api/v1/time-entries` for `time.manage` (#379). They
+now open to `time.log` as well, and the `time` domain scopes the read (`reportScope`): everybody's
+entries for `time.manage`; for `time.log` alone, only the viewer's own, whatever person the filters
+or the query string name. `/settings/time` stays `time.manage`. The report also filters by kind of
+record (`ticket` or `task`) and splits its total between the two.
+
+The project screen lists the entries behind its total: everybody's, on every task of the project,
+read-only, to whoever reads the project with `time.log`.
+
+**Why.** A technician had no view of their own time short of opening record after record, and the
+project showed a total without the entries behind it. Neither widens what anyone sees: under #45 a
+technician already read every entry on a ticket or task they can open, and every role holding
+`time.log` also holds `projects.view` (pinned by a test in `permissions.spec.ts`), so the project
+list gathers entries its reader could already read one task at a time. A title the viewer cannot
+read is still blanked, as decision 4 and #372 require. Everybody's time across records stays an
+admin view.

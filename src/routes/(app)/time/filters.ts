@@ -15,6 +15,7 @@ export function filtersFrom(params: URLSearchParams): ReportFilters {
 		personId: read('person', z.uuid()),
 		typeId: read('type', z.uuid()),
 		projectTag: read('project', tag),
-		recordTag: read('record', tag)
+		recordTag: read('record', tag),
+		kind: read('kind', z.enum(['ticket', 'task']))
 	};
 }

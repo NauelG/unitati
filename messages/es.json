@@ -2120,6 +2120,8 @@
 	"time_error_stale": "El registro cambió mientras lo editabas.",
 
 	"time_project_empty": "Ninguna tarea del proyecto tiene tiempo registrado.",
+	"time_project_entries": "Registros",
+	"time_project_open_report": "Ver en informe",
 
 	"time_error_timer_running": "Ya tienes un cronómetro en marcha.",
 	"time_error_no_timer": "No hay ningún cronómetro en marcha.",
@@ -2133,8 +2135,14 @@
 	"time_shell_timer": "Cronómetro en marcha en {tag}: {elapsed}",
 
 	"nav_time": "Tiempo",
-	"time_report_title": "Tiempo registrado",
+	"time_report_title": "Tiempo",
 	"time_report_lede": "Todo el tiempo registrado en tickets y tareas. Filtra y exporta el resultado para tu herramienta de facturación o de reparto de costes.",
+	"time_report_title_own": "Mi tiempo",
+	"time_report_lede_own": "El tiempo que has registrado en tickets y tareas. Filtra y exporta el resultado.",
+	"time_report_kind": "Tickets o tareas",
+	"time_report_kind_ticket": "Solo tickets",
+	"time_report_kind_task": "Solo tareas",
+	"time_report_split": "Tickets: {tickets} · Tareas: {tasks}",
 	"time_report_export": "Exportar CSV (,)",
 	"time_report_export_excel": "Exportar para Excel (;)",
 	"time_report_from": "Desde",

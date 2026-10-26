@@ -4,7 +4,8 @@ import { permissionsOf } from '#lib/server/access/permissions.js';
 import {
 	ASSET_READ_PERMISSIONS,
 	PROJECT_READ_PERMISSIONS,
-	TICKET_READ_PERMISSIONS
+	TICKET_READ_PERMISSIONS,
+	TIME_READ_PERMISSIONS
 } from '#lib/domain/access.js';
 import { needsSetup, countPeople } from '#lib/server/directory/index.js';
 import { countActive } from '#lib/server/assets/index.js';
@@ -46,9 +47,10 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			visibleRunningTimer(user)
 		]);
 
-	// The `/time` link exists only for whoever may open it, and while tracking is on (ADR 0052).
+	// The `/time` link exists only for whoever may open it, and while tracking is on (ADR 0052):
+	// everybody's time with `time.manage`, one's own with `time.log` (#379).
 	const timeEnabled =
-		permissions.includes('time.manage') && (await isTimeTrackingEnabled(user.organisationId));
+		hasAnyPermission(TIME_READ_PERMISSIONS) && (await isTimeTrackingEnabled(user.organisationId));
 
 	// Sent to the client so navigation can hide what the user cannot reach.
 	// Hiding is a convenience; every route still guards itself server-side.

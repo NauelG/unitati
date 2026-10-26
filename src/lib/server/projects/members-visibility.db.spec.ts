@@ -15,6 +15,7 @@ import {
 	load as loadTask
 } from '../../../routes/(app)/tasks/[taskTag]/+page.server';
 import { load as loadTasks } from '../../../routes/(app)/tasks/+page.server';
+import { load as loadTime } from '../../../routes/(app)/time/+page.server';
 import { activitySentence } from '../../components/unitati/activity';
 import { listActivity, listRecentActivity } from '../activity';
 import { authenticateRequest } from '../api';
@@ -769,6 +770,42 @@ describe('time on a members-only project, for the people who may see it', () => 
 
 		expect(edit.returned).toEqual({ action: 'editTime' });
 		expect(removal.returned).toEqual({ action: 'deleteTime' });
+	});
+
+	it('lists a member every entry of the project on its page, and keeps the outsider at a 404', async () => {
+		const s = await timeScenario();
+
+		const member = (await loadProject(event(s.member, { tag: SECRETS.projectTag }))) as {
+			time: { entries: { total: number; rows: { id: string; record: { title: string } }[] } };
+		};
+		expect(member.time.entries.total).toBe(2);
+		expect(member.time.entries.rows.map((row) => row.id).sort()).toEqual(
+			[s.outsiderOnTask.id, s.memberOnTask.id].sort()
+		);
+		expect(member.time.entries.rows[0].record.title).toBe(SECRETS.taskTitle);
+
+		expect(await status(() => loadProject(event(s.outsider, { tag: SECRETS.projectTag })))).toBe(
+			404
+		);
+	});
+
+	it('shows the outsider only their own time on /time, with the code but not the title of the task', async () => {
+		const s = await timeScenario();
+
+		const text = await payload(() =>
+			loadTime(event(s.outsider, {}, `?person=${s.member.personId}`))
+		);
+		const data = JSON.parse(text) as {
+			report: { rows: { id: string; record: { tag: string; title: string | null } }[] };
+		};
+		expect(data.report.rows.map((row) => row.id).sort()).toEqual(
+			[s.outsiderOnTask.id, s.outsiderOnTicket.id].sort()
+		);
+		expect(data.report.rows.find((row) => row.id === s.outsiderOnTask.id)?.record).toMatchObject({
+			tag: SECRETS.taskTag,
+			title: null
+		});
+		expect(leaksTitles(text)).toEqual([]);
 	});
 
 	it('lets an admin read and correct every entry', async () => {

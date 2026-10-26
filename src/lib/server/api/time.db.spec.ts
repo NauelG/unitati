@@ -265,14 +265,12 @@ describe('PATCH and DELETE /time-entries/{id}', () => {
 });
 
 describe('GET /time-entries', () => {
-	it('is for time.manage keys only, filtered, with the total in meta', async () => {
+	it('lists everybody’s for a time.manage key, filtered, with the total in meta', async () => {
 		const scene = await createTimeScene();
 		const techKey = await keyFor(scene.technician, ['time.log']);
 		const adminKey = await keyFor(scene.admin, ['time.manage']);
 		await logged(scene, techKey);
 		await logged(scene, techKey, { duration: '30m', workDate: '2020-02-01' });
-
-		expect((await send('GET', '/time-entries', techKey)).response.status).toBe(404);
 
 		const all = await send('GET', '/time-entries', adminKey);
 		expect(all.response.status).toBe(200);
@@ -286,6 +284,56 @@ describe('GET /time-entries', () => {
 		expect(january.body.meta).toMatchObject({ total: 1, totalMinutes: 90 });
 		const byRecord = await send('GET', `/time-entries?recordTag=${scene.task.taskTag}`, adminKey);
 		expect(byRecord.body.meta.total).toBe(2);
+	});
+
+	it('lists only the key’s own person’s entries for a time.log key, whatever personId says', async () => {
+		const scene = await createTimeScene();
+		const techKey = await keyFor(scene.technician, ['time.log']);
+		const colleagueKey = await keyFor(scene.colleague, ['time.log']);
+		await logged(scene, techKey);
+		await logged(scene, colleagueKey, { duration: '30m' });
+
+		for (const query of ['', `?personId=${scene.colleague.personId}`]) {
+			const { response, body } = await send('GET', `/time-entries${query}`, techKey);
+			expect(response.status).toBe(200);
+			expect(body.meta).toMatchObject({ total: 1, totalMinutes: 90 });
+			expect(body.data.map((row: { person: { id: string } }) => row.person.id)).toEqual([
+				scene.technician.personId
+			]);
+			// Its own entries read as they did when it logged them: titles included.
+			expect(body.data[0].record.title).toBe(scene.task.title);
+		}
+	});
+
+	it('filters by kind, and refuses a kind it does not know', async () => {
+		const scene = await createTimeScene();
+		const techKey = await keyFor(scene.technician, ['time.log']);
+		const adminKey = await keyFor(scene.admin, ['time.manage']);
+		await logged(scene, techKey);
+		const ticket = await send('POST', '/time-entries', techKey, {
+			ticketTag: scene.ticket.ticketTag,
+			minutes: 20,
+			...day
+		});
+		expect(ticket.response.status).toBe(201);
+
+		for (const key of [techKey, adminKey]) {
+			const tickets = await send('GET', '/time-entries?kind=ticket', key);
+			const tasks = await send('GET', '/time-entries?kind=task', key);
+			expect(tickets.body.meta).toMatchObject({ total: 1, totalMinutes: 20 });
+			expect(tickets.body.data[0].record.kind).toBe('ticket');
+			expect(tasks.body.meta).toMatchObject({ total: 1, totalMinutes: 90 });
+			expect(tasks.body.data[0].record.kind).toBe('task');
+		}
+
+		expect((await send('GET', '/time-entries?kind=asset', adminKey)).response.status).toBe(400);
+	});
+
+	it('is a 404 for a key with neither time.log nor time.manage', async () => {
+		const scene = await createTimeScene();
+		const key = await keyFor(scene.technician, ['tickets.view']);
+
+		expect((await send('GET', '/time-entries', key)).response.status).toBe(404);
 	});
 
 	it('answers 409 time_tracking_disabled while it is off', async () => {

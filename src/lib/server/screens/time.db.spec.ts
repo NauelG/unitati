@@ -108,5 +108,40 @@ describe('the Time section of the record screens', () => {
 		const off = await projectScreen(scene.technician, scene.project.projectTag);
 		if (!off.ok) throw new Error('screen not found');
 		expect(off.value.time).toBeNull();
+		const adminOff = await projectScreen(scene.admin, scene.project.projectTag);
+		if (!adminOff.ok) throw new Error('screen not found');
+		expect(adminOff.value.may.openTimeReport).toBe(false);
+	});
+
+	it('lists the entries behind the project total, paged, and the report link only for time.manage', async () => {
+		const scene = await sceneWithTime();
+		await logTime(
+			scene.colleague,
+			{ taskId: scene.task.id },
+			{ minutes: 20, workDate: '2020-01-02' }
+		);
+
+		const project = await projectScreen(scene.technician, scene.project.projectTag);
+		if (!project.ok) throw new Error('screen not found');
+		expect(project.value.may.openTimeReport).toBe(false);
+		expect(project.value.time?.entries).toMatchObject({ total: 2, page: 1 });
+		expect(
+			project.value.time?.entries.rows.map((row) => [row.personName, row.minutes, row.record])
+		).toEqual([
+			[
+				'Carla Colleague',
+				20,
+				expect.objectContaining({ tag: scene.task.taskTag, title: scene.task.title })
+			],
+			[scene.technician.name, 30, expect.objectContaining({ tag: scene.task.taskTag })]
+		]);
+
+		const second = await projectScreen(scene.admin, scene.project.projectTag, {
+			time: { page: 2, perPage: 1 }
+		});
+		if (!second.ok) throw new Error('screen not found');
+		expect(second.value.may.openTimeReport).toBe(true);
+		expect(second.value.time?.entries).toMatchObject({ total: 2, page: 2, pageCount: 2 });
+		expect(second.value.time?.entries.rows.map((row) => row.minutes)).toEqual([30]);
 	});
 });

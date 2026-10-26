@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lte, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, lte, sql, type SQL } from 'drizzle-orm';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
@@ -12,8 +12,9 @@ import { isTimeTrackingEnabled } from './settings';
 
 /**
  * The organisation's time, across tickets and tasks (ADR 0052): what `/time`,
- * the CSV export and `GET /api/v1/time-entries` all read. `time.manage` only,
- * because it shows everybody's entries.
+ * the CSV export and `GET /api/v1/time-entries` all read. Everybody's entries
+ * for `time.manage`; for `time.log` alone, the actor's own and nobody else's,
+ * whatever person the filters name (#379).
  *
  * Reading both kinds of record in one query is the reason this domain exists:
  * `time` reads the `service-desk` and `projects` schemas for exactly this.
@@ -29,6 +30,8 @@ export interface ReportFilters {
 	projectTag?: string;
 	/** Only the entries of this ticket or task, by its code. */
 	recordTag?: string;
+	/** Only the entries of tickets, or only those of tasks: support time against project time. */
+	kind?: 'ticket' | 'task';
 }
 
 export interface ReportRow {
@@ -65,7 +68,9 @@ function conditions(organisationId: string, filters: ReportFilters): SQL {
 		filters.projectTag ? eq(projects.projectTag, filters.projectTag) : undefined,
 		filters.recordTag
 			? sql`(${tickets.ticketTag} = ${filters.recordTag} or ${tasks.taskTag} = ${filters.recordTag})`
-			: undefined
+			: undefined,
+		filters.kind === 'ticket' ? isNotNull(timeEntries.ticketId) : undefined,
+		filters.kind === 'task' ? isNotNull(timeEntries.taskId) : undefined
 	) as SQL;
 }
 
@@ -121,24 +126,57 @@ function toRow(row: Selected): ReportRow {
 	};
 }
 
-async function allowed(actor: SessionUser): Promise<ReportFailure | null> {
-	if (!can(actor, 'time.manage')) return 'forbidden';
-	if (!(await isTimeTrackingEnabled(actor.organisationId))) return 'time_tracking_disabled';
+/**
+ * Whether the actor reads everybody's time or only their own: `time.manage`
+ * reads everybody's, `time.log` alone only the actor's (#379). Exported so a
+ * screen can say which one it is showing without restating the rule.
+ */
+export function reportScope(actor: SessionUser): 'all' | 'own' | null {
+	if (can(actor, 'time.manage')) return 'all';
+	if (can(actor, 'time.log')) return 'own';
 	return null;
 }
 
-export type ReportPage = Page<ReportRow> & { totalMinutes: number };
+/**
+ * The filters as the actor may apply them, as the `where` of the read. Without `time.manage` the person is
+ * forced to the actor, whatever they asked for; a principal with no person of
+ * its own owns no entries, so it matches none.
+ */
+async function scopedConditions(
+	actor: SessionUser,
+	filters: ReportFilters
+): Promise<Outcome<SQL, ReportFailure>> {
+	const scope = reportScope(actor);
+	if (scope === null) return failure('forbidden');
+	if (!(await isTimeTrackingEnabled(actor.organisationId))) {
+		return failure('time_tracking_disabled');
+	}
+	if (scope === 'all') return success(conditions(actor.organisationId, filters));
+	if (actor.personId === null) return success(sql`false`);
+	return success(conditions(actor.organisationId, { ...filters, personId: actor.personId }));
+}
 
-/** One page of the filtered list, and the total of the whole filtered list (not just the page). */
+export type ReportPage = Page<ReportRow> & {
+	totalMinutes: number;
+	/** The part of `totalMinutes` logged on tickets: support. */
+	ticketMinutes: number;
+	/** The part of `totalMinutes` logged on tasks: projects. The two add up to the total. */
+	taskMinutes: number;
+};
+
+/**
+ * One page of the filtered list, and the totals of the whole filtered list (not
+ * just the page): everybody's for `time.manage`, the actor's own for `time.log`.
+ */
 export async function reportEntries(
 	actor: SessionUser,
 	filters: ReportFilters,
 	request: PageRequest = {}
 ): Promise<Outcome<ReportPage, ReportFailure>> {
-	const refused = await allowed(actor);
-	if (refused) return failure(refused);
+	const scope = await scopedConditions(actor, filters);
+	if (!scope.ok) return scope;
 
-	const where = conditions(actor.organisationId, filters);
+	const where = scope.value;
 	const window = pageWindow(request);
 
 	const [rows, [totals]] = await Promise.all([
@@ -146,7 +184,8 @@ export async function reportEntries(
 		getDb()
 			.select({
 				count: sql<number>`count(*)::int`,
-				minutes: sql<number>`coalesce(sum(${timeEntries.minutes}), 0)::int`
+				minutes: sql<number>`coalesce(sum(${timeEntries.minutes}), 0)::int`,
+				ticketMinutes: sql<number>`coalesce(sum(${timeEntries.minutes}) filter (where ${timeEntries.ticketId} is not null), 0)::int`
 			})
 			.from(timeEntries)
 			.leftJoin(tickets, eq(tickets.id, timeEntries.ticketId))
@@ -157,8 +196,47 @@ export async function reportEntries(
 
 	return success({
 		...page(rows.map(toRow), totals.count, window),
-		totalMinutes: totals.minutes
+		totalMinutes: totals.minutes,
+		ticketMinutes: totals.ticketMinutes,
+		// An entry is on exactly one ticket or one task (a check constraint), so the rest is tasks.
+		taskMinutes: totals.minutes - totals.ticketMinutes
 	});
+}
+
+/**
+ * One page of the entries behind a project's total (`projectTime`): everybody's,
+ * on every task of the project, subtasks and completed tasks included, newest
+ * work first. Read-only: entries are edited on the task screen.
+ *
+ * Not the report: whoever reads the project with `time.log` may list them, as
+ * they could already read each one on its task (ADR 0042, #379). **The caller
+ * has already resolved the project in the viewer's scope.** `null` while
+ * tracking is off or for anybody without `time.log`, as `projectTime`.
+ */
+export async function projectEntries(
+	viewer: SessionUser,
+	projectId: string,
+	request: PageRequest = {}
+): Promise<Page<ReportRow> | null> {
+	if (!can(viewer, 'time.log')) return null;
+	if (!(await isTimeTrackingEnabled(viewer.organisationId))) return null;
+
+	const where = and(
+		eq(timeEntries.organisationId, viewer.organisationId),
+		eq(tasks.projectId, projectId)
+	) as SQL;
+	const window = pageWindow(request);
+
+	const [rows, [{ count }]] = await Promise.all([
+		selectRows(where).limit(window.limit).offset(window.offset),
+		getDb()
+			.select({ count: sql<number>`count(*)::int` })
+			.from(timeEntries)
+			.innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+			.where(where)
+	]);
+
+	return page(rows.map(toRow), count, window);
 }
 
 /** Every row of the filtered list, for the export. */
@@ -166,10 +244,10 @@ export async function reportAll(
 	actor: SessionUser,
 	filters: ReportFilters
 ): Promise<Outcome<ReportRow[], ReportFailure>> {
-	const refused = await allowed(actor);
-	if (refused) return failure(refused);
+	const scope = await scopedConditions(actor, filters);
+	if (!scope.ok) return scope;
 
-	return success((await selectRows(conditions(actor.organisationId, filters))).map(toRow));
+	return success((await selectRows(scope.value)).map(toRow));
 }
 
 /**
