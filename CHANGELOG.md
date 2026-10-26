@@ -6,6 +6,15 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.2.6] - 2026-10-26
+
+### Fixed
+
+- With time tracking switched off, every time endpoint of the API now answers
+  `409 time_tracking_disabled` (#373, ADR 0047). `PATCH /time-entries/{id}` used to answer `404`,
+  `GET /time-entry-types` threw the refusal by hand so its `409` was missing from the OpenAPI
+  document, and cancelling a timer from the app skipped the switch. Each is now covered by a test.
+
 ## [1.2.5] - 2026-10-26
 
 ### Changed
