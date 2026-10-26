@@ -117,6 +117,16 @@ describe('the timer', () => {
 		expect((await discardTimer(scene.technician)).ok).toBe(true);
 	});
 
+	it('refuses to discard while tracking is switched off', async () => {
+		const scene = await createTimeScene();
+		await setTimeTracking(scene.admin, false);
+
+		expect(await discardTimer(scene.technician)).toEqual({
+			ok: false,
+			error: 'time_tracking_disabled'
+		});
+	});
+
 	it('is discarded for the whole organisation when tracking is switched off', async () => {
 		const scene = await createTimeScene();
 		await startTimer(scene.technician, { ticketId: scene.ticket.id });

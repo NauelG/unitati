@@ -138,7 +138,10 @@ export function timeActions<
 		discardTimer: async (event: Event) => {
 			const user = requireViewer(event.locals.user);
 			const outcome = await discardTimer(user);
-			if (!outcome.ok) error(403, 'Forbidden');
+			if (!outcome.ok) {
+				if (outcome.error === 'forbidden') error(403, 'Forbidden');
+				return rejected('discardTimer', timeFailureMessage(outcome.error));
+			}
 			return { action: 'discardTimer' as const };
 		},
 

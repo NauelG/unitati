@@ -175,9 +175,10 @@ export async function saveTimer(
 }
 
 /** Cancelling the form: the timer is thrown away and nothing is logged. */
-export async function discardTimer(actor: SessionUser): Promise<Outcome<void, 'forbidden'>> {
-	if (!can(actor, 'time.log') || actor.personId === null) return failure('forbidden');
+export async function discardTimer(actor: SessionUser): Promise<Outcome<void, EntryFailure>> {
+	const refused = await gate(actor);
+	if (refused) return failure(refused);
 
-	await getDb().delete(runningTimers).where(eq(runningTimers.personId, actor.personId));
+	await getDb().delete(runningTimers).where(eq(runningTimers.personId, actor.personId!));
 	return success(undefined);
 }
