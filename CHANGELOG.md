@@ -6,6 +6,20 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.2.7] - 2026-10-26
+
+### Fixed
+
+- Time tracking now honours who can see a record (#372). A technician removed from a members-only
+  project can no longer edit or delete their time there, save a timer on it or see its task code and
+  title in the app shell, and posting an entry id from another record's page answers `404`. A
+  running timer on a record the person can no longer read is hidden but can still be discarded.
+  `/time`, its CSV and `GET /api/v1/time-entries` return the record title and the project name only
+  for records the principal can read; otherwise the codes stay and the title and name are `null`
+  (empty cells in the CSV). `PATCH` and `DELETE /time-entries/{id}` accept a key that holds
+  `time.manage` without `time.log`, including one with no person behind it; `POST` still needs a
+  person.
+
 ## [1.2.6] - 2026-10-26
 
 ### Fixed
