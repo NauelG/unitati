@@ -30,6 +30,8 @@
 		minutes: number;
 		workDate: string;
 		note: string | null;
+		/** Sent back as `baseRevision` by the edit form. */
+		revision: number;
 		canChange: boolean;
 	}
 
@@ -251,6 +253,8 @@
 	>
 		{#if editing}
 			<input type="hidden" name="id" value={editing.id} />
+			<!-- The revision this form was opened on: an entry edited since is refused (ADR 0046). -->
+			<input type="hidden" name="baseRevision" value={editing.revision} />
 		{/if}
 		<Field
 			label={m.time_panel_duration()}

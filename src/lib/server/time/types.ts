@@ -6,7 +6,7 @@ import type { Executor } from '../db';
 import { uniqueConstraintName } from '../db/errors';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { timeEntries, timeEntryTypes, type TimeEntryType } from './schema';
-import { isTimeTrackingEnabled } from './settings';
+import { isTimeTrackingEnabled, lockOrganisation } from './settings';
 
 /**
  * The entry-type catalogue (ADR 0052): what kind of work an hour was spent on.
@@ -28,7 +28,9 @@ export type CatalogueFailure =
 	| 'name_taken'
 	| 'type_not_found'
 	| 'type_archived'
-	| 'default_type';
+	| 'default_type'
+	/** A concurrent write got there first on a unique key; the caller may retry. */
+	| 'conflict';
 
 export interface TypeView {
 	id: string;
@@ -99,12 +101,19 @@ function checkName(raw: string): Outcome<string, 'name_required' | 'name_too_lon
 	return success(name);
 }
 
-/** Runs a write that may collide with the unique name, mapping the violation to its code. */
+/**
+ * Runs a write that may collide with a unique key, mapping the violation to its
+ * code. The name is the person's to fix; any other key (the single default) is a
+ * lost race, which the organisation lock should already prevent, so it is a
+ * refusal to retry rather than a 500.
+ */
 async function nameChecked<T>(write: () => Promise<Outcome<T, CatalogueFailure>>) {
 	try {
 		return await write();
 	} catch (error) {
-		if (uniqueConstraintName(error) === 'time_entry_types_org_name') return failure('name_taken');
+		const constraint = uniqueConstraintName(error);
+		if (constraint === 'time_entry_types_org_name') return failure('name_taken');
+		if (constraint !== null) return failure('conflict');
 		throw error;
 	}
 }
@@ -120,6 +129,8 @@ export async function createType(
 
 	return nameChecked(() =>
 		getDb().transaction(async (tx) => {
+			// Two first types would both read "none yet" and both become the default.
+			await lockOrganisation(tx, actor.organisationId, 'update');
 			const [{ next }] = await tx
 				.select({ next: sql<number>`coalesce(max(${timeEntryTypes.position}) + 1, 0)::int` })
 				.from(timeEntryTypes)
@@ -234,33 +245,39 @@ export async function setDefaultType(
 	const refused = await allowed(actor);
 	if (refused) return failure(refused);
 
-	return getDb().transaction(async (tx) => {
-		const [type] = await tx
-			.select()
-			.from(timeEntryTypes)
-			.where(
-				and(eq(timeEntryTypes.id, typeId), eq(timeEntryTypes.organisationId, actor.organisationId))
-			)
-			.for('update');
-		if (!type) return failure('type_not_found');
-		if (type.archivedAt) return failure('type_archived');
-
-		// The old default first: the partial unique index allows one at a time.
-		await tx
-			.update(timeEntryTypes)
-			.set({ isDefault: false, updatedAt: new Date() })
-			.where(
-				and(
-					eq(timeEntryTypes.organisationId, actor.organisationId),
-					eq(timeEntryTypes.isDefault, true)
+	return nameChecked(() =>
+		getDb().transaction(async (tx) => {
+			await lockOrganisation(tx, actor.organisationId, 'update');
+			const [type] = await tx
+				.select()
+				.from(timeEntryTypes)
+				.where(
+					and(
+						eq(timeEntryTypes.id, typeId),
+						eq(timeEntryTypes.organisationId, actor.organisationId)
+					)
 				)
-			);
-		await tx
-			.update(timeEntryTypes)
-			.set({ isDefault: true, updatedAt: new Date() })
-			.where(eq(timeEntryTypes.id, typeId));
-		return success(undefined);
-	});
+				.for('update');
+			if (!type) return failure('type_not_found');
+			if (type.archivedAt) return failure('type_archived');
+
+			// The old default first: the partial unique index allows one at a time.
+			await tx
+				.update(timeEntryTypes)
+				.set({ isDefault: false, updatedAt: new Date() })
+				.where(
+					and(
+						eq(timeEntryTypes.organisationId, actor.organisationId),
+						eq(timeEntryTypes.isDefault, true)
+					)
+				);
+			await tx
+				.update(timeEntryTypes)
+				.set({ isDefault: true, updatedAt: new Date() })
+				.where(eq(timeEntryTypes.id, typeId));
+			return success(undefined);
+		})
+	);
 }
 
 /**
@@ -275,6 +292,7 @@ export async function removeType(
 	if (refused) return failure(refused);
 
 	return getDb().transaction(async (tx) => {
+		await lockOrganisation(tx, actor.organisationId, 'update');
 		const [type] = await tx
 			.select()
 			.from(timeEntryTypes)

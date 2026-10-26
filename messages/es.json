@@ -2088,6 +2088,7 @@
 	"time_settings_error_archived": "Un tipo archivado no se puede modificar.",
 	"time_settings_error_default": "El tipo predeterminado no se puede borrar ni archivar. Elige antes otro como predeterminado.",
 	"time_settings_error_not_found": "Ese tipo ya no existe.",
+	"time_settings_error_conflict": "Otra persona cambió la configuración del tiempo a la vez. Inténtalo de nuevo.",
 
 	"activity_time_logged": "Registró {duration} de «{type}» el {date}",
 	"activity_time_edited": "Corrigió su registro de tiempo de «{type}» del {date} ({duration})",

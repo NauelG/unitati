@@ -6,6 +6,17 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.2.2] - 2026-10-26
+
+### Fixed
+
+- Time tracking under concurrency (#377, ADR 0046). Editing a time entry from the app now carries
+  its revision: if someone else changed it meanwhile, the edit is refused with a message and the
+  form keeps what was typed, instead of silently overwriting. Concurrent catalogue writes (setting
+  the default type, creating the first type, the first switch-on) now run one after the other on the
+  organisation and end consistently instead of in a `500`, and a timer can no longer survive a
+  concurrent switch-off.
+
 ## [1.2.1] - 2026-10-26
 
 ### Fixed
