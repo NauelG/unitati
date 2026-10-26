@@ -6,6 +6,15 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.2.1] - 2026-10-26
+
+### Fixed
+
+- The time form proposed a work date from the browser's clock, which near midnight could be a day
+  the server then refused as a future date (#378). The ticket and task screens now receive today in
+  the organisation's time zone, and the form uses it as the default work date and as the latest day
+  the date picker offers.
+
 ## [1.2.0] - 2026-10-25
 
 ### Added
