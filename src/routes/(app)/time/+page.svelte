@@ -49,6 +49,9 @@
 	<PageHeader title={m.time_report_title()}>
 		{#snippet summary()}{m.time_report_lede()}{/snippet}
 		{#snippet actions()}
+			<Button href="/time/export.csv{query({ sep: 'semicolon' })}" variant="secondary"
+				>{m.time_report_export_excel()}</Button
+			>
 			<Button href="/time/export.csv{query()}" variant="secondary">{m.time_report_export()}</Button>
 		{/snippet}
 	</PageHeader>

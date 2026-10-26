@@ -53,10 +53,24 @@ describe('/time/export.csv', () => {
 
 		expect(response.headers.get('content-type')).toBe('text/csv; charset=utf-8');
 		expect(response.headers.get('content-disposition')).toContain('attachment');
+		// `Response.text()` strips a leading BOM, so the bytes are what proves it is sent.
+		const bytes = new Uint8Array(await response.clone().arrayBuffer());
+		expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
 		const [header, row] = (await response.text()).split('\r\n');
 		expect(header.startsWith('work_date,person,type,minutes,hours')).toBe(true);
 		expect(row).toContain(',75,1.25,');
 		expect(row.endsWith(",'=SUM(A1)")).toBe(true);
+	});
+
+	it('uses the semicolon separator with ?sep=semicolon', async () => {
+		const s = await scene();
+		const response = await GET(
+			event(s.admin, '/export.csv?sep=semicolon&record=' + s.ticket.ticketTag)
+		);
+
+		const [header, row] = (await response.text()).split('\r\n');
+		expect(header.startsWith('work_date;person;type;minutes;hours')).toBe(true);
+		expect(row).toContain(';75;1.25;');
 	});
 
 	it('is a 404 without time.manage and while tracking is off', async () => {
