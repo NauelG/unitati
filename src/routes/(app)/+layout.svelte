@@ -143,6 +143,27 @@
 				}
 			]
 		},
+		// Its own module, not a people screen (#379): a technician's own time, an
+		// admin's everybody's. Only while tracking is on (ADR 0052). No accent: time
+		// has no domain colour of its own, it cuts across tickets and tasks.
+		...(data.timeEnabled
+			? [
+					{
+						id: 'time',
+						label: m.nav_time(),
+						icon: ClockIcon,
+						section: 'modules' as const,
+						children: [
+							{
+								href: '/time',
+								label: m.nav_time(),
+								icon: ClockIcon,
+								permission: ['time.log', 'time.manage'] as const
+							}
+						]
+					}
+				]
+			: []),
 		{
 			href: '/directory',
 			label: m.nav_directory(),
@@ -151,17 +172,6 @@
 			section: 'directory',
 			count: data.counts.directory
 		},
-		...(data.timeEnabled
-			? [
-					{
-						href: '/time',
-						label: m.nav_time(),
-						permission: 'time.manage' as const,
-						icon: ClockIcon,
-						section: 'directory' as const
-					}
-				]
-			: []),
 		// The component gallery, open in every environment but production. The
 		// route answers 404 there too, so hiding the entry is a convenience,
 		// not the guard.

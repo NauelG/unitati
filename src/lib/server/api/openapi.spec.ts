@@ -54,6 +54,17 @@ describe('the OpenAPI document built from the real registry', () => {
 		expect(schema).toContain('1h 30m');
 	});
 
+	it('opens the time entry list to time.log, own entries only, and documents the kind filter', () => {
+		const operation = document.paths['/time-entries'].get;
+		expect(operation['x-unitati-permissions']).toEqual(['time.log', 'time.manage']);
+		expect(operation.description).toContain('only the entries of the person behind it');
+		const kind = JSON.stringify(
+			(operation.parameters as { name: string }[]).find((parameter) => parameter.name === 'kind')
+		);
+		expect(kind).toContain('"ticket"');
+		expect(kind).toContain('"task"');
+	});
+
 	it('has exactly one operation per registry entry, with its id, method and path', () => {
 		expect(operations).toHaveLength(ENDPOINTS.length);
 		for (const endpoint of ENDPOINTS) {

@@ -1,16 +1,17 @@
 import { error } from '@sveltejs/kit';
-import { requirePermission } from '#lib/server/auth/guards.js';
+import { requireAnyPermission } from '#lib/server/auth/guards.js';
 import { redactTimeRows } from '#lib/server/links/index.js';
 import { parseCsvSeparator, reportAll, timeEntriesCsv } from '#lib/server/time/index.js';
-import { filtersFrom } from '../filters';
+import { filtersFrom, TIME_READ_PERMISSIONS } from '../filters';
 import type { RequestHandler } from './$types';
 
 /**
  * The filtered list of `/time` as a CSV, for the organisation's own billing or chargeback tool (ADR 0052).
+ * Same scope as the screen: without `time.manage`, only the viewer's own rows (#379).
  * Always UTF-8 with a BOM; `?sep=semicolon` switches the separator for Excel in a Spanish locale.
  */
 export const GET: RequestHandler = async ({ locals, url }) => {
-	const user = requirePermission(locals.user, 'time.manage', url);
+	const user = requireAnyPermission(locals.user, TIME_READ_PERMISSIONS, url);
 
 	const rows = await reportAll(user, filtersFrom(url.searchParams));
 	if (!rows.ok) error(404, 'Not found');

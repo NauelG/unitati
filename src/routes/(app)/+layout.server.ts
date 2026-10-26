@@ -46,9 +46,11 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			visibleRunningTimer(user)
 		]);
 
-	// The `/time` link exists only for whoever may open it, and while tracking is on (ADR 0052).
+	// The `/time` link exists only for whoever may open it, and while tracking is on (ADR 0052):
+	// everybody's time with `time.manage`, one's own with `time.log` (#379).
 	const timeEnabled =
-		permissions.includes('time.manage') && (await isTimeTrackingEnabled(user.organisationId));
+		hasAnyPermission(['time.log', 'time.manage']) &&
+		(await isTimeTrackingEnabled(user.organisationId));
 
 	// Sent to the client so navigation can hide what the user cannot reach.
 	// Hiding is a convenience; every route still guards itself server-side.

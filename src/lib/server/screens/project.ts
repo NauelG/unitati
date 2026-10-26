@@ -2,7 +2,7 @@ import { PROJECT_READ_PERMISSIONS } from '#lib/domain/access.js';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { listPeople } from '../directory';
-import { openTicketCount, projectTimeline, relatedTo } from '../links';
+import { openTicketCount, projectTimeline, redactTimeRows, relatedTo } from '../links';
 import { followState } from '../notifications';
 import {
 	canManageMembers,
@@ -15,7 +15,8 @@ import {
 	projectProgress
 } from '../projects';
 import { failure, success } from '../shared/outcome';
-import { projectTime } from '../time';
+import type { Page, PageRequest } from '../shared/pagination';
+import { projectEntries, projectTime, type ProjectTime, type ReportRow } from '../time';
 import { activePeople } from './choices';
 
 /**
@@ -50,7 +51,42 @@ export interface ProjectChoices {
 	memberCandidates: { id: string; fullName: string }[];
 }
 
-export async function projectScreen(viewer: SessionUser, projectTag: string) {
+/** The Time section of the project's rail (ADR 0052, #379), as the screen hands it to the page. */
+export interface ProjectTimeSection extends ProjectTime {
+	/**
+	 * One page of the entries behind the total, read-only: they are edited on
+	 * the task screen. Titles the viewer cannot read are blanked (ADR 0050).
+	 */
+	entries: Page<ReportRow>;
+	/** Whether the viewer may follow the project into `/time`: everybody's time is `time.manage`. */
+	report: boolean;
+}
+
+/** The rail is narrow: a short page of entries, the rest a click away. */
+export const PROJECT_TIME_PER_PAGE = 10;
+
+async function projectTimeSection(
+	viewer: SessionUser,
+	projectId: string,
+	request: PageRequest
+): Promise<ProjectTimeSection | null> {
+	const [time, entries] = await Promise.all([
+		projectTime(viewer, projectId),
+		projectEntries(viewer, projectId, { perPage: PROJECT_TIME_PER_PAGE, ...request })
+	]);
+	if (!time || !entries) return null;
+	return {
+		...time,
+		entries: { ...entries, rows: await redactTimeRows(viewer, entries.rows) },
+		report: can(viewer, 'time.manage')
+	};
+}
+
+export async function projectScreen(
+	viewer: SessionUser,
+	projectTag: string,
+	options: { time?: PageRequest } = {}
+) {
 	if (!PROJECT_READ_PERMISSIONS.some((permission) => can(viewer, permission))) {
 		return failure('not_found');
 	}
@@ -106,8 +142,10 @@ export async function projectScreen(viewer: SessionUser, projectTag: string) {
 		choices,
 		// How much of the project the viewer sees: everything, or only the work assigned to them.
 		scope: can(viewer, 'projects.view') ? ('all' as const) : ('assigned' as const),
-		// The sum of its tasks' time, by type; null while tracking is off (ADR 0052).
-		time: await projectTime(viewer, project.id),
+		// The sum of its tasks' time, by type, and the entries behind it; null while
+		// tracking is off (ADR 0052). Everybody's entries: whoever reads the project with
+		// `time.log` could already read each one on its task (#379).
+		time: await projectTimeSection(viewer, project.id, options.time ?? {}),
 		follow: await followState(viewer, { projectId: project.id }),
 		tasks,
 		// Every column of the board, including the empty ones. The route resolves the

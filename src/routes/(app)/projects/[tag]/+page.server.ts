@@ -50,7 +50,9 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals, params, url, cookies }) => {
 	const user = requireProjectRead(locals.user);
 
-	const screen = await projectScreen(user, params.tag);
+	// The rail's list of time entries pages on its own key, so it never fights another list for `?page=`.
+	const timePage = Number(url.searchParams.get('timePage') ?? 1);
+	const screen = await projectScreen(user, params.tag, { time: { page: timePage } });
 	if (!screen.ok) error(404, 'Not found');
 	const { value } = screen;
 

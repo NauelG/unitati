@@ -52,6 +52,6 @@ export {
 } from './timers';
 export type { SaveTimerFailure, StartTimerFailure, TimerPayload, TimerView } from './timers';
 
-export { reportEntries, reportAll, getEntry } from './report';
+export { reportEntries, reportAll, reportScope, projectEntries, getEntry } from './report';
 export type { ReportFailure, ReportFilters, ReportPage, ReportRow } from './report';
 export { timeEntriesCsv, parseCsvSeparator, CSV_COLUMNS } from './csv';

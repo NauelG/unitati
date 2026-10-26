@@ -15,10 +15,13 @@
 
 	const input = field().input();
 	const report = $derived(data.report);
+	/** Everybody's time (`time.manage`) or the viewer's own: the server decided, the page only says so. */
+	const everybody = $derived(data.scope === 'all');
+	const title = $derived(everybody ? m.time_report_title() : m.time_report_title_own());
 
 	/** The current filters as a query string, with an optional page, shared by the pager and the export. */
 	function query(extra: Record<string, string> = {}): string {
-		const { from, to, personId, typeId, projectTag, recordTag } = data.filters;
+		const { from, to, personId, typeId, projectTag, recordTag, kind } = data.filters;
 		const pairs: Record<string, string | undefined> = {
 			from,
 			to,
@@ -26,6 +29,7 @@
 			type: typeId,
 			project: projectTag,
 			record: recordTag,
+			kind,
 			...extra
 		};
 		const parts = Object.entries(pairs)
@@ -42,12 +46,12 @@
 </script>
 
 <svelte:head>
-	<title>{documentTitle(m.time_report_title())}</title>
+	<title>{documentTitle(title)}</title>
 </svelte:head>
 
 <PageLayout variant="index">
-	<PageHeader title={m.time_report_title()}>
-		{#snippet summary()}{m.time_report_lede()}{/snippet}
+	<PageHeader {title}>
+		{#snippet summary()}{everybody ? m.time_report_lede() : m.time_report_lede_own()}{/snippet}
 		{#snippet actions()}
 			<Button href="/time/export.csv{query({ sep: 'semicolon' })}" variant="secondary"
 				>{m.time_report_export_excel()}</Button
@@ -58,7 +62,7 @@
 
 	<form
 		method="GET"
-		class="mt-[var(--space-6)] grid gap-[var(--space-3)] sm:grid-cols-3 lg:grid-cols-6"
+		class="mt-[var(--space-6)] grid gap-[var(--space-3)] sm:grid-cols-3 lg:grid-cols-4"
 	>
 		<label class="flex flex-col gap-[var(--space-1)]">
 			<span class="text-label text-[var(--ink)]">{m.time_report_from()}</span>
@@ -68,15 +72,29 @@
 			<span class="text-label text-[var(--ink)]">{m.time_report_to()}</span>
 			<input type="date" name="to" value={data.filters.to ?? ''} class={input} />
 		</label>
+		{#if everybody}
+			<label class="flex flex-col gap-[var(--space-1)]">
+				<span class="text-label text-[var(--ink)]">{m.time_report_person()}</span>
+				<select name="person" class={input}>
+					<option value="">{m.time_report_any()}</option>
+					{#each data.people as person (person.id)}
+						<option value={person.id} selected={person.id === data.filters.personId}>
+							{person.fullName}
+						</option>
+					{/each}
+				</select>
+			</label>
+		{/if}
 		<label class="flex flex-col gap-[var(--space-1)]">
-			<span class="text-label text-[var(--ink)]">{m.time_report_person()}</span>
-			<select name="person" class={input}>
+			<span class="text-label text-[var(--ink)]">{m.time_report_kind()}</span>
+			<select name="kind" class={input}>
 				<option value="">{m.time_report_any()}</option>
-				{#each data.people as person (person.id)}
-					<option value={person.id} selected={person.id === data.filters.personId}>
-						{person.fullName}
-					</option>
-				{/each}
+				<option value="ticket" selected={data.filters.kind === 'ticket'}>
+					{m.time_report_kind_ticket()}
+				</option>
+				<option value="task" selected={data.filters.kind === 'task'}>
+					{m.time_report_kind_task()}
+				</option>
 			</select>
 		</label>
 		<label class="flex flex-col gap-[var(--space-1)]">
@@ -108,7 +126,7 @@
 				class={input}
 			/>
 		</label>
-		<div class="flex items-end gap-[var(--space-2)] sm:col-span-3 lg:col-span-6">
+		<div class="flex items-end gap-[var(--space-2)] sm:col-span-3 lg:col-span-4">
 			<Button type="submit" size="sm">{m.time_report_filter()}</Button>
 			<Button href="/time" variant="ghost" size="sm">{m.time_report_clear()}</Button>
 		</div>
@@ -119,6 +137,12 @@
 			count: report.total,
 			duration: formatMinutes(report.totalMinutes),
 			hours: decimalHours(report.totalMinutes)
+		})}
+	</p>
+	<p class="mt-[var(--space-1)] mb-0 text-sm text-[var(--ink-muted)]" data-testid="report-split">
+		{m.time_report_split({
+			tickets: formatMinutes(report.ticketMinutes),
+			tasks: formatMinutes(report.taskMinutes)
 		})}
 	</p>
 
@@ -132,7 +156,7 @@
 				<thead>
 					<tr>
 						<th scope="col" class={head}>{m.time_panel_date()}</th>
-						<th scope="col" class={head}>{m.time_report_person()}</th>
+						{#if everybody}<th scope="col" class={head}>{m.time_report_person()}</th>{/if}
 						<th scope="col" class={head}>{m.time_panel_type()}</th>
 						<th scope="col" class="{head} text-right">{m.time_report_duration()}</th>
 						<th scope="col" class={head}>{m.time_report_record()}</th>
@@ -144,7 +168,7 @@
 					{#each report.rows as row (row.id)}
 						<tr>
 							<td class="{cell} whitespace-nowrap tabular-nums">{row.workDate}</td>
-							<td class={cell}>{row.personName}</td>
+							{#if everybody}<td class={cell}>{row.personName}</td>{/if}
 							<td class={cell}>{row.typeName}</td>
 							<td class="{cell} text-right whitespace-nowrap tabular-nums">
 								{formatMinutes(row.minutes)}

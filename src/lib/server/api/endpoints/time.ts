@@ -13,6 +13,7 @@ import {
 	listTypes,
 	logTime,
 	reportEntries,
+	reportScope,
 	type EditFailure,
 	type EntryFailure,
 	type ReportFailure,
@@ -41,7 +42,6 @@ import { named, paginationMetaSchema, toMeta } from '../shared-schemas';
  */
 
 const LOG = ['time.log'] as const;
-const MANAGE = ['time.manage'] as const;
 
 /**
  * Naming the ticket or task is part of logging time on it, as naming an asset
@@ -223,11 +223,11 @@ export const listTimeEntriesEndpoint = defineEndpoint({
 	id: 'time.entries.list',
 	method: 'GET',
 	path: '/time-entries',
-	summary: 'List the time entries of the organisation, newest work first.',
+	summary: 'List time entries across tickets and tasks, newest work first.',
 	description:
-		"Returns one page of the organisation's time entries across tickets and tasks, with the same filters as the `/time` screen: `from` and `to` (inclusive work dates), `personId`, `typeId`, `projectTag` (the tasks of that project) and `recordTag` (one ticket or task). `meta` carries the totals of the whole filtered list and `totalMinutes` its sum. Needs `time.manage`. Answers `409 time_tracking_disabled` while the organisation has time tracking switched off.",
+		"Returns one page of time entries across tickets and tasks, with the same filters as the `/time` screen: `from` and `to` (inclusive work dates), `personId`, `typeId`, `projectTag` (the tasks of that project), `recordTag` (one ticket or task) and `kind` (`ticket` or `task`: support time against project time). `meta` carries the totals of the whole filtered list and `totalMinutes` its sum. A key whose role holds `time.manage` lists everybody's entries; a key with `time.log` alone lists only the entries of the person behind it, and `personId` cannot widen that. Answers `409 time_tracking_disabled` while the organisation has time tracking switched off.",
 	refusalTable: reportRefusals,
-	permissions: MANAGE,
+	permissions: ['time.log', 'time.manage'],
 	input: z.object({
 		from: day.optional(),
 		to: day.optional(),
@@ -235,6 +235,7 @@ export const listTimeEntriesEndpoint = defineEndpoint({
 		typeId: z.uuid().optional(),
 		projectTag: tag.optional(),
 		recordTag: tag.optional(),
+		kind: z.enum(['ticket', 'task']).optional(),
 		page: z.coerce.number().optional(),
 		perPage: z.coerce.number().optional()
 	}),
@@ -247,8 +248,11 @@ export const listTimeEntriesEndpoint = defineEndpoint({
 		const result = await reportEntries(principal, filters, { page, perPage });
 		if (!result.ok) throw refuse(result.error);
 
-		// The key's own reads, not widened: a key scoped to `time.manage` alone sees codes, not titles.
-		const rows = await redactTimeRows(principal, result.value.rows);
+		// Everybody's entries are read with the key's own reads, not widened: a key scoped to
+		// `time.manage` alone sees codes, not titles. A key's own entries read as they did when it
+		// logged them (`wireOf`): with the reads that let it name the record, still bounded by its role.
+		const reads = reportScope(principal) === 'own' ? withReads(principal) : principal;
+		const rows = await redactTimeRows(reads, result.value.rows);
 		return {
 			data: rows.map(toWire),
 			meta: { ...toMeta(result.value), totalMinutes: result.value.totalMinutes }
