@@ -228,7 +228,7 @@ describe('the register form a technician is sent', () => {
 
 	it('answers in Spanish, not raw Zod, for a blank Name/Model submitted to the edit action', async () => {
 		// Same leak, other form surface (issue #102's "Done when" asks for
-		// both): `editActions.default` runs `targetOf` — a real database read —
+		// both): `editActions.save` runs `targetOf` — a real database read —
 		// before validating the form, so this one needs the `floor()` fixture
 		// and belongs in the DB project, not alongside the plain action specs.
 		const { organisation } = await floor();
@@ -236,16 +236,16 @@ describe('the register form a technician is sent', () => {
 
 		const fd = new FormData();
 		fd.set('name', '');
-		const request = new Request('http://localhost/assets/AST-0001/edit', {
+		const request = new Request('http://localhost/assets/AST-0001/edit?/save', {
 			method: 'POST',
 			body: fd
 		});
 
-		const result = (await editActions.default({
+		const result = (await editActions.save({
 			request,
 			locals: { user: technician },
 			params: { tag: 'AST-0001' }
-		} as Event<typeof editActions.default>)) as unknown as {
+		} as Event<typeof editActions.save>)) as unknown as {
 			status: number;
 			data: { form: { errors: Record<string, string[]> } };
 		};

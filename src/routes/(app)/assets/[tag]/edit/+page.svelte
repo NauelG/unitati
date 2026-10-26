@@ -31,7 +31,12 @@
 		{#snippet summary()}{m.asset_edit_lede()}{/snippet}
 	</PageHeader>
 
-	<form method="POST" use:enhance class="mt-[var(--space-6)] space-y-[var(--space-5)]">
+	<form
+		method="POST"
+		action="?/save"
+		use:enhance
+		class="mt-[var(--space-6)] space-y-[var(--space-5)]"
+	>
 		<AssetFields
 			bind:values={$form}
 			errors={$errors}
