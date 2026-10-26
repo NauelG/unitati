@@ -6,6 +6,13 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.3.1] - 2026-10-26
+
+### Fixed
+
+- Editing an inventory asset no longer fails with a server error. The edit form submits to a named
+  action, as required when the same page also provides the create-model action.
+
 ## [1.3.0] - 2026-10-26
 
 ### Added
