@@ -171,7 +171,7 @@
 				class="flex items-center gap-[var(--space-2)] py-[var(--space-3)] text-sm text-[var(--ink-muted)]"
 			>
 				<Flag class="size-4" aria-hidden="true" />
-				{m.milestone_dialog_new_lede()}
+				{m.milestones_empty()}
 			</li>
 		{/each}
 		{#if milestones.length > 0}

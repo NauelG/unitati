@@ -112,12 +112,8 @@ const updateMilestoneInput = z.object({
 	targetDate: milestoneFields.targetDate.optional()
 });
 
-export type MilestoneValues = {
-	name?: string;
-	description?: string | null;
-	startDate?: string;
-	targetDate?: string;
-};
+export type CreateMilestoneValues = z.output<typeof createMilestoneInput>;
+export type UpdateMilestoneValues = z.output<typeof updateMilestoneInput>;
 
 /**
  * A milestone's fields, validated: all of them on creation, any of them on an
@@ -128,8 +124,16 @@ export type MilestoneValues = {
  */
 export function parseMilestoneInput(
 	input: unknown,
+	partial: false
+): Outcome<CreateMilestoneValues, MilestoneInputFailure>;
+export function parseMilestoneInput(
+	input: unknown,
+	partial: true
+): Outcome<UpdateMilestoneValues, MilestoneInputFailure>;
+export function parseMilestoneInput(
+	input: unknown,
 	partial: boolean
-): Outcome<MilestoneValues, MilestoneInputFailure> {
+): Outcome<CreateMilestoneValues | UpdateMilestoneValues, MilestoneInputFailure> {
 	const parsed = (partial ? updateMilestoneInput : createMilestoneInput).safeParse(input);
 	if (!parsed.success) {
 		const field = parsed.error.issues[0]?.path[0];

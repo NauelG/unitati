@@ -972,6 +972,8 @@
 	"milestone_error_dates": "Indica fechas válidas: el inicio no puede ser posterior a la fecha objetivo.",
 	"milestone_error_description": "La descripción es demasiado larga.",
 	"milestones_panel_title": "Hitos",
+	"milestones_empty": "Este proyecto aún no tiene hitos.",
+	"milestone_unknown": "Hito desconocido",
 	"milestone_new": "Nuevo hito",
 	"milestone_edit": "Editar hito",
 	"milestone_delete": "Eliminar hito",

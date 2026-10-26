@@ -9,11 +9,7 @@ import { runtimeTimeZone } from '../shared/runtime';
 import { milestoneStatus, type MilestoneProgress, type MilestoneStatus } from './milestone-status';
 import { milestones, projects, states, tasks, type Milestone } from './schema';
 import { requireManage, requireProjectScope, requireTaskScope } from './scope';
-import {
-	parseMilestoneInput,
-	type MilestoneInputFailure,
-	type MilestoneValues
-} from './validation';
+import { parseMilestoneInput, type MilestoneInputFailure } from './validation';
 import { lockProject } from './writes';
 
 /**
@@ -153,10 +149,7 @@ export async function createMilestone(
 	requireManage(actor);
 	const parsed = parseMilestoneInput(input, false);
 	if (!parsed.ok) return parsed;
-	const values = parsed.value as Required<
-		Pick<MilestoneValues, 'name' | 'startDate' | 'targetDate'>
-	> &
-		MilestoneValues;
+	const values = parsed.value;
 
 	return getDb().transaction(async (tx) => {
 		const locked = await lockProject(tx, actor, projectId);

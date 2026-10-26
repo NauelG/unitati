@@ -27,6 +27,7 @@ import {
 	createTaskInput,
 	deleteMilestone,
 	getProject,
+	listMilestones,
 	PROJECT_VISIBILITIES,
 	readAttachmentForm,
 	removeProjectAttachment,
@@ -145,6 +146,15 @@ const milestoneFailures: Record<
 	invalid_dates: ['dates', m.milestone_error_dates],
 	invalid_description: ['description', m.milestone_error_description]
 };
+
+/**
+ * The milestone an action targets must be one of the project in the URL: the
+ * domain scopes by organisation, and a page must not edit another project's.
+ */
+async function ownsMilestone(user: SessionUser, projectId: string, milestoneId: string) {
+	const listed = await listMilestones(user, projectId);
+	return listed.ok && listed.value.some((milestone) => milestone.id === milestoneId);
+}
 
 const moveFailures: Record<Exclude<MoveTaskFailure, 'task_not_found'>, () => string> = {
 	project_archived: m.project_error_archived,
@@ -454,7 +464,10 @@ export const actions: Actions = {
 		const id = z.uuid().safeParse(fields.get('milestoneId'));
 		if (!id.success) return rejected('updateMilestone', m.action_error_invalid());
 
-		await targetOf(user, params.tag);
+		const project = await targetOf(user, params.tag);
+		if (!(await ownsMilestone(user, project.id, id.data))) {
+			return rejected('updateMilestone', m.milestone_error_missing());
+		}
 		const outcome = await updateMilestone(user, id.data, {
 			name: fields.get('name'),
 			description: orNull(fields.get('description')),
@@ -474,11 +487,14 @@ export const actions: Actions = {
 		const id = z.uuid().safeParse((await fieldsOf(request)).get('milestoneId'));
 		if (!id.success) return rejected('deleteMilestone', m.action_error_invalid());
 
-		await targetOf(user, params.tag);
-		const outcome = await deleteMilestone(user, id.data);
+		const project = await targetOf(user, params.tag);
 		// Already gone, e.g. a second tab deleted it first: the reload shows the truth.
+		if (!(await ownsMilestone(user, project.id, id.data))) {
+			return { action: 'deleteMilestone' as const };
+		}
+		const outcome = await deleteMilestone(user, id.data);
 		if (!outcome.ok && outcome.error !== 'milestone_not_found') {
-			return rejected('deleteMilestone', m.project_error_archived());
+			return rejected('deleteMilestone', milestoneFailures[outcome.error][1]());
 		}
 
 		return { action: 'deleteMilestone' as const };

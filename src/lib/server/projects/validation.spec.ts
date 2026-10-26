@@ -82,7 +82,7 @@ describe('tags', () => {
 describe('milestone input', () => {
 	const valid = { name: 'Piloto', startDate: '2026-11-01', targetDate: '2026-11-30' };
 	const failure = (input: object, partial = false) => {
-		const outcome = parseMilestoneInput(input, partial);
+		const outcome = partial ? parseMilestoneInput(input, true) : parseMilestoneInput(input, false);
 		return outcome.ok ? null : outcome.error;
 	};
 

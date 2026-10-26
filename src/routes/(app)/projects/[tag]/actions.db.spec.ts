@@ -548,6 +548,24 @@ describe('milestones on the project record', () => {
 		expect(await milestonesOf(technician, project.id)).toEqual([]);
 	});
 
+	it('does not edit or delete a milestone of another project through this page', async () => {
+		const { technician, organisation, project, params } = await setup();
+		const other = await createProjectRow(organisation.id, { name: 'Elsewhere' });
+		const foreign = await createMilestoneRow(organisation.id, other.id, { name: 'Theirs' });
+
+		const edited = await outcomeOf(() =>
+			actions.updateMilestone(
+				actionEvent(technician, { milestoneId: foreign.id, name: 'Hijacked', ...dates }, params)
+			)
+		);
+		await actions.deleteMilestone(actionEvent(technician, { milestoneId: foreign.id }, params));
+
+		expect(edited.returned?.status).toBe(400);
+		const remaining = await milestonesOf(technician, other.id);
+		expect(remaining.map((milestone) => milestone.name)).toEqual(['Theirs']);
+		expect(project.id).toBeTruthy();
+	});
+
 	it('answers each invalid field with its own message and creates nothing', async () => {
 		const { technician, project, params } = await setup();
 		const create = async (fields: Record<string, string>) =>

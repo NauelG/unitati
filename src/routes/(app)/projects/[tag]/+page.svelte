@@ -150,11 +150,16 @@
 	const milestoneOptions = $derived(
 		data.milestones.map((milestone) => ({ value: milestone.id, label: milestone.name }))
 	);
-	const filteredMilestone = $derived(
-		data.milestoneFilter === 'none'
-			? { name: m.milestone_none() }
-			: (data.milestones.find((milestone) => milestone.id === data.milestoneFilter) ?? null)
-	);
+	const filteredMilestone = $derived.by(() => {
+		if (data.milestoneFilter === null) return null;
+		if (data.milestoneFilter === 'none') return { name: m.milestone_none() };
+		// An id that is not (or no longer) a milestone of this project still gets a chip to clear.
+		return (
+			data.milestones.find((milestone) => milestone.id === data.milestoneFilter) ?? {
+				name: m.milestone_unknown()
+			}
+		);
+	});
 	/** A refusal of the milestone panel's actions, for the dialog that owns it. */
 	const milestoneFailure = $derived(
 		form &&
