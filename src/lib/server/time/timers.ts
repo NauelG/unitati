@@ -89,6 +89,27 @@ export function timerPayload(timer: TimerView | null): TimerPayload | null {
 	);
 }
 
+/**
+ * The record the viewer's timer counts on, for the caller to resolve through the
+ * owning domain's read policy (ADR 0050). A timer outlives the viewer's access
+ * to its record, so anything that shows or saves it asks first.
+ */
+export async function timerTarget(viewer: SessionUser): Promise<TimeTarget | null> {
+	if (viewer.personId === null) return null;
+	const [timer] = await getDb()
+		.select({ ticketId: runningTimers.ticketId, taskId: runningTimers.taskId })
+		.from(runningTimers)
+		.where(
+			and(
+				eq(runningTimers.personId, viewer.personId),
+				eq(runningTimers.organisationId, viewer.organisationId)
+			)
+		)
+		.limit(1);
+	if (!timer) return null;
+	return timer.ticketId ? { ticketId: timer.ticketId } : { taskId: timer.taskId! };
+}
+
 /** The viewer's running timer, with the record it counts on; null when there is none or tracking is off. */
 export async function getRunningTimer(viewer: SessionUser): Promise<TimerView | null> {
 	if (!can(viewer, 'time.log') || viewer.personId === null) return null;

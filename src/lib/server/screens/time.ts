@@ -1,9 +1,9 @@
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
+import { visibleRunningTimer } from '../links';
 import {
 	isTimeTrackingEnabled,
 	listEntriesFor,
-	getRunningTimer,
 	listOfferedTypes,
 	organisationToday,
 	type RecordTime,
@@ -40,7 +40,7 @@ export async function timeSection(
 	const [time, types, running] = await Promise.all([
 		listEntriesFor(viewer, target),
 		listOfferedTypes(viewer.organisationId),
-		getRunningTimer(viewer)
+		visibleRunningTimer(viewer)
 	]);
 	const here =
 		running !== null &&

@@ -41,9 +41,14 @@ export interface ReportRow {
 	minutes: number;
 	revision: number;
 	note: string | null;
-	record: { kind: 'ticket' | 'task'; tag: string; title: string };
-	/** The project of the task; null for a ticket, which is not project work. */
-	project: { tag: string; name: string } | null;
+	/**
+	 * The ticket or task. `title` is what the viewer may read of it: `time` always
+	 * fills it, and whoever composes the screen blanks it for a record the viewer
+	 * cannot open (`redactTimeRows` in `links`, ADR 0042, ADR 0050).
+	 */
+	record: { kind: 'ticket' | 'task'; id: string; tag: string; title: string | null };
+	/** The project of the task, with the same caveat on `name`; null for a ticket. */
+	project: { tag: string; name: string | null } | null;
 }
 
 export type ReportFailure = 'forbidden' | 'time_tracking_disabled';
@@ -77,8 +82,10 @@ function selectRows(where: SQL) {
 			minutes: timeEntries.minutes,
 			revision: timeEntries.revision,
 			note: timeEntries.note,
+			ticketId: tickets.id,
 			ticketTag: tickets.ticketTag,
 			ticketSubject: tickets.subject,
+			taskId: tasks.id,
 			taskTag: tasks.taskTag,
 			taskTitle: tasks.title,
 			projectTag: projects.projectTag,
@@ -108,8 +115,8 @@ function toRow(row: Selected): ReportRow {
 		revision: row.revision,
 		note: row.note,
 		record: row.ticketTag
-			? { kind: 'ticket', tag: row.ticketTag, title: row.ticketSubject! }
-			: { kind: 'task', tag: row.taskTag!, title: row.taskTitle! },
+			? { kind: 'ticket', id: row.ticketId!, tag: row.ticketTag, title: row.ticketSubject! }
+			: { kind: 'task', id: row.taskId!, tag: row.taskTag!, title: row.taskTitle! },
 		project: row.projectTag ? { tag: row.projectTag, name: row.projectName! } : null
 	};
 }

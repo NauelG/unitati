@@ -1,11 +1,19 @@
 import { isHttpError } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { GET as getTimer } from '../../../routes/(app)/api/timer/+server';
+import { load as loadLayout } from '../../../routes/(app)/+layout.server';
 import { load as loadOverview } from '../../../routes/(app)/+page.server';
 import { load as loadProject } from '../../../routes/(app)/projects/[tag]/+page.server';
 import { load as loadProjects } from '../../../routes/(app)/projects/+page.server';
-import { load as loadTicket } from '../../../routes/(app)/service-desk/[tag]/+page.server';
-import { load as loadTask } from '../../../routes/(app)/tasks/[taskTag]/+page.server';
+import {
+	actions as ticketRouteActions,
+	load as loadTicket
+} from '../../../routes/(app)/service-desk/[tag]/+page.server';
+import {
+	actions as taskActions,
+	load as loadTask
+} from '../../../routes/(app)/tasks/[taskTag]/+page.server';
 import { load as loadTasks } from '../../../routes/(app)/tasks/+page.server';
 import { activitySentence } from '../../components/unitati/activity';
 import { listActivity, listRecentActivity } from '../activity';
@@ -13,6 +21,7 @@ import { authenticateRequest } from '../api';
 import { handleApiRequest } from '../api';
 import { createApiKey } from '../api';
 import { createViewer } from '../assets/testing/fixtures';
+import { actionEvent, outcomeOf } from './testing/action-event';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
 import {
@@ -20,6 +29,7 @@ import {
 	linkTicketToProject,
 	linkTicketToTask,
 	projectChoices,
+	redactTimeRows,
 	relatedTo,
 	taskChoices,
 	visibleFeed
@@ -37,6 +47,9 @@ import {
 	moveTaskToProject
 } from './index';
 import { projectMembers, tasks } from './schema';
+import { reportAll, setTimeTracking, timeEntriesCsv } from '../time';
+import { runningTimers, timeEntries } from '../time/schema';
+import { defaultTypeOf } from '../time/testing/fixtures';
 import {
 	assignRow,
 	createProjectRow,
@@ -160,6 +173,11 @@ async function status(run: () => unknown): Promise<number> {
 		if (isHttpError(caught)) return caught.status;
 		throw caught;
 	}
+}
+
+/** The titles and names only: the codes stay on a time row on purpose. */
+function leaksTitles(text: string): string[] {
+	return [SECRETS.projectName, SECRETS.taskTitle].filter((secret) => text.includes(secret));
 }
 
 function leaksSecrets(text: string): string[] {
@@ -515,5 +533,309 @@ describe('moving a task into a members-only project', () => {
 		const moved = await moveTaskToProject(s.member, s.task.id, s.open.id);
 
 		expect(moved.ok).toBe(true);
+	});
+});
+
+/**
+ * Time on work the viewer can no longer see (ADR 0042, ADR 0052, #372). `time`
+ * calls no other domain, so every caller resolves the target of an entry or a
+ * timer through the owning domain's read policy before it writes or renders.
+ *
+ * Tom (the outsider) logged time on T and started a timer there while he still
+ * had access; Mia (a member) did too. Both entries are on the members-only task,
+ * and one more of Tom's is on the ticket K, which every technician can open.
+ */
+async function timeScenario() {
+	const s = await scenario();
+	const enabled = await setTimeTracking(s.admin, true);
+	if (!enabled.ok) throw new Error('could not switch time tracking on');
+	const type = await defaultTypeOf(s.organisation.id);
+
+	const entry = async (personId: string, target: { taskId: string } | { ticketId: string }) => {
+		const [row] = await getDb()
+			.insert(timeEntries)
+			.values({
+				organisationId: s.organisation.id,
+				...target,
+				personId,
+				typeId: type.id,
+				minutes: 30,
+				workDate: '2020-01-01'
+			})
+			.returning();
+		return row;
+	};
+	const outsiderOnTask = await entry(s.outsider.personId!, { taskId: s.task.id });
+	const memberOnTask = await entry(s.member.personId!, { taskId: s.task.id });
+	const outsiderOnTicket = await entry(s.outsider.personId!, { ticketId: s.ticket.id });
+	const timerOf = (personId: string) =>
+		getDb().insert(runningTimers).values({
+			organisationId: s.organisation.id,
+			personId,
+			taskId: s.task.id,
+			startedAt: new Date()
+		});
+	await timerOf(s.outsider.personId!);
+
+	return { ...s, type, outsiderOnTask, memberOnTask, outsiderOnTicket, timerOf };
+}
+
+type TimeScenario = Awaited<ReturnType<typeof timeScenario>>;
+
+const ticketParams = (s: TimeScenario) => ({ tag: s.ticket.ticketTag });
+
+const ticketActions = <K extends 'editTime' | 'deleteTime' | 'saveTimer' | 'discardTimer'>(
+	name: K
+) => (ticketRouteActions as unknown as Record<K, (event: never) => unknown>)[name];
+
+const entryForm = (s: TimeScenario, id: string) => ({
+	id,
+	duration: '45m',
+	workDate: '2020-01-02',
+	typeId: s.type.id,
+	baseRevision: '1'
+});
+
+async function entriesOf(s: TimeScenario) {
+	return getDb()
+		.select()
+		.from(timeEntries)
+		.where(eq(timeEntries.organisationId, s.organisation.id));
+}
+
+async function timeApi(
+	key: string,
+	method: string,
+	path: string,
+	body?: Record<string, unknown>
+	// The body is read through the serialised text too; the shape varies per endpoint.
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<{ status: number; text: string; json: { data: any } | null }> {
+	const request = new Request(`http://localhost/api/v1${path}`, {
+		method,
+		headers: {
+			authorization: `Bearer ${key}`,
+			...(body ? { 'content-type': 'application/json' } : {})
+		},
+		body: body ? JSON.stringify(body) : undefined
+	});
+	const locals = { ...(await authenticateRequest(request)) } as unknown as App.Locals;
+	const response = await handleApiRequest({ request, locals });
+	const text = await response.text();
+	return { status: response.status, text, json: text ? JSON.parse(text) : null };
+}
+
+async function keyOf(owner: SessionUser, scopes: string[]): Promise<string> {
+	const issued = await createApiKey(owner, {
+		name: crypto.randomUUID(),
+		scopes: scopes as never,
+		expiresInDays: 90
+	});
+	if (!issued.ok) throw new Error(String(issued.error));
+	return issued.value.key;
+}
+
+describe('time on a members-only project, for a technician who is no longer a member', () => {
+	it('answers 404 to an entry id of that task posted from a ticket page they can open', async () => {
+		const s = await timeScenario();
+
+		for (const action of ['editTime', 'deleteTime'] as const) {
+			const { thrown } = await outcomeOf(() =>
+				ticketActions(action)(
+					actionEvent(s.outsider, entryForm(s, s.outsiderOnTask.id), ticketParams(s))
+				)
+			);
+			expect(thrown?.status).toBe(404);
+		}
+
+		const stored = (await entriesOf(s)).find((row) => row.id === s.outsiderOnTask.id);
+		expect(stored).toMatchObject({ minutes: 30, revision: 1 });
+	});
+
+	it('still edits and deletes their own entry on the ticket they can open', async () => {
+		const s = await timeScenario();
+
+		const edit = await outcomeOf(() =>
+			ticketActions('editTime')(
+				actionEvent(s.outsider, entryForm(s, s.outsiderOnTicket.id), ticketParams(s))
+			)
+		);
+		expect(edit.returned).toEqual({ action: 'editTime' });
+
+		const removal = await outcomeOf(() =>
+			ticketActions('deleteTime')(
+				actionEvent(s.outsider, { id: s.outsiderOnTicket.id }, ticketParams(s))
+			)
+		);
+		expect(removal.returned).toEqual({ action: 'deleteTime' });
+	});
+
+	it('answers 404 to the task page itself and to its own time actions', async () => {
+		const s = await timeScenario();
+		const params = { taskTag: SECRETS.taskTag };
+
+		expect(await status(() => loadTask(event(s.outsider, params)))).toBe(404);
+		for (const action of ['logTime', 'editTime', 'deleteTime', 'startTimer'] as const) {
+			const { thrown } = await outcomeOf(() =>
+				taskActions[action](actionEvent(s.outsider, entryForm(s, s.outsiderOnTask.id), params))
+			);
+			expect(thrown?.status).toBe(404);
+		}
+		expect((await entriesOf(s)).find((row) => row.id === s.outsiderOnTask.id)).toMatchObject({
+			minutes: 30
+		});
+	});
+
+	it('cannot save a timer that counts on it, and can still discard it', async () => {
+		const s = await timeScenario();
+		const before = (await entriesOf(s)).length;
+
+		const saved = await outcomeOf(() =>
+			ticketActions('saveTimer')(actionEvent(s.outsider, entryForm(s, ''), ticketParams(s)))
+		);
+		expect(saved.thrown?.status).toBe(404);
+		expect((await entriesOf(s)).length).toBe(before);
+		expect(await getDb().select().from(runningTimers)).toHaveLength(1);
+
+		const discarded = await outcomeOf(() =>
+			ticketActions('discardTimer')(actionEvent(s.outsider, {}, ticketParams(s)))
+		);
+		expect(discarded.returned).toEqual({ action: 'discardTimer' });
+		expect(await getDb().select().from(runningTimers)).toHaveLength(0);
+	});
+
+	it('does not see the timer in the app shell, the timer poll or the ticket rail', async () => {
+		const s = await timeScenario();
+
+		const layout = await payload(() => loadLayout(event(s.outsider)));
+		expect(JSON.parse(layout).timer).toBeNull();
+		expect(leaksSecrets(layout)).toEqual([]);
+
+		const poll = await (await getTimer({ locals: { user: s.outsider } } as never)).text();
+		expect(JSON.parse(poll).timer).toBeNull();
+		expect(leaksSecrets(poll)).toEqual([]);
+
+		const ticket = await payload(() => loadTicket(event(s.outsider, ticketParams(s))));
+		expect(leaksSecrets(ticket)).toEqual([]);
+	});
+
+	it('shows a member their timer', async () => {
+		const s = await timeScenario();
+		await s.timerOf(s.member.personId!);
+
+		const layout = JSON.parse(await payload(() => loadLayout(event(s.member))));
+
+		expect(layout.timer).toMatchObject({ tag: SECRETS.taskTag });
+	});
+
+	it('answers 404 to POST, PATCH and DELETE /time-entries, and changes nothing', async () => {
+		const s = await timeScenario();
+		const key = await keyOf(s.outsider, ['time.log']);
+
+		const post = await timeApi(key, 'POST', '/time-entries', {
+			taskTag: SECRETS.taskTag,
+			minutes: 10,
+			workDate: '2020-01-01'
+		});
+		const patch = await timeApi(key, 'PATCH', `/time-entries/${s.outsiderOnTask.id}`, {
+			minutes: 5,
+			baseRevision: 1
+		});
+		const del = await timeApi(key, 'DELETE', `/time-entries/${s.outsiderOnTask.id}`);
+
+		expect([post.status, patch.status, del.status]).toEqual([404, 404, 404]);
+		for (const reply of [post, patch, del]) expect(leaksSecrets(reply.text)).toEqual([]);
+		expect((await entriesOf(s)).find((row) => row.id === s.outsiderOnTask.id)).toMatchObject({
+			minutes: 30,
+			revision: 1
+		});
+	});
+});
+
+describe('time on a members-only project, for the people who may see it', () => {
+	it('lets a member edit and delete their own entry from the task page', async () => {
+		const s = await timeScenario();
+		const params = { taskTag: SECRETS.taskTag };
+
+		const edit = await outcomeOf(() =>
+			taskActions.editTime(actionEvent(s.member, entryForm(s, s.memberOnTask.id), params))
+		);
+		const removal = await outcomeOf(() =>
+			taskActions.deleteTime(actionEvent(s.member, { id: s.memberOnTask.id }, params))
+		);
+
+		expect(edit.returned).toEqual({ action: 'editTime' });
+		expect(removal.returned).toEqual({ action: 'deleteTime' });
+	});
+
+	it('lets an admin read and correct every entry', async () => {
+		const s = await timeScenario();
+		const key = await keyOf(s.admin, ['time.log', 'time.manage', 'tickets.view', 'projects.view']);
+
+		const list = await timeApi(key, 'GET', '/time-entries');
+		const patch = await timeApi(key, 'PATCH', `/time-entries/${s.outsiderOnTask.id}`, {
+			minutes: 5,
+			baseRevision: 1
+		});
+		const del = await timeApi(key, 'DELETE', `/time-entries/${s.memberOnTask.id}`);
+
+		expect(list.status).toBe(200);
+		expect(
+			list.json?.data.map((row: { record: { title: string | null } }) => row.record.title)
+		).toContain(SECRETS.taskTitle);
+		expect(patch.status).toBe(200);
+		expect(patch.json?.data.record.title).toBe(SECRETS.taskTitle);
+		expect(del.status).toBe(204);
+	});
+});
+
+describe('GET /time-entries, /time and the CSV, for a principal who cannot read the record', () => {
+	it('keeps the codes and drops the titles and the project name', async () => {
+		const s = await timeScenario();
+		const key = await keyOf(s.admin, ['time.manage']);
+
+		const { status: code, json, text } = await timeApi(key, 'GET', '/time-entries');
+
+		expect(code).toBe(200);
+		expect(leaksTitles(text)).toEqual([]);
+		const rows = json?.data as {
+			record: { kind: string; tag: string; title: string | null };
+			project: { tag: string; name: string | null } | null;
+		}[];
+		expect(rows).toHaveLength(3);
+		const task = rows.find((row) => row.record.kind === 'task')!;
+		expect(task.record).toEqual({ kind: 'task', tag: SECRETS.taskTag, title: null });
+		expect(task.project).toEqual({ tag: SECRETS.projectTag, name: null });
+		const ticket = rows.find((row) => row.record.kind === 'ticket')!;
+		expect(ticket.record).toEqual({ kind: 'ticket', tag: s.ticket.ticketTag, title: null });
+	});
+
+	it('returns them once the key also reads tickets and projects', async () => {
+		const s = await timeScenario();
+		const key = await keyOf(s.admin, ['time.manage', 'tickets.view', 'projects.view']);
+
+		const { json } = await timeApi(key, 'GET', '/time-entries');
+
+		const titles = (json?.data as { record: { title: string | null } }[]).map(
+			(row) => row.record.title
+		);
+		expect(titles).toContain(SECRETS.taskTitle);
+		expect(titles).not.toContain(null);
+	});
+
+	it('leaves empty cells in the CSV for a technician lent time.manage who is not a member', async () => {
+		const s = await timeScenario();
+		const viewer = { ...s.outsider, grants: ['time.manage'] } as SessionUser;
+
+		const report = await reportAll(viewer, {});
+		if (!report.ok) throw new Error('expected a report');
+		const rows = await redactTimeRows(viewer, report.value);
+		const csv = timeEntriesCsv(rows);
+
+		expect(csv).toContain(SECRETS.taskTag);
+		expect(csv).toContain(SECRETS.projectTag);
+		expect(leaksTitles(csv)).toEqual([]);
+		const ticketRow = rows.find((row) => row.record.kind === 'ticket')!;
+		expect(ticketRow.record.title).toBe(s.ticket.subject);
 	});
 });

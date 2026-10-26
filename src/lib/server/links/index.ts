@@ -104,3 +104,5 @@ export type { TaskChoice, ProjectChoice } from './escalation-targets';
 
 export { parseEscalation, invalidField } from './escalation-input';
 export type { EscalationField, ParsedEscalation } from './escalation-input';
+
+export { canReadTimeTarget, visibleRunningTimer, redactTimeRows } from './time-access';

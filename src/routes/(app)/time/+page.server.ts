@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { requirePermission } from '#lib/server/auth/guards.js';
 import { listPeople } from '#lib/server/directory/index.js';
+import { redactTimeRows } from '#lib/server/links/index.js';
 import { reportEntries, listTypes } from '#lib/server/time/index.js';
 import { filtersFrom } from './filters';
 import type { PageServerLoad } from './$types';
@@ -23,7 +24,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	]);
 
 	return {
-		report: report.value,
+		report: { ...report.value, rows: await redactTimeRows(user, report.value.rows) },
 		filters,
 		people: people.map(({ id, fullName }) => ({ id, fullName })),
 		types: types.map(({ id, name, archived }) => ({ id, name, archived }))

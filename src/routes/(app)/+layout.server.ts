@@ -11,7 +11,8 @@ import { countActive } from '#lib/server/assets/index.js';
 import { countOpen } from '#lib/server/service-desk/index.js';
 import { unreadCount } from '#lib/server/notifications/index.js';
 import { countActiveProjects, countOpenTasks } from '#lib/server/projects/index.js';
-import { getRunningTimer, isTimeTrackingEnabled, timerPayload } from '#lib/server/time/index.js';
+import { visibleRunningTimer } from '#lib/server/links/index.js';
+import { isTimeTrackingEnabled, timerPayload } from '#lib/server/time/index.js';
 import type { Permission } from '#lib/server/access/permissions.js';
 import type { LayoutServerLoad } from './$types';
 
@@ -42,7 +43,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			seesProjects ? countActiveProjects(user) : undefined,
 			seesProjects ? countOpenTasks(user) : undefined,
 			unreadCount(user),
-			getRunningTimer(user)
+			visibleRunningTimer(user)
 		]);
 
 	// The `/time` link exists only for whoever may open it, and while tracking is on (ADR 0052).
