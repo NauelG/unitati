@@ -157,6 +157,14 @@
 			resetForm: false,
 			onUpdated({ form: updated }) {
 				if (updated.valid) editOpen = false;
+			},
+			// A successful save answers with `redirect(303)` to this same page, and
+			// Superforms fires neither `onUpdated` nor an untaint for a redirect:
+			// the sheet would stay open and then ask to discard what was just saved.
+			onResult({ result }) {
+				if (result.type !== 'redirect') return;
+				untaintEdit();
+				editOpen = false;
 			}
 		}
 	);
@@ -166,6 +174,10 @@
 		enhance: editEnhance,
 		submitting: editSubmitting
 	} = edit;
+
+	function untaintEdit() {
+		edit.tainted.set(undefined);
+	}
 
 	function openEdit(event: Event) {
 		event.preventDefault();
