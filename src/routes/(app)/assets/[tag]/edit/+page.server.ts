@@ -56,7 +56,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 };
 
 export const actions: Actions = {
-	default: async (event) => {
+	save: async (event) => {
 		const user = requirePermission(event.locals.user, 'assets.manage');
 		const asset = await targetOf(user, event.params.tag);
 
