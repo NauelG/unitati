@@ -6,6 +6,15 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.2.3] - 2026-10-26
+
+### Fixed
+
+- The `/time` CSV export now opens cleanly in Excel with a Spanish locale (#375). The file starts
+  with a UTF-8 byte-order mark so accents survive, and `?sep=semicolon` writes `;` as the separator
+  so each value lands in its own column. `/time` offers both actions, "Exportar para Excel (;)" and
+  "Exportar CSV (,)", and both keep the active filters.
+
 ## [1.2.2] - 2026-10-26
 
 ### Fixed
