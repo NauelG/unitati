@@ -107,6 +107,17 @@ export async function gate(actor: SessionUser): Promise<EntryFailure | null> {
 }
 
 /**
+ * The gate of an edit or a delete. An author needs what a write needs; `time.manage`
+ * corrects anybody's entry and needs no person of its own, so a key with no person
+ * behind it may do so. It still cannot author: `gate` stays the gate of a create.
+ */
+async function changeGate(actor: SessionUser): Promise<EntryFailure | null> {
+	if (!can(actor, 'time.manage')) return gate(actor);
+	if (!(await isTimeTrackingEnabled(actor.organisationId))) return 'time_tracking_disabled';
+	return null;
+}
+
+/**
  * Whether the record exists in the organisation and may be written to: a task
  * of an archived project is read-only. The project row is locked shared so an
  * archive cannot slip between this check and the insert.
@@ -235,6 +246,20 @@ async function lockEntry(tx: Transaction, actor: SessionUser, entryId: string) {
 	return entry ?? null;
 }
 
+/**
+ * The ticket or task an entry is on, for the caller to resolve through the
+ * owning domain's read policy before it writes or renders (ADR 0050). `null`
+ * for an entry that does not exist in the organisation.
+ */
+export async function entryTarget(actor: SessionUser, entryId: string): Promise<TimeTarget | null> {
+	const [entry] = await getDb()
+		.select({ ticketId: timeEntries.ticketId, taskId: timeEntries.taskId })
+		.from(timeEntries)
+		.where(and(eq(timeEntries.id, entryId), eq(timeEntries.organisationId, actor.organisationId)));
+	if (!entry) return null;
+	return entry.ticketId ? { ticketId: entry.ticketId } : { taskId: entry.taskId! };
+}
+
 /** Own entries, or anybody's with `time.manage`. */
 const mayChange = (actor: SessionUser, authorPersonId: string) =>
 	authorPersonId === actor.personId || can(actor, 'time.manage');
@@ -245,7 +270,7 @@ export async function editEntry(
 	input: EntryInput & { baseRevision?: number },
 	clock: Clock = {}
 ): Promise<Outcome<{ id: string; revision: number }, EditFailure>> {
-	const refused = await gate(actor);
+	const refused = await changeGate(actor);
 	if (refused) return failure(refused);
 	const invalid = checkValues(input, clock);
 	if (invalid) return failure(invalid);
@@ -332,7 +357,7 @@ export async function deleteEntry(
 	actor: SessionUser,
 	entryId: string
 ): Promise<Outcome<void, EntryFailure>> {
-	const refused = await gate(actor);
+	const refused = await changeGate(actor);
 	if (refused) return failure(refused);
 
 	return getDb().transaction(async (tx): Promise<Outcome<void, EntryFailure>> => {

@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { listActivity } from '../activity';
+import { createServiceAccount } from '../api';
 import { getDb } from '../db';
 import { projects, tasks } from '../projects/schema';
 import { tickets } from '../service-desk/schema';
@@ -10,6 +11,7 @@ import {
 	createType,
 	deleteEntry,
 	editEntry,
+	entryTarget,
 	listEntriesFor,
 	listOfferedTypes,
 	logTime,
@@ -331,5 +333,63 @@ describe('history and visibility', () => {
 
 		expect((await listEntriesFor(scene.colleague, target)).entries[0].canChange).toBe(false);
 		expect((await listEntriesFor(scene.admin, target)).entries[0].canChange).toBe(true);
+	});
+});
+
+describe('a principal with no person behind it that holds time.manage (#372)', () => {
+	async function account(scene: Awaited<ReturnType<typeof createTimeScene>>) {
+		const created = await createServiceAccount(scene.admin, {
+			name: 'Billing',
+			role: 'technician'
+		});
+		if (!created.ok) throw new Error(`account failed: ${created.error}`);
+		// No role holds `time.manage` for an account today: it arrives by a grant (ADR 0044).
+		return {
+			id: created.value.id,
+			serviceAccountId: created.value.id,
+			name: 'Billing',
+			email: '',
+			role: 'technician' as const,
+			organisationId: scene.organisation.id,
+			personId: null,
+			grants: ['time.manage'] as const
+		};
+	}
+
+	it('edits and deletes anybody’s entry, naming itself as the actor', async () => {
+		const scene = await createTimeScene();
+		const id = await logged(scene);
+		const billing = await account(scene);
+
+		const edited = await editEntry(billing, id, { ...entry, minutes: 15 }, clock);
+		expect(edited).toEqual({ ok: true, value: { id, revision: 2 } });
+		expect(await deleteEntry(billing, id)).toEqual({ ok: true, value: undefined });
+		expect(await getDb().select().from(timeEntries)).toHaveLength(0);
+	});
+
+	it('still cannot create an entry, which is first-person', async () => {
+		const scene = await createTimeScene();
+		const billing = await account(scene);
+
+		expect(await logTime(billing, { ticketId: scene.ticket.id }, entry, clock)).toEqual({
+			ok: false,
+			error: 'forbidden'
+		});
+	});
+
+	it('is refused without time.manage, like any principal with no person', async () => {
+		const scene = await createTimeScene();
+		const id = await logged(scene);
+		const billing = { ...(await account(scene)), grants: [] as never[] };
+
+		expect(await deleteEntry(billing, id)).toEqual({ ok: false, error: 'forbidden' });
+	});
+
+	it('tells the caller where an entry is, and nothing for a missing one', async () => {
+		const scene = await createTimeScene();
+		const onTask = await logged(scene, scene.technician, { taskId: scene.task.id });
+
+		expect(await entryTarget(scene.technician, onTask)).toEqual({ taskId: scene.task.id });
+		expect(await entryTarget(scene.technician, crypto.randomUUID())).toBeNull();
 	});
 });

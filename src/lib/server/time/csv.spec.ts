@@ -12,7 +12,7 @@ const row: ReportRow = {
 	minutes: 90,
 	revision: 1,
 	note: 'Swapped the toner',
-	record: { kind: 'task', tag: 'TSK-0001', title: 'Pack the boxes' },
+	record: { kind: 'task', id: 'r1', tag: 'TSK-0001', title: 'Pack the boxes' },
 	project: { tag: 'PRJ-0001', name: 'Office move' }
 };
 
@@ -100,7 +100,7 @@ describe('timeEntriesCsv', () => {
 	it('leaves the project empty for a ticket and escapes a hostile note and title', () => {
 		const ticket: ReportRow = {
 			...row,
-			record: { kind: 'ticket', tag: 'TCK-0001', title: '=cmd|calc' },
+			record: { kind: 'ticket', id: 'r2', tag: 'TCK-0001', title: '=cmd|calc' },
 			project: null,
 			note: '@evil'
 		};

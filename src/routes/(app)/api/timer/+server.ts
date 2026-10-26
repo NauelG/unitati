@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { requireUser } from '#lib/server/auth/guards.js';
-import { getRunningTimer, timerPayload } from '#lib/server/time/index.js';
+import { visibleRunningTimer } from '#lib/server/links/index.js';
+import { timerPayload } from '#lib/server/time/index.js';
 import type { RequestHandler } from './$types';
 
 /**
@@ -10,5 +11,5 @@ import type { RequestHandler } from './$types';
  */
 export const GET: RequestHandler = async ({ locals }) => {
 	const user = requireUser(locals.user);
-	return json({ timer: timerPayload(await getRunningTimer(user)) });
+	return json({ timer: timerPayload(await visibleRunningTimer(user)) });
 };

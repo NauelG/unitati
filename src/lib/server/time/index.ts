@@ -26,6 +26,7 @@ export {
 	editEntry,
 	deleteEntry,
 	listEntriesFor,
+	entryTarget,
 	organisationToday,
 	MAX_NOTE_LENGTH
 } from './entries';
@@ -41,7 +42,14 @@ export type {
 export { projectTime } from './totals';
 export type { ProjectTime } from './totals';
 
-export { startTimer, getRunningTimer, timerPayload, saveTimer, discardTimer } from './timers';
+export {
+	startTimer,
+	getRunningTimer,
+	timerTarget,
+	timerPayload,
+	saveTimer,
+	discardTimer
+} from './timers';
 export type { SaveTimerFailure, StartTimerFailure, TimerPayload, TimerView } from './timers';
 
 export { reportEntries, reportAll, getEntry } from './report';

@@ -2,13 +2,16 @@ import { error, fail } from '@sveltejs/kit';
 import { parseDuration } from '#lib/domain/time.js';
 import { m } from '#lib/paraglide/messages.js';
 import type { SessionUser } from '#lib/server/auth/guards.js';
+import { canReadTimeTarget } from '#lib/server/links/index.js';
 import {
 	deleteEntry,
 	discardTimer,
 	editEntry,
+	entryTarget,
 	logTime,
 	saveTimer,
 	startTimer,
+	timerTarget,
 	type EditFailure,
 	type TimeTarget
 } from '#lib/server/time/index.js';
@@ -48,11 +51,20 @@ export function timeFailureMessage(
 	}
 }
 
+/** Whether the entry found by id is on the record of the route. */
+const isOnRecord = (record: TimeTarget, entryTarget: TimeTarget | null) =>
+	entryTarget !== null &&
+	('ticketId' in record
+		? 'ticketId' in entryTarget && record.ticketId === entryTarget.ticketId
+		: 'taskId' in entryTarget && record.taskId === entryTarget.taskId);
+
 /**
  * The `?/logTime`, `?/editTime` and `?/deleteTime` actions of a ticket or task
  * route (ADR 0052). `resolve` reads the record through its owning domain's
  * read policy, so one the viewer cannot see is a 404 before `time` is asked
- * anything (ADR 0050).
+ * anything (ADR 0050). A posted entry must belong to that record, and a timer
+ * is saved only while the record it counts on is still readable: both answer
+ * 404, like a record that does not exist (ADR 0042).
  */
 export function timeActions<
 	Event extends {
@@ -103,6 +115,7 @@ export function timeActions<
 			const id = read_.fields.id;
 			if (!id)
 				return fail(400, { action: 'editTime', message: m.time_error_not_found(), id: null });
+			if (!isOnRecord(read_.target, await entryTarget(read_.user, id))) error(404, 'Not found');
 			// The revision the form was opened on (ADR 0046). Required: a form that
 			// lost it must not turn into a silent last-write-wins.
 			const base = Number(read_.fields.baseRevision);
@@ -129,6 +142,9 @@ export function timeActions<
 			const read_ = await read(event, 'saveTimer');
 			if ('rejection' in read_) return read_.rejection;
 
+			const counting = await timerTarget(read_.user);
+			if (counting && !(await canReadTimeTarget(read_.user, counting))) error(404, 'Not found');
+
 			const outcome = await saveTimer(read_.user, read_.input);
 			if (!outcome.ok) return rejected('saveTimer', timeFailureMessage(outcome.error));
 			return { action: 'saveTimer' as const };
@@ -152,6 +168,7 @@ export function timeActions<
 
 			const { id } = await fieldsOf(event.request);
 			if (!id) return rejected('deleteTime', m.time_error_not_found());
+			if (!isOnRecord(target, await entryTarget(user, id))) error(404, 'Not found');
 			const outcome = await deleteEntry(user, id);
 			if (!outcome.ok) return rejected('deleteTime', timeFailureMessage(outcome.error));
 			return { action: 'deleteTime' as const };

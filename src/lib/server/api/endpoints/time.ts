@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import { DURATION_GRAMMAR, MAX_ENTRY_MINUTES, parseDuration } from '#lib/domain/time.js';
 import { can, type Permission } from '../../access/permissions';
+import { canReadTimeTarget, redactTimeRows } from '../../links';
 import { getTask, readsProjects } from '../../projects';
 import { getTicketByTag } from '../../service-desk';
 import {
 	deleteEntry,
 	editEntry,
+	entryTarget,
 	getEntry,
 	isTimeTrackingEnabled,
 	listTypes,
@@ -72,10 +74,14 @@ const timeEntrySchema = named(
 		/** Decimal hours, two places: `"1.50"`. */
 		hours: z.string(),
 		note: z.string().nullable(),
-		/** The ticket or task, by its code. */
-		record: z.object({ kind: z.enum(['ticket', 'task']), tag: z.string(), title: z.string() }),
-		/** The project of the task; null on a ticket. */
-		project: z.object({ tag: z.string(), name: z.string() }).nullable(),
+		/** The ticket or task, by its code. `title` is null when the key cannot read that record. */
+		record: z.object({
+			kind: z.enum(['ticket', 'task']),
+			tag: z.string(),
+			title: z.string().nullable()
+		}),
+		/** The project of the task; null on a ticket, and its `name` null when the key cannot read the task. */
+		project: z.object({ tag: z.string(), name: z.string().nullable() }).nullable(),
 		/** Send it back as `baseRevision` when editing (ADR 0046). */
 		revision: z.number().int()
 	})
@@ -90,7 +96,7 @@ function toWire(row: ReportRow): z.input<typeof timeEntrySchema> {
 		minutes: row.minutes,
 		hours: (row.minutes / 60).toFixed(2),
 		note: row.note,
-		record: row.record,
+		record: { kind: row.record.kind, tag: row.record.tag, title: row.record.title },
 		project: row.project,
 		revision: row.revision
 	};
@@ -188,6 +194,27 @@ async function targetOf(
 	return { taskId: task.value.id };
 }
 
+/**
+ * An entry the key has just resolved the record of, as the response shows it:
+ * read with the same widened reads that let it name the record (`withReads`).
+ */
+async function wireOf(principal: ApiPrincipal, row: ReportRow) {
+	const [readable] = await redactTimeRows(withReads(principal), [row]);
+	return toWire(readable);
+}
+
+/**
+ * An entry is addressed by id, so its record is resolved before anything is
+ * written or shown: one the key can no longer read answers like a missing entry
+ * (ADR 0042, ADR 0050).
+ */
+async function ensureReadable(principal: ApiPrincipal, entryId: string): Promise<void> {
+	const target = await entryTarget(principal, entryId);
+	if (!target || !(await canReadTimeTarget(withReads(principal), target))) {
+		throw notFound('Time entry not found.');
+	}
+}
+
 /* -------------------------------------------------------------------------- */
 /* Endpoints                                                                  */
 /* -------------------------------------------------------------------------- */
@@ -220,8 +247,10 @@ export const listTimeEntriesEndpoint = defineEndpoint({
 		const result = await reportEntries(principal, filters, { page, perPage });
 		if (!result.ok) throw refuse(result.error);
 
+		// The key's own reads, not widened: a key scoped to `time.manage` alone sees codes, not titles.
+		const rows = await redactTimeRows(principal, result.value.rows);
 		return {
-			data: result.value.rows.map(toWire),
+			data: rows.map(toWire),
 			meta: { ...toMeta(result.value), totalMinutes: result.value.totalMinutes }
 		};
 	}
@@ -272,7 +301,7 @@ export const createTimeEntryEndpoint = defineEndpoint({
 		if (!outcome.ok) throw refuse(outcome.error);
 
 		const row = await getEntry(principal, outcome.value.id);
-		return created({ data: toWire(row!) }, `/time-entries/${outcome.value.id}`);
+		return created({ data: await wireOf(principal, row!) }, `/time-entries/${outcome.value.id}`);
 	}
 });
 
@@ -285,7 +314,7 @@ export const updateTimeEntryEndpoint = defineEndpoint({
 		'Edits the duration (`minutes` or `duration`), `workDate`, `typeId` or `note` of an entry; a field left out keeps its value, and `note: null` clears it. Only the author edits an entry, or a key whose role holds `time.manage`. `baseRevision` is required: the `revision` the client read. If the entry moved on, nothing is written and the answer is `409 stale_revision` with the current `revision` in `error.details` (ADR 0046). An entry may keep an archived type but not be moved onto one.',
 	example: { duration: '2h', baseRevision: 1 },
 	refusalTable: updateRefusals,
-	permissions: LOG,
+	permissions: ['time.log', 'time.manage'],
 	input: z
 		.object({
 			id: z.uuid(),
@@ -308,6 +337,7 @@ export const updateTimeEntryEndpoint = defineEndpoint({
 		const minutes = minutesOf(input);
 		const current = await getEntry(principal, input.id);
 		if (!current) throw notFound('Time entry not found.');
+		await ensureReadable(principal, input.id);
 
 		const outcome = await editEntry(principal, input.id, {
 			minutes: minutes ?? current.minutes,
@@ -318,7 +348,7 @@ export const updateTimeEntryEndpoint = defineEndpoint({
 		});
 		if (!outcome.ok) throw refuse(outcome.error);
 
-		return { data: toWire((await getEntry(principal, input.id))!) };
+		return { data: await wireOf(principal, (await getEntry(principal, input.id))!) };
 	}
 });
 
@@ -330,10 +360,13 @@ export const deleteTimeEntryEndpoint = defineEndpoint({
 	description:
 		'Deletes an entry. Only the author deletes an entry, or a key whose role holds `time.manage`. Answers `204` with no body.',
 	refusalTable: deleteRefusals,
-	permissions: LOG,
+	permissions: ['time.log', 'time.manage'],
 	input: z.object({ id: z.uuid() }),
 	output: z.null(),
 	handler: async ({ principal, input, refuse }) => {
+		// The record is resolved first, but only for an entry the key may change at all:
+		// a missing or foreign entry is refused by `deleteEntry` with the same 404.
+		if (await getEntry(principal, input.id)) await ensureReadable(principal, input.id);
 		const outcome = await deleteEntry(principal, input.id);
 		if (!outcome.ok) throw refuse(outcome.error);
 		return noContent();

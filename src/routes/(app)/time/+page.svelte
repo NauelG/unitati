@@ -154,7 +154,9 @@
 									class="text-[var(--brand)] hover:underline"
 									href={recordHref(row.record.kind, row.record.tag)}>{row.record.tag}</a
 								>
-								<span class="text-[var(--ink-muted)]">{row.record.title}</span>
+								{#if row.record.title !== null}
+									<span class="text-[var(--ink-muted)]">{row.record.title}</span>
+								{/if}
 							</td>
 							<td class={cell}>
 								{#if row.project}
@@ -164,7 +166,9 @@
 									>
 										{row.project.tag}
 									</a>
-									<span class="text-[var(--ink-muted)]">{row.project.name}</span>
+									{#if row.project.name !== null}
+										<span class="text-[var(--ink-muted)]">{row.project.name}</span>
+									{/if}
 								{/if}
 							</td>
 							<td class="{cell} whitespace-pre-line">{row.note ?? ''}</td>
