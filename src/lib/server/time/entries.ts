@@ -71,6 +71,11 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** Today in the organisation's zone, overridable so a spec can fix the clock. */
 export type Clock = { now?: Date };
 
+/** Today (`YYYY-MM-DD`) in the organisation's zone: the day a work date is validated against. */
+export function organisationToday(clock: Clock = {}): string {
+	return calendarDayIn(runtimeTimeZone(), clock.now ?? new Date());
+}
+
 function validDay(value: string): boolean {
 	if (!ISO_DATE.test(value)) return false;
 	const date = new Date(`${value}T00:00:00Z`);
@@ -82,7 +87,7 @@ export function checkValues(input: EntryInput, clock: Clock): EntryFailure | nul
 		return 'invalid_minutes';
 	}
 	if (!validDay(input.workDate)) return 'invalid_date';
-	if (input.workDate > calendarDayIn(runtimeTimeZone(), clock.now ?? new Date())) {
+	if (input.workDate > organisationToday(clock)) {
 		return 'future_date';
 	}
 	if ((input.note?.length ?? 0) > MAX_NOTE_LENGTH) return 'note_too_long';

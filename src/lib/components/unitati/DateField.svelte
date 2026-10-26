@@ -18,6 +18,8 @@
 		/** Rendered and announced; presence alone marks the control invalid. */
 		error?: string;
 		required?: boolean;
+		/** Latest day the field accepts, `YYYY-MM-DD`; later days are disabled in the calendar. */
+		max?: string;
 		disabled?: boolean;
 		id?: string;
 		/** Narrower than Svelte's `ClassValue`: tailwind-variants merges strings. */
@@ -33,6 +35,7 @@
 		hint,
 		error,
 		required,
+		max,
 		disabled,
 		id,
 		class: className,
@@ -54,6 +57,7 @@
 
 	// The segments hold a partial date while the user types; `undefined` until all three are in.
 	const date = $derived<DateValue | undefined>(parseIsoDate(value));
+	const maxValue = $derived(parseIsoDate(max));
 
 	function set(next: DateValue | undefined) {
 		const iso = next ? toIsoDate(next) : null;
@@ -72,6 +76,7 @@
 		locale={LOCALE}
 		{required}
 		{disabled}
+		{maxValue}
 		granularity="day"
 	>
 		<div
@@ -125,6 +130,7 @@
 						locale={LOCALE}
 						weekStartsOn={1}
 						value={date}
+						{maxValue}
 						onValueChange={(next) => {
 							set(next);
 							open = false;

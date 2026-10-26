@@ -21,7 +21,14 @@ export {
 } from './types';
 export type { CatalogueFailure, TypeView } from './types';
 
-export { logTime, editEntry, deleteEntry, listEntriesFor, MAX_NOTE_LENGTH } from './entries';
+export {
+	logTime,
+	editEntry,
+	deleteEntry,
+	listEntriesFor,
+	organisationToday,
+	MAX_NOTE_LENGTH
+} from './entries';
 export type {
 	EditFailure,
 	EntryFailure,
