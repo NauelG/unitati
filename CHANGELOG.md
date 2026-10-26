@@ -6,6 +6,14 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.3.3] - 2026-10-26
+
+### Fixed
+
+- The asset edit sheet now closes once the changes are saved. A successful save answers with a
+  redirect to the same page, which the form library does not report as an update, so the sheet
+  stayed open and then asked to discard changes that were already saved.
+
 ## [1.3.2] - 2026-10-26
 
 ### Fixed

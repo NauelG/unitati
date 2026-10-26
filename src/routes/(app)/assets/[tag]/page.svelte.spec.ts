@@ -1,9 +1,13 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
-import { writable } from 'svelte/store';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { get, writable, type Writable } from 'svelte/store';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import Page from './+page.svelte';
 
-const submitted = vi.hoisted(() => ({ actions: [] as string[] }));
+const submitted = vi.hoisted(() => ({
+	actions: [] as string[],
+	onResult: undefined as undefined | ((event: { result: { type: 'redirect' } }) => void),
+	tainted: undefined as Writable<Record<string, boolean> | undefined> | undefined
+}));
 
 vi.mock('$app/forms', () => ({
 	enhance: (form: HTMLFormElement, submit: (input: { formData: FormData }) => unknown) => {
@@ -17,20 +21,29 @@ vi.mock('$app/forms', () => ({
 	}
 }));
 vi.mock('sveltekit-superforms', () => ({
-	superForm: () => ({
-		form: writable({}),
-		errors: writable({}),
-		enhance: (form: HTMLFormElement) => {
-			const onSubmit = (event: Event) => {
-				event.preventDefault();
-				submitted.actions.push(form.action);
-			};
-			form.addEventListener('submit', onSubmit);
-			return { destroy: () => form.removeEventListener('submit', onSubmit) };
-		},
-		submitting: writable(false),
-		tainted: writable(undefined)
-	})
+	superForm: (_data: unknown, options: { id?: string; onResult?: typeof submitted.onResult }) => {
+		const tainted = writable<Record<string, boolean> | undefined>(undefined);
+		// The page builds several forms (the create-model dialog too): only the
+		// edit sheet's own callbacks and tainted store are the ones under test.
+		if (options?.id === 'asset-edit-sheet') {
+			submitted.onResult = options.onResult;
+			submitted.tainted = tainted;
+		}
+		return {
+			form: writable({}),
+			errors: writable({}),
+			enhance: (form: HTMLFormElement) => {
+				const onSubmit = (event: Event) => {
+					event.preventDefault();
+					submitted.actions.push(form.action);
+				};
+				form.addEventListener('submit', onSubmit);
+				return { destroy: () => form.removeEventListener('submit', onSubmit) };
+			},
+			submitting: writable(false),
+			tainted
+		};
+	}
 }));
 vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
 
@@ -39,6 +52,8 @@ beforeAll(() => {
 });
 beforeEach(() => {
 	submitted.actions = [];
+	submitted.onResult = undefined;
+	submitted.tainted = undefined;
 	location.hash = '';
 });
 
@@ -114,6 +129,22 @@ const renderPage = (permissions: { canManage: boolean; canCheckout: boolean }) =
 	render(Page, { data: pageData(permissions), form: null } as never);
 
 describe('asset record in-place editing', () => {
+	it('closes the edit sheet without a discard prompt after the save redirects', async () => {
+		renderPage({ canManage: true, canCheckout: false });
+		await fireEvent.click(screen.getByRole('link', { name: 'Editar' }));
+		expect(await screen.findByRole('button', { name: 'Guardar cambios' })).toBeTruthy();
+		submitted.tainted!.set({ name: true });
+
+		expect(submitted.onResult).toBeTypeOf('function');
+		submitted.onResult!({ result: { type: 'redirect' } });
+
+		await waitFor(() =>
+			expect(screen.queryByRole('button', { name: 'Guardar cambios' })).toBeNull()
+		);
+		expect(get(submitted.tainted!)).toBeUndefined();
+		expect(screen.queryByText(/descartar cambios/i)).toBeNull();
+	});
+
 	it('submits the edit sheet to the named save action', async () => {
 		renderPage({ canManage: true, canCheckout: false });
 		await fireEvent.click(screen.getByRole('link', { name: 'Editar' }));
