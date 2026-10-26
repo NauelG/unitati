@@ -713,7 +713,7 @@ export const GALLERY_EXCEPTIONS: GalleryException[] = [
 	{
 		sourceFile: 'RunningTimer.svelte',
 		reason:
-			"A link in the app shell's top bar that exists only while the signed-in person has a running timer (ADR 0052); it reads the layout's `timer`, so it has no states of its own to show. It is covered by its component spec."
+			"A link in the app shell's top bar that exists only while the signed-in person has a running timer (ADR 0052); it takes the layout's `timer`, so it has no states of its own to show. It is covered by its component spec."
 	},
 	{
 		sourceFile: 'HandoverStateBadge.svelte',

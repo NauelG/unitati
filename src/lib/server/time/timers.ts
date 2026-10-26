@@ -71,6 +71,23 @@ export async function startTimer(
 	});
 }
 
+/** The timer as the app shell receives it: plain values, safe to serialise. */
+export interface TimerPayload {
+	startedAt: string;
+	tag: string;
+	href: string;
+}
+
+export function timerPayload(timer: TimerView | null): TimerPayload | null {
+	return (
+		timer && {
+			startedAt: timer.startedAt.toISOString(),
+			tag: timer.record.tag,
+			href: timer.record.href
+		}
+	);
+}
+
 /** The viewer's running timer, with the record it counts on; null when there is none or tracking is off. */
 export async function getRunningTimer(viewer: SessionUser): Promise<TimerView | null> {
 	if (!can(viewer, 'time.log') || viewer.personId === null) return null;

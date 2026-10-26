@@ -36,6 +36,21 @@
 
 	let { data, children }: LayoutProps = $props();
 
+	// The running timer lives on the server: a timer started or stopped on another
+	// device shows up here through a read of its own, not by re-running this layout's load.
+	let timer = $derived(data.timer);
+	$effect(() => {
+		const refresh = setInterval(async () => {
+			try {
+				const response = await fetch('/api/timer');
+				if (response.ok) timer = ((await response.json()) as { timer: typeof data.timer }).timer;
+			} catch {
+				// Offline or mid-deploy: keep showing the last known timer until the next poll.
+			}
+		}, 60_000);
+		return () => clearInterval(refresh);
+	});
+
 	/**
 	 * The shell's own link types with `permission` narrowed to the real
 	 * `Permission` union (not widened to `string`), so a typo'd permission name
@@ -187,8 +202,8 @@
 	settings={showSettings ? settingsLink : undefined}
 >
 	{#snippet topbarEnd()}
-		{#if data.timer}
-			<RunningTimer {...data.timer} />
+		{#if timer}
+			<RunningTimer {...timer} />
 		{/if}
 		<NotificationBell count={data.unreadNotifications} inboxHref="/notifications" />
 		<UserMenu name={data.user.name} email={data.user.email} />

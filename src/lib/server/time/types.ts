@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
@@ -77,14 +77,26 @@ export async function listTypes(
 	}));
 }
 
-/** The types an entry may be put on: the active ones. */
+/**
+ * The types an entry may be put on: the active ones. Reads the catalogue alone:
+ * the usage count is only shown in `/settings/time`, and computing it here would
+ * scan every entry of the organisation on each ticket and task page.
+ */
 export async function listOfferedTypes(
 	organisationId: string,
 	executor: Executor = getDb()
 ): Promise<{ id: string; name: string; isDefault: boolean }[]> {
-	return (await listTypes(organisationId, executor))
-		.filter((type) => !type.archived)
-		.map(({ id, name, isDefault }) => ({ id, name, isDefault }));
+	return executor
+		.select({
+			id: timeEntryTypes.id,
+			name: timeEntryTypes.name,
+			isDefault: timeEntryTypes.isDefault
+		})
+		.from(timeEntryTypes)
+		.where(
+			and(eq(timeEntryTypes.organisationId, organisationId), isNull(timeEntryTypes.archivedAt))
+		)
+		.orderBy(asc(timeEntryTypes.position), asc(timeEntryTypes.name));
 }
 
 /** The gate of every catalogue write: `time.manage`, with tracking on (ADR 0052). */

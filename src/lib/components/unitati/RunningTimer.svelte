@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { invalidate } from '$app/navigation';
 	import ClockIcon from '@lucide/svelte/icons/clock';
 	import { formatElapsed } from '#lib/domain/time.js';
 	import { m } from '#lib/paraglide/messages.js';
@@ -7,8 +6,7 @@
 	/**
 	 * The running timer in the app shell (ADR 0052): the record code and the time
 	 * elapsed, linking to the record. The timer lives on the server, so it shows
-	 * on every device; this re-reads it now and then so a timer started or
-	 * stopped elsewhere appears here without a reload.
+	 * on every device. The layout re-reads it now and then through `/api/timer`.
 	 */
 	interface Props {
 		startedAt: string;
@@ -23,10 +21,8 @@
 
 	$effect(() => {
 		const tick = setInterval(() => (now = Date.now()), 15_000);
-		const refresh = setInterval(() => void invalidate('app:timer'), 60_000);
 		return () => {
 			clearInterval(tick);
-			clearInterval(refresh);
 		};
 	});
 </script>

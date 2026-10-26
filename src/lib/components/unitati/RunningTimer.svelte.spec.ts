@@ -2,8 +2,6 @@ import { render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import RunningTimer from './RunningTimer.svelte';
 
-vi.mock('$app/navigation', () => ({ invalidate: vi.fn() }));
-
 describe('RunningTimer', () => {
 	beforeEach(() => {
 		vi.useFakeTimers();

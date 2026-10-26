@@ -254,3 +254,35 @@ describe('the entry-type catalogue', () => {
 		).toHaveLength(1);
 	});
 });
+
+describe('offering types', () => {
+	it('never reads the entries to do it', async () => {
+		const { admin } = await createTimeScene();
+		const db = getDb();
+		const read: unknown[] = [];
+		const watching = new Proxy(db, {
+			get(target, property, receiver) {
+				if (property !== 'select') return Reflect.get(target, property, receiver);
+				return (...args: unknown[]) => {
+					const builder = (target.select as (...a: unknown[]) => { from: (t: unknown) => unknown })(
+						...args
+					);
+					return new Proxy(builder, {
+						get(inner, key) {
+							if (key !== 'from') return Reflect.get(inner, key, inner);
+							return (table: unknown) => {
+								read.push(table);
+								return inner.from(table);
+							};
+						}
+					});
+				};
+			}
+		}) as typeof db;
+
+		const offered = await listOfferedTypes(admin.organisationId, watching);
+
+		expect(offered.map((type) => type.name)).toEqual(['General']);
+		expect(read).toEqual([timeEntryTypes]);
+	});
+});
