@@ -1,12 +1,16 @@
+import { LABEL_DESCRIPTION_MAX, LABEL_NAME_MAX } from '#lib/domain/label.js';
 import { JUSTIFICATION_MAX } from '#lib/domain/request-form.js';
 import { m } from '#lib/paraglide/messages.js';
 import type {
 	AddCommentFailure,
 	CreateTicketFailure,
+	LabelDeleteFailure,
+	LabelEditFailure,
 	QueueDeleteFailure,
 	QueueEditFailure,
 	RequestFormDeleteFailure,
 	RequestFormEditFailure,
+	SetTicketLabelsFailure,
 	SubmitRequestFailure
 } from '#lib/server/service-desk/index.js';
 import type { CitationRefusal } from '#lib/server/service-desk/index.js';
@@ -25,6 +29,9 @@ type Failure =
 	| QueueDeleteFailure
 	| RequestFormEditFailure
 	| RequestFormDeleteFailure
+	| LabelEditFailure
+	| LabelDeleteFailure
+	| SetTicketLabelsFailure
 	| SubmitRequestFailure
 	| 'invalid_transition'
 	| 'assignee_not_found'
@@ -50,7 +57,13 @@ const MESSAGES: Record<Failure, () => string> = {
 	request_form_not_found: m.request_error_form_not_found,
 	invalid_request: () => m.request_error_invalid({ max: JUSTIFICATION_MAX }),
 	duplicate_request_form_name: m.request_forms_error_duplicate,
-	request_form_in_use: m.request_forms_error_in_use
+	request_form_in_use: m.request_forms_error_in_use,
+	duplicate_label_name: m.labels_error_duplicate,
+	invalid_label: () =>
+		m.labels_error_invalid({ nameMax: LABEL_NAME_MAX, descriptionMax: LABEL_DESCRIPTION_MAX }),
+	label_not_found: m.labels_error_not_found,
+	label_in_use: m.labels_error_in_use,
+	label_archived: m.labels_error_archived
 };
 
 export function failureMessage(failure: Failure | CitationRefusal): string {

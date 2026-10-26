@@ -52,12 +52,17 @@ function pageData(canManage: boolean) {
 			queueName: 'Hardware',
 			queueColor: null
 		},
+		labels: [
+			{ id: 'l1', name: 'vpn', color: 'blue', description: 'Remote access', active: true },
+			{ id: 'l2', name: 'viejo', color: 'gray', description: null, active: false }
+		],
 		thread: [],
 		related: Promise.resolve([]),
 		may: {
 			editSubject: canManage,
 			assign: canManage,
 			moveToQueue: canManage,
+			setLabels: canManage,
 			setPriority: canManage,
 			changeStatus: canManage,
 			link: canManage,
@@ -74,6 +79,13 @@ function pageData(canManage: boolean) {
 		nextStatuses: ['in_progress', 'closed'],
 		choices: {
 			queues: canManage ? [{ id: 'q1', name: 'Hardware', color: null }] : [],
+			labels: canManage
+				? [
+						{ id: 'l1', name: 'vpn', color: 'blue', description: 'Remote access', active: true },
+						{ id: 'l2', name: 'viejo', color: 'gray', description: null, active: false },
+						{ id: 'l3', name: 'auditoría', color: 'red', description: null, active: true }
+					]
+				: [],
 			people: canManage ? [{ id: 'p1', fullName: 'Tech' }] : [],
 			inStockForRequest: []
 		},
@@ -115,7 +127,24 @@ describe('ticket record header', () => {
 	it('shows plain chips and rows without tickets.manage', () => {
 		renderPage(false);
 		expect(
-			screen.queryByRole('button', { name: /^(Estado|Prioridad|Asignada a|Cola)/ })
+			screen.queryByRole('button', { name: /^(Estado|Prioridad|Asignada a|Cola|Etiquetas)/ })
 		).toBeNull();
+	});
+
+	it('shows the labels on the ticket, with the description as a tooltip, to a reader', () => {
+		renderPage(false);
+		expect(screen.getByText('vpn').closest('[title]')?.getAttribute('title')).toBe('Remote access');
+		expect(screen.getByText('viejo')).toBeTruthy();
+	});
+
+	it('posts the whole picked label set to ?/labels, archived label included while it is kept', async () => {
+		renderPage(true);
+		await fireEvent.click(screen.getByRole('button', { name: /^Etiquetas/ }));
+		await fireEvent.click(await screen.findByRole('option', { name: 'auditoría', hidden: true }));
+		// Saves when the popover closes.
+		await fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+		await waitFor(() => expect(submitted).toHaveLength(1));
+		expect(submitted[0].action).toBe('?/labels');
+		expect(submitted[0].data.getAll('labelIds').sort()).toEqual(['l1', 'l2', 'l3']);
 	});
 });

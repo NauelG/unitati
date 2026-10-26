@@ -35,6 +35,7 @@ export const ACTIVITY_VERBS = [
 	'ticket.priority.changed',
 	'ticket.queue.changed',
 	'ticket.subject.changed',
+	'ticket.labels.changed',
 	'comment.edited',
 	'link.asset.added',
 	'link.asset.removed',

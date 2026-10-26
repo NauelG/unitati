@@ -173,6 +173,12 @@
 			description: 'El valor ya formateado para el modo lectura.'
 		},
 		{
+			name: 'displayContent',
+			type: 'Snippet',
+			description:
+				'Marcado más rico para el valor (un chip por etiqueta); `display` sigue siendo el texto equivalente.'
+		},
+		{
 			name: 'action / name',
 			type: 'string',
 			description: 'Acción del formulario y campo enviado.'

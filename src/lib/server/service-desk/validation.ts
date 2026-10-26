@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DEFAULT_QUEUE_COLOR, QUEUE_COLORS } from '#lib/domain/queue-color.js';
+import { DEFAULT_CATALOGUE_COLOR, CATALOGUE_COLORS } from '#lib/domain/catalogue-color.js';
 import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENTS_PER_COMMENT } from '#lib/domain/attachments.js';
 import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 import {
@@ -7,6 +7,7 @@ import {
 	REQUEST_FORM_DESCRIPTION_MAX,
 	REQUEST_FORM_KINDS
 } from '#lib/domain/request-form.js';
+import { LABEL_DESCRIPTION_MAX, LABEL_NAME_MAX } from '#lib/domain/label.js';
 import { PRIORITIES } from '#lib/domain/status.js';
 
 /**
@@ -61,7 +62,18 @@ export const subjectInput = createTicketInput.pick({ subject: true });
 
 export const queueInput = z.object({
 	name: nonEmpty,
-	color: z.enum(QUEUE_COLORS).default(DEFAULT_QUEUE_COLOR)
+	color: z.enum(CATALOGUE_COLORS).default(DEFAULT_CATALOGUE_COLOR)
+});
+
+export const labelInput = z.object({
+	name: nonEmpty.max(LABEL_NAME_MAX),
+	description: z
+		.string()
+		.trim()
+		.max(LABEL_DESCRIPTION_MAX)
+		.nullish()
+		.transform((value) => value || null),
+	color: z.enum(CATALOGUE_COLORS).default(DEFAULT_CATALOGUE_COLOR)
 });
 
 export const requestFormInput = z.object({
@@ -89,5 +101,6 @@ export type EquipmentRequestInput = z.input<typeof equipmentRequestInput>;
 export type CreateTicketInput = z.input<typeof createTicketInput>;
 export type AddCommentInput = z.input<typeof addCommentInput>;
 export type QueueInput = z.input<typeof queueInput>;
+export type LabelInput = z.input<typeof labelInput>;
 
 export { attachmentProblem } from '../shared/attachments';

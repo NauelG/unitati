@@ -93,7 +93,8 @@ describe('visibleSections', () => {
 		]);
 		expect(deskManager).toEqual([
 			'/settings/service-desk/queues',
-			'/settings/service-desk/request-forms'
+			'/settings/service-desk/request-forms',
+			'/settings/service-desk/labels'
 		]);
 	});
 });

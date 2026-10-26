@@ -35,8 +35,13 @@
 		value?: string | null;
 		/** The current values (`multiselect`). */
 		values?: string[];
-		/** The value formatted for read mode: a person's name, a formatted date. */
+		/** The value formatted for read mode: a person's name, a formatted date. Also the accessible name of the value. */
 		display: string;
+		/**
+		 * Richer markup for `display` (a coloured chip per label), used in read mode and inside the
+		 * trigger. `display` stays the text equivalent for assistive technology.
+		 */
+		displayContent?: Snippet;
 		action: string;
 		/**
 		 * Picks the action URL from the submitted value, for a row whose choices post to different
@@ -66,6 +71,7 @@
 		value = null,
 		values = [],
 		display,
+		displayContent,
 		action,
 		actionFor,
 		name,
@@ -148,8 +154,8 @@
 
 {#if !editable}
 	<span class={className}
-		>{#if display}{display}{:else if placeholder}<span class="text-[var(--ink-muted)]"
-				>{placeholder}</span
+		>{#if displayContent && display}{@render displayContent()}{:else if display}{display}{:else if placeholder}<span
+				class="text-[var(--ink-muted)]">{placeholder}</span
 			>{:else}—{/if}</span
 	>
 {:else if kind === 'text'}
@@ -193,7 +199,8 @@
 					aria-label={`${label}: ${shown}`}
 					class={`flex min-h-[26px] w-full items-center justify-between gap-[var(--space-2)] px-[var(--space-2)] text-left text-sm ${EDITABLE_OUTLINE} ${className ?? ''}`}
 				>
-					<span class={['min-w-0 break-words', !display && 'text-[var(--ink-muted)]']}>{shown}</span
+					<span class={['min-w-0 break-words', !display && 'text-[var(--ink-muted)]']}
+						>{#if displayContent && display}{@render displayContent()}{:else}{shown}{/if}</span
 					>
 					<ChevronDownIcon class={EDITABLE_CHEVRON} aria-hidden="true" />
 				</button>

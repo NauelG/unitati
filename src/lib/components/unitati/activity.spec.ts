@@ -226,6 +226,31 @@ describe('activitySentence for tickets', () => {
 		expect(sentence).toContain('Redes');
 	});
 
+	it('lists the labels added and removed from the snapshot, one line for both', () => {
+		const added = { id: PERSON, name: 'VPN' };
+		const removed = { id: LOCATION, name: 'Auditoría' };
+
+		const both = activitySentence({
+			verb: 'ticket.labels.changed',
+			payload: { added: [added], removed: [removed] }
+		});
+		const onlyAdded = activitySentence({
+			verb: 'ticket.labels.changed',
+			payload: { added: [added, removed], removed: [] }
+		});
+		const onlyRemoved = activitySentence({
+			verb: 'ticket.labels.changed',
+			payload: { added: [], removed: [removed] }
+		});
+
+		expect(both).toContain('VPN');
+		expect(both).toContain('Auditoría');
+		expect(onlyAdded).toContain('VPN, Auditoría');
+		expect(onlyAdded).not.toContain('quitadas');
+		expect(onlyRemoved).toContain('Auditoría');
+		expect(onlyRemoved).not.toContain('añadidas');
+	});
+
 	it('says "Normal" in a priority change even though it renders no badge', () => {
 		const entry: ActivityEntry = {
 			verb: 'ticket.priority.changed',

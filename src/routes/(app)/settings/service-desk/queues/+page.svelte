@@ -19,13 +19,13 @@
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
 	import QueueLabel from '#lib/components/unitati/QueueLabel.svelte';
 	import {
-		DEFAULT_QUEUE_COLOR,
-		QUEUE_COLORS,
-		queueColorVar,
-		type QueueColor
-	} from '#lib/domain/queue-color.js';
+		DEFAULT_CATALOGUE_COLOR,
+		CATALOGUE_COLORS,
+		catalogueColorVar,
+		type CatalogueColor
+	} from '#lib/domain/catalogue-color.js';
 	import { m } from '#lib/paraglide/messages.js';
-	import { queueColorLabel } from '#lib/queue-color-label.js';
+	import { catalogueColorLabel } from '#lib/catalogue-color-label.js';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -33,7 +33,7 @@
 	interface Queue {
 		id: string;
 		name: string;
-		color: QueueColor;
+		color: CatalogueColor;
 	}
 
 	// Same input styling as `Field`, without its label: a row in a list is
@@ -42,11 +42,11 @@
 
 	const dialog = catalogueDialog<Queue>({ createAction: 'create', editAction: 'rename' });
 	let draftName = $state('');
-	let draftColor = $state<QueueColor>(DEFAULT_QUEUE_COLOR);
+	let draftColor = $state<CatalogueColor>(DEFAULT_CATALOGUE_COLOR);
 
 	function openCreate() {
 		draftName = '';
-		draftColor = DEFAULT_QUEUE_COLOR;
+		draftColor = DEFAULT_CATALOGUE_COLOR;
 		dialog.openCreate();
 	}
 
@@ -184,11 +184,11 @@
 			<fieldset class="flex flex-col gap-[var(--space-2)]">
 				<legend class="mb-[var(--space-1)] text-label text-[var(--ink)]">{m.queues_color()}</legend>
 				<div class="flex flex-wrap gap-[var(--space-2)]">
-					{#each QUEUE_COLORS as color (color)}
+					{#each CATALOGUE_COLORS as color (color)}
 						<label
 							class="relative size-8 cursor-pointer rounded-[var(--radius-full)] has-[:checked]:ring-2 has-[:checked]:ring-[var(--ink)] has-[:checked]:ring-offset-2 has-[:checked]:ring-offset-[var(--surface-1)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--focus)]"
-							style:background-color={queueColorVar(color)}
-							title={queueColorLabel(color)}
+							style:background-color={catalogueColorVar(color)}
+							title={catalogueColorLabel(color)}
 						>
 							<input
 								type="radio"
@@ -196,7 +196,7 @@
 								value={color}
 								bind:group={draftColor}
 								class="sr-only"
-								aria-label={queueColorLabel(color)}
+								aria-label={catalogueColorLabel(color)}
 							/>
 						</label>
 					{/each}

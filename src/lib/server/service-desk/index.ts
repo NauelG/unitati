@@ -9,7 +9,7 @@
  * and scope tenancy only.
  */
 
-export type { Queue, RequestForm, Ticket, TicketComment, Attachment } from './schema';
+export type { Queue, Label, RequestForm, Ticket, TicketComment, Attachment } from './schema';
 
 export {
 	listTickets,
@@ -69,6 +69,23 @@ export { listQueues, defaultQueue, createQueue, renameQueue, deleteQueue } from 
 export type { QueueFailure, QueueEditFailure, QueueDeleteFailure } from './queues';
 
 export {
+	listLabels,
+	ticketLabelsOf,
+	createLabel,
+	updateLabel,
+	setLabelActive,
+	deleteLabel,
+	setTicketLabels
+} from './labels';
+export type {
+	LabelEntry,
+	LabelFailure,
+	LabelEditFailure,
+	LabelDeleteFailure,
+	SetTicketLabelsFailure
+} from './labels';
+
+export {
 	listRequestForms,
 	listActiveRequestForms,
 	getActiveRequestForm,
@@ -93,6 +110,7 @@ export {
 	editCommentInput,
 	subjectInput,
 	queueInput,
+	labelInput,
 	requestFormInput,
 	requestFormEditInput,
 	equipmentRequestInput,
@@ -106,6 +124,7 @@ export type {
 	CreateTicketInput,
 	AddCommentInput,
 	QueueInput,
+	LabelInput,
 	RequestFormInput,
 	RequestFormEditInput,
 	EquipmentRequestInput,

@@ -99,6 +99,12 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
 		permission: 'tickets.manage'
 	},
 	{
+		module: 'service-desk',
+		href: '/settings/service-desk/labels',
+		label: m.settings_section_ticket_labels,
+		permission: 'tickets.manage'
+	},
+	{
 		module: 'knowledge',
 		href: '/settings/knowledge',
 		label: m.settings_section_knowledge,

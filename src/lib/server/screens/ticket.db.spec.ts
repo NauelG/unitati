@@ -9,7 +9,13 @@ import {
 import { createLocation as createDirectoryLocation, setPersonLocation } from '../directory';
 import { linkTicketToProject } from '../links';
 import { createProjectRow, createWorkspace } from '../projects/testing/fixtures';
-import { createRequestForm, submitEquipmentRequest } from '../service-desk';
+import {
+	createLabel,
+	createRequestForm,
+	setLabelActive,
+	setTicketLabels,
+	submitEquipmentRequest
+} from '../service-desk';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
 import { ticketScreen } from './ticket';
 
@@ -36,6 +42,7 @@ const NO_ACTS = {
 	editSubject: false,
 	assign: false,
 	moveToQueue: false,
+	setLabels: false,
 	setPriority: false,
 	changeStatus: false,
 	link: false,
@@ -58,6 +65,7 @@ describe('the ticket screen, per role', () => {
 			editSubject: true,
 			assign: true,
 			moveToQueue: true,
+			setLabels: true,
 			setPriority: true,
 			changeStatus: true,
 			link: true,
@@ -89,7 +97,12 @@ describe('the ticket screen, per role', () => {
 		const screen = await screenOf(reader, ticket.ticketTag);
 
 		expect(screen.may).toEqual(NO_ACTS);
-		expect(screen.choices).toEqual({ queues: [], people: [], inStockForRequest: [] });
+		expect(screen.choices).toEqual({
+			queues: [],
+			labels: [],
+			people: [],
+			inStockForRequest: []
+		});
 		expect(screen.escalationDraft).toBeNull();
 		expect(screen.ticket.ticketTag).toBe(ticket.ticketTag);
 	});
@@ -131,6 +144,47 @@ describe('the ticket screen, per role', () => {
 
 		expect(await ticketScreen(admin, 'TCK-9999')).toEqual({ ok: false, error: 'not_found' });
 		expect(await ticketScreen(other, ticket.ticketTag)).toEqual({ ok: false, error: 'not_found' });
+	});
+});
+
+describe('the ticket screen, labels', () => {
+	it('shows a reader the labels on the ticket but offers no catalogue to edit', async () => {
+		const { technician, ticket } = await setup();
+		const vpn = await createLabel(technician, {
+			name: 'vpn',
+			color: 'blue',
+			description: 'Remote access'
+		});
+		if (!vpn.ok) throw new Error(vpn.error);
+		await setTicketLabels(technician, ticket.ticketTag, [vpn.value.id]);
+		const reader = { ...technician, scopes: ['tickets.view' as const] };
+
+		const screen = await screenOf(reader, ticket.ticketTag);
+
+		expect(screen.labels).toEqual([
+			{ id: vpn.value.id, name: 'vpn', color: 'blue', description: 'Remote access', active: true }
+		]);
+		expect(screen.may.setLabels).toBe(false);
+		expect(screen.choices.labels).toEqual([]);
+	});
+
+	it('offers the active catalogue plus the archived labels already on the ticket', async () => {
+		const { technician, ticket } = await setup();
+		const make = async (name: string) => {
+			const created = await createLabel(technician, { name });
+			if (!created.ok) throw new Error(created.error);
+			return created.value.id;
+		};
+		const onTicket = await make('old');
+		const archivedElsewhere = await make('retired');
+		const active = await make('vpn');
+		await setTicketLabels(technician, ticket.ticketTag, [onTicket]);
+		await setLabelActive(technician, onTicket, false);
+		await setLabelActive(technician, archivedElsewhere, false);
+
+		const screen = await screenOf(technician, ticket.ticketTag);
+
+		expect(screen.choices.labels.map((label) => label.id)).toEqual([onTicket, active]);
 	});
 });
 

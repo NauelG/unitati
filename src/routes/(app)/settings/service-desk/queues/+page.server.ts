@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DEFAULT_QUEUE_COLOR, QUEUE_COLORS } from '#lib/domain/queue-color.js';
+import { DEFAULT_CATALOGUE_COLOR, CATALOGUE_COLORS } from '#lib/domain/catalogue-color.js';
 import { m } from '#lib/paraglide/messages.js';
 import {
 	createQueue,
@@ -22,7 +22,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 const named = z.object({
 	name: z.string().trim().min(1),
-	color: z.enum(QUEUE_COLORS).default(DEFAULT_QUEUE_COLOR)
+	color: z.enum(CATALOGUE_COLORS).default(DEFAULT_CATALOGUE_COLOR)
 });
 const withId = z.object({ id: z.uuid() });
 

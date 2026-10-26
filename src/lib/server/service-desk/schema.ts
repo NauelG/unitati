@@ -6,12 +6,14 @@ import {
 	pgEnum,
 	pgSequence,
 	pgTable,
+	primaryKey,
 	text,
 	timestamp,
 	unique,
+	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core';
-import { DEFAULT_QUEUE_COLOR, QUEUE_COLORS } from '#lib/domain/queue-color.js';
+import { DEFAULT_CATALOGUE_COLOR, CATALOGUE_COLORS } from '#lib/domain/catalogue-color.js';
 import { REQUEST_FORM_KINDS } from '#lib/domain/request-form.js';
 import { PRIORITIES, TICKET_STATUSES } from '#lib/domain/status.js';
 import { timestamps } from '../shared/columns';
@@ -53,8 +55,8 @@ export const queues = pgTable(
 			.notNull()
 			.references(() => organisations.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
-		/** A palette key (`#lib/domain/queue-color.js`), so tickets can be told apart at a glance. */
-		color: text('color', { enum: QUEUE_COLORS }).notNull().default(DEFAULT_QUEUE_COLOR),
+		/** A palette key (`#lib/domain/catalogue-color.js`), so tickets can be told apart at a glance. */
+		color: text('color', { enum: CATALOGUE_COLORS }).notNull().default(DEFAULT_CATALOGUE_COLOR),
 		...timestamps
 	},
 	(table) => [unique('queues_org_name').on(table.organisationId, table.name)]
@@ -185,7 +187,55 @@ export const attachments = pgTable(
 	(table) => [index('attachments_comment_idx').on(table.commentId)]
 );
 
+/**
+ * The organisation's catalogue of labels (ADR 0053). Flat and owned by the
+ * organisation, applied to any ticket whatever its queue. Archived, never
+ * hidden from the tickets that carry one; deleted only while on no ticket.
+ */
+export const labels = pgTable(
+	'labels',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		description: text('description'),
+		/** A palette key (`#lib/domain/catalogue-color.js`), shared with queues. */
+		color: text('color', { enum: CATALOGUE_COLORS }).notNull().default(DEFAULT_CATALOGUE_COLOR),
+		active: boolean('active').notNull().default(true),
+		...timestamps
+	},
+	(table) => [
+		// Case-insensitive: `VPN` and `vpn` are the same label, the sprawl this catalogue exists to stop.
+		uniqueIndex('labels_org_name').on(table.organisationId, sql`lower(${table.name})`)
+	]
+);
+
+/**
+ * Both ends are service-desk tables, so the join lives here and not in `links`
+ * (ADR 0002). Same organisation on both ends is enforced by the write path.
+ * `restrict` on the label is what refuses deleting one in use.
+ */
+export const ticketLabels = pgTable(
+	'ticket_labels',
+	{
+		ticketId: uuid('ticket_id')
+			.notNull()
+			.references(() => tickets.id, { onDelete: 'cascade' }),
+		labelId: uuid('label_id')
+			.notNull()
+			.references(() => labels.id, { onDelete: 'restrict' }),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [
+		primaryKey({ columns: [table.ticketId, table.labelId] }),
+		index('ticket_labels_label_idx').on(table.labelId)
+	]
+);
+
 export type Queue = typeof queues.$inferSelect;
+export type Label = typeof labels.$inferSelect;
 export type RequestForm = typeof requestForms.$inferSelect;
 export type Ticket = typeof tickets.$inferSelect;
 export type TicketComment = typeof ticketComments.$inferSelect;
