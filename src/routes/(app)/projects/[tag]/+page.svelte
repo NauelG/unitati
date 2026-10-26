@@ -519,7 +519,7 @@
 		{#if data.time}
 			<WorkPanel id="project-time" heading={m.time_panel_title()}>
 				{#snippet actions()}
-					{#if data.time?.report}
+					{#if data.may.openTimeReport}
 						<a
 							class="text-sm text-[var(--brand)] hover:underline"
 							href="/time?project={encodeURIComponent(project.projectTag)}"

@@ -16,6 +16,17 @@ export const ASSET_READ_PERMISSIONS = [
 ] as const satisfies readonly Permission[];
 
 /**
+ * The permissions that get a person onto `/time`, its export and
+ * `GET /api/v1/time-entries`: `time.log` for their own time, `time.manage` for
+ * everybody's (ADR 0052, #379). Which entries then appear is decided inside the
+ * time domain (`reportScope`).
+ */
+export const TIME_READ_PERMISSIONS = [
+	'time.log',
+	'time.manage'
+] as const satisfies readonly Permission[];
+
+/**
  * The permissions that get a person onto the service-desk list: a technician by
  * `tickets.view`, an employee by `tickets.view.own`. Which tickets then appear
  * is decided inside the domain.

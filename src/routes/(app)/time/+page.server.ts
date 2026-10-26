@@ -1,9 +1,10 @@
 import { error } from '@sveltejs/kit';
+import { TIME_READ_PERMISSIONS } from '#lib/domain/access.js';
 import { requireAnyPermission } from '#lib/server/auth/guards.js';
 import { listPeople } from '#lib/server/directory/index.js';
 import { redactTimeRows } from '#lib/server/links/index.js';
 import { reportEntries, reportScope, listTypes } from '#lib/server/time/index.js';
-import { filtersFrom, TIME_READ_PERMISSIONS } from './filters';
+import { filtersFrom } from './filters';
 import type { PageServerLoad } from './$types';
 
 /**

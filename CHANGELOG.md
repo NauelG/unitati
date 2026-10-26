@@ -26,8 +26,9 @@ Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 ### Changed
 
 - `GET /api/v1/time-entries` accepts a key with `time.log`: it lists only the entries of the person
-  behind the key, and `personId` cannot widen that. A key whose role holds `time.manage` still lists
-  everybody's.
+  behind the key, and `personId` cannot widen that. Those entries carry the record title and the
+  project name as `POST` and `PATCH` return them, for every record the key's role can read. A key
+  whose role holds `time.manage` still lists everybody's.
 - "Tiempo" is now a module of its own in the navigation, shown to anyone with `time.log` while time
   tracking is on, instead of a link in the directory section for admins only.
 

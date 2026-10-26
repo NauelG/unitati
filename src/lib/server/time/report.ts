@@ -138,11 +138,11 @@ export function reportScope(actor: SessionUser): 'all' | 'own' | null {
 }
 
 /**
- * The filters as the actor may apply them. Without `time.manage` the person is
+ * The filters as the actor may apply them, as the `where` of the read. Without `time.manage` the person is
  * forced to the actor, whatever they asked for; a principal with no person of
  * its own owns no entries, so it matches none.
  */
-async function scoped(
+async function scopedConditions(
 	actor: SessionUser,
 	filters: ReportFilters
 ): Promise<Outcome<SQL, ReportFailure>> {
@@ -173,7 +173,7 @@ export async function reportEntries(
 	filters: ReportFilters,
 	request: PageRequest = {}
 ): Promise<Outcome<ReportPage, ReportFailure>> {
-	const scope = await scoped(actor, filters);
+	const scope = await scopedConditions(actor, filters);
 	if (!scope.ok) return scope;
 
 	const where = scope.value;
@@ -244,7 +244,7 @@ export async function reportAll(
 	actor: SessionUser,
 	filters: ReportFilters
 ): Promise<Outcome<ReportRow[], ReportFailure>> {
-	const scope = await scoped(actor, filters);
+	const scope = await scopedConditions(actor, filters);
 	if (!scope.ok) return scope;
 
 	return success((await selectRows(scope.value)).map(toRow));

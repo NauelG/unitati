@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TIME_READ_PERMISSIONS } from '#lib/domain/access.js';
 import { DURATION_GRAMMAR, MAX_ENTRY_MINUTES, parseDuration } from '#lib/domain/time.js';
 import { can, type Permission } from '../../access/permissions';
 import { canReadTimeTarget, redactTimeRows } from '../../links';
@@ -227,7 +228,7 @@ export const listTimeEntriesEndpoint = defineEndpoint({
 	description:
 		"Returns one page of time entries across tickets and tasks, with the same filters as the `/time` screen: `from` and `to` (inclusive work dates), `personId`, `typeId`, `projectTag` (the tasks of that project), `recordTag` (one ticket or task) and `kind` (`ticket` or `task`: support time against project time). `meta` carries the totals of the whole filtered list and `totalMinutes` its sum. A key whose role holds `time.manage` lists everybody's entries; a key with `time.log` alone lists only the entries of the person behind it, and `personId` cannot widen that. Answers `409 time_tracking_disabled` while the organisation has time tracking switched off.",
 	refusalTable: reportRefusals,
-	permissions: ['time.log', 'time.manage'],
+	permissions: TIME_READ_PERMISSIONS,
 	input: z.object({
 		from: day.optional(),
 		to: day.optional(),

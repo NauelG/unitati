@@ -27,7 +27,8 @@
 	import {
 		ASSET_READ_PERMISSIONS,
 		PROJECT_READ_PERMISSIONS,
-		TICKET_READ_PERMISSIONS
+		TICKET_READ_PERMISSIONS,
+		TIME_READ_PERMISSIONS
 	} from '#lib/domain/access.js';
 	import { isProduction } from '#lib/environment.js';
 	import { m } from '#lib/paraglide/messages.js';
@@ -158,7 +159,7 @@
 								href: '/time',
 								label: m.nav_time(),
 								icon: ClockIcon,
-								permission: ['time.log', 'time.manage'] as const
+								permission: TIME_READ_PERMISSIONS
 							}
 						]
 					}
