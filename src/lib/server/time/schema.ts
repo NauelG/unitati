@@ -86,6 +86,7 @@ export const timeEntries = pgTable(
 		index('time_entries_org_work_date').on(table.organisationId, table.workDate),
 		index('time_entries_ticket').on(table.ticketId),
 		index('time_entries_task').on(table.taskId),
+		index('time_entries_type').on(table.typeId),
 		index('time_entries_person_work_date').on(table.personId, table.workDate)
 	]
 );

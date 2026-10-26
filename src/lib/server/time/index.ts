@@ -41,8 +41,8 @@ export type {
 export { projectTime } from './totals';
 export type { ProjectTime } from './totals';
 
-export { startTimer, getRunningTimer, saveTimer, discardTimer } from './timers';
-export type { SaveTimerFailure, StartTimerFailure, TimerView } from './timers';
+export { startTimer, getRunningTimer, timerPayload, saveTimer, discardTimer } from './timers';
+export type { SaveTimerFailure, StartTimerFailure, TimerPayload, TimerView } from './timers';
 
 export { reportEntries, reportAll, getEntry } from './report';
 export type { ReportFailure, ReportFilters, ReportPage, ReportRow } from './report';

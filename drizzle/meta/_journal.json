@@ -302,6 +302,13 @@
       "when": 1792946424347,
       "tag": "0042_time_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792999802771,
+      "tag": "0043_time_entries_type_index",
+      "breakpoints": true
     }
   ]
 }

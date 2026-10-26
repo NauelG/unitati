@@ -6,6 +6,16 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.2.4] - 2026-10-26
+
+### Fixed
+
+- Time tracking no longer slows down as entries grow (#374). Ticket and task pages build their type
+  selector from the catalogue alone, without counting every time entry of the organisation, and a
+  new index on `time_entries(type_id)` speeds up the usage check when removing a type. The timer in
+  the app shell now refreshes every minute through a read of its own instead of re-running the whole
+  app layout load.
+
 ## [1.2.3] - 2026-10-26
 
 ### Fixed

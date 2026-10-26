@@ -1,0 +1,1 @@
+CREATE INDEX "time_entries_type" ON "time_entries" USING btree ("type_id");
