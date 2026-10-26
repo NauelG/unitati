@@ -6,6 +6,31 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.3.0] - 2026-10-26
+
+### Added
+
+- The project screen lists the time entries behind its total (#379): every entry on every task of
+  the project, subtasks and completed tasks included, newest work date first, ten to a page, with
+  the work date, the person, the task, the type, the duration and the note. Read-only: entries are
+  still edited on the task screen. Shown to whoever reads the project with `time.log`, and only
+  while time tracking is on; admins also get "Ver en informe", which opens `/time` filtered by the
+  project.
+- "Mi tiempo": a technician now opens `/time` and sees only their own entries, without the person
+  filter; the server forces the person to the viewer whatever the query string says, and the CSV
+  export follows the same rule. Admins keep "Tiempo", with everybody's entries and the person filter.
+- A filter by kind of record, tickets or tasks (`kind=ticket|task`), on `/time`, its CSV export and
+  `GET /api/v1/time-entries`, to tell support time from project time. The `/time` header splits the
+  filtered total into tickets and tasks.
+
+### Changed
+
+- `GET /api/v1/time-entries` accepts a key with `time.log`: it lists only the entries of the person
+  behind the key, and `personId` cannot widen that. A key whose role holds `time.manage` still lists
+  everybody's.
+- "Tiempo" is now a module of its own in the navigation, shown to anyone with `time.log` while time
+  tracking is on, instead of a link in the directory section for admins only.
+
 ## [1.2.7] - 2026-10-26
 
 ### Fixed
