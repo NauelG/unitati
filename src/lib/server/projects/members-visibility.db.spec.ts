@@ -521,7 +521,10 @@ describe('moving a task into a members-only project', () => {
 	it('moves a task with no assignee, and checks nothing for an open target', async () => {
 		const s = await scenario();
 		const fresh = await freshTask(s);
-		const other = await createProjectRow(s.organisation.id, { name: 'Other' });
+		const other = await createProjectRow(s.organisation.id, {
+			projectTag: 'PRJ-0950',
+			name: 'Other'
+		});
 		await assignRow(s.organisation.id, fresh.id, s.outsider.personId!);
 
 		expect((await moveTaskToProject(s.admin, fresh.id, other.id)).ok).toBe(true);
