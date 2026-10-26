@@ -482,7 +482,7 @@
 		title={m.asset_edit_title({ tag: asset.assetTag })}
 		description={m.asset_edit_lede()}
 		form={{
-			action: `/assets/${encodeURIComponent(asset.assetTag)}/edit`,
+			action: `/assets/${encodeURIComponent(asset.assetTag)}/edit?/save`,
 			method: 'POST',
 			use: editEnhance
 		}}

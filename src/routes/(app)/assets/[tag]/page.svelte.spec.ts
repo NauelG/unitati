@@ -20,7 +20,14 @@ vi.mock('sveltekit-superforms', () => ({
 	superForm: () => ({
 		form: writable({}),
 		errors: writable({}),
-		enhance: () => ({ destroy() {} }),
+		enhance: (form: HTMLFormElement) => {
+			const onSubmit = (event: Event) => {
+				event.preventDefault();
+				submitted.actions.push(form.action);
+			};
+			form.addEventListener('submit', onSubmit);
+			return { destroy: () => form.removeEventListener('submit', onSubmit) };
+		},
 		submitting: writable(false),
 		tainted: writable(undefined)
 	})
@@ -107,6 +114,19 @@ const renderPage = (permissions: { canManage: boolean; canCheckout: boolean }) =
 	render(Page, { data: pageData(permissions), form: null } as never);
 
 describe('asset record in-place editing', () => {
+	it('submits the edit sheet to the named save action', async () => {
+		renderPage({ canManage: true, canCheckout: false });
+		await fireEvent.click(screen.getByRole('link', { name: 'Editar' }));
+		const save = await screen.findByRole('button', { name: 'Guardar cambios' });
+		await fireEvent.submit(save.closest('form')!);
+		expect(
+			submitted.actions.map((action) => {
+				const url = new URL(action);
+				return url.pathname + url.search;
+			})
+		).toContain('/assets/AST-1/edit?/save');
+	});
+
 	it('opens the take-back dialog, listing what the custodian holds', async () => {
 		const data = pageData({ canManage: true, canCheckout: true }) as unknown as Mutable;
 		data.choices.heldAssets = [

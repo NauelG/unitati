@@ -6,6 +6,14 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.3.2] - 2026-10-26
+
+### Fixed
+
+- Editing an asset from its detail page now posts the contextual edit sheet to the named save
+  action. The separate edit page already used that action; the sheet still posted to the bare URL,
+  which returned 404 after 1.3.1.
+
 ## [1.3.1] - 2026-10-26
 
 ### Fixed
