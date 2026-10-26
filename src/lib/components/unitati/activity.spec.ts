@@ -515,3 +515,47 @@ describe('activitySentence for locations', () => {
 		);
 	});
 });
+
+describe('milestone entries', () => {
+	const id = PERSON;
+
+	it('names the milestone and its range when it is created', () => {
+		expect(
+			activitySentence({
+				verb: 'project.milestone.created',
+				payload: {
+					milestoneId: id,
+					name: 'Piloto',
+					startDate: '2026-11-01',
+					targetDate: '2026-11-30'
+				}
+			})
+		).toBe('Creó el hito «Piloto» (2026-11-01 – 2026-11-30)');
+	});
+
+	it('lists only what changed, from the snapshot', () => {
+		expect(
+			activitySentence({
+				verb: 'project.milestone.changed',
+				payload: {
+					milestoneId: id,
+					name: 'Piloto',
+					from: { targetDate: '2026-11-30' },
+					to: { targetDate: '2026-12-15' }
+				}
+			})
+		).toBe('Cambió el hito «Piloto»: fecha objetivo de 2026-11-30 a 2026-12-15');
+	});
+
+	it('names a deleted milestone, and a task changing milestone with none at one end', () => {
+		expect(
+			activitySentence({ verb: 'project.milestone.deleted', payload: { name: 'Piloto' } })
+		).toBe('Eliminó el hito «Piloto»');
+		expect(
+			activitySentence({
+				verb: 'task.milestone.changed',
+				payload: { from: null, to: { id, name: 'Piloto' } }
+			})
+		).toBe('Cambió el hito de ninguno a Piloto');
+	});
+});

@@ -4,13 +4,14 @@ import { createViewer } from '#lib/server/assets/testing/fixtures.js';
 import { getDb } from '#lib/server/db/index.js';
 import { assignRow } from '#lib/server/projects/testing/fixtures.js';
 import {
+	createMilestoneRow,
 	createProjectRow,
 	createTaskRow,
 	createWorkspace,
 	statesByGroup
 } from '#lib/server/projects/testing/fixtures.js';
 import { listActivity } from '#lib/server/activity/index.js';
-import { getProject, listTasks } from '#lib/server/projects/index.js';
+import { getProject, listMilestones, listTasks } from '#lib/server/projects/index.js';
 import { projectMembers, projects } from '#lib/server/projects/schema.js';
 import { actionEvent, outcomeOf } from '#lib/server/projects/testing/action-event.js';
 import { linkTicketToProject, relatedTo } from '#lib/server/links/index.js';
@@ -32,6 +33,15 @@ describe('writing to a project record', () => {
 			() => actions.archive(actionEvent(employee, {}, params)),
 			() => actions.unarchive(actionEvent(employee, {}, params)),
 			() => actions.createTask(actionEvent(employee, { title: 'Nope' }, params)),
+			() => actions.createMilestone(actionEvent(employee, { name: 'Nope' }, params)),
+			() =>
+				actions.updateMilestone(
+					actionEvent(employee, { milestoneId: crypto.randomUUID() }, params)
+				),
+			() =>
+				actions.deleteMilestone(
+					actionEvent(employee, { milestoneId: crypto.randomUUID() }, params)
+				),
 			() => actions.moveTask(actionEvent(employee, {}, params)),
 			() => actions.unlinkTicket(actionEvent(employee, { recordId: crypto.randomUUID() }, params))
 		]) {
@@ -498,5 +508,133 @@ describe('members-only projects', () => {
 		expect(allowed.returned).toEqual({ action: 'setVisibility' });
 		const found = await getProject(admin, project.projectTag);
 		expect(found.ok && found.value.visibility).toBe('organisation');
+	});
+});
+
+describe('milestones on the project record', () => {
+	const dates = { startDate: '2026-11-01', targetDate: '2026-11-30' };
+
+	const milestonesOf = async (viewer: Parameters<typeof listMilestones>[0], projectId: string) => {
+		const listed = await listMilestones(viewer, projectId);
+		return listed.ok ? listed.value : [];
+	};
+
+	it('creates, edits and deletes for a technician', async () => {
+		const { technician, project, params } = await setup();
+
+		const created = await outcomeOf(() =>
+			actions.createMilestone(
+				actionEvent(technician, { name: 'Pilot', description: 'Why', ...dates }, params)
+			)
+		);
+		expect(created.returned).toMatchObject({ action: 'createMilestone' });
+		const [milestone] = await milestonesOf(technician, project.id);
+		expect(milestone).toMatchObject({ name: 'Pilot', description: 'Why', ...dates });
+
+		await actions.updateMilestone(
+			actionEvent(
+				technician,
+				{ milestoneId: milestone.id, name: 'Go-live', description: '', ...dates },
+				params
+			)
+		);
+		const [renamed] = await milestonesOf(technician, project.id);
+		expect(renamed).toMatchObject({ name: 'Go-live', description: null });
+
+		const deleted = await outcomeOf(() =>
+			actions.deleteMilestone(actionEvent(technician, { milestoneId: milestone.id }, params))
+		);
+		expect(deleted.returned).toMatchObject({ action: 'deleteMilestone' });
+		expect(await milestonesOf(technician, project.id)).toEqual([]);
+	});
+
+	it('answers each invalid field with its own message and creates nothing', async () => {
+		const { technician, project, params } = await setup();
+		const create = async (fields: Record<string, string>) =>
+			(await outcomeOf(() => actions.createMilestone(actionEvent(technician, fields, params))))
+				.returned;
+
+		expect(await create({ name: '', ...dates })).toMatchObject({
+			status: 400,
+			data: { field: 'name' }
+		});
+		expect(
+			await create({ name: 'Pilot', startDate: '2026-12-01', targetDate: '2026-11-01' })
+		).toMatchObject({ status: 400, data: { field: 'dates' } });
+		expect(await milestonesOf(technician, project.id)).toEqual([]);
+	});
+
+	it('hands the page the milestones with their description rendered', async () => {
+		const { technician, organisation, project, params } = await setup();
+		await createMilestoneRow(organisation.id, project.id, { description: 'Hi **there**' });
+
+		const data = (await load({
+			locals: { user: technician },
+			params,
+			url: new URL(`http://localhost/projects/${params.tag}`),
+			cookies: { get: () => undefined, set: () => undefined }
+		} as never)) as { milestones: { descriptionHtml: string; status: string }[] };
+
+		expect(data.milestones).toHaveLength(1);
+		expect(data.milestones[0].descriptionHtml).toContain('<strong>there</strong>');
+	});
+
+	describe('?milestone=', () => {
+		const loadTasks = async (
+			viewer: unknown,
+			params: Record<string, string>,
+			search: string
+		): Promise<{ tasks: { title: string }[]; milestoneFilter: string | null }> =>
+			(await load({
+				locals: { user: viewer },
+				params,
+				url: new URL(`http://localhost/projects/${params.tag}${search}`),
+				cookies: { get: () => undefined, set: () => undefined }
+			} as never)) as never;
+
+		it('filters the loaded tasks by milestone, by none, and ignores garbage', async () => {
+			const { technician, organisation, project, params } = await setup();
+			const states = await statesByGroup(organisation.id);
+			const milestone = await createMilestoneRow(organisation.id, project.id);
+			await createTaskRow(organisation.id, project.id, states.unstarted.id, {
+				title: 'inside',
+				milestoneId: milestone.id
+			});
+			await createTaskRow(organisation.id, project.id, states.unstarted.id, { title: 'outside' });
+
+			const titles = async (search: string) =>
+				(await loadTasks(technician, params, search)).tasks.map((task) => task.title);
+
+			expect(await titles(`?milestone=${milestone.id}`)).toEqual(['inside']);
+			expect(await titles('?milestone=none')).toEqual(['outside']);
+			expect((await titles('?milestone=garbage')).sort()).toEqual(['inside', 'outside']);
+			expect(
+				(await loadTasks(technician, params, '?milestone=garbage')).milestoneFilter
+			).toBeNull();
+		});
+
+		it('loads an empty list, not an error, for a milestone of another project', async () => {
+			const { technician, organisation, project, params } = await setup();
+			const states = await statesByGroup(organisation.id);
+			const other = await createProjectRow(organisation.id, { name: 'Elsewhere' });
+			const foreign = await createMilestoneRow(organisation.id, other.id);
+			await createTaskRow(organisation.id, project.id, states.unstarted.id);
+
+			const data = await loadTasks(technician, params, `?milestone=${foreign.id}`);
+
+			expect(data.tasks).toEqual([]);
+		});
+	});
+
+	it('creates a task in a milestone from the dialog', async () => {
+		const { technician, organisation, project, params } = await setup();
+		const milestone = await createMilestoneRow(organisation.id, project.id);
+
+		await actions.createTask(
+			actionEvent(technician, { title: 'Pack', milestoneId: milestone.id }, params)
+		);
+
+		const [task] = await listTasks(technician, { projectId: project.id });
+		expect(task.milestoneId).toBe(milestone.id);
 	});
 });

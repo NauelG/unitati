@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { RICH_TEXT_MAX_LENGTH } from '#lib/domain/rich-text.js';
 import { STATE_GROUPS } from '#lib/domain/status.js';
+import { failure, success, type Outcome } from '../shared/outcome';
 
 /**
  * Input validation for projects, tasks and the state catalogue. Hand-written:
@@ -67,6 +68,11 @@ export const createTaskInput = z.object({
 	dueDate: dueDate.optional(),
 	/** Omitted: the task lands in the first open state (`defaultTaskState`). */
 	stateId: z.uuid().optional(),
+	/** Omitted or null: no milestone. Must belong to the task's own project. */
+	milestoneId: z
+		.uuid()
+		.nullish()
+		.transform((value) => value ?? undefined),
 	taskTag: tagOf(RESERVED_TASK_TAGS).optional()
 });
 
@@ -82,6 +88,62 @@ export const updateTaskInput = z.object({
 	dueDate: dueDate.optional(),
 	taskTag: tagOf(RESERVED_TASK_TAGS).optional()
 });
+
+/** The longest milestone name; the same bound as a task title. */
+export const MILESTONE_NAME_MAX = TASK_TITLE_MAX;
+
+export type MilestoneInputFailure = 'invalid_name' | 'invalid_description' | 'invalid_dates';
+
+const milestoneFields = {
+	name: nonEmpty.max(MILESTONE_NAME_MAX),
+	description: optionalText.pipe(z.string().max(RICH_TEXT_MAX_LENGTH).nullable()),
+	startDate: z.iso.date(),
+	targetDate: z.iso.date()
+};
+
+const createMilestoneInput = z.object({
+	...milestoneFields,
+	description: milestoneFields.description.optional()
+});
+const updateMilestoneInput = z.object({
+	name: milestoneFields.name.optional(),
+	description: milestoneFields.description.optional(),
+	startDate: milestoneFields.startDate.optional(),
+	targetDate: milestoneFields.targetDate.optional()
+});
+
+export type MilestoneValues = {
+	name?: string;
+	description?: string | null;
+	startDate?: string;
+	targetDate?: string;
+};
+
+/**
+ * A milestone's fields, validated: all of them on creation, any of them on an
+ * update (`partial`). The failure names the offending field, which is what the
+ * dialog shows. `startDate <= targetDate` is checked here when both are given;
+ * an update that sends only one of them is checked against the stored other
+ * by the caller.
+ */
+export function parseMilestoneInput(
+	input: unknown,
+	partial: boolean
+): Outcome<MilestoneValues, MilestoneInputFailure> {
+	const parsed = (partial ? updateMilestoneInput : createMilestoneInput).safeParse(input);
+	if (!parsed.success) {
+		const field = parsed.error.issues[0]?.path[0];
+		if (field === 'name') return failure('invalid_name');
+		if (field === 'description') return failure('invalid_description');
+		return failure('invalid_dates');
+	}
+
+	const { startDate, targetDate } = parsed.data;
+	if (startDate !== undefined && targetDate !== undefined && startDate > targetDate) {
+		return failure('invalid_dates');
+	}
+	return success(parsed.data);
+}
 
 export const createStateInput = z.object({
 	name: nonEmpty,

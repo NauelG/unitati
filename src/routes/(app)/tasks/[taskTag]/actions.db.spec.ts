@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import {
 	assignRow,
+	createMilestoneRow,
 	createProjectRow,
 	createTaskRow,
 	createWorkspace,
@@ -34,6 +35,7 @@ describe('writing to a task record', () => {
 			() => actions.update(actionEvent(employee, { title: 'Nope' }, params)),
 			() => actions.changeState(actionEvent(employee, { stateId: states.completed.id }, params)),
 			() => actions.setAssignees(actionEvent(employee, { personIds: [] }, params)),
+			() => actions.setMilestone(actionEvent(employee, { milestoneId: '' }, params)),
 			() =>
 				actions.moveToProject(actionEvent(employee, { projectId: crypto.randomUUID() }, params)),
 			() => actions.unlinkTicket(actionEvent(employee, { recordId: crypto.randomUUID() }, params))
@@ -278,5 +280,48 @@ describe('a task of a members-only project', () => {
 			action: 'setAssignees',
 			message: expect.stringContaining('miembro')
 		});
+	});
+});
+
+describe('setting the milestone of a task', () => {
+	it('sets and clears it', async () => {
+		const { technician, organisation, project, params } = await setup();
+		const milestone = await createMilestoneRow(organisation.id, project.id, { name: 'Pilot' });
+
+		const set = await outcomeOf(() =>
+			actions.setMilestone(actionEvent(technician, { milestoneId: milestone.id }, params))
+		);
+		expect(set.returned).toMatchObject({ action: 'setMilestone' });
+		const placed = await getTask(technician, params.taskTag);
+		expect(placed.ok && placed.value.milestoneName).toBe('Pilot');
+
+		await actions.setMilestone(actionEvent(technician, { milestoneId: '' }, params));
+		const cleared = await getTask(technician, params.taskTag);
+		expect(cleared.ok && cleared.value.milestoneId).toBeNull();
+	});
+
+	it('refuses a milestone of another project like one that does not exist', async () => {
+		const { technician, organisation, params } = await setup();
+		const other = await createProjectRow(organisation.id, { name: 'Elsewhere' });
+		const foreign = await createMilestoneRow(organisation.id, other.id);
+
+		const { returned, thrown } = await outcomeOf(() =>
+			actions.setMilestone(actionEvent(technician, { milestoneId: foreign.id }, params))
+		);
+
+		expect(thrown).toBeUndefined();
+		expect(returned).toMatchObject({ status: 400, data: { field: 'milestoneId' } });
+		const task = await getTask(technician, params.taskTag);
+		expect(task.ok && task.value.milestoneId).toBeNull();
+	});
+
+	it('refuses a malformed id', async () => {
+		const { technician, params } = await setup();
+
+		const { returned } = await outcomeOf(() =>
+			actions.setMilestone(actionEvent(technician, { milestoneId: 'garbage' }, params))
+		);
+
+		expect(returned?.status).toBe(400);
 	});
 });

@@ -10,6 +10,7 @@ import {
 	listProjectAttachments,
 	listProjectComments,
 	listProjectMembers,
+	listMilestones,
 	listStates,
 	listTasks,
 	projectProgress
@@ -37,6 +38,8 @@ export interface ProjectMay {
 	createTask: boolean;
 	/** Dragging a card to another column, or reordering it. */
 	moveTask: boolean;
+	/** Creating, editing and deleting milestones, and the task creation dialog's milestone pick. */
+	manageMilestones: boolean;
 	comment: boolean;
 	/** Adding and removing attachments. */
 	attach: boolean;
@@ -87,7 +90,7 @@ async function projectTimeSection(
 export async function projectScreen(
 	viewer: SessionUser,
 	projectTag: string,
-	options: { time?: PageRequest } = {}
+	options: { time?: PageRequest; milestone?: string } = {}
 ) {
 	if (!PROJECT_READ_PERMISSIONS.some((permission) => can(viewer, permission))) {
 		return failure('not_found');
@@ -111,6 +114,7 @@ export async function projectScreen(
 		edit: writable,
 		createTask: writable,
 		moveTask: writable,
+		manageMilestones: writable,
 		comment: writable,
 		attach: writable,
 		documentPage: writable,
@@ -124,11 +128,14 @@ export async function projectScreen(
 
 	// What the viewer can see of the project: an employee gets their own tasks
 	// and counts of exactly those (the domain scopes both from the same viewer).
-	const [tasks, states, progress, people, related, attachments, members, comments] =
+	const [tasks, states, progress, milestones, people, related, attachments, members, comments] =
 		await Promise.all([
-			listTasks(viewer, { projectId: project.id }),
+			// `milestone` narrows the board and the list only: the header's progress below
+			// is the whole project's and does not move with the filter.
+			listTasks(viewer, { projectId: project.id, milestone: options.milestone }),
 			listStates(viewer),
 			projectProgress(viewer, project.id),
+			listMilestones(viewer, project.id),
 			writable ? listPeople(viewer.organisationId) : Promise.resolve([]),
 			// The tickets behind this project, already scoped to what the viewer may
 			// see: an employee gets their own, and every count below follows suit.
@@ -137,7 +144,8 @@ export async function projectScreen(
 			listProjectMembers(viewer, project.id),
 			listProjectComments(viewer, project.id)
 		]);
-	if (!progress.ok || !attachments.ok || !members.ok || !comments.ok) return failure('not_found');
+	if (!progress.ok || !milestones.ok || !attachments.ok || !members.ok || !comments.ok)
+		return failure('not_found');
 
 	const listed = new Set(members.value.map((member) => member.personId));
 	const active = activePeople(people);
@@ -159,6 +167,9 @@ export async function projectScreen(
 		// board cookie and `?view=` against them.
 		states: states.map(({ id, name, group, position }) => ({ id, name, group, position })),
 		progress: progress.value,
+		milestones: milestones.value,
+		// The filter in force: a milestone id, `none`, or null for the whole project.
+		milestoneFilter: options.milestone ?? null,
 		members: members.value,
 		related,
 		attachments: attachments.value,

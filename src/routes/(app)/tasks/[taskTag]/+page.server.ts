@@ -22,6 +22,7 @@ import {
 	requireProjectRead,
 	requireProjectWrite,
 	setAssignees,
+	setTaskMilestone,
 	updateTask,
 	updateTaskInput,
 	type AssignFailure,
@@ -152,6 +153,33 @@ export const actions: Actions = {
 		}
 
 		return { action: 'changeState' as const };
+	},
+
+	// Empty is "no milestone". A milestone of another project is refused like one that
+	// does not exist, the domain's call (ADR 0042 semantics), never a 403.
+	setMilestone: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const posted = orNull((await fieldsOf(request)).get('milestoneId'));
+
+		const milestoneId = posted === null ? null : z.uuid().safeParse(posted);
+		if (milestoneId !== null && !milestoneId.success) {
+			return rejected('setMilestone', m.action_error_invalid(), 'milestoneId');
+		}
+
+		const task = await targetOf(user, params.taskTag);
+		const outcome = await setTaskMilestone(user, task.id, milestoneId?.data ?? null);
+		if (!outcome.ok) {
+			if (outcome.error === 'task_not_found') error(404, 'Not found');
+			return rejected(
+				'setMilestone',
+				outcome.error === 'project_archived'
+					? m.project_error_archived()
+					: m.milestone_error_missing(),
+				'milestoneId'
+			);
+		}
+
+		return { action: 'setMilestone' as const };
 	},
 
 	moveToProject: async ({ request, locals, params }) => {

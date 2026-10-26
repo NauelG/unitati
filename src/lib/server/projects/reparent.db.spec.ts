@@ -17,7 +17,12 @@ import {
 import { reparentTask } from './reparent';
 import { lockProjects, lockTask } from './writes';
 import { projects, tasks } from './schema';
-import { createProjectRow, createWorkspace, statesByGroup } from './testing/fixtures';
+import {
+	createMilestoneRow,
+	createProjectRow,
+	createWorkspace,
+	statesByGroup
+} from './testing/fixtures';
 
 type Workspace = Awaited<ReturnType<typeof createWorkspace>>;
 
@@ -56,6 +61,44 @@ async function titlesIn(projectTag: string) {
 		.orderBy(asc(tasks.position));
 	return rows.map((row) => row.title);
 }
+
+describe('moveTaskToProject: milestones', () => {
+	it('clears the milestone, which belongs to the old project, and records the change', async () => {
+		const { admin, organisation } = await createWorkspace();
+		const from = await newProject(admin, 'Office move');
+		const to = await newProject(admin, 'Warehouse');
+		const milestone = await createMilestoneRow(organisation.id, from.id, { name: 'Pilot' });
+		const created = await createTask(admin, from.id, { title: 'Pack', milestoneId: milestone.id });
+		if (!created.ok) throw new Error('setup');
+
+		expect(await moveTaskToProject(admin, created.value.id, to.id)).toEqual({
+			ok: true,
+			value: undefined
+		});
+
+		const [row] = await getDb().select().from(tasks).where(eq(tasks.id, created.value.id));
+		expect(row).toMatchObject({ projectId: to.id, milestoneId: null });
+		expect((await historyOf(created.value.id)).slice(-2)).toEqual([
+			expect.objectContaining({ verb: 'task.project.changed' }),
+			{
+				verb: 'task.milestone.changed',
+				payload: { from: { id: milestone.id, name: 'Pilot' }, to: null }
+			}
+		]);
+	});
+
+	it('records no milestone entry for a task that had none', async () => {
+		const { admin } = await createWorkspace();
+		const from = await newProject(admin, 'Office move');
+		const to = await newProject(admin, 'Warehouse');
+		const task = await newTask(admin, from.id, 'Pack');
+
+		await moveTaskToProject(admin, task.id, to.id);
+
+		const verbs = (await historyOf(task.id)).map((entry) => entry.verb);
+		expect(verbs).not.toContain('task.milestone.changed');
+	});
+});
 
 describe('moveTaskToProject', () => {
 	it('keeps the task as it was, puts it at the end of its column and writes one entry', async () => {

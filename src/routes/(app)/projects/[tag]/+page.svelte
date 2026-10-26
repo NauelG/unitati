@@ -26,6 +26,9 @@
 	import FollowControl from '#lib/components/unitati/FollowControl.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Dialog from '#lib/components/unitati/Dialog.svelte';
+	import MilestonesPanel from '#lib/components/unitati/MilestonesPanel.svelte';
+	import SelectField from '#lib/components/unitati/SelectField.svelte';
+	import X from '@lucide/svelte/icons/x';
 	import EmptyState from '#lib/components/unitati/EmptyState.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
 	import FormActions from '#lib/components/unitati/FormActions.svelte';
@@ -134,10 +137,44 @@
 
 	const quickCreateState = $derived(data.states.find((state) => state.id === taskStateId));
 
+	/** The create-task dialog's milestone: the one the board is filtered by, never `none`. */
+	let taskMilestoneId = $state<string | null>(null);
+
 	function openTask(stateId: string | null) {
 		taskStateId = stateId;
+		taskMilestoneId =
+			data.milestoneFilter && data.milestoneFilter !== 'none' ? data.milestoneFilter : null;
 		taskOpen = true;
 	}
+
+	const milestoneOptions = $derived(
+		data.milestones.map((milestone) => ({ value: milestone.id, label: milestone.name }))
+	);
+	const filteredMilestone = $derived(
+		data.milestoneFilter === 'none'
+			? { name: m.milestone_none() }
+			: (data.milestones.find((milestone) => milestone.id === data.milestoneFilter) ?? null)
+	);
+	/** A refusal of the milestone panel's actions, for the dialog that owns it. */
+	const milestoneFailure = $derived(
+		form &&
+			'action' in form &&
+			['createMilestone', 'updateMilestone', 'deleteMilestone'].includes(String(form.action)) &&
+			'message' in form
+			? {
+					action: String(form.action),
+					message: String(form.message),
+					field: (form.field ?? null) as string | null
+				}
+			: null
+	);
+	/** The query string without `?milestone=`: the other parameters (`?view=`) stay. */
+	const clearFilterHref = $derived.by(() => {
+		const params = new SvelteURLSearchParams(page.url.search);
+		params.delete('milestone');
+		const rest = params.toString();
+		return rest ? `?${rest}` : page.url.pathname;
+	});
 
 	const failureFor = (action: string) =>
 		form && 'action' in form && form.action === action && 'message' in form
@@ -403,13 +440,34 @@
 		</WorkPanel>
 	{/if}
 
-	<SegmentedControl
-		class="mt-[var(--space-6)]"
-		aria-label={m.board_views_label()}
-		options={views}
-		value={view}
-		onchange={(id) => storeBoardPreference({ view: id as 'board' | 'list' })}
-	/>
+	{#if data.milestones.length > 0 || data.may.manageMilestones}
+		<MilestonesPanel
+			milestones={data.milestones}
+			editable={data.may.manageMilestones}
+			filter={data.milestoneFilter}
+			failure={milestoneFailure}
+		/>
+	{/if}
+
+	<div class="mt-[var(--space-6)] flex flex-wrap items-center gap-[var(--space-3)]">
+		<SegmentedControl
+			aria-label={m.board_views_label()}
+			options={views}
+			value={view}
+			onchange={(id) => storeBoardPreference({ view: id as 'board' | 'list' })}
+		/>
+		{#if filteredMilestone}
+			<a
+				href={clearFilterHref}
+				class="inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-full)] bg-[var(--brand-soft)] px-[var(--space-3)] py-[var(--space-1)] text-sm text-[var(--brand)] hover:underline"
+				aria-label={m.milestone_filter_clear()}
+				data-testid="milestone-filter-chip"
+			>
+				{m.milestone_filter_chip({ name: filteredMilestone.name })}
+				<X class="size-3.5" aria-hidden="true" />
+			</a>
+		{/if}
+	</div>
 
 	{#if view === 'board'}
 		<div class="mt-[var(--space-4)]" data-view="board">
@@ -459,6 +517,11 @@
 										? task.assignees.map((assignee) => assignee.fullName).join(', ')
 										: m.project_detail_task_unassigned()}
 								</span>
+								{#if task.milestoneName}
+									<span class="text-[var(--ink-muted)]" data-milestone-name>
+										{task.milestoneName}
+									</span>
+								{/if}
 								{#if task.dueDate}
 									<span class="text-[var(--ink-muted)] tabular-nums">{formatDay(task.dueDate)}</span
 									>
@@ -675,6 +738,15 @@
 				autofocus
 				error={failureFor('createTask')}
 			/>
+			{#if milestoneOptions.length > 0}
+				<SelectField
+					label={m.milestone_field()}
+					name="milestoneId"
+					options={milestoneOptions}
+					placeholder={m.milestone_none_option()}
+					bind:value={taskMilestoneId}
+				/>
+			{/if}
 			<FormActions>
 				<Button type="button" variant="ghost" onclick={() => (taskOpen = false)}>
 					{m.form_cancel()}

@@ -5,7 +5,7 @@ import { getDb, type Transaction } from '../db';
 import { people } from '../directory/schema';
 import { failure, success, type Outcome } from '../shared/outcome';
 import { placeBetween } from '../shared/position';
-import { projectMembers, projects, taskAssignees, tasks, type Task } from './schema';
+import { milestones, projectMembers, projects, taskAssignees, tasks, type Task } from './schema';
 import { requireManage } from './scope';
 import { columnOf } from './tasks';
 import { lockProjects } from './writes';
@@ -31,7 +31,8 @@ export type MoveTaskToProjectFailure =
  * **Assumes the locks are held**: both the task's current project and `target`
  * (`lockProjects`), and that neither is archived nor the same as the other. It
  * validates nothing, which is what lets #61 call it for every task of a project
- * being merged, inside its own transaction. Not exported from the domain's
+ * being merged, inside its own transaction. It also clears `milestone_id`: a
+ * milestone belongs to one project (ADR 0054). Not exported from the domain's
  * `index.ts`.
  */
 export async function reparentTask(
@@ -50,9 +51,23 @@ export async function reparentTask(
 	// Nothing follows the last task, so the end of a column never needs a renumber.
 	if (!('position' in placed)) throw new Error('Appending to a column cannot renumber it.');
 
+	// A milestone belongs to one project, so it cannot follow the task: the same
+	// UPDATE clears it, or the composite foreign key would reject the move.
+	const [milestone] = task.milestoneId
+		? await tx
+				.select({ id: milestones.id, name: milestones.name })
+				.from(milestones)
+				.where(eq(milestones.id, task.milestoneId))
+		: [];
+
 	await tx
 		.update(tasks)
-		.set({ projectId: target.id, position: String(placed.position), updatedAt: new Date() })
+		.set({
+			projectId: target.id,
+			milestoneId: null,
+			position: String(placed.position),
+			updatedAt: new Date()
+		})
 		.where(eq(tasks.id, task.id));
 
 	await recordActivity(tx, {
@@ -69,6 +84,16 @@ export async function reparentTask(
 			toProjectName: target.name
 		}
 	});
+
+	if (milestone) {
+		await recordActivity(tx, {
+			organisationId: actor.organisationId,
+			...actorColumns(actor),
+			target: { taskId: task.id },
+			verb: 'task.milestone.changed',
+			payload: { from: milestone, to: null }
+		});
+	}
 }
 
 /**

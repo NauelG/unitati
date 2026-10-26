@@ -3,6 +3,8 @@ import {
 	createProjectInput,
 	createStateInput,
 	createTaskInput,
+	MILESTONE_NAME_MAX,
+	parseMilestoneInput,
 	updateProjectInput,
 	updateStateInput,
 	updateTaskInput,
@@ -74,5 +76,62 @@ describe('tags', () => {
 
 	it('accepts any other tag, trimmed', () => {
 		expect(updateProjectInput.parse({ projectTag: ' PRJ-0042 ' }).projectTag).toBe('PRJ-0042');
+	});
+});
+
+describe('milestone input', () => {
+	const valid = { name: 'Piloto', startDate: '2026-11-01', targetDate: '2026-11-30' };
+	const failure = (input: object, partial = false) => {
+		const outcome = parseMilestoneInput(input, partial);
+		return outcome.ok ? null : outcome.error;
+	};
+
+	it('trims the name and accepts 1 to 200 characters', () => {
+		expect(MILESTONE_NAME_MAX).toBe(200);
+		expect(parseMilestoneInput({ ...valid, name: '  Piloto ' }, false)).toMatchObject({
+			ok: true,
+			value: { name: 'Piloto' }
+		});
+		expect(failure({ ...valid, name: 'a'.repeat(200) })).toBeNull();
+	});
+
+	it('refuses an empty, blank or 201-character name', () => {
+		expect(failure({ ...valid, name: '' })).toBe('invalid_name');
+		expect(failure({ ...valid, name: '   ' })).toBe('invalid_name');
+		expect(failure({ ...valid, name: 'a'.repeat(201) })).toBe('invalid_name');
+	});
+
+	it('turns an empty description into none and refuses one over the rich-text max', () => {
+		expect(parseMilestoneInput({ ...valid, description: '  ' }, false)).toMatchObject({
+			ok: true,
+			value: { description: null }
+		});
+		expect(failure({ ...valid, description: 'x'.repeat(20_001) })).toBe('invalid_description');
+		expect(failure({ description: 'x'.repeat(20_001) }, true)).toBe('invalid_description');
+	});
+
+	it('refuses dates that are not ISO calendar days', () => {
+		expect(failure({ ...valid, startDate: '01/11/2026' })).toBe('invalid_dates');
+		expect(failure({ ...valid, targetDate: '2026-02-30' })).toBe('invalid_dates');
+		expect(failure({ ...valid, targetDate: undefined })).toBe('invalid_dates');
+	});
+
+	it('refuses a start after the target, and allows a one-day milestone', () => {
+		expect(failure({ ...valid, startDate: '2026-12-01' })).toBe('invalid_dates');
+		expect(failure({ ...valid, startDate: '2026-11-30' })).toBeNull();
+	});
+
+	it('leaves absent fields absent on a partial update', () => {
+		const outcome = parseMilestoneInput({ name: 'Nuevo' }, true);
+		expect(outcome).toEqual({ ok: true, value: { name: 'Nuevo' } });
+	});
+});
+
+describe('task input: milestone', () => {
+	it('accepts an optional milestone id on creation and refuses a non-uuid', () => {
+		const id = '3f1e0c9a-0000-4000-8000-0000000000a1';
+		expect(createTaskInput.parse({ title: 'x', milestoneId: id }).milestoneId).toBe(id);
+		expect(createTaskInput.parse({ title: 'x' }).milestoneId).toBeUndefined();
+		expect(() => createTaskInput.parse({ title: 'x', milestoneId: 'nope' })).toThrow();
 	});
 });

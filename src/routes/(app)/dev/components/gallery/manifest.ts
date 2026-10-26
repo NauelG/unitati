@@ -679,6 +679,11 @@ export const GALLERY_EXCEPTIONS: GalleryException[] = [
 			'Bound to the project record: its radio, add and remove forms post to the ?/setVisibility, ?/addMember and ?/removeMember actions of /projects/[tag], which answer 404 without a project the viewer can see.'
 	},
 	{
+		sourceFile: 'MilestonesPanel.svelte',
+		reason:
+			'Bound to the project record: its dialog and delete forms post to the ?/createMilestone, ?/updateMilestone and ?/deleteMilestone actions of /projects/[tag], which answer 404 without a project the viewer can see, and its rows link to ?milestone= of that page.'
+	},
+	{
 		sourceFile: 'NotificationBell.svelte',
 		reason:
 			'Bound to the session: it polls and posts to /notifications/*, which answer 401 without a user, so it cannot render working in the gallery. It sits in both topbars.'

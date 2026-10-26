@@ -12,7 +12,7 @@
  * Code may depend on a state's `group`, never on its name.
  */
 
-export type { State, Project, Task, TaskAssignee } from './schema';
+export type { State, Project, Task, TaskAssignee, Milestone } from './schema';
 
 export { requireProjectScope, requireTaskScope, seesAllProjects } from './scope';
 export { findTaskInScope, findProjectInScope, taskSnapshot, projectSnapshot } from './link-targets';
@@ -90,6 +90,7 @@ export {
 	assign,
 	unassign,
 	setAssignees,
+	setTaskMilestone,
 	moveTask
 } from './tasks';
 export type {
@@ -130,6 +131,18 @@ export {
 } from './comments';
 export type { AddProjectCommentFailure, AddTaskCommentFailure } from './comments';
 
+export { listMilestones, createMilestone, updateMilestone, deleteMilestone } from './milestones';
+export type {
+	MilestoneView,
+	MilestoneClock,
+	CreateMilestoneInput,
+	UpdateMilestoneInput,
+	CreateMilestoneFailure,
+	MilestoneWriteFailure
+} from './milestones';
+export { milestoneStatus } from './milestone-status';
+export type { MilestoneStatus, MilestoneProgress } from './milestone-status';
+
 export { moveTaskToProject } from './reparent';
 export type { MoveTaskToProjectFailure } from './reparent';
 
@@ -145,7 +158,8 @@ export {
 	PROJECT_VISIBILITIES,
 	RESERVED_PROJECT_TAGS,
 	RESERVED_TASK_TAGS,
-	TASK_TITLE_MAX
+	TASK_TITLE_MAX,
+	MILESTONE_NAME_MAX
 } from './validation';
 export type {
 	CreateProjectInput,

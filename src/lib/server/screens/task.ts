@@ -6,6 +6,7 @@ import { relatedTo, taskTimeline } from '../links';
 import { followState } from '../notifications';
 import {
 	getTask,
+	listMilestones,
 	listProjectMembers,
 	listProjects,
 	listStates,
@@ -28,6 +29,8 @@ export interface TaskMay {
 	edit: boolean;
 	changeState: boolean;
 	assign: boolean;
+	/** Putting the task in a milestone of its project, or taking it out. */
+	setMilestone: boolean;
 	moveToProject: boolean;
 	comment: boolean;
 	/** Adding and removing attachments. */
@@ -42,6 +45,8 @@ export interface TaskChoices {
 	people: { id: string; fullName: string }[];
 	/** The destinations of "move to project": in scope and not this one. */
 	projects: { id: string; projectTag: string; name: string }[];
+	/** The task's project's milestones, in their fixed order; empty unless the viewer may set one. */
+	milestones: { id: string; name: string }[];
 }
 
 export async function taskScreen(viewer: SessionUser, taskTag: string) {
@@ -65,6 +70,7 @@ export async function taskScreen(viewer: SessionUser, taskTag: string) {
 		edit: writable,
 		changeState: writable,
 		assign: writable,
+		setMilestone: writable,
 		moveToProject: writable,
 		comment: writable,
 		attach: writable,
@@ -96,10 +102,11 @@ async function choicesFor(
 	task: { projectId: string; projectVisibility: string },
 	may: TaskMay
 ): Promise<TaskChoices> {
-	const [states, people, projects] = await Promise.all([
+	const [states, people, projects, milestones] = await Promise.all([
 		may.changeState ? listStates(viewer) : [],
 		may.assign ? listPeople(viewer.organisationId) : [],
-		may.moveToProject ? listProjects(viewer) : []
+		may.moveToProject ? listProjects(viewer) : [],
+		may.setMilestone ? listMilestones(viewer, task.projectId) : null
 	]);
 
 	// On a members-only project only its members can be put on the task (ADR 0042),
@@ -116,7 +123,8 @@ async function choicesFor(
 		people: activePeople(assignable),
 		projects: projects
 			.filter((project) => project.id !== task.projectId)
-			.map(({ id, projectTag, name }) => ({ id, projectTag, name }))
+			.map(({ id, projectTag, name }) => ({ id, projectTag, name })),
+		milestones: milestones?.ok ? milestones.value.map(({ id, name }) => ({ id, name })) : []
 	};
 }
 
