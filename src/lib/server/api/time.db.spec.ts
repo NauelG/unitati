@@ -97,6 +97,37 @@ describe('POST /time-entries', () => {
 		}
 	});
 
+	it('bounds minutes to 1..1440 and a duration to 24 h on create and edit', async () => {
+		const scene = await createTimeScene();
+		const key = await keyFor(scene.technician, ['time.log']);
+		const created = await send('POST', '/time-entries', key, {
+			taskTag: scene.task.taskTag,
+			minutes: 1440,
+			...day
+		});
+		expect(created.response.status).toBe(201);
+
+		for (const bad of [
+			{ minutes: 0 },
+			{ minutes: 1441 },
+			{ duration: '25h' },
+			{ duration: '1h 90m' }
+		]) {
+			const post = await send('POST', '/time-entries', key, {
+				taskTag: scene.task.taskTag,
+				...day,
+				...bad
+			});
+			expect(post.response.status, JSON.stringify(bad)).toBe(400);
+
+			const patch = await send('PATCH', `/time-entries/${created.body.data.id}`, key, {
+				baseRevision: 1,
+				...bad
+			});
+			expect(patch.response.status, JSON.stringify(bad)).toBe(400);
+		}
+	});
+
 	it('answers 400 on the field for a bad duration, a future date and an unknown type', async () => {
 		const scene = await createTimeScene();
 		const key = await keyFor(scene.technician, ['time.log']);

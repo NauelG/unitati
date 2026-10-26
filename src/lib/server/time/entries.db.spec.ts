@@ -97,6 +97,8 @@ describe('logging time', () => {
 
 		expect(await log({ minutes: 0 })).toEqual({ ok: false, error: 'invalid_minutes' });
 		expect(await log({ minutes: 1.5 })).toEqual({ ok: false, error: 'invalid_minutes' });
+		expect(await log({ minutes: 1441 })).toEqual({ ok: false, error: 'invalid_minutes' });
+		expect(await log({ minutes: 1440, workDate: '2026-10-25' })).toMatchObject({ ok: true });
 		expect(await log({ workDate: '2026-02-30' })).toEqual({ ok: false, error: 'invalid_date' });
 		expect(await log({ workDate: 'yesterday' })).toEqual({ ok: false, error: 'invalid_date' });
 		expect(await log({ workDate: '2026-10-26' })).toEqual({ ok: false, error: 'future_date' });

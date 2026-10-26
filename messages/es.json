@@ -2109,7 +2109,7 @@
 	"time_panel_date": "Fecha de trabajo",
 	"time_panel_type": "Tipo",
 	"time_panel_note": "Nota (opcional)",
-	"time_error_invalid_duration": "Escribe una duración válida, como 1h 30m, 45m o 1.5h.",
+	"time_error_invalid_duration": "Escribe una duración válida de entre 1 minuto y 24 horas, como 1h 30m, 45m o 1,5h. Con horas, los minutos deben ser menos de 60.",
 	"time_error_invalid_date": "Indica una fecha de trabajo válida.",
 	"time_error_future_date": "La fecha de trabajo no puede ser futura.",
 	"time_error_invalid_type": "Elige un tipo de trabajo disponible.",

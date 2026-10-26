@@ -5,11 +5,15 @@
  */
 
 /**
- * An overflow guard on the `integer` column, not a product limit: about 1,900
- * years of minutes are refused long before Postgres would. A forgotten timer is
- * corrected in the form, not capped (ADR 0052).
+ * The longest single entry: 24 hours. No real entry exceeds a day, and the cap
+ * catches typos like `150h`. Applies to every write path: the form, the timer
+ * save and the API.
  */
-export const MAX_ENTRY_MINUTES = 1_000_000;
+export const MAX_ENTRY_MINUTES = 1440;
+
+/** The grammar of a typed duration, for API docs and form hints. */
+export const DURATION_GRAMMAR =
+	'`1h 30m`, `1h30m`, `1h`, `45m`, `90m`, or decimal hours `1.5h`, `1,5h`, `.5h`. A minutes part next to hours must be under 60; at least 1 minute and at most 24 hours.';
 
 /** `1h`, `45m`, `1h 30m`, `1h30m`: whole hours and/or whole minutes. */
 const HOURS_AND_MINUTES = /^(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?$/;
@@ -30,6 +34,9 @@ export function parseDuration(input: string): number | null {
 
 	const match = HOURS_AND_MINUTES.exec(text);
 	if (!match || (match[1] === undefined && match[2] === undefined)) return null;
+
+	// `1h 90m` is ambiguous: with hours present, minutes must be a real minute part.
+	if (match[1] !== undefined && Number(match[2] ?? 0) >= 60) return null;
 
 	return checked(Number(match[1] ?? 0) * 60 + Number(match[2] ?? 0));
 }

@@ -22,7 +22,10 @@ describe('parseDuration', () => {
 		['0.25h', 15],
 		['  2H  ', 120],
 		['2h 0m', 120],
-		['1h 75m', 135]
+		['1 h', 60],
+		['1h 59m', 119],
+		['24h', 1440],
+		['1440m', 1440]
 	])('reads %j as %i minutes', (text, minutes) => {
 		expect(parseDuration(text)).toBe(minutes);
 	});
@@ -44,12 +47,21 @@ describe('parseDuration', () => {
 		'0.001h',
 		'1 hour',
 		'1h30m5s',
-		'1e3m'
+		'1e3m',
+		'2',
+		'1h 90m',
+		'1h 60m',
+		'1h 75m',
+		'25h',
+		'1441m',
+		'24h 1m',
+		'150h'
 	])('refuses %j', (text) => {
 		expect(parseDuration(text)).toBeNull();
 	});
 
-	it('refuses a duration beyond the overflow guard', () => {
+	it('refuses a duration beyond one day', () => {
+		expect(MAX_ENTRY_MINUTES).toBe(1440);
 		expect(parseDuration(`${MAX_ENTRY_MINUTES}m`)).toBe(MAX_ENTRY_MINUTES);
 		expect(parseDuration(`${MAX_ENTRY_MINUTES + 1}m`)).toBeNull();
 		expect(parseDuration('99999999999999999999m')).toBeNull();
