@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { getDb } from '../db';
 import { projects } from '../projects/schema';
 import { logTime, setTimeTracking } from '../time';
@@ -41,6 +41,30 @@ describe('the Time section of the record screens', () => {
 		expect(ticket.value.time).toMatchObject({ totalMinutes: 45, canLog: true });
 		expect(task.value.time).toMatchObject({ totalMinutes: 30, canLog: true });
 		expect(task.value.time?.types.map((type) => type.name)).toEqual(['General']);
+	});
+
+	it('hands the screen the organisation’s today, not the UTC day', async () => {
+		const scene = await sceneWithTime();
+		// 23:30 UTC on the 25th is already the 26th in the organisation's zone (Europe/Madrid).
+		vi.useFakeTimers({ toFake: ['Date'] });
+		vi.setSystemTime(new Date('2026-10-25T23:30:00Z'));
+		try {
+			const ticket = await ticketScreen(scene.technician, scene.ticket.ticketTag);
+			const task = await taskScreen(scene.technician, scene.task.taskTag);
+			if (!ticket.ok || !task.ok) throw new Error('screens not found');
+			expect(ticket.value.time?.today).toBe('2026-10-26');
+			expect(task.value.time?.today).toBe('2026-10-26');
+
+			// The default the form proposes is a date the server accepts.
+			const saved = await logTime(
+				scene.technician,
+				{ taskId: scene.task.id },
+				{ minutes: 15, workDate: task.value.time!.today }
+			);
+			expect(saved.ok).toBe(true);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it('is absent while tracking is off', async () => {

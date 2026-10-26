@@ -5,12 +5,18 @@ import {
 	listEntriesFor,
 	getRunningTimer,
 	listOfferedTypes,
+	organisationToday,
 	type RecordTime,
 	type TimeTarget
 } from '../time';
 
 /** The Time section of a record's rail (ADR 0052), as the screens hand it to the page. */
 export interface TimeSection extends RecordTime {
+	/**
+	 * Today (`YYYY-MM-DD`) in the organisation's time zone, the day the server
+	 * validates a work date against: the form's default and its latest pick.
+	 */
+	today: string;
 	/** The types an entry may be put on. */
 	types: { id: string; name: string; isDefault: boolean }[];
 	/** Record state applied (ADR 0050 rule 4): false on a task of an archived project. */
@@ -42,6 +48,7 @@ export async function timeSection(
 
 	return {
 		...time,
+		today: organisationToday(),
 		types,
 		canLog: writable && viewer.personId !== null,
 		timer: running && {

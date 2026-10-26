@@ -412,6 +412,7 @@
 				totalMinutes={data.time.totalMinutes}
 				types={data.time.types}
 				canLog={data.time.canLog}
+				today={data.time.today}
 				timer={data.time.timer}
 				error={timeError}
 			/>

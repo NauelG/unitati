@@ -40,13 +40,19 @@
 		types: { id: string; name: string; isDefault: boolean }[];
 		/** Whether the viewer may log time here (record state applied, ADR 0050). */
 		canLog: boolean;
+		/**
+		 * Today (`YYYY-MM-DD`) in the organisation's time zone, from the server: the
+		 * form's default work date and the latest day it offers. The browser's own
+		 * day may differ, and the server refuses a date after its own.
+		 */
+		today: string;
 		/** A refusal of one of the three actions, placed in the open form. */
 		error?: string | null;
 		/** The viewer's running timer; `here` when it counts on this record. */
 		timer?: { startedAt: string; here: boolean; tag: string; href: string } | null;
 	}
 
-	let { entries, totalMinutes, types, canLog, error = null, timer = null }: Props = $props();
+	let { entries, totalMinutes, types, canLog, today, error = null, timer = null }: Props = $props();
 
 	/** The form is the timer's stop (prefilled, saved or cancelled) rather than a plain entry. */
 	let stopping = $state(false);
@@ -63,18 +69,11 @@
 	let confirmingId: string | null = $state(null);
 	let pendingId: string | null = $state(null);
 
-	function today(): string {
-		// The browser's own day: the server validates against the organisation's.
-		const now = new Date();
-		const pad = (value: number) => String(value).padStart(2, '0');
-		return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-	}
-
 	function openCreate(minutes?: number) {
 		editing = null;
 		stopping = false;
 		duration = minutes ? formatMinutes(minutes) : '';
-		workDate = today();
+		workDate = today;
 		typeId = defaultTypeId;
 		note = '';
 		open = true;
@@ -261,7 +260,13 @@
 			autocomplete="off"
 			required
 		/>
-		<DateField label={m.time_panel_date()} name="workDate" bind:value={workDate} required />
+		<DateField
+			label={m.time_panel_date()}
+			name="workDate"
+			bind:value={workDate}
+			max={today}
+			required
+		/>
 		<SelectField
 			label={m.time_panel_type()}
 			name="typeId"
