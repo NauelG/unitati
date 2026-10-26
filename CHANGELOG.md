@@ -6,6 +6,16 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.2.5] - 2026-10-26
+
+### Changed
+
+- A time entry is now capped at 24 hours (1440 minutes) on every write path: the form, the timer
+  save and the API (#376). The API's `minutes` is documented as `minimum: 1`, `maximum: 1440` in
+  OpenAPI, and the `duration` field states its grammar. `1h 90m` (a minutes part of 60 or more next
+  to hours) is now refused; `90m` and `1.5h` still work. Entries already above a day are left as
+  they are: the new database check applies to new writes only.
+
 ## [1.2.4] - 2026-10-26
 
 ### Fixed

@@ -46,6 +46,14 @@ describe('the OpenAPI document built from the real registry', () => {
 		});
 	});
 
+	it('bounds the minutes of a time entry and states the duration grammar', () => {
+		const operation = document.paths['/time-entries'].post;
+		const schema = JSON.stringify(operation.requestBody);
+		expect(schema).toContain('"minimum":1');
+		expect(schema).toContain('"maximum":1440');
+		expect(schema).toContain('1h 30m');
+	});
+
 	it('has exactly one operation per registry entry, with its id, method and path', () => {
 		expect(operations).toHaveLength(ENDPOINTS.length);
 		for (const endpoint of ENDPOINTS) {

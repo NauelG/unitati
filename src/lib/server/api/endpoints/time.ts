@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { parseDuration } from '#lib/domain/time.js';
+import { DURATION_GRAMMAR, MAX_ENTRY_MINUTES, parseDuration } from '#lib/domain/time.js';
 import { can, type Permission } from '../../access/permissions';
 import { getTask, readsProjects } from '../../projects';
 import { getTicketByTag } from '../../service-desk';
@@ -118,7 +118,7 @@ const entryRefusals = {
 	invalid_minutes: {
 		as: 'field',
 		path: 'minutes',
-		message: 'Use a whole number of minutes, at least 1.'
+		message: 'Use a whole number of minutes, from 1 to 1440.'
 	},
 	invalid_date: { as: 'field', path: 'workDate', message: 'Use a real date like 2026-10-24.' },
 	future_date: { as: 'field', path: 'workDate', message: 'The work date cannot be in the future.' },
@@ -155,14 +155,19 @@ const reportRefusals = refusalTable<ReportFailure>({
 
 /** `minutes` as a number, or `duration` as the text the UI accepts (`1h 30m`, `45m`, `1.5h`). */
 const durationFields = {
-	minutes: z.number().int().optional(),
-	duration: z.string().optional()
+	minutes: z.number().int().min(1).max(MAX_ENTRY_MINUTES).optional(),
+	duration: z
+		.string()
+		.describe(`The time as text: ${DURATION_GRAMMAR} Send it instead of \`minutes\`.`)
+		.optional()
 };
 
 function minutesOf(input: { minutes?: number; duration?: string }): number | undefined {
 	if (input.duration !== undefined) {
 		const parsed = parseDuration(input.duration);
-		if (parsed === null) throw invalidField('duration', 'Use 1h 30m, 1h, 45m, 90m or 1.5h.');
+		if (parsed === null) {
+			throw invalidField('duration', 'Use 1h 30m, 1h, 45m, 90m or 1.5h, up to 24h.');
+		}
 		return parsed;
 	}
 	return input.minutes;
@@ -229,7 +234,7 @@ export const createTimeEntryEndpoint = defineEndpoint({
 	path: '/time-entries',
 	summary: 'Log time on a ticket or a task.',
 	description:
-		"Logs time on the ticket (`ticketTag`) or the task (`taskTag`), exactly one of them, as the person behind the key: nobody logs on behalf of someone else. The duration is `minutes` (a whole number, at least 1) or `duration` (`1h 30m`, `1h`, `45m`, `90m` or `1.5h`), exactly one of them. `workDate` is a day that is not in the future in the organisation's time zone. `typeId` defaults to the organisation's default type; see `GET /time-entry-types`. Logging is allowed on resolved or closed tickets and completed tasks, and refused on tasks of an archived project (`409 project_archived`). Answers `409 time_tracking_disabled` while time tracking is switched off.",
+		"Logs time on the ticket (`ticketTag`) or the task (`taskTag`), exactly one of them, as the person behind the key: nobody logs on behalf of someone else. The duration is `minutes` (a whole number from 1 to 1440) or `duration` (text such as `1h 30m`, `45m` or `1.5h`; at most 24 hours), exactly one of them. `workDate` is a day that is not in the future in the organisation's time zone. `typeId` defaults to the organisation's default type; see `GET /time-entry-types`. Logging is allowed on resolved or closed tickets and completed tasks, and refused on tasks of an archived project (`409 project_archived`). Answers `409 time_tracking_disabled` while time tracking is switched off.",
 	example: {
 		taskTag: 'TSK-0042',
 		duration: '1h 30m',

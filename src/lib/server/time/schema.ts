@@ -79,6 +79,9 @@ export const timeEntries = pgTable(
 	},
 	(table) => [
 		check('time_entries_minutes_positive', sql`${table.minutes} > 0`),
+		// One day (MAX_ENTRY_MINUTES). Added NOT VALID in the migration: rows from before
+		// the cap are left alone, new writes are held to it.
+		check('time_entries_minutes_max', sql`${table.minutes} <= 1440`),
 		check(
 			'time_entries_exactly_one_target',
 			sql`num_nonnulls(${table.ticketId}, ${table.taskId}) = 1`

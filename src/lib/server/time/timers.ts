@@ -24,7 +24,8 @@ import { isTimeTrackingEnabled, lockOrganisation } from './settings';
  * stored server-side, so it survives reloads and devices. Stopping is not a
  * write of its own: it opens the entry form prefilled with the elapsed time, and
  * saving that form turns the timer into an entry. Cancelling discards it. There
- * is no cap; the form is where a forgotten timer gets corrected.
+ * is no cap on the timer itself; the form is where a forgotten timer gets corrected,
+ * and an entry is limited to 24 h (`MAX_ENTRY_MINUTES`).
  *
  * **The caller has already resolved the record** through its owning domain.
  */
