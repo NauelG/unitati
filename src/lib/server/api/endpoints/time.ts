@@ -19,7 +19,6 @@ import {
 } from '../../time';
 import type { ApiPrincipal } from '../keys';
 import {
-	conflict,
 	created,
 	defineEndpoint,
 	noContent,
@@ -301,6 +300,11 @@ export const updateTimeEntryEndpoint = defineEndpoint({
 		}),
 	output: z.object({ data: timeEntrySchema }),
 	handler: async ({ principal, input, refuse }) => {
+		// First, before the input is read: `getEntry` answers null while tracking
+		// is off, which would surface as a 404 instead of the refusal.
+		if (!(await isTimeTrackingEnabled(principal.organisationId))) {
+			throw refuse('time_tracking_disabled');
+		}
 		const minutes = minutesOf(input);
 		const current = await getEntry(principal, input.id);
 		if (!current) throw notFound('Time entry not found.');
@@ -343,6 +347,7 @@ export const listTimeEntryTypesEndpoint = defineEndpoint({
 	summary: 'List the time entry types of the organisation.',
 	description:
 		"Returns the organisation's entry types in display order, archived ones last. Offer only the ones with `archived: false` for new entries; `isDefault` marks the type used when `typeId` is left out. Needs `time.log` or `time.manage`. Answers `409 time_tracking_disabled` while time tracking is switched off.",
+	refusalTable: reportRefusals,
 	permissions: ['time.log', 'time.manage'],
 	input: z.object({}),
 	output: z.object({
@@ -358,13 +363,10 @@ export const listTimeEntryTypesEndpoint = defineEndpoint({
 			)
 		)
 	}),
-	handler: async ({ principal }) => {
-		if (!can(principal, 'time.log') && !can(principal, 'time.manage')) throw notFound();
+	handler: async ({ principal, refuse }) => {
+		if (!can(principal, 'time.log') && !can(principal, 'time.manage')) throw refuse('forbidden');
 		if (!(await isTimeTrackingEnabled(principal.organisationId))) {
-			throw conflict(
-				'time_tracking_disabled',
-				'Time tracking is switched off for this organisation.'
-			);
+			throw refuse('time_tracking_disabled');
 		}
 		const types = await listTypes(principal.organisationId);
 		return {

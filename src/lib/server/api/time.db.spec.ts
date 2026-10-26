@@ -237,6 +237,24 @@ describe('PATCH and DELETE /time-entries/{id}', () => {
 		expect((await send('DELETE', `/time-entries/${entry.id}`, adminKey)).response.status).toBe(404);
 	});
 
+	it('answers 409 time_tracking_disabled on PATCH and DELETE while it is off', async () => {
+		const scene = await createTimeScene();
+		const key = await keyFor(scene.technician, ['time.log']);
+		const entry = await logged(scene, key);
+		await setTimeTracking(scene.admin, false);
+
+		const patched = await send('PATCH', `/time-entries/${entry.id}`, key, {
+			minutes: 5,
+			baseRevision: 1
+		});
+		expect(patched.response.status).toBe(409);
+		expect(patched.body.error.code).toBe('time_tracking_disabled');
+
+		const deleted = await send('DELETE', `/time-entries/${entry.id}`, key);
+		expect(deleted.response.status).toBe(409);
+		expect(deleted.body.error.code).toBe('time_tracking_disabled');
+	});
+
 	it('lets a technician delete their own', async () => {
 		const scene = await createTimeScene();
 		const key = await keyFor(scene.technician, ['time.log']);
@@ -295,6 +313,8 @@ describe('GET /time-entry-types', () => {
 		]);
 
 		await setTimeTracking(scene.admin, false);
-		expect((await send('GET', '/time-entry-types', key)).response.status).toBe(409);
+		const off = await send('GET', '/time-entry-types', key);
+		expect(off.response.status).toBe(409);
+		expect(off.body.error.code).toBe('time_tracking_disabled');
 	});
 });

@@ -441,6 +441,12 @@ describe('the OpenAPI document built from the real registry', () => {
 			expect(JSON.stringify(create)).not.toContain('attachments_too');
 		});
 
+		it('lists time_tracking_disabled as the 409 of GET /time-entry-types', () => {
+			expect(codesOf(responsesOf('/time-entry-types', 'get')['409'])).toEqual([
+				'time_tracking_disabled'
+			]);
+		});
+
 		it('lists the transition conflict, and no 409 on the writes that cannot conflict', () => {
 			expect(codesOf(responsesOf('/tickets/{tag}/status', 'post')['409'])).toEqual([
 				'invalid_transition'
