@@ -38,12 +38,18 @@
 
 	// The running timer lives on the server: a timer started or stopped on another
 	// device shows up here through a read of its own, not by re-running this layout's load.
-	let timer = $derived(data.timer);
+	// Derived from `data` as a whole, not from `data.timer`: after a start or stop here the load
+	// returns a new object even when the timer is `null` again, and that must drop a polled value.
+	let timer = $derived.by(() => {
+		void data;
+		return data.timer;
+	});
 	$effect(() => {
 		const refresh = setInterval(async () => {
 			try {
 				const response = await fetch('/api/timer');
-				if (response.ok) timer = ((await response.json()) as { timer: typeof data.timer }).timer;
+				if (response.ok && !response.redirected)
+					timer = ((await response.json()) as { timer: typeof data.timer }).timer;
 			} catch {
 				// Offline or mid-deploy: keep showing the last known timer until the next poll.
 			}
