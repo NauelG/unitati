@@ -185,6 +185,8 @@ describe('ticket.labels.changed', () => {
 			parsePayload('ticket.labels.changed', { added: [{ id: PERSON }], removed: [] })
 		).toThrow();
 		expect(() => parsePayload('ticket.labels.changed', { added: [vpn] })).toThrow();
+	});
+});
 
 describe('the milestone payloads', () => {
 	const MILESTONE = '3f1e0c9a-0000-4000-8000-0000000000a1';
