@@ -6,6 +6,20 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.4.0] - 2026-10-26
+
+### Added
+
+- Labels on tickets. Staff define a catalogue of labels in Settings > Service desk > Labels (name,
+  colour, optional description), archive or restore them, and delete the ones no ticket uses. On a
+  ticket, technicians add and remove labels from the sidebar; the thread shows one line per save
+  naming what was added and removed. Names are unique ignoring case, an archived label cannot be
+  added to a ticket, and labels never reach the employee portal ([ADR 0053](docs/adr/0053-labels-on-tickets.md)).
+
+### Changed
+
+- Queues and labels share one colour palette. Queues look and behave as before.
+
 ## [1.3.3] - 2026-10-26
 
 ### Fixed

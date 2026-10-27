@@ -267,6 +267,14 @@ export const COMPONENT_MANIFEST: ComponentManifestEntry[] = [
 		load: () => import('./specs/QueueLabel.svelte')
 	},
 	{
+		id: 'label-chip',
+		name: 'LabelChip',
+		category: 'feedback',
+		summary: 'Una etiqueta de solicitud: punto de color, nombre y descripción como ayuda.',
+		sourceFile: 'LabelChip.svelte',
+		load: () => import('./specs/LabelChip.svelte')
+	},
+	{
 		id: 'environment-badge',
 		name: 'EnvironmentBadge',
 		category: 'feedback',

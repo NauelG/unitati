@@ -150,6 +150,15 @@ export function activitySentence(entry: ActivityEntry): string {
 				to: entry.payload.toQueueName
 			});
 
+		case 'ticket.labels.changed': {
+			const added = entry.payload.added.map((label) => label.name).join(', ');
+			const removed = entry.payload.removed.map((label) => label.name).join(', ');
+			if (added && removed) return m.activity_ticket_labels_changed({ added, removed });
+			return added
+				? m.activity_ticket_labels_added({ labels: added })
+				: m.activity_ticket_labels_removed({ labels: removed });
+		}
+
 		case 'ticket.subject.changed':
 			return m.activity_ticket_subject_changed({
 				from: entry.payload.from,

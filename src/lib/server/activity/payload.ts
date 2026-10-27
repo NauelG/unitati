@@ -34,6 +34,9 @@ const presentText = z.string().min(1);
 /** A calendar date (`YYYY-MM-DD`), as the `date` columns hold it: no time, no zone. */
 const isoDate = z.iso.date();
 
+/** A label's id and its name as it read when the set changed. */
+const labelRef = z.object({ id: z.uuid(), name: presentName });
+
 /** The id for the link, the tag and name as they read when it was made or undone. */
 const linkedAsset = z.object({
 	assetId: z.uuid(),
@@ -229,6 +232,12 @@ export const PAYLOAD_SCHEMAS = {
 		fromQueueName: presentName,
 		toQueueId: z.uuid(),
 		toQueueName: presentName
+	}),
+
+	// Names are snapshots, like the queue's: a label renamed later does not rewrite the thread (ADR 0053).
+	'ticket.labels.changed': z.object({
+		added: z.array(labelRef),
+		removed: z.array(labelRef)
 	}),
 
 	'ticket.subject.changed': z.object({

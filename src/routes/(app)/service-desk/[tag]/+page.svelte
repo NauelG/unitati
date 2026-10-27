@@ -5,6 +5,7 @@
 	import EscalateSheet from '#lib/components/unitati/EscalateSheet.svelte';
 	import { documentTitle } from '#lib/brand.svelte.js';
 	import Breadcrumbs from '#lib/components/unitati/Breadcrumbs.svelte';
+	import LabelChip from '#lib/components/unitati/LabelChip.svelte';
 	import FollowControl from '#lib/components/unitati/FollowControl.svelte';
 	import Button from '#lib/components/unitati/Button.svelte';
 	import Field from '#lib/components/unitati/Field.svelte';
@@ -68,6 +69,8 @@
 	let localQueueId = $state(ticket.queueId);
 	let localQueueName = $state(ticket.queueName);
 	let localQueueColor = $state(ticket.queueColor);
+	// Writable `$derived`, as `localThread` below: the optimistic write holds until `data.labels` changes.
+	let localLabels = $derived(data.labels);
 	// A writable `$derived` (Svelte 5: a direct assignment overrides it until
 	// `data.thread` itself changes again) rather than `$state` + `$effect` —
 	// the lone assignment here has nothing else to coordinate with.
@@ -118,6 +121,22 @@
 	const peopleOptions = $derived(
 		data.choices.people.map((person) => ({ value: person.id, label: person.fullName }))
 	);
+
+	const labelOptions = $derived(
+		data.choices.labels.map((label) => ({
+			value: label.id,
+			label: label.active ? label.name : `${label.name} (${m.labels_archived_badge()})`
+		}))
+	);
+
+	function optimisticLabels(formData: FormData) {
+		const chosen = new Set(formData.getAll('labelIds').map(String));
+		const previous = localLabels;
+		localLabels = data.choices.labels.filter((label) => chosen.has(label.id));
+		return () => {
+			localLabels = previous;
+		};
+	}
 
 	function optimisticSubject(formData: FormData) {
 		const next = formData.get('subject');
@@ -287,6 +306,30 @@
 	{/if}
 {/snippet}
 
+{#snippet labelChips()}
+	<span class="flex flex-wrap gap-[var(--space-1)]">
+		{#each localLabels as label (label.id)}
+			<LabelChip name={label.name} color={label.color} description={label.description} />
+		{/each}
+	</span>
+{/snippet}
+
+{#snippet labelsValue()}
+	<EditableDetailRow
+		kind="multiselect"
+		label={m.ticket_detail_labels()}
+		values={localLabels.map((label) => label.id)}
+		display={localLabels.map((label) => label.name).join(', ')}
+		displayContent={labelChips}
+		placeholder={m.ticket_labels_none()}
+		options={labelOptions}
+		action="?/labels"
+		name="labelIds"
+		editable={data.may.setLabels}
+		optimistic={optimisticLabels}
+	/>
+{/snippet}
+
 <PageLayout variant="record">
 	<Breadcrumbs
 		class="mb-[var(--space-5)]"
@@ -404,6 +447,7 @@
 						: []),
 					{ label: m.ticket_detail_assignee(), value: assigneeValue },
 					{ label: m.ticket_detail_queue(), value: queueValue },
+					{ label: m.ticket_detail_labels(), value: labelsValue },
 					...(ticket.requestFormName
 						? [{ label: m.ticket_request_form(), value: ticket.requestFormName }]
 						: []),

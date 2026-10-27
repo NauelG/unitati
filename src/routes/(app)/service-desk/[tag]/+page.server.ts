@@ -31,6 +31,7 @@ import {
 	getTicketByTag,
 	moveTicketToQueue,
 	readTicketForm,
+	setTicketLabels,
 	setTicketPriority,
 	subjectInput
 } from '#lib/server/service-desk/index.js';
@@ -189,6 +190,23 @@ export const actions: Actions = {
 		const outcome = await setTicketPriority(user, params.tag, parsed.data.priority);
 		if (!outcome.ok) error(404, 'Not found');
 		return { action: 'priority' as const };
+	},
+
+	// The whole label set in one save (ADR 0053): the domain works out what was added and removed.
+	labels: async ({ locals, request, params }) => {
+		const user = requirePermission(locals.user, 'tickets.manage');
+		const ids = (await request.formData())
+			.getAll('labelIds')
+			.filter((id) => typeof id === 'string');
+		const parsed = z.array(z.uuid()).safeParse(ids);
+		if (!parsed.success) return rejected('labels', m.ticket_error_invalid());
+
+		const outcome = await setTicketLabels(user, params.tag, parsed.data);
+		if (!outcome.ok) {
+			if (outcome.error === 'ticket_not_found') error(404, 'Not found');
+			return rejected('labels', failureMessage(outcome.error));
+		}
+		return { action: 'labels' as const };
 	},
 
 	assign: async ({ locals, request, params }) => {

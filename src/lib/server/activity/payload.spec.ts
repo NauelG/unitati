@@ -169,3 +169,21 @@ describe('parsePayload', () => {
 		expect(() => parsePayload('page.attachment.added', { filename: '' })).toThrow();
 	});
 });
+
+describe('ticket.labels.changed', () => {
+	const vpn = { id: PERSON, name: 'VPN' };
+
+	it('accepts added and removed labels with their names', () => {
+		expect(parsePayload('ticket.labels.changed', { added: [vpn], removed: [] })).toEqual({
+			added: [vpn],
+			removed: []
+		});
+	});
+
+	it('refuses a label with no name snapshot or a side that is missing', () => {
+		expect(() =>
+			parsePayload('ticket.labels.changed', { added: [{ id: PERSON }], removed: [] })
+		).toThrow();
+		expect(() => parsePayload('ticket.labels.changed', { added: [vpn] })).toThrow();
+	});
+});

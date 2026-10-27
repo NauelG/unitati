@@ -6,8 +6,10 @@ import { escalationDraft, relatedTo, requestedCategory } from '../links';
 import { followState } from '../notifications';
 import {
 	getTicketByTag,
+	listLabels,
 	listQueues,
 	nextStatuses,
+	ticketLabelsOf,
 	ticketThread,
 	type ThreadItem
 } from '../service-desk';
@@ -16,6 +18,7 @@ import { activePeople } from './choices';
 import { timeSection } from './time';
 
 type Queue = Awaited<ReturnType<typeof listQueues>>[number];
+type LabelEntry = Awaited<ReturnType<typeof ticketLabelsOf>>[number];
 
 /**
  * What the viewer may do on this ticket (ADR 0050 rule 4). Most acts are the ones
@@ -27,6 +30,8 @@ export interface TicketMay {
 	editSubject: boolean;
 	assign: boolean;
 	moveToQueue: boolean;
+	/** Applying and removing labels (ADR 0053). Seeing them needs only `tickets.view`. */
+	setLabels: boolean;
 	setPriority: boolean;
 	/** Moving the ticket on: needs `tickets.manage` and a status to go to. */
 	changeStatus: boolean;
@@ -46,6 +51,8 @@ export interface TicketMay {
 /** Picker data. Each list is empty unless the act it serves is allowed (ADR 0050 rule 5). */
 export interface TicketChoices {
 	queues: { id: string; name: string; color: Queue['color'] }[];
+	/** What the label editor offers: the active catalogue, plus the archived labels already on the ticket so they can be removed. */
+	labels: LabelEntry[];
 	/** Active people: the assignee picker. */
 	people: { id: string; fullName: string }[];
 	/** A short list of in-stock assets to start a delivery from; the dialog filters the rest. */
@@ -73,6 +80,7 @@ export async function ticketScreen(viewer: SessionUser, ticketTag: string) {
 		editSubject: manages,
 		assign: manages,
 		moveToQueue: manages,
+		setLabels: manages,
 		setPriority: manages,
 		changeStatus: manages && nextStatusList.length > 0,
 		link: manages,
@@ -85,9 +93,13 @@ export async function ticketScreen(viewer: SessionUser, ticketTag: string) {
 		escalateCreate: manages && can(viewer, 'projects.manage')
 	};
 
-	const [queues, people] = manages
-		? await Promise.all([listQueues(viewer), listPeople(viewer.organisationId)])
-		: [[], []];
+	const [labels, [queues, people, catalogue]] = await Promise.all([
+		ticketLabelsOf(viewer.organisationId, ticket.id),
+		manages
+			? Promise.all([listQueues(viewer), listPeople(viewer.organisationId), listLabels(viewer)])
+			: [[], [], []]
+	]);
+	const onTicket = new Set(labels.map((label) => label.id));
 
 	// Staff only (#176, ADR 0007): for anyone else the value is never read.
 	const requesterLocation = can(viewer, 'people.view')
@@ -105,12 +117,14 @@ export async function ticketScreen(viewer: SessionUser, ticketTag: string) {
 
 	const choices: TicketChoices = {
 		queues: queues.map(({ id, name, color }) => ({ id, name, color })),
+		labels: catalogue.filter((label) => label.active || onTicket.has(label.id)),
 		people: activePeople(people),
 		inStockForRequest: inStock.slice(0, 5).map(({ assetTag, name }) => ({ assetTag, name }))
 	};
 
 	return success({
 		ticket,
+		labels,
 		may,
 		choices,
 		requestedCategory: requested,

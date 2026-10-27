@@ -63,15 +63,15 @@
 	--knowledge: #0b6f8a;
 	--knowledge-soft: #e0f3f8;
 
-	/* Queue colours (`domain/queue-color.ts`): a dot beside a queue name */
-	--queue-gray: #5b6675;
-	--queue-blue: #1d5cf0;
-	--queue-violet: #6544e8;
-	--queue-pink: #b8237a;
-	--queue-red: #c2261c;
-	--queue-amber: #995700;
-	--queue-green: #12733f;
-	--queue-teal: #0b7a84;
+	/* Catalogue colours (`domain/catalogue-color.ts`): a dot beside a queue or label name */
+	--catalogue-gray: #5b6675;
+	--catalogue-blue: #1d5cf0;
+	--catalogue-violet: #6544e8;
+	--catalogue-pink: #b8237a;
+	--catalogue-red: #c2261c;
+	--catalogue-amber: #995700;
+	--catalogue-green: #12733f;
+	--catalogue-teal: #0b7a84;
 
 	/* Knowledge-space colours (`domain/knowledge.ts`): a swatch beside a space name */
 	--kb-gray: #5b6675;
@@ -236,14 +236,14 @@
 	--knowledge: #5cc8e6;
 	--knowledge-soft: #0f2e38;
 
-	--queue-gray: #98a3b3;
-	--queue-blue: #78a2ff;
-	--queue-violet: #a890ff;
-	--queue-pink: #f28cc4;
-	--queue-red: #ff8173;
-	--queue-amber: #f2b54a;
-	--queue-green: #5ccf8c;
-	--queue-teal: #4fd0da;
+	--catalogue-gray: #98a3b3;
+	--catalogue-blue: #78a2ff;
+	--catalogue-violet: #a890ff;
+	--catalogue-pink: #f28cc4;
+	--catalogue-red: #ff8173;
+	--catalogue-amber: #f2b54a;
+	--catalogue-green: #5ccf8c;
+	--catalogue-teal: #4fd0da;
 
 	--kb-gray: #98a3b3;
 	--kb-blue: #78a2ff;

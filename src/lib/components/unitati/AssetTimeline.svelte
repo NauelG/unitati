@@ -28,6 +28,7 @@
 	import PackagePlus from '@lucide/svelte/icons/package-plus';
 	import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 	import Clock from '@lucide/svelte/icons/clock';
+	import Tag from '@lucide/svelte/icons/tag';
 	import Ticket from '@lucide/svelte/icons/ticket';
 	import Undo2 from '@lucide/svelte/icons/undo-2';
 	import Unlink from '@lucide/svelte/icons/unlink';
@@ -96,6 +97,7 @@
 		'ticket.unassigned': UserMinus,
 		'ticket.priority.changed': Flag,
 		'ticket.queue.changed': Inbox,
+		'ticket.labels.changed': Tag,
 		'ticket.subject.changed': Pencil,
 		'comment.edited': Pencil,
 		'link.asset.added': Link,

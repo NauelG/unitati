@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, exists, or, sql, type SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
-import type { QueueColor } from '#lib/domain/queue-color.js';
+import type { CatalogueColor } from '#lib/domain/catalogue-color.js';
 import type { Priority, TicketStatus } from '#lib/domain/status.js';
 import { m } from '#lib/paraglide/messages.js';
 import { actorColumns, recordActivity } from '../activity';
@@ -90,7 +90,7 @@ export type TicketView = {
 	channel: 'portal' | 'agent';
 	queueId: string;
 	queueName: string;
-	queueColor: QueueColor;
+	queueColor: CatalogueColor;
 	requesterPersonId: string;
 	requesterName: string;
 	assigneePersonId: string | null;

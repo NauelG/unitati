@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ComponentDocPage from '../ComponentDocPage.svelte';
 	import QueueLabel from '#lib/components/unitati/QueueLabel.svelte';
-	import { QUEUE_COLORS } from '#lib/domain/queue-color.js';
+	import { CATALOGUE_COLORS } from '#lib/domain/catalogue-color.js';
 
 	const usage = '<QueueLabel name="Incidencias" color="blue" />';
 </script>
@@ -26,8 +26,8 @@
 		},
 		{
 			name: 'color',
-			type: 'QueueColor',
-			description: 'Clave de la paleta; el color real sale de --queue-<clave>.'
+			type: 'CatalogueColor',
+			description: 'Clave de la paleta; el color real sale de --catalogue-<clave>.'
 		}
 	]}
 	{usage}
@@ -36,7 +36,7 @@
 >
 	{#snippet demo()}
 		<div class="flex flex-wrap items-center gap-[var(--space-4)] text-sm">
-			{#each QUEUE_COLORS as color (color)}
+			{#each CATALOGUE_COLORS as color (color)}
 				<QueueLabel name={color} {color} />
 			{/each}
 		</div>
