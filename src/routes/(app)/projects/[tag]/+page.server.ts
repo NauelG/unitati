@@ -22,9 +22,12 @@ import {
 	addProjectComment,
 	addProjectMember,
 	archiveProject,
+	createMilestone,
 	createTask,
 	createTaskInput,
+	deleteMilestone,
 	getProject,
+	listMilestones,
 	PROJECT_VISIBILITIES,
 	readAttachmentForm,
 	removeProjectAttachment,
@@ -35,10 +38,12 @@ import {
 	requireProjectRead,
 	requireProjectWrite,
 	unarchiveProject,
+	updateMilestone,
 	updateProject,
 	updateProjectInput,
 	type AddMemberFailure,
 	type CreateTaskFailure,
+	type MilestoneWriteFailure,
 	type MembershipFailure,
 	type MoveTaskFailure,
 	type RemoveMemberFailure,
@@ -47,12 +52,21 @@ import {
 import { followActions } from '../../follow-actions';
 import type { Actions, PageServerLoad } from './$types';
 
+/** `?milestone=`: a milestone id or `none`. Anything else is ignored, not an error. */
+function milestoneFilter(raw: string | null): string | undefined {
+	if (raw === 'none') return 'none';
+	return raw !== null && z.uuid().safeParse(raw).success ? raw : undefined;
+}
+
 export const load: PageServerLoad = async ({ locals, params, url, cookies }) => {
 	const user = requireProjectRead(locals.user);
 
 	// The rail's list of time entries pages on its own key, so it never fights another list for `?page=`.
 	const timePage = Number(url.searchParams.get('timePage') ?? 1);
-	const screen = await projectScreen(user, params.tag, { time: { page: timePage } });
+	const screen = await projectScreen(user, params.tag, {
+		time: { page: timePage },
+		milestone: milestoneFilter(url.searchParams.get('milestone'))
+	});
 	if (!screen.ok) error(404, 'Not found');
 	const { value } = screen;
 
@@ -76,6 +90,10 @@ export const load: PageServerLoad = async ({ locals, params, url, cookies }) => 
 	return {
 		...value,
 		descriptionHtml: renderMarkdown(value.project.description ?? ''),
+		milestones: value.milestones.map((milestone) => ({
+			...milestone,
+			descriptionHtml: renderMarkdown(milestone.description ?? '')
+		})),
 		// The board and the list are two views of the same data; the board is the default (#125).
 		view: resolveView(url.searchParams.get('view'), preference.view),
 		collapsedStates: preference.states
@@ -113,8 +131,30 @@ const taskFailures: Record<
 > = {
 	project_archived: [null, m.project_error_archived],
 	state_not_found: [null, m.task_error_state_missing],
+	milestone_not_found: ['milestoneId', m.milestone_error_missing],
 	duplicate_task_tag: [null, m.action_error_invalid]
 };
+
+/** Where each milestone refusal is shown in the dialog (`null`: above the form). */
+const milestoneFailures: Record<
+	Exclude<MilestoneWriteFailure, 'project_not_found'>,
+	readonly [string | null, () => string]
+> = {
+	project_archived: [null, m.project_error_archived],
+	milestone_not_found: [null, m.milestone_error_missing],
+	invalid_name: ['name', m.milestone_error_name],
+	invalid_dates: ['dates', m.milestone_error_dates],
+	invalid_description: ['description', m.milestone_error_description]
+};
+
+/**
+ * The milestone an action targets must be one of the project in the URL: the
+ * domain scopes by organisation, and a page must not edit another project's.
+ */
+async function ownsMilestone(user: SessionUser, projectId: string, milestoneId: string) {
+	const listed = await listMilestones(user, projectId);
+	return listed.ok && listed.value.some((milestone) => milestone.id === milestoneId);
+}
 
 const moveFailures: Record<Exclude<MoveTaskFailure, 'task_not_found'>, () => string> = {
 	project_archived: m.project_error_archived,
@@ -380,7 +420,8 @@ export const actions: Actions = {
 		// without one the state is the domain's default.
 		const parsed = createTaskInput.safeParse({
 			title: fields.get('title'),
-			stateId: orNull(fields.get('stateId')) ?? undefined
+			stateId: orNull(fields.get('stateId')) ?? undefined,
+			milestoneId: orNull(fields.get('milestoneId')) ?? undefined
 		});
 		if (!parsed.success) {
 			return rejected('createTask', m.task_error_title_required(), 'title');
@@ -395,6 +436,68 @@ export const actions: Actions = {
 		}
 
 		return { action: 'createTask' as const, taskTag: outcome.value.taskTag };
+	},
+
+	createMilestone: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const fields = await fieldsOf(request);
+
+		const project = await targetOf(user, params.tag);
+		const outcome = await createMilestone(user, project.id, {
+			name: fields.get('name'),
+			description: orNull(fields.get('description')),
+			startDate: fields.get('startDate'),
+			targetDate: fields.get('targetDate')
+		});
+		if (!outcome.ok) {
+			if (outcome.error === 'project_not_found') error(404, 'Not found');
+			const [field, message] = milestoneFailures[outcome.error];
+			return rejected('createMilestone', message(), field);
+		}
+
+		return { action: 'createMilestone' as const };
+	},
+
+	updateMilestone: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const fields = await fieldsOf(request);
+		const id = z.uuid().safeParse(fields.get('milestoneId'));
+		if (!id.success) return rejected('updateMilestone', m.action_error_invalid());
+
+		const project = await targetOf(user, params.tag);
+		if (!(await ownsMilestone(user, project.id, id.data))) {
+			return rejected('updateMilestone', m.milestone_error_missing());
+		}
+		const outcome = await updateMilestone(user, id.data, {
+			name: fields.get('name'),
+			description: orNull(fields.get('description')),
+			startDate: fields.get('startDate'),
+			targetDate: fields.get('targetDate')
+		});
+		if (!outcome.ok) {
+			const [field, message] = milestoneFailures[outcome.error];
+			return rejected('updateMilestone', message(), field);
+		}
+
+		return { action: 'updateMilestone' as const };
+	},
+
+	deleteMilestone: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const id = z.uuid().safeParse((await fieldsOf(request)).get('milestoneId'));
+		if (!id.success) return rejected('deleteMilestone', m.action_error_invalid());
+
+		const project = await targetOf(user, params.tag);
+		// Already gone, e.g. a second tab deleted it first: the reload shows the truth.
+		if (!(await ownsMilestone(user, project.id, id.data))) {
+			return { action: 'deleteMilestone' as const };
+		}
+		const outcome = await deleteMilestone(user, id.data);
+		if (!outcome.ok && outcome.error !== 'milestone_not_found') {
+			return rejected('deleteMilestone', milestoneFailures[outcome.error][1]());
+		}
+
+		return { action: 'deleteMilestone' as const };
 	},
 
 	/**

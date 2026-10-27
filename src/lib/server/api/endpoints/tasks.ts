@@ -30,6 +30,7 @@ import {
 	projectNotFound,
 	projectOf,
 	statePositions,
+	milestoneNotFound,
 	stateNotFound,
 	tag,
 	taskNotFound,
@@ -58,6 +59,7 @@ const createRefusals = refusalTable<CreateTaskFailure>({
 	project_not_found: projectNotFound,
 	project_archived: conflicting,
 	state_not_found: stateNotFound,
+	milestone_not_found: milestoneNotFound,
 	duplicate_task_tag: conflicting
 });
 
@@ -192,7 +194,8 @@ export const createTaskEndpoint = defineEndpoint({
 	status: 201,
 	permissions: PROJECT_MANAGE,
 	refusalTable: createRefusals,
-	input: createTaskInput.extend({ tag }),
+	// Milestones are not part of the API yet: the field is not accepted here.
+	input: createTaskInput.omit({ milestoneId: true }).extend({ tag }),
 	output: taskResponse,
 	handler: async ({ principal, input, refuse }) => {
 		const actor = withReads(principal);

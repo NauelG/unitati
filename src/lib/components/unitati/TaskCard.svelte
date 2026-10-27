@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Ellipsis from '@lucide/svelte/icons/ellipsis';
+	import Flag from '@lucide/svelte/icons/flag';
 	import Avatar from './Avatar.svelte';
 	import type { BoardTask } from './board.js';
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
@@ -63,6 +64,13 @@
 	>
 		{task.title}
 	</a>
+
+	{#if task.milestoneName}
+		<span class="flex items-center gap-[var(--space-1)] text-xs text-[var(--ink-muted)]">
+			<Flag class="size-3 shrink-0" aria-hidden="true" />
+			<span class="truncate" data-milestone-name>{task.milestoneName}</span>
+		</span>
+	{/if}
 
 	<div class="flex items-center justify-between gap-[var(--space-2)] text-xs">
 		{#if task.assignees.length > 0}

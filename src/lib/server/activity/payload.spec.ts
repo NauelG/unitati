@@ -187,3 +187,50 @@ describe('ticket.labels.changed', () => {
 		expect(() => parsePayload('ticket.labels.changed', { added: [vpn] })).toThrow();
 	});
 });
+
+describe('the milestone payloads', () => {
+	const MILESTONE = '3f1e0c9a-0000-4000-8000-0000000000a1';
+	const dates = { startDate: '2026-11-01', targetDate: '2026-11-30' };
+
+	it('project.milestone.created accepts a snapshot and refuses a non-ISO date', () => {
+		const payload = { milestoneId: MILESTONE, name: 'Piloto', ...dates };
+		expect(parsePayload('project.milestone.created', payload)).toEqual(payload);
+		expect(() =>
+			parsePayload('project.milestone.created', { ...payload, startDate: '01/11/2026' })
+		).toThrow();
+		expect(() => parsePayload('project.milestone.created', { ...payload, name: '' })).toThrow();
+	});
+
+	it('project.milestone.changed holds only changed fields and refuses unknown keys', () => {
+		const payload = {
+			milestoneId: MILESTONE,
+			name: 'Piloto',
+			from: { targetDate: '2026-11-30' },
+			to: { targetDate: '2026-12-15' }
+		};
+		expect(parsePayload('project.milestone.changed', payload)).toEqual(payload);
+		expect(() =>
+			parsePayload('project.milestone.changed', { ...payload, to: { colour: 'red' } })
+		).toThrow();
+		expect(() =>
+			parsePayload('project.milestone.changed', { ...payload, from: { targetDate: 'soon' } })
+		).toThrow();
+	});
+
+	it('project.milestone.deleted carries the name only', () => {
+		expect(parsePayload('project.milestone.deleted', { name: 'Piloto' })).toEqual({
+			name: 'Piloto'
+		});
+		expect(() => parsePayload('project.milestone.deleted', { name: '' })).toThrow();
+	});
+
+	it('task.milestone.changed accepts a milestone or null at each end', () => {
+		const ref = { id: MILESTONE, name: 'Piloto' };
+		expect(parsePayload('task.milestone.changed', { from: null, to: ref }).to).toEqual(ref);
+		expect(parsePayload('task.milestone.changed', { from: ref, to: null }).from).toEqual(ref);
+		expect(() =>
+			parsePayload('task.milestone.changed', { from: { id: 'x', name: 'Piloto' }, to: null })
+		).toThrow();
+		expect(() => parsePayload('task.milestone.changed', { from: null })).toThrow();
+	});
+});

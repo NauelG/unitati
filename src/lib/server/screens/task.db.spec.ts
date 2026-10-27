@@ -7,6 +7,7 @@ import { archiveProject } from '../projects';
 import { projectMembers, projects } from '../projects/schema';
 import {
 	assignRow,
+	createMilestoneRow,
 	createProjectRow,
 	createTaskRow,
 	createWorkspace,
@@ -35,6 +36,7 @@ const NO_ACTS = {
 	edit: false,
 	changeState: false,
 	assign: false,
+	setMilestone: false,
 	moveToProject: false,
 	comment: false,
 	attach: false,
@@ -51,6 +53,7 @@ describe('the task screen, per role', () => {
 			edit: true,
 			changeState: true,
 			assign: true,
+			setMilestone: true,
 			moveToProject: true,
 			comment: true,
 			attach: true,
@@ -75,7 +78,7 @@ describe('the task screen, per role', () => {
 		const screen = await screenOf(employee, task.taskTag);
 
 		expect(screen.may).toEqual(NO_ACTS);
-		expect(screen.choices).toEqual({ states: [], people: [], projects: [] });
+		expect(screen.choices).toEqual({ states: [], people: [], projects: [], milestones: [] });
 		expect(screen.task.taskTag).toBe(task.taskTag);
 	});
 
@@ -108,7 +111,7 @@ describe('the task screen, on an archived project', () => {
 		const screen = await screenOf(technician, task.taskTag);
 
 		expect(screen.may).toEqual({ ...NO_ACTS, unlinkTicket: true });
-		expect(screen.choices).toEqual({ states: [], people: [], projects: [] });
+		expect(screen.choices).toEqual({ states: [], people: [], projects: [], milestones: [] });
 	});
 });
 
@@ -169,5 +172,18 @@ describe('the task screen rail', () => {
 
 		expect(related.flatMap((group) => group.items.map((item) => item.ref.id))).toEqual([mine.id]);
 		expect(Array.isArray(timeline)).toBe(true);
+	});
+});
+
+describe('the task screen, milestones', () => {
+	it("offers the milestones of the task's own project to whoever may set one", async () => {
+		const { technician, project, organisation, task } = await setup();
+		const other = await createProjectRow(organisation.id, { name: 'Elsewhere' });
+		await createMilestoneRow(organisation.id, project.id, { name: 'Pilot' });
+		await createMilestoneRow(organisation.id, other.id, { name: 'Foreign' });
+
+		const screen = await screenOf(technician, task.taskTag);
+
+		expect(screen.choices.milestones.map((entry) => entry.name)).toEqual(['Pilot']);
 	});
 });

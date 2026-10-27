@@ -95,6 +95,18 @@ function fieldChange<T extends z.ZodType>(value: T) {
 
 const nullableText = z.string().nullable();
 
+/** A milestone as it read when an entry was written. */
+const milestoneRef = z.object({ id: z.uuid(), name: presentName });
+
+/** The fields of a milestone an edit records; `.strict()` so a stray key is refused. */
+const milestoneFields = z
+	.object({
+		name: presentName.optional(),
+		startDate: isoDate.optional(),
+		targetDate: isoDate.optional()
+	})
+	.strict();
+
 const spaceAudience = z.enum(SPACE_AUDIENCES);
 const pageCount = z.number().int().nonnegative();
 const nullableNumber = z.number().nullable();
@@ -313,6 +325,23 @@ export const PAYLOAD_SCHEMAS = {
 	'project.attachment.added': z.object({ filename: presentName }),
 	'project.attachment.removed': z.object({ filename: presentName }),
 
+	// Milestones are renamed and deleted, so every entry snapshots the name. `from` and
+	// `to` of a change hold only the fields that changed (ADR 0053); a description-only
+	// edit writes nothing.
+	'project.milestone.created': z.object({
+		milestoneId: z.uuid(),
+		name: presentName,
+		startDate: isoDate,
+		targetDate: isoDate
+	}),
+	'project.milestone.changed': z.object({
+		milestoneId: z.uuid(),
+		name: presentName,
+		from: milestoneFields,
+		to: milestoneFields
+	}),
+	'project.milestone.deleted': z.object({ name: presentName }),
+
 	'task.attachment.added': z.object({ filename: presentName }),
 	'task.attachment.removed': z.object({ filename: presentName }),
 
@@ -354,6 +383,12 @@ export const PAYLOAD_SCHEMAS = {
 		toProjectId: z.uuid(),
 		toProjectTag: presentName,
 		toProjectName: presentName
+	}),
+
+	// A task's milestone, as it read at the change; null when it had none (or has none).
+	'task.milestone.changed': z.object({
+		from: milestoneRef.nullable(),
+		to: milestoneRef.nullable()
 	}),
 
 	// Directory events (#12). Names and email as they read at the time: a person

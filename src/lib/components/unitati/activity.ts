@@ -265,6 +265,52 @@ export function activitySentence(entry: ActivityEntry): string {
 		case 'project.attachment.removed':
 			return m.activity_project_attachment_removed({ filename: entry.payload.filename });
 
+		case 'project.milestone.created':
+			return m.activity_project_milestone_created({
+				name: entry.payload.name,
+				start: entry.payload.startDate,
+				target: entry.payload.targetDate
+			});
+
+		case 'project.milestone.changed': {
+			const { from, to } = entry.payload;
+			const changes: string[] = [];
+			if (to.name !== undefined) {
+				changes.push(
+					m.activity_project_milestone_change_name({ from: from.name ?? '', to: to.name })
+				);
+			}
+			if (to.startDate !== undefined) {
+				changes.push(
+					m.activity_project_milestone_change_start({
+						from: from.startDate ?? '',
+						to: to.startDate
+					})
+				);
+			}
+			if (to.targetDate !== undefined) {
+				changes.push(
+					m.activity_project_milestone_change_target({
+						from: from.targetDate ?? '',
+						to: to.targetDate
+					})
+				);
+			}
+			return m.activity_project_milestone_changed({
+				name: entry.payload.name,
+				changes: changes.join(', ')
+			});
+		}
+
+		case 'project.milestone.deleted':
+			return m.activity_project_milestone_deleted({ name: entry.payload.name });
+
+		case 'task.milestone.changed':
+			return m.activity_task_milestone_changed({
+				from: entry.payload.from?.name ?? m.activity_milestone_none(),
+				to: entry.payload.to?.name ?? m.activity_milestone_none()
+			});
+
 		case 'task.attachment.added':
 			return m.activity_task_attachment_added({ filename: entry.payload.filename });
 

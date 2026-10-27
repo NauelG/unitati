@@ -9,7 +9,7 @@ Draft. Names here become folder names in `src/lib/server/<domain>/` (see [ADR 00
 | `directory`    | `Organisation`, `OrganisationBranding`, `BrandAsset`, `Person`, `Team`, `Department`, `Location`                     |
 | `assets`       | `Asset`, `AssetModel`, `Category`, `Manufacturer`, `Custody`, `Handover`, `HandoverTemplate`; later `Kit`, `License` |
 | `service-desk` | `Ticket`, `Queue`, `Label`, `RequestForm`, `Comment` (public / internal); later `CannedResponse`, `Sla`              |
-| `projects`     | `Project`, `Task`, `State` + `StateGroup`; later `Milestone`                                                         |
+| `projects`     | `Project`, `Task`, `State` + `StateGroup`; `Milestone`                                                               |
 | `knowledge`    | `Space`, `Page`, `PageRevision`, `PageComment`                                                                       |
 | `links`        | the pairwise join tables and the uniform read facade over them                                                       |
 | `api`          | `ApiKey`, `ServiceAccount`; the `/api/v1` endpoint registry                                                          |
@@ -36,6 +36,8 @@ An **attachment** is a file that belongs to exactly one owner: a ticket **commen
 `State` carries a user-chosen name and a system-owned `StateGroup` (`backlog`, `unstarted`, `started`, `completed`, `cancelled`). That split is how a catalogue stays configurable while the structure does not — the shape Plane uses. The group is fixed when a state is created and never changes; code depends on the group, never on the name. A `Task` sits in exactly one `State`, and its board column is ordered by a fractional `position`.
 
 A project is **archived** rather than deleted, and an archived project (with its tasks) is read-only. A task has **assignees** — any number of people — and a project has at most one owner.
+
+A **milestone** is a dated checkpoint inside one project ([ADR 0054](adr/0054-milestones.md)): a named **range** (`start_date` to `target_date`, both required, a one-day range allowed) that groups some of the project's tasks. A task is in zero or one milestone, always of its own project, and moving it to another project takes it out of its milestone. Its **status** (`upcoming`, `active`, `overdue`, `completed`) and its progress are derived on read from the dates and from where its tasks sit, never stored: reopening a task can make a completed milestone active again with no write. A milestone with no tasks is never completed. It has no code, no owner and no archive; deleting one detaches its tasks and deletes none. _Avoid_: release, sprint, phase.
 
 A project has a **visibility**: `organisation` (everyone whose role reads projects) or `members`. A members-only project and its tasks are visible only to its **members** — a list of people kept in `project_members` — and to admins; to everyone else they do not exist (`not_found`, never a 403). The owner and admins manage the list; the owner is always a member; assigning a task to a non-member is refused instead of granting access ([ADR 0042](adr/0042-per-project-visibility.md)).
 
@@ -78,6 +80,7 @@ erDiagram
 
     PROJECT ||--o{ MILESTONE : "has"
     PROJECT ||--o{ TASK : "has"
+    MILESTONE |o--o{ TASK : "groups"
     TASK }o--o{ PERSON : "assigned to"
     PROJECT }o--o| PERSON : "owned by"
     PROJECT ||--o{ ATTACHMENT : "has"

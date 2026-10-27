@@ -7,6 +7,7 @@ import { archiveProject } from '../projects';
 import { projectMembers, projects } from '../projects/schema';
 import {
 	assignRow,
+	createMilestoneRow,
 	createProjectRow,
 	createTaskRow,
 	createWorkspace,
@@ -33,6 +34,7 @@ const NO_ACTS = {
 	edit: false,
 	createTask: false,
 	moveTask: false,
+	manageMilestones: false,
 	comment: false,
 	attach: false,
 	documentPage: false,
@@ -56,6 +58,7 @@ describe('the project screen, per role', () => {
 			edit: true,
 			createTask: true,
 			moveTask: true,
+			manageMilestones: true,
 			comment: true,
 			attach: true,
 			documentPage: true,
@@ -236,5 +239,43 @@ describe('the tickets behind a project screen', () => {
 		const tickets = (await screen.timeline).filter((item) => item.kind === 'ticket');
 
 		expect(tickets.map((item) => item.record?.tag)).toEqual([direct.ticketTag]);
+	});
+});
+
+describe('the project screen, milestones', () => {
+	it('lists the milestones and filters the tasks without moving the header progress', async () => {
+		const { technician, project, organisation } = await setup();
+		const states = await statesByGroup(organisation.id);
+		const milestone = await createMilestoneRow(organisation.id, project.id, { name: 'Pilot' });
+		const inside = await createTaskRow(organisation.id, project.id, states.completed.id, {
+			milestoneId: milestone.id
+		});
+		await createTaskRow(organisation.id, project.id, states.started.id);
+
+		const outcome = await projectScreen(technician, project.projectTag, {
+			milestone: milestone.id
+		});
+		if (!outcome.ok) throw new Error('expected a screen');
+		const screen = outcome.value;
+
+		expect(screen.milestones.map((entry) => entry.name)).toEqual(['Pilot']);
+		expect(screen.milestoneFilter).toBe(milestone.id);
+		expect(screen.tasks.map((task) => task.id)).toEqual([inside.id]);
+		expect(screen.progress.total).toBe(2);
+	});
+
+	it('shows an employee the milestones read-only', async () => {
+		const { employee, project, organisation } = await setup();
+		const states = await statesByGroup(organisation.id);
+		const milestone = await createMilestoneRow(organisation.id, project.id);
+		const mine = await createTaskRow(organisation.id, project.id, states.started.id, {
+			milestoneId: milestone.id
+		});
+		await assignRow(organisation.id, mine.id, employee.personId!);
+
+		const screen = await screenOf(employee, project.projectTag);
+
+		expect(screen.may.manageMilestones).toBe(false);
+		expect(screen.milestones).toHaveLength(1);
 	});
 });

@@ -13,6 +13,8 @@ export type BoardTask = BoardItem & {
 	taskTag: string;
 	title: string;
 	dueDate: string | null;
+	/** Shown on the card when the task counts towards a milestone. */
+	milestoneName?: string | null;
 	assignees: { personId: string; fullName: string }[];
 };
 export type BoardColumnModel<T extends BoardItem> = { state: BoardState; items: T[] };

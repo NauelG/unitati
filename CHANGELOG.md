@@ -6,6 +6,19 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.5.0] - 2026-10-27
+
+### Added
+
+- Milestones: dated checkpoints inside a project (#30). A milestone has a name, a start and a target
+  date, and groups some of the project's tasks. A task is in at most one milestone of its own
+  project. The project page shows a "Hitos" panel with each milestone's status (upcoming, active,
+  overdue, completed) and progress, both derived from its dates and its tasks. Clicking one filters
+  the board and the list (`?milestone=`); the create-task dialog preselects it. The task page has a
+  "Hito" row. Technicians and admins create, edit and delete milestones; deleting one keeps its
+  tasks. Moving a task to another project takes it out of its milestone. The activity log records
+  milestone changes (ADR 0054).
+
 ## [1.4.0] - 2026-10-26
 
 ### Added

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, exists, inArray, ne, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, inArray, isNull, ne, sql, type SQL } from 'drizzle-orm';
 import type { StateGroup } from '#lib/domain/status.js';
 import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
@@ -13,7 +13,7 @@ import { page, pageWindow, type Page, type PageRequest } from '../shared/paginat
 import type { ProjectVisibility } from './members';
 import { placeBetween, spread } from '../shared/position';
 import { matchesQuery } from './search';
-import { projects, states, taskAssignees, tasks } from './schema';
+import { milestones, projects, states, taskAssignees, tasks } from './schema';
 import { requireManage, requireTaskScope } from './scope';
 import { defaultTaskState } from './states';
 import {
@@ -64,6 +64,9 @@ export type TaskView = {
 	stateId: string;
 	stateName: string;
 	stateGroup: StateGroup;
+	/** The milestone the task counts towards, of its own project. */
+	milestoneId: string | null;
+	milestoneName: string | null;
 	/** `YYYY-MM-DD`. */
 	dueDate: string | null;
 	/** Place in the board column; only the order of two of them means anything. */
@@ -86,6 +89,8 @@ const taskColumns = {
 	stateId: tasks.stateId,
 	stateName: states.name,
 	stateGroup: states.group,
+	milestoneId: tasks.milestoneId,
+	milestoneName: milestones.name,
 	dueDate: tasks.dueDate,
 	position: tasks.position,
 	createdAt: tasks.createdAt,
@@ -97,7 +102,8 @@ function tasksWithRelations() {
 		.select(taskColumns)
 		.from(tasks)
 		.innerJoin(projects, eq(tasks.projectId, projects.id))
-		.innerJoin(states, eq(tasks.stateId, states.id));
+		.innerJoin(states, eq(tasks.stateId, states.id))
+		.leftJoin(milestones, eq(tasks.milestoneId, milestones.id));
 }
 
 type TaskRow = Awaited<ReturnType<typeof tasksWithRelations>>[number];
@@ -136,6 +142,8 @@ export interface TaskListRequest {
 	/** A person: the tasks they are one of the assignees of. */
 	assignee?: string;
 	group?: StateGroup;
+	/** A milestone id, or `'none'` for the tasks that have no milestone. */
+	milestone?: string;
 	q?: string;
 }
 
@@ -164,6 +172,11 @@ export async function listTasks(
 		request.projectId ? eq(tasks.projectId, request.projectId) : undefined,
 		request.group ? eq(states.group, request.group) : undefined,
 		request.assignee ? hasAssignee(request.assignee) : undefined,
+		request.milestone === 'none'
+			? isNull(tasks.milestoneId)
+			: request.milestone
+				? eq(tasks.milestoneId, request.milestone)
+				: undefined,
 		term ? matchesQuery(tasks.search, term) : undefined
 	);
 	const ordered = tasksWithRelations()
@@ -259,7 +272,8 @@ export async function getTask(
 /* Writes                                                                     */
 /* -------------------------------------------------------------------------- */
 
-export type CreateTaskFailure = ProjectWriteFailure | 'state_not_found' | 'duplicate_task_tag';
+export type CreateTaskFailure =
+	ProjectWriteFailure | 'state_not_found' | 'milestone_not_found' | 'duplicate_task_tag';
 export type UpdateTaskFailure = TaskWriteFailure | 'duplicate_task_tag';
 export type AssignFailure = TaskWriteFailure | 'person_not_found' | 'not_a_member';
 export type MoveTaskFailure = TaskWriteFailure | 'state_not_found' | 'invalid_neighbours';
@@ -318,6 +332,11 @@ export async function openTask(
 		: await defaultTaskState(tx, actor.organisationId);
 	if (!state) return failure('state_not_found' as const);
 
+	// Born in a milestone: `task.created` covers it, no `task.milestone.changed`.
+	if (values.milestoneId && !(await milestoneOfProject(tx, projectId, values.milestoneId))) {
+		return failure('milestone_not_found' as const);
+	}
+
 	const column = await columnOf(tx, projectId, state.id);
 	const placed = placeBetween(column.at(-1)?.position ?? null, null);
 	// Nothing follows the last task, so the end of a column never needs a renumber.
@@ -332,6 +351,7 @@ export async function openTask(
 			description: values.description,
 			dueDate: values.dueDate ?? null,
 			stateId: state.id,
+			milestoneId: values.milestoneId ?? null,
 			position: String(placed.position),
 			taskTag: values.taskTag
 		})
@@ -346,6 +366,19 @@ export async function openTask(
 	});
 
 	return success({ id: task.id, taskTag: task.taskTag });
+}
+
+/** The milestone, when it exists **in this project**: another project's reads as absent. */
+async function milestoneOfProject(
+	tx: Transaction,
+	projectId: string,
+	milestoneId: string
+): Promise<{ id: string; name: string } | null> {
+	const [row] = await tx
+		.select({ id: milestones.id, name: milestones.name })
+		.from(milestones)
+		.where(and(eq(milestones.id, milestoneId), eq(milestones.projectId, projectId)));
+	return row ?? null;
 }
 
 /**
@@ -367,6 +400,10 @@ export async function createTask(
 		// The state was deleted between the check and the insert.
 		if (constraintViolation(error)?.constraint === 'tasks_state_id_states_id_fk') {
 			return failure('state_not_found');
+		}
+		// The milestone was deleted between the check and the insert.
+		if (constraintViolation(error)?.constraint === 'tasks_milestone_same_project_fk') {
+			return failure('milestone_not_found');
 		}
 		throw error;
 	}
@@ -429,6 +466,46 @@ export async function updateTask(
 		if (uniqueConstraintName(error) === 'tasks_org_tag') return failure('duplicate_task_tag');
 		throw error;
 	}
+}
+
+/**
+ * Puts the task in a milestone of **its own project**, or takes it out (`null`).
+ * `milestone_not_found` when the milestone does not exist or belongs to another
+ * project: not-found semantics, as ADR 0042. Setting the same value writes and
+ * records nothing.
+ */
+export async function setTaskMilestone(
+	actor: SessionUser,
+	taskId: string,
+	milestoneId: string | null
+): Promise<Outcome<void, TaskWriteFailure | 'milestone_not_found'>> {
+	requireManage(actor);
+
+	return getDb().transaction(async (tx) => {
+		const locked = await lockTask(tx, actor, taskId);
+		if (!locked.ok) return locked;
+		const { task } = locked.value;
+
+		const to = milestoneId ? await milestoneOfProject(tx, task.projectId, milestoneId) : null;
+		if (milestoneId && !to) return failure('milestone_not_found' as const);
+		if ((task.milestoneId ?? null) === milestoneId) return success(undefined);
+
+		const from = task.milestoneId
+			? await milestoneOfProject(tx, task.projectId, task.milestoneId)
+			: null;
+
+		await tx.update(tasks).set({ milestoneId, updatedAt: new Date() }).where(eq(tasks.id, taskId));
+
+		await recordActivity(tx, {
+			organisationId: actor.organisationId,
+			...actorColumns(actor),
+			target: { taskId },
+			verb: 'task.milestone.changed',
+			payload: { from, to }
+		});
+
+		return success(undefined);
+	});
 }
 
 /* ----------------------------- assignees ----------------------------------- */

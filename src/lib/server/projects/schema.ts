@@ -1,6 +1,8 @@
 import { sql, type SQL } from 'drizzle-orm';
 import {
+	check,
 	date,
+	foreignKey,
 	index,
 	integer,
 	numeric,
@@ -28,7 +30,10 @@ import { organisations, people } from '../directory/schema';
  * **No phase, no deletion.** A project's progress is derived from where its
  * tasks sit (`projectProgress`), and projects archive while tasks go to a
  * `cancelled` state, so a code and its history never disappear. The reasons are
- * recorded in #10.
+ * recorded in #10. Milestones are not a phase either: their status is derived
+ * like progress, from their dates and their tasks. They are the one hard-deleted
+ * row in the domain, because deleting a milestone destroys no work: its tasks
+ * stay, detached (ADR 0054).
  *
  * Prose is searched with the **Spanish** dictionary, like tickets: a task title
  * is a sentence, and "mudanzas" has to find "Mudanza". The vectors go through
@@ -104,6 +109,38 @@ export const projects = pgTable(
 	]
 );
 
+/**
+ * A dated checkpoint inside one project: a named range that groups some of its
+ * tasks (ADR 0054). Status and progress are derived on read and never stored.
+ * Identity is the UUID only: no tag, no sequence, no position, no archive.
+ */
+export const milestones = pgTable(
+	'milestones',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		projectId: uuid('project_id')
+			.notNull()
+			.references(() => projects.id, { onDelete: 'cascade' }),
+		/** 1 to 200 characters, trimmed; enforced in the domain. */
+		name: text('name').notNull(),
+		/** Markdown; the length is enforced in the domain. */
+		description: text('description'),
+		/** Calendar days, `YYYY-MM-DD`. */
+		startDate: date('start_date', { mode: 'string' }).notNull(),
+		targetDate: date('target_date', { mode: 'string' }).notNull(),
+		...timestamps
+	},
+	(table) => [
+		/** The target of the composite foreign key on `tasks`. */
+		unique('milestones_project_id_id').on(table.projectId, table.id),
+		check('milestones_dates_ordered', sql`${table.startDate} <= ${table.targetDate}`),
+		index('milestones_project_order_idx').on(table.projectId, table.startDate, table.targetDate)
+	]
+);
+
 export const tasks = pgTable(
 	'tasks',
 	{
@@ -130,6 +167,8 @@ export const tasks = pgTable(
 		dueDate: date('due_date', { mode: 'string' }),
 		/** Fractional index within the board column; see `position.ts`. Read back as a string. */
 		position: numeric('position').notNull(),
+		/** 0 or 1 milestone, of the task's own project: see `tasks_milestone_same_project_fk`. */
+		milestoneId: uuid('milestone_id'),
 		search: tsvector('search')
 			.notNull()
 			.generatedAlwaysAs((): SQL =>
@@ -141,7 +180,21 @@ export const tasks = pgTable(
 		unique('tasks_org_tag').on(table.organisationId, table.taskTag),
 		index('tasks_column_idx').on(table.projectId, table.stateId, table.position),
 		index('tasks_state_idx').on(table.stateId),
-		index('tasks_search_gin').using('gin', table.search)
+		index('tasks_milestone_idx').on(table.milestoneId),
+		index('tasks_search_gin').using('gin', table.search),
+		/**
+		 * Composite, so the database refuses a milestone of another project. With the
+		 * default `MATCH SIMPLE` a task whose `milestone_id` is null is not checked.
+		 * **The migration is hand-edited:** Drizzle emits `ON DELETE set null`, which
+		 * would also null `project_id` (NOT NULL) and fail every milestone delete; the
+		 * SQL carries `ON DELETE SET NULL ("milestone_id")`, which Drizzle cannot
+		 * express (PostgreSQL 15+).
+		 */
+		foreignKey({
+			name: 'tasks_milestone_same_project_fk',
+			columns: [table.projectId, table.milestoneId],
+			foreignColumns: [milestones.projectId, milestones.id]
+		}).onDelete('set null')
 	]
 );
 
@@ -250,6 +303,7 @@ export type State = typeof states.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type ProjectMember = typeof projectMembers.$inferSelect;
 export type Task = typeof tasks.$inferSelect;
+export type Milestone = typeof milestones.$inferSelect;
 export type TaskAssignee = typeof taskAssignees.$inferSelect;
 export type ProjectAttachment = typeof projectAttachments.$inferSelect;
 export type TaskAttachment = typeof taskAttachments.$inferSelect;

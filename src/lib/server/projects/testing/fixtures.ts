@@ -3,7 +3,7 @@ import type { StateGroup } from '#lib/domain/status.js';
 import { getDb } from '../../db';
 import { createOrganisation, createViewer } from '../../assets/testing/fixtures';
 import { ensureDefaultStates } from '../defaults';
-import { projects, states, taskAssignees, tasks } from '../schema';
+import { milestones, projects, states, taskAssignees, tasks } from '../schema';
 
 /**
  * Row builders for the projects specs. They insert straight into the tables,
@@ -96,4 +96,25 @@ export async function createTaskRow(
 
 export async function assignRow(organisationId: string, taskId: string, personId: string) {
 	await getDb().insert(taskAssignees).values({ organisationId, taskId, personId });
+}
+
+type MilestoneOverrides = Partial<typeof milestones.$inferInsert>;
+
+export async function createMilestoneRow(
+	organisationId: string,
+	projectId: string,
+	overrides: MilestoneOverrides = {}
+) {
+	const [milestone] = await getDb()
+		.insert(milestones)
+		.values({
+			organisationId,
+			projectId,
+			name: 'Pilot',
+			startDate: '2026-11-01',
+			targetDate: '2026-11-30',
+			...overrides
+		})
+		.returning();
+	return milestone;
 }

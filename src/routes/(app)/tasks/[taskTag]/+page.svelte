@@ -59,6 +59,7 @@
 	let stateId = $derived<string>(data.task.stateId);
 	let dueDate = $derived<string | null>(data.task.dueDate);
 	let assigneeIds = $derived(data.task.assignees.map((assignee) => assignee.personId));
+	let milestoneId = $derived<string | null>(data.task.milestoneId);
 
 	let moveOpen = $state(false);
 
@@ -95,6 +96,16 @@
 		task.assignees.find((assignee) => assignee.personId === id)?.fullName ??
 		id;
 	const assigneeNames = $derived(assigneeIds.map(nameOf));
+
+	const milestoneOptions = $derived(
+		data.choices.milestones.map((milestone) => ({ value: milestone.id, label: milestone.name }))
+	);
+	// Readers get no list: the row shows the task's own milestone alone.
+	const milestoneName = $derived(
+		milestoneId === task.milestoneId
+			? (task.milestoneName ?? '')
+			: (milestoneOptions.find((option) => option.value === milestoneId)?.label ?? '')
+	);
 
 	const styles = pageHeader({ level: 'record' });
 
@@ -189,6 +200,26 @@
 			</div>
 		{/snippet}
 	</EditableDetailRow>
+{/snippet}
+
+{#snippet milestoneRow()}
+	<EditableDetailRow
+		kind="select"
+		label={m.task_detail_milestone()}
+		value={milestoneId}
+		display={milestoneName}
+		options={milestoneOptions}
+		noneLabel={m.milestone_none_option()}
+		placeholder={m.milestone_none_option()}
+		action="?/setMilestone"
+		name="milestoneId"
+		editable={data.may.setMilestone}
+		optimistic={mirror(
+			() => milestoneId,
+			(value) => (milestoneId = value),
+			(formData) => String(formData.get('milestoneId') ?? '') || null
+		)}
+	/>
 {/snippet}
 
 {#snippet assigneesRow()}
@@ -400,6 +431,7 @@
 			<DescriptionList
 				items={[
 					{ label: m.task_detail_project(), value: projectLink },
+					{ label: m.task_detail_milestone(), value: milestoneRow },
 					{ label: m.task_detail_due(), value: dueRow },
 					{ label: m.task_detail_assignees(), value: assigneesRow }
 				]}

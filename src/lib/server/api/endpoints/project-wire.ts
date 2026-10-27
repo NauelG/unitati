@@ -201,6 +201,11 @@ export const ownerNotFound = {
 	message: 'Person not found.'
 } as const;
 export const stateNotFound = { as: 'field', path: 'stateId', message: 'State not found.' } as const;
+export const milestoneNotFound = {
+	as: 'field',
+	path: 'milestoneId',
+	message: 'Milestone not found.'
+} as const;
 export const personNotFound = {
 	as: 'field',
 	path: 'personId',

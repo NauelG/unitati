@@ -1,7 +1,6 @@
 # projects
 
-Projects, tasks and the state catalogue that kanban boards are drawn from. Later: milestones, time
-entries and Gantt. This folder is the domain with **no screens yet** (#121): tables, codes, rules,
+Projects, tasks, milestones and the state catalogue that kanban boards are drawn from. Later: Gantt. This folder is the domain with **no screens yet** (#121): tables, codes, rules,
 who sees what, activity, search. The routes are #123, #124 and #125.
 
 ## The shape of it
@@ -16,8 +15,18 @@ who sees what, activity, search. The routes are #123, #124 and #125.
 - **`tasks`** belong to exactly one project and sit in exactly one state. They go to a `cancelled`
   state rather than being deleted, so a code and its history never disappear.
 - **`task_assignees`** is many people per task.
+- **`milestones`** are dated checkpoints of one project (`milestones.ts`, ADR 0054): a name and a
+  required `start_date`..`target_date` range that groups some of its tasks. A task is in 0 or 1
+  milestone **of its own project**, enforced by the domain and by the composite foreign key
+  `tasks_milestone_same_project_fk`. Status and progress are derived on read
+  (`milestone-status.ts`, `listMilestones`), never stored. They are the one row here that is
+  hard-deleted: the database detaches the tasks (`ON DELETE SET NULL ("milestone_id")`).
 
 ## Rules worth knowing
+
+- **`reparentTask` clears `milestone_id`.** A milestone belongs to one project, so it cannot follow a
+  task to another; the same `UPDATE` that changes `project_id` nulls it (and records
+  `task.milestone.changed`), or the composite foreign key would reject the move.
 
 - **Archived means read-only.** Every write on an archived project, or on one of its tasks, fails
   with `project_archived`. `unarchiveProject` is the one write it accepts. Writes lock the project
