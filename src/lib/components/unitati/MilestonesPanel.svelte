@@ -220,7 +220,7 @@
 				bind:value={name}
 				error={fieldError('name')}
 			/>
-			<div class="grid gap-[var(--space-3)] sm:grid-cols-2">
+			<div class="grid grid-cols-1 gap-[var(--space-3)] min-[28rem]:grid-cols-2 [&>*]:min-w-0">
 				<DateField
 					label={m.milestone_field_start()}
 					name="startDate"
