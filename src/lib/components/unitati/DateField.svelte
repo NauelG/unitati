@@ -95,7 +95,7 @@
 				aria-labelledby={`${fieldId}-label`}
 				aria-invalid={error ? 'true' : undefined}
 				aria-describedby={describedBy}
-				class="flex flex-1 items-center"
+				class="flex min-w-0 flex-1 items-center overflow-hidden whitespace-nowrap"
 			>
 				{#snippet children({ segments })}
 					{#each segments as { part, value: text }, i (part + i)}
