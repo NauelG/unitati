@@ -6,6 +6,24 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.6.0] - 2026-10-27
+
+### Added
+
+- Subtasks: a task can hold child tasks, one level deep and in the same project (#59, ADR 0055). A
+  subtask is a task: its own `TSK-####`, its own card on the board with a `↳ TSK-####` chip to its
+  parent, counted like any other task in project and milestone progress. A parent card shows
+  `completed/total`, plus `+n` for subtasks the viewer cannot see. The task page has a "Subtareas"
+  section with "Añadir subtarea" (in the parent's project and milestone), a "Tarea principal" row
+  to set or remove the parent, a link to the parent on a subtask, a warning when a subtask is due
+  after its parent, and, on a parent, its own time beside its time with subtasks. A parent cannot
+  close while a subtask is open, and a closed parent admits no open subtask: both are refused,
+  nothing cascades. Moving a parent to another project takes its subtasks along; moving a subtask
+  detaches it first. The activity log records parent changes on the subtask.
+- API: `POST` and `DELETE /tasks/{tag}/parent`, `parentTag` on `POST /projects/{tag}/tasks`,
+  `?parent=` on `GET /tasks`, `parent` and `subtasks` on every task, and `time` on
+  `GET /tasks/{tag}`. `POST /tasks/{tag}/state` declares `open_subtasks` and `parent_closed`.
+
 ## [1.5.2] - 2026-10-27
 
 ### Fixed

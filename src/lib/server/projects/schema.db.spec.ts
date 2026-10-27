@@ -50,7 +50,7 @@ describe('the projects and tasks tables', () => {
 		).toEqual({ code: '23505', constraint: 'tasks_org_tag' });
 	});
 
-	it('carry neither a phase nor a parent task', async () => {
+	it('carry no phase', async () => {
 		const columns = await getDb().execute<{ table_name: string; column_name: string }>(
 			sql`select table_name, column_name from information_schema.columns
 				where table_name in ('projects', 'tasks')`
@@ -59,7 +59,68 @@ describe('the projects and tasks tables', () => {
 
 		expect(names).toContain('state_id');
 		expect(names).not.toContain('phase');
-		expect(names).not.toContain('parent_task_id');
+	});
+
+	it('refuse a parent task of another project, and a task that is its own parent', async () => {
+		const { organisation } = await createWorkspace();
+		const { backlog } = await statesByGroup(organisation.id);
+		const here = await createProjectRow(organisation.id);
+		const there = await createProjectRow(organisation.id);
+		const parent = await createTaskRow(organisation.id, here.id, backlog.id);
+		const task = await createTaskRow(organisation.id, there.id, backlog.id);
+
+		expect(
+			await refusalFrom(
+				getDb().execute(sql`update tasks set parent_task_id = ${parent.id} where id = ${task.id}`)
+			)
+		).toEqual({ code: '23503', constraint: 'tasks_parent_same_project_fk' });
+		expect(
+			await refusalFrom(
+				getDb().execute(sql`update tasks set parent_task_id = id where id = ${task.id}`)
+			)
+		).toEqual({ code: '23514', constraint: 'tasks_parent_not_self' });
+	});
+
+	it('detach the subtasks of a deleted task, and keep their project', async () => {
+		const { organisation } = await createWorkspace();
+		const { backlog } = await statesByGroup(organisation.id);
+		const project = await createProjectRow(organisation.id);
+		const parent = await createTaskRow(organisation.id, project.id, backlog.id);
+		const child = await createTaskRow(organisation.id, project.id, backlog.id, {
+			parentTaskId: parent.id
+		});
+
+		await getDb().execute(sql`delete from tasks where id = ${parent.id}`);
+
+		const [row] = await getDb().execute<{ project_id: string; parent_task_id: string | null }>(
+			sql`select project_id, parent_task_id from tasks where id = ${child.id}`
+		);
+		expect(row).toEqual({ project_id: project.id, parent_task_id: null });
+	});
+
+	it('let a family change project in one statement, and no other way', async () => {
+		const { organisation } = await createWorkspace();
+		const { backlog } = await statesByGroup(organisation.id);
+		const from = await createProjectRow(organisation.id);
+		const to = await createProjectRow(organisation.id);
+		const parent = await createTaskRow(organisation.id, from.id, backlog.id);
+		const child = await createTaskRow(organisation.id, from.id, backlog.id, {
+			parentTaskId: parent.id
+		});
+
+		expect(
+			await refusalFrom(
+				getDb().execute(sql`update tasks set project_id = ${to.id} where id = ${parent.id}`)
+			)
+		).toEqual({ code: '23503', constraint: 'tasks_parent_same_project_fk' });
+
+		await getDb().execute(
+			sql`update tasks set project_id = ${to.id} where id in (${parent.id}, ${child.id})`
+		);
+		const rows = await getDb().execute<{ project_id: string }>(
+			sql`select project_id from tasks where id in (${parent.id}, ${child.id})`
+		);
+		expect([...rows].map((row) => row.project_id)).toEqual([to.id, to.id]);
 	});
 
 	it('refuse a task with no project, and no state', async () => {

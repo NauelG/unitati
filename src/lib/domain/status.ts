@@ -41,6 +41,15 @@ export const STATE_GROUPS = ['backlog', 'unstarted', 'started', 'completed', 'ca
 
 export type TicketStatus = (typeof TICKET_STATUSES)[number];
 export type StateGroup = (typeof STATE_GROUPS)[number];
+
+/**
+ * The groups a task is finished in, one way or the other. Every other group is
+ * _open_, `backlog` included: the reading the subtask rules use (ADR 0055), wider
+ * than the "my own work in progress" of `OPEN_TASK_GROUPS`.
+ */
+export const CLOSED_STATE_GROUPS: readonly StateGroup[] = ['completed', 'cancelled'];
+
+export const isClosedGroup = (group: StateGroup): boolean => CLOSED_STATE_GROUPS.includes(group);
 export type Priority = (typeof PRIORITIES)[number];
 export type AssetState = (typeof ASSET_STATES)[number];
 

@@ -16,6 +16,7 @@ import {
 import type { MailMessage } from '../shared/mail';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
 import { flushEvents, on, resetSubscriptions, setDispatchMode } from '../shared/events';
+import { setTimeTracking } from '../time';
 import { authenticateRequest } from './authenticate-request';
 import { handleApiRequest } from './dispatch';
 import { createApiKey } from './keys';
@@ -749,5 +750,147 @@ describe('the wire', () => {
 		expect(Object.keys(body.components.schemas)).toEqual(
 			expect.arrayContaining(['Project', 'Task', 'State', 'Person', 'TimelineEntry'])
 		);
+	});
+});
+
+describe('subtasks over the API (ADR 0055)', () => {
+	async function family() {
+		const base = await scene();
+		const key = await keyFor(base.technician, ['projects.view', 'projects.manage', 'time.log']);
+		const project = await send('POST', api('/projects'), key, { name: 'Mail server' });
+		const projectTag: string = project.body.data.tag;
+		const parent = await send('POST', api(`/projects/${projectTag}/tasks`), key, {
+			title: 'Migrate'
+		});
+		return { ...base, key, projectTag, parentTag: parent.body.data.tag as string };
+	}
+
+	it('creates a subtask by parentTag and reads both sides, with time on the single read', async () => {
+		const { key, projectTag, parentTag, admin } = await family();
+		await setTimeTracking(admin, true);
+
+		const child = await send('POST', api(`/projects/${projectTag}/tasks`), key, {
+			title: 'Export mailboxes',
+			parentTag
+		});
+		expect(child.response.status).toBe(201);
+		expect(child.body.data).toMatchObject({
+			parent: { tag: parentTag, title: 'Migrate' },
+			subtasks: { total: 0, completed: 0, restricted: 0 }
+		});
+
+		const parent = await send('GET', api(`/tasks/${parentTag}`), key);
+		expect(parent.body.data).toMatchObject({
+			parent: null,
+			subtasks: { total: 1, completed: 0, restricted: 0 },
+			time: { ownMinutes: 0, withSubtasksMinutes: 0 }
+		});
+
+		const listed = await send('GET', api(`/tasks?parent=${parentTag}`), key);
+		expect(listed.body.data.map((task: { tag: string }) => task.tag)).toEqual([
+			child.body.data.tag
+		]);
+		expect(listed.body.data[0]).not.toHaveProperty('time');
+		const none = await send('GET', api('/tasks?parent=TSK-9999'), key);
+		expect(none.body).toMatchObject({ data: [], meta: { total: 0 } });
+	});
+
+	it('answers time: null to a key without time.log', async () => {
+		const { technician, parentTag } = await family();
+		const reader = await keyFor(technician, ['projects.view']);
+
+		const { body } = await send('GET', api(`/tasks/${parentTag}`), reader);
+		expect(body.data.time).toBeNull();
+	});
+
+	it('sets and removes a parent, and declares each refusal', async () => {
+		const { key, projectTag, parentTag, states } = await family();
+		const task = await send('POST', api(`/projects/${projectTag}/tasks`), key, { title: 'Task' });
+		const taskTag: string = task.body.data.tag;
+
+		const set = await send('POST', api(`/tasks/${taskTag}/parent`), key, { parentTag });
+		expect(set.response.status).toBe(200);
+		expect(set.body.data.parent).toEqual({ tag: parentTag, title: 'Migrate' });
+
+		const missing = await send('POST', api(`/tasks/${parentTag}/parent`), key, {
+			parentTag: 'TSK-9999'
+		});
+		expect(missing.response.status).toBe(400);
+		expect(missing.body.error.issues[0].path).toEqual(['parentTag']);
+
+		const self = await send('POST', api(`/tasks/${parentTag}/parent`), key, { parentTag });
+		expect(self.response.status).toBe(400);
+
+		const deep = await send('POST', api(`/projects/${projectTag}/tasks`), key, {
+			title: 'Deep',
+			parentTag: taskTag
+		});
+		expect(deep.response.status).toBe(409);
+		expect(deep.body.error.code).toBe('parent_is_subtask');
+
+		const other = await send('POST', api(`/projects/${projectTag}/tasks`), key, { title: 'Other' });
+		const hasChildren = await send('POST', api(`/tasks/${parentTag}/parent`), key, {
+			parentTag: other.body.data.tag
+		});
+		expect(hasChildren.response.status).toBe(409);
+		expect(hasChildren.body.error.code).toBe('task_has_subtasks');
+
+		const close = await send('POST', api(`/tasks/${parentTag}/state`), key, {
+			stateId: states.completed.id
+		});
+		expect(close.response.status).toBe(409);
+		expect(close.body.error.code).toBe('open_subtasks');
+		expect(close.body.error.details).toEqual({ subtasks: [{ tag: taskTag, title: 'Task' }] });
+
+		await send('POST', api(`/tasks/${taskTag}/state`), key, { stateId: states.completed.id });
+		await send('POST', api(`/tasks/${parentTag}/state`), key, { stateId: states.completed.id });
+		const reopen = await send('POST', api(`/tasks/${taskTag}/state`), key, {
+			stateId: states.started.id
+		});
+		expect(reopen.response.status).toBe(409);
+		expect(reopen.body.error.code).toBe('parent_closed');
+
+		const removed = await send('DELETE', api(`/tasks/${taskTag}/parent`), key);
+		expect(removed.response.status).toBe(200);
+		expect(removed.body.data.parent).toBeNull();
+	});
+
+	it('documents the subtask endpoints and fields in openapi.json', async () => {
+		const { key } = await family();
+
+		const { body } = await send('GET', api('/openapi.json'), key);
+
+		expect(Object.keys(body.paths['/tasks/{tag}/parent'])).toEqual(
+			expect.arrayContaining(['post', 'delete'])
+		);
+		expect(Object.keys(body.components.schemas.Task.properties)).toEqual(
+			expect.arrayContaining(['parent', 'subtasks'])
+		);
+		expect(Object.keys(body.components.schemas.TaskDetail.properties)).toContain('time');
+		expect(JSON.stringify(body.paths['/tasks/{tag}/state'].post.responses)).toContain(
+			'open_subtasks'
+		);
+		expect(JSON.stringify(body.paths['/projects/{tag}/tasks'].post)).toContain('parentTag');
+	});
+});
+
+describe('a subtask’s timeline over the API', () => {
+	it('names the parent by code and title, without its internal id', async () => {
+		const { technician, organisation, states } = await scene();
+		const key = await keyFor(technician, ['projects.view', 'projects.manage']);
+		const project = await createProjectRow(organisation.id);
+		const parent = await createTaskRow(organisation.id, project.id, states.unstarted.id, {
+			title: 'Parent'
+		});
+		const child = await createTaskRow(organisation.id, project.id, states.unstarted.id);
+		await send('POST', api(`/tasks/${child.taskTag}/parent`), key, { parentTag: parent.taskTag });
+
+		const { body } = await send('GET', api(`/tasks/${child.taskTag}/timeline`), key);
+
+		expect(body.data[0]).toMatchObject({
+			verb: 'task.parent.changed',
+			payload: { from: null, to: { taskTag: parent.taskTag, title: 'Parent' } }
+		});
+		expect(JSON.stringify(body)).not.toContain(parent.id);
 	});
 });

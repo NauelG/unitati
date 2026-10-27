@@ -44,11 +44,11 @@ import {
 	type CreateTaskFailure,
 	type MilestoneWriteFailure,
 	type MembershipFailure,
-	type MoveTaskFailure,
 	type RemoveMemberFailure,
 	type UpdateProjectFailure
 } from '#lib/server/projects/index.js';
 import { followActions } from '../../follow-actions';
+import { moveRefusal, parentRefusals } from '../../task-refusals';
 import type { Actions, PageServerLoad } from './$types';
 
 /** `?milestone=`: a milestone id or `none`. Anything else is ignored, not an error. */
@@ -131,7 +131,11 @@ const taskFailures: Record<
 	project_archived: [null, m.project_error_archived],
 	state_not_found: [null, m.task_error_state_missing],
 	milestone_not_found: ['milestoneId', m.milestone_error_missing],
-	duplicate_task_tag: [null, m.action_error_invalid]
+	duplicate_task_tag: [null, m.action_error_invalid],
+	// The board opens top-level tasks only; a subtask is added from its parent's screen.
+	parent_not_found: [null, parentRefusals.parent_not_found],
+	parent_is_subtask: [null, parentRefusals.parent_is_subtask],
+	parent_closed: [null, parentRefusals.parent_closed]
 };
 
 /** Where each milestone refusal is shown in the dialog (`null`: above the form). */
@@ -144,12 +148,6 @@ const milestoneFailures: Record<
 	invalid_name: ['name', m.milestone_error_name],
 	invalid_dates: ['dates', m.milestone_error_dates],
 	invalid_description: ['description', m.milestone_error_description]
-};
-
-const moveFailures: Record<Exclude<MoveTaskFailure, 'task_not_found'>, () => string> = {
-	project_archived: m.project_error_archived,
-	state_not_found: m.task_error_state_missing,
-	invalid_neighbours: m.action_error_invalid
 };
 
 function removeMemberMessage(failure: RemoveMemberFailure): string {
@@ -506,7 +504,7 @@ export const actions: Actions = {
 		const outcome = await moveTask(user, taskId, stateId, neighbours);
 		if (!outcome.ok) {
 			if (outcome.error === 'task_not_found') error(404, 'Not found');
-			return rejected('moveTask', moveFailures[outcome.error](), 'stateId');
+			return rejected('moveTask', moveRefusal(outcome.error), 'stateId');
 		}
 
 		return { action: 'moveTask' as const };

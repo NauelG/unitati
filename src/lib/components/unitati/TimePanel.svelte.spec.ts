@@ -43,3 +43,19 @@ describe('TimePanel work date', () => {
 		expect(today.hasAttribute('data-disabled')).toBe(false);
 	});
 });
+
+describe('TimePanel total', () => {
+	it('shows one total on a task without subtasks', () => {
+		render(TimePanel, { ...props, totalMinutes: 30 });
+
+		expect(screen.getByTestId('time-total').textContent).not.toContain('subtareas');
+	});
+
+	it('shows own and with-subtasks time side by side on a parent (ADR 0055)', () => {
+		render(TimePanel, { ...props, totalMinutes: 30, withSubtasksMinutes: 90 });
+
+		const total = screen.getByTestId('time-total').textContent ?? '';
+		expect(total).toContain('Propio: 30m');
+		expect(total).toContain('Con subtareas: 1h 30m');
+	});
+});

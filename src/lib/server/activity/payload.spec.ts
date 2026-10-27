@@ -233,4 +233,22 @@ describe('the milestone payloads', () => {
 		).toThrow();
 		expect(() => parsePayload('task.milestone.changed', { from: null })).toThrow();
 	});
+
+	it('task.parent.changed accepts a task snapshot or null at each end', () => {
+		const ref = { taskId: MILESTONE, taskTag: 'TSK-0041', title: 'Migrar el correo' };
+		expect(parsePayload('task.parent.changed', { from: null, to: ref }).to).toEqual(ref);
+		expect(parsePayload('task.parent.changed', { from: ref, to: null }).from).toEqual(ref);
+		expect(() =>
+			parsePayload('task.parent.changed', { from: { taskTag: '' }, to: null })
+		).toThrow();
+		expect(() => parsePayload('task.parent.changed', { to: null })).toThrow();
+	});
+
+	it('task.created may name the parent a subtask was born under', () => {
+		const ref = { taskId: MILESTONE, taskTag: 'TSK-0041', title: 'Migrar el correo' };
+		const payload = { taskTag: 'TSK-0042', title: 'Exportar buzones' };
+		expect(parsePayload('task.created', payload)).toEqual(payload);
+		expect(parsePayload('task.created', { ...payload, parent: ref }).parent).toEqual(ref);
+		expect(() => parsePayload('task.created', { ...payload, parent: { taskTag: '' } })).toThrow();
+	});
 });

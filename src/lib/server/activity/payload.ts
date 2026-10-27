@@ -98,6 +98,13 @@ const nullableText = z.string().nullable();
 /** A milestone as it read when an entry was written. */
 const milestoneRef = z.object({ id: z.uuid(), name: presentName });
 
+/**
+ * A task as it read when an entry was written: the parent of a subtask (ADR 0055).
+ * The id is what lets a reader who cannot see that task get the code and title
+ * redacted (ADR 0042, `redactWorkEntries`).
+ */
+const taskRef = z.object({ taskId: z.uuid(), taskTag: presentName, title: presentName });
+
 /** The fields of a milestone an edit records; `.strict()` so a stray key is refused. */
 const milestoneFields = z
 	.object({
@@ -347,7 +354,9 @@ export const PAYLOAD_SCHEMAS = {
 
 	'task.created': z.object({
 		taskTag: presentName,
-		title: presentName
+		title: presentName,
+		// Born as a subtask (ADR 0055): no separate `task.parent.changed`.
+		parent: taskRef.optional()
 	}),
 
 	// The state catalogue is user-authored, so the name is a snapshot: renaming a
@@ -389,6 +398,13 @@ export const PAYLOAD_SCHEMAS = {
 	'task.milestone.changed': z.object({
 		from: milestoneRef.nullable(),
 		to: milestoneRef.nullable()
+	}),
+
+	// A subtask's parent, as it read at the change; null for a top-level task (ADR 0055).
+	// Recorded on the child only.
+	'task.parent.changed': z.object({
+		from: taskRef.nullable(),
+		to: taskRef.nullable()
 	}),
 
 	// Directory events (#12). Names and email as they read at the time: a person

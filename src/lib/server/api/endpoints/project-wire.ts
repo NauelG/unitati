@@ -79,7 +79,35 @@ export const taskSchema = named(
 		/** `YYYY-MM-DD`. */
 		dueDate: z.string().nullable(),
 		/** Whether the task's project is archived, which makes the task read-only. */
-		archived: z.boolean()
+		archived: z.boolean(),
+		/** The task this one is a subtask of (ADR 0055); `null` too when the key cannot see it. */
+		parent: z.object({ tag: z.string(), title: z.string() }).nullable(),
+		/**
+		 * The task's subtasks: `total` and `completed` count the visible, non-cancelled
+		 * ones; `restricted` the ones the key cannot see.
+		 */
+		subtasks: z.object({
+			total: z.number().int(),
+			completed: z.number().int(),
+			restricted: z.number().int()
+		})
+	})
+);
+
+/**
+ * One task as `GET /tasks/{tag}` answers it: the list shape plus its time, which
+ * costs a query of its own and so is not part of a list (ADR 0055).
+ */
+export const taskDetailSchema = named(
+	'TaskDetail',
+	taskSchema.extend({
+		/**
+		 * Minutes logged on the task and on it plus its subtasks, cancelled ones
+		 * included. `null` when time tracking is off or the key holds no `time.log`.
+		 */
+		time: z
+			.object({ ownMinutes: z.number().int(), withSubtasksMinutes: z.number().int() })
+			.nullable()
 	})
 );
 
@@ -140,7 +168,9 @@ export function taskToWire(
 		},
 		assignees: view.assignees.map(({ personId, fullName }) => ({ id: personId, name: fullName })),
 		dueDate: view.dueDate,
-		archived: view.projectArchived
+		archived: view.projectArchived,
+		parent: view.parent && { tag: view.parent.taskTag, title: view.parent.title },
+		subtasks: view.subtasks
 	};
 }
 

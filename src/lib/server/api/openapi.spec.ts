@@ -369,15 +369,36 @@ describe('the OpenAPI document built from the real registry', () => {
 			expect(assign['400'].description).toContain('`personId`');
 			expect(codesOf(responsesOf('/projects/{tag}/tasks', 'post')['409'])).toEqual([
 				'project_archived',
-				'duplicate_task_tag'
+				'duplicate_task_tag',
+				'parent_is_subtask',
+				'parent_closed'
 			]);
 			expect(responsesOf('/projects/{tag}/tasks', 'post')['400'].description).toContain(
 				'`stateId`'
 			);
+			expect(responsesOf('/projects/{tag}/tasks', 'post')['400'].description).toContain(
+				'`parentTag`'
+			);
 			expect(codesOf(responsesOf('/tasks/{tag}/state', 'post')['409'])).toEqual([
 				'project_archived',
-				'invalid_neighbours'
+				'invalid_neighbours',
+				'open_subtasks',
+				'parent_closed'
 			]);
+		});
+
+		it('lists the subtask conflicts of setting a parent, and none of removing one (ADR 0055)', () => {
+			const set = responsesOf('/tasks/{tag}/parent', 'post');
+			expect(codesOf(set['409'])).toEqual([
+				'project_archived',
+				'parent_is_subtask',
+				'task_has_subtasks',
+				'parent_closed'
+			]);
+			expect(set['400'].description).toContain('`parentTag`');
+
+			const remove = responsesOf('/tasks/{tag}/parent', 'delete');
+			expect(codesOf(remove['409'])).toEqual(['project_archived']);
 		});
 
 		it('lists the reparent conflicts, with the computed assignees_not_members', () => {

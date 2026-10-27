@@ -1,4 +1,5 @@
 <script lang="ts" module>
+	import CornerDownRight from '@lucide/svelte/icons/corner-down-right';
 	import FileSignature from '@lucide/svelte/icons/file-signature';
 	import FileCheck from '@lucide/svelte/icons/file-check';
 	import FileX from '@lucide/svelte/icons/file-x';
@@ -130,6 +131,7 @@
 		'task.due.changed': CalendarClock,
 		'task.project.changed': ArrowRightLeft,
 		'task.milestone.changed': Flag,
+		'task.parent.changed': CornerDownRight,
 		'task.attachment.added': Paperclip,
 		'task.attachment.removed': Paperclip,
 		'person.created': UserPlus,

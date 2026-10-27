@@ -28,8 +28,9 @@ export const timelineEntrySchema = named(
 
 /**
  * Tasks and projects are addressed by their code (ADR 0010); their ids are
- * internal and a snapshot may carry them (`task.project.changed`). The tag and
- * name beside them say the same thing, so the ids are left out.
+ * internal and a snapshot may carry them (`task.project.changed`, or nested in the
+ * parent of `task.parent.changed`). The tag and name beside them say the same
+ * thing, so the ids are left out, at any depth.
  */
 const INTERNAL_IDS: ReadonlySet<string> = new Set([
 	'taskId',
@@ -39,8 +40,15 @@ const INTERNAL_IDS: ReadonlySet<string> = new Set([
 ]);
 
 function withoutInternalIds(payload: object): Record<string, unknown> {
-	return Object.fromEntries(Object.entries(payload).filter(([key]) => !INTERNAL_IDS.has(key)));
+	return Object.fromEntries(
+		Object.entries(payload)
+			.filter(([key]) => !INTERNAL_IDS.has(key))
+			.map(([key, value]) => [key, isPlainObject(value) ? withoutInternalIds(value) : value])
+	);
 }
+
+const isPlainObject = (value: unknown): value is object =>
+	typeof value === 'object' && value !== null && !Array.isArray(value);
 
 export function entryToWire(entry: TimelineEntry): z.input<typeof timelineEntrySchema> {
 	const name = entry.actorName ?? '';

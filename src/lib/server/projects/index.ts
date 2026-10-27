@@ -91,17 +91,23 @@ export {
 	unassign,
 	setAssignees,
 	setTaskMilestone,
+	setTaskParent,
+	subtasksOf,
 	moveTask
 } from './tasks';
 export type {
 	TaskView,
 	TaskAssigneeView,
+	TaskRef,
+	SubtaskCounts,
 	TaskListRequest,
 	MoveNeighbours,
 	CreateTaskFailure,
 	UpdateTaskFailure,
 	AssignFailure,
-	MoveTaskFailure
+	MoveTaskFailure,
+	ParentFailure,
+	SetTaskParentFailure
 } from './tasks';
 
 export {

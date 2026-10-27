@@ -108,10 +108,14 @@ async function run(
 			if (!opened.ok) {
 				// No default state, or a tag clash with no tag given, cannot come from the
 				// caller's input: they are broken invariants, not something to report as invalid.
+				// Nor can a parent refusal: an escalation creates a top-level task (ADR 0055).
 				if (
 					opened.error === 'state_not_found' ||
 					opened.error === 'duplicate_task_tag' ||
-					opened.error === 'milestone_not_found'
+					opened.error === 'milestone_not_found' ||
+					opened.error === 'parent_not_found' ||
+					opened.error === 'parent_is_subtask' ||
+					opened.error === 'parent_closed'
 				) {
 					throw new Error(`Could not open the escalated task: ${opened.error}.`);
 				}

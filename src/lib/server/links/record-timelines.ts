@@ -1,5 +1,6 @@
 import { listActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
+import { redactWorkEntries } from '../projects';
 import { relatedTo, type RelatedGroup } from './related';
 import { mergeProjectTimeline, mergeTaskTimeline, type AssetTimelineItem } from './timeline';
 
@@ -25,7 +26,8 @@ export async function taskTimeline(
 		known ?? relatedTo(viewer, { kind: 'task', id: taskId })
 	]);
 
-	return mergeTaskTimeline(entries, related);
+	// A subtask's history names its parent, which the viewer may not see (ADR 0055 §9).
+	return mergeTaskTimeline(await redactWorkEntries(viewer, entries), related);
 }
 
 /**

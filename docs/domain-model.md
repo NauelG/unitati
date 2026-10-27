@@ -37,7 +37,7 @@ An **attachment** is a file that belongs to exactly one owner: a ticket **commen
 
 A project is **archived** rather than deleted, and an archived project (with its tasks) is read-only. A task has **assignees** — any number of people — and a project has at most one owner.
 
-A **subtask** is a task with a **parent** task, one level deep and always in the same project ([ADR 0055](adr/0055-subtasks-one-level.md), built by #59). It _is_ a task: its own `TSK-####` from the same sequence, its own card on the board, counted like any other task. A subtask cannot have subtasks. A parent cannot be closed (`completed` or `cancelled`) while a subtask is open, and a closed parent admits no open subtask; nothing cascades. Promoting a subtask (removing its parent) or moving it to another project keeps its code; moving a parent takes its subtasks with it. _Avoid_: child issue, sub-issue, checklist item.
+A **subtask** is a task with a **parent** task, one level deep and always in the same project ([ADR 0055](adr/0055-subtasks-one-level.md)). It _is_ a task: its own `TSK-####` from the same sequence, its own card on the board, counted like any other task. A subtask cannot have subtasks. A parent cannot be closed (`completed` or `cancelled`) while a subtask is open, and a closed parent admits no open subtask; nothing cascades. Promoting a subtask (removing its parent) or moving it to another project keeps its code; moving a parent takes its subtasks with it. _Avoid_: child issue, sub-issue, checklist item.
 
 A **milestone** is a dated checkpoint inside one project ([ADR 0054](adr/0054-milestones.md)): a named **range** (`start_date` to `target_date`, both required, a one-day range allowed) that groups some of the project's tasks. A task is in zero or one milestone, always of its own project, and moving it to another project takes it out of its milestone. Its **status** (`upcoming`, `active`, `overdue`, `completed`) and its progress are derived on read from the dates and from where its tasks sit, never stored: reopening a task can make a completed milestone active again with no write. A milestone with no tasks is never completed. It has no code, no owner and no archive; deleting one detaches its tasks and deletes none. _Avoid_: release, sprint, phase.
 
@@ -83,6 +83,7 @@ erDiagram
     PROJECT ||--o{ MILESTONE : "has"
     PROJECT ||--o{ TASK : "has"
     MILESTONE |o--o{ TASK : "groups"
+    TASK |o--o{ TASK : "parent of"
     TASK }o--o{ PERSON : "assigned to"
     PROJECT }o--o| PERSON : "owned by"
     PROJECT ||--o{ ATTACHMENT : "has"
