@@ -6,6 +6,13 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.5.1] - 2026-10-27
+
+### Fixed
+
+- The milestone dialog no longer overflows horizontally: the start and target date fields shrink to
+  fit and stack on narrow dialogs.
+
 ## [1.5.0] - 2026-10-27
 
 ### Added
