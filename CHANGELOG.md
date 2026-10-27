@@ -6,6 +6,14 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.6.1] - 2026-10-27
+
+### Fixed
+
+- The assets import spec no longer fails at random. It asserted an order between activity entries
+  written in one transaction, which share `occurred_at` and are ordered only by a random id; it now
+  compares them as a set. No change to the app.
+
 ## [1.6.0] - 2026-10-27
 
 ### Added

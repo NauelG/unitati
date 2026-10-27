@@ -57,6 +57,15 @@ const verbsOf = async (assetId: string) =>
 			.orderBy(asc(activity.occurredAt))
 	).map((entry) => entry.verb);
 
+/**
+ * Entries written in one transaction share `occurred_at` to the microsecond, and
+ * the timeline breaks that tie by `id`, a random uuid (`activity/reader.ts`):
+ * their order is stable but carries no meaning. The import writes an asset's
+ * creation, custody and note in one transaction, so its entries are compared as a
+ * set. `verbsOf` stays for entries written by separate calls, whose order is real.
+ */
+const verbSetOf = async (assetId: string) => (await verbsOf(assetId)).sort();
+
 /** The ten-asset scenario of the issue: 2 manufacturers, 1 category, 3 models, 2 locations, 1 person. */
 async function bigScenario() {
 	const scenario = await setup();
@@ -147,24 +156,23 @@ describe('the assets import', () => {
 			)[0];
 
 		const ada = await byName('Ada laptop');
-		expect(await verbsOf(ada.id)).toEqual(['asset.created', 'custody.assigned', 'note.added']);
+		expect(await verbSetOf(ada.id)).toEqual(['asset.created', 'custody.assigned', 'note.added']);
 		expect(ada.state).toBe('in_use');
 		expect(ada.custodianPersonId).not.toBeNull();
 
-		const created = await getDb()
+		const [created] = await getDb()
 			.select()
 			.from(activity)
-			.where(eq(activity.assetId, ada.id))
-			.orderBy(asc(activity.occurredAt));
-		expect(created[0].payload).toEqual({ assetTag: 'AST-0900', name: 'Ada laptop', via: 'import' });
+			.where(and(eq(activity.assetId, ada.id), eq(activity.verb, 'asset.created')));
+		expect(created.payload).toEqual({ assetTag: 'AST-0900', name: 'Ada laptop', via: 'import' });
 
 		const screen = await byName('Screen');
-		expect(await verbsOf(screen.id)).toEqual(['asset.created', 'note.added']);
+		expect(await verbSetOf(screen.id)).toEqual(['asset.created', 'note.added']);
 		expect(screen).toMatchObject({ state: 'in_repair', shared: true });
 		expect(screen.locationId).not.toBeNull();
 
 		const loose = await byName('Loose C');
-		expect(await verbsOf(loose.id)).toEqual(['asset.created', 'custody.assigned']);
+		expect(await verbSetOf(loose.id)).toEqual(['asset.created', 'custody.assigned']);
 		expect(loose.state).toBe('in_use');
 
 		const all = await getDb()
