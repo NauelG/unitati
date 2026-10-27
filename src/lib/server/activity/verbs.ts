@@ -65,6 +65,7 @@ export const ACTIVITY_VERBS = [
 	'task.due.changed',
 	'task.project.changed',
 	'task.milestone.changed',
+	'task.parent.changed',
 	'task.attachment.added',
 	'task.attachment.removed',
 	'person.created',

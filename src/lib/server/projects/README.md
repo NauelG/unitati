@@ -39,13 +39,46 @@ who sees what, activity, search. The routes are #123, #124 and #125.
 - **`moveTaskToProject` is the only function that changes `tasks.project_id`.** It locks both
   projects in one statement ordered by `id` and keeps everything else about the task. Its core,
   `reparentTask` (`reparent.ts`, not exported from `index.ts`), assumes the locks are held and
-  validates nothing, so merging projects (#61) can call it for every task in its own transaction.
+  validates nothing, so merging projects (#61) can call it for every top-level task in its own
+  transaction; subtasks travel with their parent (see Subtasks).
 - **A state's group never changes.** No update input has a `group` key; changing it would rewrite
   what every past move into the state meant. To change group, create another state.
 - **`deleteState` is refused** while a task occupies the state, and when it would leave no state in
   `backlog`, `unstarted` or `started`, because a new task needs somewhere to land.
 - **Names in history are snapshots.** `task.state.changed` stores the state names as they read when
   the move happened, so renaming a state does not rewrite the past.
+
+### Subtasks
+
+A subtask is a task with a `parent_task_id` (ADR 0055): same table, same `TSK-####` sequence, same
+board, same rules. Here _closed_ means a state in group `completed` or `cancelled`, and _open_ every
+other group, `backlog` included (`isClosedGroup`), which is wider than `OPEN_TASK_GROUPS`.
+
+- **Same project, enforced by the database.** `tasks_parent_same_project_fk` is
+  `(project_id, parent_task_id) → tasks (project_id, id)`, the shape of
+  `tasks_milestone_same_project_fk`, hand-edited to `ON DELETE SET NULL ("parent_task_id")`.
+  `tasks_parent_not_self` refuses a task that is its own parent.
+- **One level, enforced by the domain** under the project lock: a subtask cannot be a parent
+  (`parent_is_subtask`), and a task with subtasks cannot become one (`task_has_subtasks`). Parent and
+  child share a project, so that lock serialises every pair of writes that could build depth 2.
+- **`setTaskParent` is the only way to change `parent_task_id` after creation**; `null` promotes.
+  It and the detach step of `moveTaskToProject` share one writer, `writeParent`. `openTask` accepts
+  a parent at creation under the same rules, and the subtask inherits the parent's milestone and
+  nothing else. History hangs off the child only: `task.parent.changed`, or `task.created` with
+  `parent`. Both snapshot the parent's id, code and title; `redactWorkEntries` blanks them for a
+  reader who cannot see the parent (ADR 0042), and `taskTimeline` applies it.
+- **No closed parent over open children.** `moveTask` refuses `open_subtasks` (listing them) when a
+  parent enters a closed group with an open child, and `parent_closed` when a child leaves a closed
+  group under a closed parent; `openTask` and `setTaskParent` refuse an open task under a closed
+  parent. Nothing cascades.
+- **Families move whole.** `moveTaskToProject` detaches a subtask first; on a parent it moves every
+  child too, checking `assignees_not_members` for the whole family. `reparentTask` moves a top-level
+  task and its children in **one `UPDATE`**, because the composite key is checked at the end of each
+  statement and breaks between two; called on a subtask, it throws.
+- **Visibility follows each task.** `TaskView.parent` is `null` when the viewer cannot see the
+  parent; `subtasks` counts visible non-cancelled children (`total`, `completed`) and the hidden ones
+  (`restricted`). `subtasksOf` lists the visible children. Everything that counts tasks counts
+  parents and subtasks alike.
 
 ## Who sees what
 

@@ -15,7 +15,7 @@ import { listActivity } from '#lib/server/activity/index.js';
 import { linkTicketToTask, relatedTo } from '#lib/server/links/index.js';
 import { createQueue, createTicket } from '#lib/server/service-desk/testing/fixtures.js';
 import { getDb } from '#lib/server/db/index.js';
-import { projectMembers, projects } from '#lib/server/projects/schema.js';
+import { projectMembers, projects, tasks } from '#lib/server/projects/schema.js';
 import { actions } from './+page.server';
 
 async function setup() {
@@ -323,5 +323,100 @@ describe('setting the milestone of a task', () => {
 		);
 
 		expect(returned?.status).toBe(400);
+	});
+});
+
+describe('subtasks on the task screen (ADR 0055)', () => {
+	it('adds a subtask in the parent’s project and milestone', async () => {
+		const { technician, organisation, project, task, params } = await setup();
+		const milestone = await createMilestoneRow(organisation.id, project.id, { name: 'Pilot' });
+		await getDb().update(tasks).set({ milestoneId: milestone.id }).where(eq(tasks.id, task.id));
+
+		const { returned } = await outcomeOf(() =>
+			actions.addSubtask(actionEvent(technician, { title: 'Export mailboxes' }, params))
+		);
+
+		expect(returned).toMatchObject({ action: 'addSubtask' });
+		const [child] = await listTasks(technician, { parentTaskId: task.id });
+		expect(child).toMatchObject({
+			title: 'Export mailboxes',
+			projectId: project.id,
+			milestoneName: 'Pilot',
+			parent: { taskTag: task.taskTag }
+		});
+	});
+
+	it('refuses an empty title, and a subtask under a subtask, each with its own message', async () => {
+		const { technician, organisation, project, states, task, params } = await setup();
+		const child = await createTaskRow(organisation.id, project.id, states.unstarted.id, {
+			parentTaskId: task.id
+		});
+
+		const empty = await outcomeOf(() =>
+			actions.addSubtask(actionEvent(technician, { title: ' ' }, params))
+		);
+		expect(empty.returned).toMatchObject({ status: 400, data: { field: 'title' } });
+
+		const nested = await outcomeOf(() =>
+			actions.addSubtask(actionEvent(technician, { title: 'Deep' }, { taskTag: child.taskTag }))
+		);
+		expect(nested.returned).toMatchObject({
+			status: 400,
+			data: { action: 'addSubtask', message: expect.stringContaining('un nivel') }
+		});
+	});
+
+	it('sets and removes the parent, and words each refusal', async () => {
+		const { technician, organisation, project, states, params } = await setup();
+		const parent = await createTaskRow(organisation.id, project.id, states.unstarted.id, {
+			title: 'Parent'
+		});
+		const closed = await createTaskRow(organisation.id, project.id, states.completed.id);
+
+		const set = await outcomeOf(() =>
+			actions.setParent(actionEvent(technician, { parentTaskId: parent.id }, params))
+		);
+		expect(set.returned).toMatchObject({ action: 'setParent' });
+		const nested = await getTask(technician, params.taskTag);
+		expect(nested.ok && nested.value.parent).toEqual({ taskTag: parent.taskTag, title: 'Parent' });
+
+		await actions.setParent(actionEvent(technician, { parentTaskId: '' }, params));
+		const promoted = await getTask(technician, params.taskTag);
+		expect(promoted.ok && promoted.value.parent).toBeNull();
+
+		const refused = await outcomeOf(() =>
+			actions.setParent(actionEvent(technician, { parentTaskId: closed.id }, params))
+		);
+		expect(refused.returned).toMatchObject({
+			status: 400,
+			data: { field: 'parentTaskId', message: expect.stringContaining('cerrada') }
+		});
+	});
+
+	it('refuses closing a parent over an open subtask, naming it', async () => {
+		const { technician, organisation, project, states, task, params } = await setup();
+		const child = await createTaskRow(organisation.id, project.id, states.backlog.id, {
+			parentTaskId: task.id
+		});
+
+		const { returned } = await outcomeOf(() =>
+			actions.changeState(actionEvent(technician, { stateId: states.completed.id }, params))
+		);
+
+		expect(returned).toMatchObject({
+			status: 400,
+			data: { action: 'changeState', message: expect.stringContaining(child.taskTag) }
+		});
+	});
+
+	it('answers 403 to the assigned employee', async () => {
+		const { employee, params } = await setup();
+
+		for (const run of [
+			() => actions.setParent(actionEvent(employee, { parentTaskId: '' }, params)),
+			() => actions.addSubtask(actionEvent(employee, { title: 'Nope' }, params))
+		]) {
+			expect((await outcomeOf(run)).thrown?.status).toBe(403);
+		}
 	});
 });

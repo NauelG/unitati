@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { getLocalTimeZone, today } from '@internationalized/date';
 	import ArrowRightLeft from '@lucide/svelte/icons/arrow-right-left';
+	import CornerDownRight from '@lucide/svelte/icons/corner-down-right';
+	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
@@ -13,6 +15,7 @@
 	import EditableChip from '#lib/components/unitati/EditableChip.svelte';
 	import EditableDetailRow from '#lib/components/unitati/EditableDetailRow.svelte';
 	import EditableText from '#lib/components/unitati/EditableText.svelte';
+	import Field from '#lib/components/unitati/Field.svelte';
 	import MoveTaskDialog from '#lib/components/unitati/MoveTaskDialog.svelte';
 	import { pageHeader } from '#lib/components/unitati/PageHeader.svelte';
 	import PageLayout from '#lib/components/unitati/PageLayout.svelte';
@@ -22,6 +25,7 @@
 	import RelationConstellation from '#lib/components/unitati/RelationConstellation.svelte';
 	import RichTextEditor from '#lib/components/unitati/RichTextEditor.svelte';
 	import { stateGroupBadge } from '#lib/components/unitati/status.js';
+	import StatusBadge from '#lib/components/unitati/StatusBadge.svelte';
 	import TimelineSkeleton from '#lib/components/unitati/TimelineSkeleton.svelte';
 	import TimePanel from '#lib/components/unitati/TimePanel.svelte';
 	import WorkPanel from '#lib/components/unitati/WorkPanel.svelte';
@@ -60,6 +64,10 @@
 	let dueDate = $derived<string | null>(data.task.dueDate);
 	let assigneeIds = $derived(data.task.assignees.map((assignee) => assignee.personId));
 	let milestoneId = $derived<string | null>(data.task.milestoneId);
+	let parentTaskId = $derived<string | null>(
+		data.choices.parents.find((candidate) => candidate.taskTag === data.task.parent?.taskTag)?.id ??
+			null
+	);
 
 	let moveOpen = $state(false);
 
@@ -106,6 +114,32 @@
 			? (task.milestoneName ?? '')
 			: (milestoneOptions.find((option) => option.value === milestoneId)?.label ?? '')
 	);
+
+	const parentOptions = $derived(
+		data.choices.parents.map((candidate) => ({
+			value: candidate.id,
+			label: `${candidate.taskTag} · ${candidate.title}`
+		}))
+	);
+	// Readers get no list: the row shows the task's own parent alone.
+	const parentName = $derived(
+		data.may.setParent
+			? (parentOptions.find((option) => option.value === parentTaskId)?.label ?? '')
+			: task.parent
+				? `${task.parent.taskTag} · ${task.parent.title}`
+				: ''
+	);
+
+	/** Due dates are independent (ADR 0055 §7): a child due after its parent is only flagged. */
+	const dueAfterParent = $derived(
+		dueDate !== null && data.parentDueDate !== null && dueDate > data.parentDueDate
+	);
+	const showSubtasks = $derived(
+		task.parent === null &&
+			(data.subtasks.length > 0 || task.subtasks.restricted > 0 || data.may.addSubtask)
+	);
+	let addingSubtask = $state(false);
+	let subtaskTitle = $state('');
 
 	const styles = pageHeader({ level: 'record' });
 
@@ -222,6 +256,26 @@
 	/>
 {/snippet}
 
+{#snippet parentRow()}
+	<EditableDetailRow
+		kind="select"
+		label={m.task_detail_parent()}
+		value={parentTaskId}
+		display={parentName}
+		options={parentOptions}
+		noneLabel={m.task_parent_none()}
+		placeholder={m.task_parent_none()}
+		action="?/setParent"
+		name="parentTaskId"
+		editable={data.may.setParent}
+		optimistic={mirror(
+			() => parentTaskId,
+			(value) => (parentTaskId = value),
+			(formData) => String(formData.get('parentTaskId') ?? '') || null
+		)}
+	/>
+{/snippet}
+
 {#snippet assigneesRow()}
 	<EditableDetailRow
 		kind="multiselect"
@@ -258,6 +312,19 @@
 
 	<header class={styles.root()}>
 		<div class={[styles.heading(), 'min-w-0 flex-1']}>
+			{#if task.parent}
+				<p class="mb-[var(--space-1)] text-sm text-[var(--ink-muted)]" data-parent-link>
+					<CornerDownRight class="inline size-3.5 align-[-2px]" aria-hidden="true" />
+					{m.task_subtask_of()}
+					<a
+						href="/tasks/{encodeURIComponent(task.parent.taskTag)}"
+						class="text-[var(--ink)] hover:underline"
+					>
+						<span class="font-mono" translate="no">{task.parent.taskTag}</span> · {task.parent
+							.title}
+					</a>
+				</p>
+			{/if}
 			<p
 				class={styles.code()}
 				translate="no"
@@ -406,6 +473,104 @@
 		</WorkPanel>
 	</div>
 
+	{#if showSubtasks}
+		<div class="mt-[var(--space-6)]" data-subtasks-section>
+			<WorkPanel heading={m.task_subtasks_title()}>
+				{#snippet actions()}
+					{#if data.may.addSubtask && !addingSubtask}
+						<Button size="sm" variant="secondary" onclick={() => (addingSubtask = true)}>
+							{m.task_subtasks_add()}
+						</Button>
+					{/if}
+				{/snippet}
+
+				{#if task.subtasks.total > 0}
+					<p class="m-0 mb-[var(--space-2)] text-sm text-[var(--ink-muted)]">
+						{m.task_subtasks_progress({
+							completed: task.subtasks.completed,
+							total: task.subtasks.total
+						})}
+					</p>
+				{/if}
+
+				{#if data.subtasks.length === 0 && task.subtasks.restricted === 0}
+					<p class="m-0 text-sm text-[var(--ink-muted)]">{m.task_subtasks_empty()}</p>
+				{:else}
+					<ul class="m-0 list-none divide-y divide-[var(--border)] p-0">
+						{#each data.subtasks as subtask (subtask.taskTag)}
+							<li
+								class="flex flex-wrap items-center gap-x-[var(--space-3)] gap-y-[var(--space-1)] py-[var(--space-2)] text-sm"
+								data-subtask={subtask.taskTag}
+							>
+								<a
+									href="/tasks/{encodeURIComponent(subtask.taskTag)}"
+									class="min-w-0 flex-1 text-[var(--ink)] hover:underline"
+								>
+									<span class="font-mono text-xs text-[var(--ink-muted)]" translate="no"
+										>{subtask.taskTag}</span
+									>
+									{subtask.title}
+								</a>
+								<StatusBadge status={subtask.stateGroup} label={subtask.stateName} />
+								<span class="text-[var(--ink-muted)]">
+									{subtask.assignees.length > 0
+										? subtask.assignees.map((assignee) => assignee.fullName).join(', ')
+										: m.task_detail_unassigned()}
+								</span>
+								{#if subtask.dueDate}
+									<span class="text-[var(--ink-muted)] tabular-nums">
+										{formatDay(subtask.dueDate)}
+										{#if dueDate && subtask.dueDate > dueDate}
+											<TriangleAlert
+												class="inline size-3.5 align-[-2px] text-[var(--warning)]"
+												aria-label={m.task_subtasks_due_after()}
+											/>
+										{/if}
+									</span>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+					{#if task.subtasks.restricted > 0}
+						<p class="m-0 mt-[var(--space-2)] text-sm text-[var(--ink-muted)]">
+							{m.task_subtasks_restricted({ count: task.subtasks.restricted })}
+						</p>
+					{/if}
+				{/if}
+
+				{#if addingSubtask}
+					<form
+						method="POST"
+						action="?/addSubtask"
+						class="mt-[var(--space-3)] flex flex-wrap items-end gap-[var(--space-2)]"
+						use:enhance={() => {
+							return async ({ result, update }) => {
+								await update({ reset: false });
+								if (result.type === 'success') {
+									subtaskTitle = '';
+									addingSubtask = false;
+								}
+							};
+						}}
+					>
+						<Field
+							class="flex-1"
+							name="title"
+							label={m.task_subtasks_new_title()}
+							bind:value={subtaskTitle}
+							error={failureFor('addSubtask')}
+							required
+						/>
+						<Button type="submit" size="sm">{m.task_subtasks_add()}</Button>
+						<Button type="button" size="sm" variant="ghost" onclick={() => (addingSubtask = false)}>
+							{m.form_cancel()}
+						</Button>
+					</form>
+				{/if}
+			</WorkPanel>
+		</div>
+	{/if}
+
 	<div class="mt-[var(--space-6)]">
 		<RecordAttachments
 			items={data.attachments}
@@ -431,17 +596,31 @@
 			<DescriptionList
 				items={[
 					{ label: m.task_detail_project(), value: projectLink },
+					...(task.parent || data.may.setParent
+						? [{ label: m.task_detail_parent(), value: parentRow }]
+						: []),
 					{ label: m.task_detail_milestone(), value: milestoneRow },
 					{ label: m.task_detail_due(), value: dueRow },
 					{ label: m.task_detail_assignees(), value: assigneesRow }
 				]}
 			/>
+			{#if dueAfterParent && data.parentDueDate}
+				<p
+					class="m-0 mt-[var(--space-2)] flex items-start gap-[var(--space-1)] text-sm text-[var(--ink-muted)]"
+					role="note"
+					data-due-after-parent
+				>
+					<TriangleAlert class="mt-0.5 size-4 shrink-0 text-[var(--warning)]" aria-hidden="true" />
+					{m.task_due_after_parent({ date: formatDay(data.parentDueDate) })}
+				</p>
+			{/if}
 		</WorkPanel>
 
 		{#if data.time}
 			<TimePanel
 				entries={data.time.entries}
 				totalMinutes={data.time.totalMinutes}
+				withSubtasksMinutes={data.timeWithSubtasks}
 				types={data.time.types}
 				canLog={data.time.canLog}
 				today={data.time.today}

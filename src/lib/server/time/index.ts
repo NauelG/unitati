@@ -39,8 +39,8 @@ export type {
 	TimeTarget
 } from './entries';
 
-export { projectTime } from './totals';
-export type { ProjectTime } from './totals';
+export { projectTime, taskTime } from './totals';
+export type { ProjectTime, TaskTime } from './totals';
 
 export {
 	startTimer,

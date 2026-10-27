@@ -38,6 +38,11 @@
 	interface Props {
 		entries: TimeEntryRow[];
 		totalMinutes: number;
+		/**
+		 * A parent task's minutes plus its subtasks' (ADR 0055): shown beside its
+		 * own, never summed into them. Omitted where there are no subtasks.
+		 */
+		withSubtasksMinutes?: number | null;
 		/** The types an entry may be put on: the organisation's active ones. */
 		types: { id: string; name: string; isDefault: boolean }[];
 		/** Whether the viewer may log time here (record state applied, ADR 0050). */
@@ -54,7 +59,16 @@
 		timer?: { startedAt: string; here: boolean; tag: string; href: string } | null;
 	}
 
-	let { entries, totalMinutes, types, canLog, today, error = null, timer = null }: Props = $props();
+	let {
+		entries,
+		totalMinutes,
+		withSubtasksMinutes = null,
+		types,
+		canLog,
+		today,
+		error = null,
+		timer = null
+	}: Props = $props();
 
 	/** The form is the timer's stop (prefilled, saved or cancelled) rather than a plain entry. */
 	let stopping = $state(false);
@@ -144,10 +158,18 @@
 	{/if}
 
 	<p class="m-0 text-sm text-[var(--ink-muted)]" data-testid="time-total">
-		{m.time_panel_total({
-			duration: formatMinutes(totalMinutes),
-			hours: decimalHours(totalMinutes)
-		})}
+		{#if withSubtasksMinutes === null}
+			{m.time_panel_total({
+				duration: formatMinutes(totalMinutes),
+				hours: decimalHours(totalMinutes)
+			})}
+		{:else}
+			{m.time_panel_total_with_subtasks({
+				own: formatMinutes(totalMinutes),
+				all: formatMinutes(withSubtasksMinutes),
+				hours: decimalHours(withSubtasksMinutes)
+			})}
+		{/if}
 	</p>
 
 	{#if entries.length === 0}

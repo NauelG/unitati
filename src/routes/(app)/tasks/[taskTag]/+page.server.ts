@@ -10,6 +10,8 @@ import { taskScreen } from '#lib/server/screens/index.js';
 import {
 	addTaskAttachments,
 	addTaskComment,
+	createTask,
+	createTaskInput,
 	fieldsOf,
 	firstField,
 	orNull,
@@ -23,14 +25,16 @@ import {
 	requireProjectWrite,
 	setAssignees,
 	setTaskMilestone,
+	setTaskParent,
 	updateTask,
 	updateTaskInput,
 	type AssignFailure,
-	type MoveTaskFailure,
+	type CreateTaskFailure,
 	type MoveTaskToProjectFailure,
 	type UpdateTaskFailure
 } from '#lib/server/projects/index.js';
 import { followActions } from '../../follow-actions';
+import { moveRefusal, parentRefusals } from '../../task-refusals';
 import { timeActions } from '../../time-actions';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -78,12 +82,6 @@ const updateInvalid: Record<(typeof UPDATE_KEYS)[number], () => string> = {
 	taskTag: m.task_error_tag_invalid
 };
 
-const moveFailures: Record<Exclude<MoveTaskFailure, 'task_not_found'>, () => string> = {
-	project_archived: m.project_error_archived,
-	state_not_found: m.task_error_state_missing,
-	invalid_neighbours: m.action_error_invalid
-};
-
 const moveToProjectFailures: Record<
 	Exclude<MoveTaskToProjectFailure, 'task_not_found' | { kind: string }>,
 	() => string
@@ -91,6 +89,17 @@ const moveToProjectFailures: Record<
 	project_archived: m.project_error_archived,
 	same_project: m.task_error_same_project,
 	project_not_found: m.task_error_project_missing
+};
+
+const addSubtaskFailures: Record<Exclude<CreateTaskFailure, 'project_not_found'>, () => string> = {
+	project_archived: m.project_error_archived,
+	parent_not_found: parentRefusals.parent_not_found,
+	parent_is_subtask: parentRefusals.parent_is_subtask,
+	parent_closed: parentRefusals.parent_closed,
+	// None of these comes from a title: the state is the default, no milestone or tag is posted.
+	state_not_found: m.task_error_state_missing,
+	milestone_not_found: m.milestone_error_missing,
+	duplicate_task_tag: m.task_error_tag_duplicate
 };
 
 const assignFailures: Record<Exclude<AssignFailure, 'task_not_found'>, () => string> = {
@@ -149,7 +158,7 @@ export const actions: Actions = {
 		const outcome = await moveTask(user, task.id, stateId.data);
 		if (!outcome.ok) {
 			if (outcome.error === 'task_not_found') error(404, 'Not found');
-			return rejected('changeState', moveFailures[outcome.error](), 'stateId');
+			return rejected('changeState', moveRefusal(outcome.error), 'stateId');
 		}
 
 		return { action: 'changeState' as const };
@@ -180,6 +189,47 @@ export const actions: Actions = {
 		}
 
 		return { action: 'setMilestone' as const };
+	},
+
+	// Empty is "no parent": the subtask becomes a top-level task (ADR 0055).
+	setParent: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const posted = orNull((await fieldsOf(request)).get('parentTaskId'));
+
+		const parentTaskId = posted === null ? null : z.uuid().safeParse(posted);
+		if (parentTaskId !== null && !parentTaskId.success) {
+			return rejected('setParent', m.action_error_invalid(), 'parentTaskId');
+		}
+
+		const task = await targetOf(user, params.taskTag);
+		const outcome = await setTaskParent(user, task.id, parentTaskId?.data ?? null);
+		if (!outcome.ok) {
+			if (outcome.error === 'task_not_found') error(404, 'Not found');
+			return rejected('setParent', parentRefusals[outcome.error](), 'parentTaskId');
+		}
+
+		return { action: 'setParent' as const };
+	},
+
+	// In the parent's project, under it, so in its milestone too; at the end of
+	// the first open state's column, like any new task.
+	addSubtask: async ({ request, locals, params }) => {
+		const user = requireProjectWrite(locals.user);
+		const task = await targetOf(user, params.taskTag);
+
+		const parsed = createTaskInput.safeParse({
+			title: (await fieldsOf(request)).get('title'),
+			parentTaskId: task.id
+		});
+		if (!parsed.success) return rejected('addSubtask', m.task_error_title_required(), 'title');
+
+		const outcome = await createTask(user, task.projectId, parsed.data);
+		if (!outcome.ok) {
+			if (outcome.error === 'project_not_found') error(404, 'Not found');
+			return rejected('addSubtask', addSubtaskFailures[outcome.error](), 'title');
+		}
+
+		return { action: 'addSubtask' as const, taskTag: outcome.value.taskTag };
 	},
 
 	moveToProject: async ({ request, locals, params }) => {

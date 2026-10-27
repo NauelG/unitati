@@ -9,6 +9,14 @@ function priorityWord(priority: Priority): string {
 	return priority === 'normal' ? m.priority_normal() : statusLabel(priority);
 }
 
+/**
+ * A subtask's parent by its code as it read at the change (a code is editable,
+ * ADR 0010), or a restricted task when the reader cannot see it (ADR 0042).
+ */
+function parentName(parent: { taskTag: string }): string {
+	return parent.taskTag === '' ? m.activity_task_restricted() : parent.taskTag;
+}
+
 function projectVisibilityLabel(visibility: 'organisation' | 'members'): string {
 	return visibility === 'members'
 		? m.activity_project_visibility_members()
@@ -318,7 +326,15 @@ export function activitySentence(entry: ActivityEntry): string {
 			return m.activity_task_attachment_removed({ filename: entry.payload.filename });
 
 		case 'task.created':
-			return m.activity_task_created();
+			return entry.payload.parent
+				? m.activity_task_created_as_subtask({ parent: parentName(entry.payload.parent) })
+				: m.activity_task_created();
+
+		case 'task.parent.changed':
+			return m.activity_task_parent_changed({
+				from: entry.payload.from ? parentName(entry.payload.from) : m.activity_parent_none(),
+				to: entry.payload.to ? parentName(entry.payload.to) : m.activity_parent_none()
+			});
 
 		case 'task.state.changed':
 			// The names are the snapshot taken at the move, not today's catalogue.

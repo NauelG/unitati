@@ -73,6 +73,15 @@ export const createTaskInput = z.object({
 		.uuid()
 		.nullish()
 		.transform((value) => value ?? undefined),
+	/**
+	 * Omitted or null: a top-level task. A task of the same project with no parent
+	 * of its own (ADR 0055). The subtask takes the parent's milestone, whatever
+	 * `milestoneId` says.
+	 */
+	parentTaskId: z
+		.uuid()
+		.nullish()
+		.transform((value) => value ?? undefined),
 	taskTag: tagOf(RESERVED_TASK_TAGS).optional()
 });
 

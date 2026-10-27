@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, or, sql } from 'drizzle-orm';
 import { can } from '../access/permissions';
 import type { SessionUser } from '../auth/guards';
 import { getDb } from '../db';
@@ -45,4 +45,46 @@ export async function projectTime(
 
 	const byType = rows.map(({ archivedAt, ...row }) => ({ ...row, archived: archivedAt !== null }));
 	return { totalMinutes: byType.reduce((sum, row) => sum + row.minutes, 0), byType };
+}
+
+/**
+ * A task's time, in two figures, never one (ADR 0055 §10): its own entries, and
+ * those plus its subtasks'. Cancelled subtasks count, because that time was
+ * spent. Computed on read; `projectTime` and the CSV stay one row per entry, so
+ * nothing is counted twice there.
+ *
+ * `tasks.parent_task_id` is read through `projects/schema.ts`, as `projectTime`
+ * reads `tasks.project_id`. **The caller has already resolved the task in the
+ * viewer's scope** (ADR 0052 §4). Every viewer who gets an answer holds
+ * `time.log` and sees the whole project, so the sum never includes hours of a
+ * subtask they could not see.
+ */
+export interface TaskTime {
+	ownMinutes: number;
+	withSubtasksMinutes: number;
+}
+
+/** `null` while tracking is off or for anybody without `time.log`, as `listEntriesFor`. */
+export async function taskTime(viewer: SessionUser, taskId: string): Promise<TaskTime | null> {
+	if (!can(viewer, 'time.log')) return null;
+	if (!(await isTimeTrackingEnabled(viewer.organisationId))) return null;
+
+	const [row] = await getDb()
+		.select({
+			ownMinutes: sql<number>`coalesce(sum(${timeEntries.minutes}) filter (where ${timeEntries.taskId} = ${taskId}), 0)::int`,
+			withSubtasksMinutes: sql<number>`coalesce(sum(${timeEntries.minutes}), 0)::int`
+		})
+		.from(timeEntries)
+		.innerJoin(tasks, eq(tasks.id, timeEntries.taskId))
+		.where(
+			and(
+				eq(timeEntries.organisationId, viewer.organisationId),
+				or(eq(tasks.id, taskId), eq(tasks.parentTaskId, taskId))
+			)
+		);
+
+	return {
+		ownMinutes: row?.ownMinutes ?? 0,
+		withSubtasksMinutes: row?.withSubtasksMinutes ?? 0
+	};
 }

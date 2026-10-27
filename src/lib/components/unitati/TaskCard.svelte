@@ -1,6 +1,8 @@
 <script lang="ts">
+	import CornerDownRight from '@lucide/svelte/icons/corner-down-right';
 	import Ellipsis from '@lucide/svelte/icons/ellipsis';
 	import Flag from '@lucide/svelte/icons/flag';
+	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import Avatar from './Avatar.svelte';
 	import type { BoardTask } from './board.js';
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
@@ -25,6 +27,10 @@
 
 	const shown = $derived(task.assignees.slice(0, VISIBLE_ASSIGNEES));
 	const hidden = $derived(task.assignees.length - shown.length);
+	/** Shown on a parent: a count of its children, never the children themselves (ADR 0055 §13). */
+	const subtasks = $derived(
+		task.subtasks && task.subtasks.total + task.subtasks.restricted > 0 ? task.subtasks : null
+	);
 </script>
 
 <div
@@ -64,6 +70,46 @@
 	>
 		{task.title}
 	</a>
+
+	{#if task.parent || subtasks}
+		<span class="flex flex-wrap items-center gap-[var(--space-2)] text-xs text-[var(--ink-muted)]">
+			{#if task.parent}
+				<a
+					href="/tasks/{encodeURIComponent(task.parent.taskTag)}"
+					class="inline-flex items-center gap-[var(--space-1)] font-mono hover:text-[var(--ink)]"
+					aria-label={m.board_card_parent({ tag: task.parent.taskTag })}
+					data-parent-chip
+				>
+					<CornerDownRight class="size-3 shrink-0" aria-hidden="true" />
+					{task.parent.taskTag}
+				</a>
+			{/if}
+			{#if subtasks}
+				<span
+					class="inline-flex items-center gap-[var(--space-1)] tabular-nums"
+					title={m.board_card_subtasks({ completed: subtasks.completed, total: subtasks.total })}
+					data-subtasks
+				>
+					<ListChecks class="size-3 shrink-0" aria-hidden="true" />
+					<span class="sr-only"
+						>{m.board_card_subtasks({ completed: subtasks.completed, total: subtasks.total })}</span
+					>
+					<span aria-hidden="true">{subtasks.completed}/{subtasks.total}</span>
+					{#if subtasks.restricted > 0}
+						<span
+							title={m.board_card_subtasks_restricted({ count: subtasks.restricted })}
+							data-subtasks-restricted
+						>
+							<span class="sr-only"
+								>{m.board_card_subtasks_restricted({ count: subtasks.restricted })}</span
+							>
+							<span aria-hidden="true">+{subtasks.restricted}</span>
+						</span>
+					{/if}
+				</span>
+			{/if}
+		</span>
+	{/if}
 
 	{#if task.milestoneName}
 		<span class="flex items-center gap-[var(--space-1)] text-xs text-[var(--ink-muted)]">

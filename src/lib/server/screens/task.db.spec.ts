@@ -4,7 +4,7 @@ import { createOrganisation, createViewer } from '../assets/testing/fixtures';
 import { getDb } from '../db';
 import { linkTicketToTask } from '../links';
 import { archiveProject } from '../projects';
-import { projectMembers, projects } from '../projects/schema';
+import { projectMembers, projects, tasks } from '../projects/schema';
 import {
 	assignRow,
 	createMilestoneRow,
@@ -14,6 +14,7 @@ import {
 	statesByGroup
 } from '../projects/testing/fixtures';
 import { createQueue, createTicket } from '../service-desk/testing/fixtures';
+import { logTime, setTimeTracking } from '../time';
 import { taskScreen } from './task';
 
 async function setup() {
@@ -37,6 +38,8 @@ const NO_ACTS = {
 	changeState: false,
 	assign: false,
 	setMilestone: false,
+	setParent: false,
+	addSubtask: false,
 	moveToProject: false,
 	comment: false,
 	attach: false,
@@ -54,6 +57,8 @@ describe('the task screen, per role', () => {
 			changeState: true,
 			assign: true,
 			setMilestone: true,
+			setParent: true,
+			addSubtask: true,
 			moveToProject: true,
 			comment: true,
 			attach: true,
@@ -78,7 +83,13 @@ describe('the task screen, per role', () => {
 		const screen = await screenOf(employee, task.taskTag);
 
 		expect(screen.may).toEqual(NO_ACTS);
-		expect(screen.choices).toEqual({ states: [], people: [], projects: [], milestones: [] });
+		expect(screen.choices).toEqual({
+			states: [],
+			people: [],
+			projects: [],
+			milestones: [],
+			parents: []
+		});
 		expect(screen.task.taskTag).toBe(task.taskTag);
 	});
 
@@ -111,7 +122,13 @@ describe('the task screen, on an archived project', () => {
 		const screen = await screenOf(technician, task.taskTag);
 
 		expect(screen.may).toEqual({ ...NO_ACTS, unlinkTicket: true });
-		expect(screen.choices).toEqual({ states: [], people: [], projects: [], milestones: [] });
+		expect(screen.choices).toEqual({
+			states: [],
+			people: [],
+			projects: [],
+			milestones: [],
+			parents: []
+		});
 	});
 });
 
@@ -185,5 +202,73 @@ describe('the task screen, milestones', () => {
 		const screen = await screenOf(technician, task.taskTag);
 
 		expect(screen.choices.milestones.map((entry) => entry.name)).toEqual(['Pilot']);
+	});
+});
+
+describe('the task screen, subtasks (ADR 0055)', () => {
+	it('lists a parent’s subtasks, offers adding one, and shows time with subtasks', async () => {
+		const { technician, admin, project, organisation, states, task } = await setup();
+		const child = await createTaskRow(organisation.id, project.id, states.started.id, {
+			title: 'Child',
+			parentTaskId: task.id,
+			dueDate: '2026-12-01'
+		});
+		await setTimeTracking(admin, true);
+		const clock = { now: new Date('2026-10-25T12:00:00Z') };
+		const when = { workDate: '2026-10-20' };
+		await logTime(technician, { taskId: task.id }, { minutes: 30, ...when }, clock);
+		await logTime(technician, { taskId: child.id }, { minutes: 60, ...when }, clock);
+
+		const screen = await screenOf(technician, task.taskTag);
+
+		expect(screen.subtasks).toEqual([
+			{
+				taskTag: child.taskTag,
+				title: 'Child',
+				stateName: states.started.name,
+				stateGroup: 'started',
+				assignees: [],
+				dueDate: '2026-12-01'
+			}
+		]);
+		expect(screen.may).toMatchObject({ addSubtask: true, setParent: false });
+		expect(screen.time?.totalMinutes).toBe(30);
+		expect(screen.timeWithSubtasks).toBe(90);
+	});
+
+	it('gives a subtask its parent’s due date, no Add subtask, and the eligible parents', async () => {
+		const { technician, project, organisation, states, task } = await setup();
+		await getDb().update(tasks).set({ dueDate: '2026-11-15' }).where(eq(tasks.id, task.id));
+		const child = await createTaskRow(organisation.id, project.id, states.unstarted.id, {
+			title: 'Child',
+			parentTaskId: task.id
+		});
+		const other = await createTaskRow(organisation.id, project.id, states.unstarted.id, {
+			title: 'Other'
+		});
+		await createTaskRow(organisation.id, project.id, states.completed.id, { title: 'Closed' });
+		await createTaskRow(organisation.id, project.id, states.unstarted.id, {
+			title: 'Sibling',
+			parentTaskId: other.id
+		});
+
+		const screen = await screenOf(technician, child.taskTag);
+
+		expect(screen.parentDueDate).toBe('2026-11-15');
+		expect(screen.may).toMatchObject({ addSubtask: false, setParent: true });
+		expect(screen.choices.parents.map((entry) => entry.title).sort()).toEqual([
+			'Other',
+			'Pack the boxes'
+		]);
+		expect(screen.timeWithSubtasks).toBeNull();
+	});
+
+	it('offers no Add subtask on a closed task, which admits no open subtask', async () => {
+		const { technician, states, task } = await setup();
+		await getDb().update(tasks).set({ stateId: states.completed.id }).where(eq(tasks.id, task.id));
+
+		const screen = await screenOf(technician, task.taskTag);
+
+		expect(screen.may).toMatchObject({ addSubtask: false, setParent: true });
 	});
 });

@@ -169,6 +169,12 @@ export const tasks = pgTable(
 		position: numeric('position').notNull(),
 		/** 0 or 1 milestone, of the task's own project: see `tasks_milestone_same_project_fk`. */
 		milestoneId: uuid('milestone_id'),
+		/**
+		 * The task this one is a subtask of, of the same project (ADR 0055): see
+		 * `tasks_parent_same_project_fk`. One level only, which the domain enforces
+		 * under the project lock; `setTaskParent` is the only writer after creation.
+		 */
+		parentTaskId: uuid('parent_task_id'),
 		search: tsvector('search')
 			.notNull()
 			.generatedAlwaysAs((): SQL =>
@@ -194,7 +200,26 @@ export const tasks = pgTable(
 			name: 'tasks_milestone_same_project_fk',
 			columns: [table.projectId, table.milestoneId],
 			foreignColumns: [milestones.projectId, milestones.id]
-		}).onDelete('set null')
+		}).onDelete('set null'),
+		/** The target of `tasks_parent_same_project_fk`. */
+		unique('tasks_project_id_unique').on(table.projectId, table.id),
+		/**
+		 * A parent of the task's own project (ADR 0055), the shape of
+		 * `tasks_milestone_same_project_fk` and **hand-edited the same way** to
+		 * `ON DELETE SET NULL ("parent_task_id")`. `MATCH SIMPLE`: a task without a
+		 * parent is not checked. Checked at the end of each statement, so a family
+		 * changes project in one `UPDATE` (`reparentTask`).
+		 */
+		foreignKey({
+			name: 'tasks_parent_same_project_fk',
+			columns: [table.projectId, table.parentTaskId],
+			foreignColumns: [table.projectId, table.id]
+		}).onDelete('set null'),
+		check(
+			'tasks_parent_not_self',
+			sql`${table.parentTaskId} is null or ${table.parentTaskId} <> ${table.id}`
+		),
+		index('tasks_parent_idx').on(table.parentTaskId)
 	]
 );
 

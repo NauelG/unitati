@@ -558,4 +558,33 @@ describe('milestone entries', () => {
 			})
 		).toBe('Cambió el hito de ninguno a Piloto');
 	});
+
+	it('names a subtask’s parent by its code, with none at either end (ADR 0055)', () => {
+		const parent = { taskId: id, taskTag: 'TSK-0041', title: 'Migrar el correo' };
+		expect(
+			activitySentence({ verb: 'task.parent.changed', payload: { from: null, to: parent } })
+		).toBe('Cambió la tarea principal de ninguna a TSK-0041');
+		expect(
+			activitySentence({ verb: 'task.parent.changed', payload: { from: parent, to: null } })
+		).toBe('Cambió la tarea principal de TSK-0041 a ninguna');
+		expect(
+			activitySentence({
+				verb: 'task.created',
+				payload: { taskTag: 'TSK-0042', title: 'Exportar buzones', parent }
+			})
+		).toBe('Creó la tarea como subtarea de TSK-0041');
+	});
+
+	it('words a parent the reader cannot see as a restricted task', () => {
+		const hidden = { taskId: '', taskTag: '', title: '' };
+		expect(
+			activitySentence({ verb: 'task.parent.changed', payload: { from: null, to: hidden } })
+		).toBe('Cambió la tarea principal de ninguna a una tarea restringida');
+		expect(
+			activitySentence({
+				verb: 'task.created',
+				payload: { taskTag: 'TSK-0042', title: 'Exportar buzones', parent: hidden }
+			})
+		).toBe('Creó la tarea como subtarea de una tarea restringida');
+	});
 });

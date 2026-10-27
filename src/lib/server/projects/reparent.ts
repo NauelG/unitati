@@ -1,4 +1,4 @@
-import { and, asc, eq, notInArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { getDb, type Transaction } from '../db';
@@ -7,7 +7,7 @@ import { failure, success, type Outcome } from '../shared/outcome';
 import { placeBetween } from '../shared/position';
 import { milestones, projectMembers, projects, taskAssignees, tasks, type Task } from './schema';
 import { requireManage } from './scope';
-import { columnOf } from './tasks';
+import { columnOf, writeParent } from './tasks';
 import { lockProjects } from './writes';
 
 /**
@@ -24,16 +24,23 @@ export type MoveTaskToProjectFailure =
 	| { kind: 'assignees_not_members'; people: { personId: string; fullName: string }[] };
 
 /**
- * Puts `task` in `target`, at the end of its state's column there, and records
- * `task.project.changed`. Everything else about the task stays: tag, id, state,
- * due date, assignees, history.
+ * Puts `task` **and its subtasks** in `target`, each at the end of its state's
+ * column there, and records `task.project.changed` on each. Everything else about
+ * them stays: tag, id, state, due date, assignees, history, and the family itself.
  *
  * **Assumes the locks are held**: both the task's current project and `target`
  * (`lockProjects`), and that neither is archived nor the same as the other. It
- * validates nothing, which is what lets #61 call it for every task of a project
- * being merged, inside its own transaction. It also clears `milestone_id`: a
- * milestone belongs to one project (ADR 0054). Not exported from the domain's
- * `index.ts`.
+ * validates nothing, which is what lets #61 call it for every top-level task of
+ * a project being merged, inside its own transaction: the children travel with
+ * their parent. It also clears `milestone_id`: a milestone belongs to one project
+ * (ADR 0054). Not exported from the domain's `index.ts`.
+ *
+ * The family changes project in **one `UPDATE`** (ADR 0055 §8): the composite key
+ * `tasks_parent_same_project_fk` is checked at the end of each statement, and
+ * moving a parent and its children one statement at a time would break it in
+ * between, whichever goes first. A subtask is never moved on its own: it is
+ * detached first (`moveTaskToProject`) or travels with its parent, so calling
+ * this on one is a programming error.
  */
 export async function reparentTask(
 	tx: Transaction,
@@ -41,80 +48,127 @@ export async function reparentTask(
 	task: Task,
 	target: typeof projects.$inferSelect
 ): Promise<void> {
+	if (task.parentTaskId !== null) {
+		throw new Error(`Task ${task.taskTag} is a subtask: detach it or move its parent.`);
+	}
+
 	const [source] = await tx
 		.select({ id: projects.id, projectTag: projects.projectTag, name: projects.name })
 		.from(projects)
 		.where(eq(projects.id, task.projectId));
 
-	const column = await columnOf(tx, target.id, task.stateId);
-	const placed = placeBetween(column.at(-1)?.position ?? null, null);
-	// Nothing follows the last task, so the end of a column never needs a renumber.
-	if (!('position' in placed)) throw new Error('Appending to a column cannot renumber it.');
+	const children = await tx
+		.select()
+		.from(tasks)
+		.where(eq(tasks.parentTaskId, task.id))
+		.orderBy(asc(tasks.position), asc(tasks.id));
+	const family = [task, ...children];
+
+	// Each one at the end of its own column in the target, in family order.
+	const ends = new Map<string, number | null>();
+	const positions = new Map<string, number>();
+	for (const member of family) {
+		if (!ends.has(member.stateId)) {
+			const column = await columnOf(tx, target.id, member.stateId);
+			ends.set(member.stateId, column.at(-1)?.position ?? null);
+		}
+		const placed = placeBetween(ends.get(member.stateId) ?? null, null);
+		// Nothing follows the last task, so the end of a column never needs a renumber.
+		if (!('position' in placed)) throw new Error('Appending to a column cannot renumber it.');
+		ends.set(member.stateId, placed.position);
+		positions.set(member.id, placed.position);
+	}
 
 	// A milestone belongs to one project, so it cannot follow the task: the same
 	// UPDATE clears it, or the composite foreign key would reject the move.
-	const [milestone] = task.milestoneId
-		? await tx
-				.select({ id: milestones.id, name: milestones.name })
-				.from(milestones)
-				.where(eq(milestones.id, task.milestoneId))
-		: [];
+	const milestoneIds = family.flatMap((member) => (member.milestoneId ? [member.milestoneId] : []));
+	const left =
+		milestoneIds.length === 0
+			? []
+			: await tx
+					.select({ id: milestones.id, name: milestones.name })
+					.from(milestones)
+					.where(inArray(milestones.id, milestoneIds));
 
+	const ids = family.map((member) => member.id);
 	await tx
 		.update(tasks)
 		.set({
 			projectId: target.id,
 			milestoneId: null,
-			position: String(placed.position),
+			position: sql`(case ${sql.join(
+				family.map(
+					(member) =>
+						sql`when ${tasks.id} = ${member.id} then ${String(positions.get(member.id))}::numeric`
+				),
+				sql` `
+			)} end)`,
 			updatedAt: new Date()
 		})
-		.where(eq(tasks.id, task.id));
+		.where(inArray(tasks.id, ids));
 
-	await recordActivity(tx, {
-		organisationId: actor.organisationId,
-		...actorColumns(actor),
-		target: { taskId: task.id },
-		verb: 'task.project.changed',
-		payload: {
-			fromProjectId: source.id,
-			fromProjectTag: source.projectTag,
-			fromProjectName: source.name,
-			toProjectId: target.id,
-			toProjectTag: target.projectTag,
-			toProjectName: target.name
-		}
-	});
-
-	if (milestone) {
+	for (const member of family) {
 		await recordActivity(tx, {
 			organisationId: actor.organisationId,
 			...actorColumns(actor),
-			target: { taskId: task.id },
-			verb: 'task.milestone.changed',
-			payload: { from: milestone, to: null }
+			target: { taskId: member.id },
+			verb: 'task.project.changed',
+			payload: {
+				fromProjectId: source.id,
+				fromProjectTag: source.projectTag,
+				fromProjectName: source.name,
+				toProjectId: target.id,
+				toProjectTag: target.projectTag,
+				toProjectName: target.name
+			}
 		});
+
+		const milestone = left.find((entry) => entry.id === member.milestoneId);
+		if (milestone) {
+			await recordActivity(tx, {
+				organisationId: actor.organisationId,
+				...actorColumns(actor),
+				target: { taskId: member.id },
+				verb: 'task.milestone.changed',
+				payload: { from: milestone, to: null }
+			});
+		}
 	}
 }
 
 /**
- * The assignees of a task who are not members of `target`, when it is members-only
- * (ADR 0042: an assignment never widens access, and neither does a move). Empty
- * for an open project, which anybody may be assigned in.
+ * Takes a subtask out from under its parent, through the one writer of
+ * `parent_task_id` (`writeParent`), which records `task.parent.changed` on it:
+ * the first half of moving one to another project, since a parent and its
+ * children always share a project (ADR 0055 §8). Assumes the project lock is held.
+ */
+async function detachSubtask(tx: Transaction, actor: SessionUser, task: Task): Promise<Task> {
+	if (task.parentTaskId === null) return task;
+
+	await writeParent(tx, actor, task, null);
+	return { ...task, parentTaskId: null };
+}
+
+/**
+ * The assignees of the tasks who are not members of `target`, when it is
+ * members-only (ADR 0042: an assignment never widens access, and neither does a
+ * move), each person once. Empty for an open project, which anybody may be
+ * assigned in. A family moves whole, so its caller passes every task of it.
  */
 export async function assigneesOutside(
 	tx: Transaction,
-	taskId: string,
+	taskIds: readonly string[],
 	target: Pick<typeof projects.$inferSelect, 'id' | 'visibility'>
 ): Promise<{ personId: string; fullName: string }[]> {
 	if (target.visibility === 'organisation') return [];
 
 	return tx
-		.select({ personId: people.id, fullName: people.fullName })
+		.selectDistinct({ personId: people.id, fullName: people.fullName })
 		.from(taskAssignees)
 		.innerJoin(people, eq(taskAssignees.personId, people.id))
 		.where(
 			and(
-				eq(taskAssignees.taskId, taskId),
+				inArray(taskAssignees.taskId, [...taskIds]),
 				notInArray(
 					taskAssignees.personId,
 					tx
@@ -172,12 +226,19 @@ export async function moveTaskToProject(
 			if (source.archivedAt || target.archivedAt) return failure('project_archived' as const);
 			if (source.id === target.id) return failure('same_project' as const);
 
-			const outside = await assigneesOutside(tx, task.id, target);
+			// A parent takes its children along, so every assignee of the family counts;
+			// a subtask goes alone, detached from its parent.
+			const children = await tx
+				.select({ id: tasks.id })
+				.from(tasks)
+				.where(eq(tasks.parentTaskId, task.id));
+			const family = [task.id, ...children.map((child) => child.id)];
+			const outside = await assigneesOutside(tx, family, target);
 			if (outside.length > 0) {
 				return failure({ kind: 'assignees_not_members' as const, people: outside });
 			}
 
-			await reparentTask(tx, actor, task, target);
+			await reparentTask(tx, actor, await detachSubtask(tx, actor, task), target);
 			return success(undefined);
 		}
 

@@ -9,7 +9,10 @@ import {
 	projectEntries,
 	projectTime,
 	removeType,
-	setTimeTracking
+	reportAll,
+	setTimeTracking,
+	taskTime,
+	timeEntriesCsv
 } from './index';
 import { createTimeScene } from './testing/fixtures';
 
@@ -153,5 +156,84 @@ describe('a project’s entries', () => {
 
 		await setTimeTracking(scene.admin, false);
 		expect(await projectEntries(scene.technician, scene.project.id)).toBeNull();
+	});
+});
+
+describe('a task’s time with its subtasks', () => {
+	async function family() {
+		const scene = await createTimeScene();
+		const child = await createTaskRow(
+			scene.organisation.id,
+			scene.project.id,
+			scene.states.started.id,
+			{ title: 'Child', parentTaskId: scene.task.id }
+		);
+		const dropped = await createTaskRow(
+			scene.organisation.id,
+			scene.project.id,
+			scene.states.cancelled.id,
+			{ title: 'Dropped', parentTaskId: scene.task.id }
+		);
+		const log = (taskId: string, minutes: number) =>
+			logTime(scene.technician, { taskId }, { minutes, ...when }, clock);
+		await log(scene.task.id, 30);
+		await log(child.id, 60);
+		await log(dropped.id, 15);
+		return { ...scene, child, dropped };
+	}
+
+	it('gives two figures, the second including cancelled subtasks', async () => {
+		const scene = await family();
+
+		expect(await taskTime(scene.technician, scene.task.id)).toEqual({
+			ownMinutes: 30,
+			withSubtasksMinutes: 105
+		});
+		expect(await taskTime(scene.technician, scene.child.id)).toEqual({
+			ownMinutes: 60,
+			withSubtasksMinutes: 60
+		});
+	});
+
+	it('is zero for a task with no entries, and absent for an employee or while tracking is off', async () => {
+		const scene = await createTimeScene();
+		expect(await taskTime(scene.technician, scene.task.id)).toEqual({
+			ownMinutes: 0,
+			withSubtasksMinutes: 0
+		});
+		expect(await taskTime(scene.employee, scene.task.id)).toBeNull();
+
+		await setTimeTracking(scene.admin, false);
+		expect(await taskTime(scene.technician, scene.task.id)).toBeNull();
+	});
+
+	it('leaves the project total and the export unchanged by nesting', async () => {
+		const scene = await family();
+		const loose = await createTaskRow(
+			scene.organisation.id,
+			scene.project.id,
+			scene.states.started.id,
+			{ title: 'Loose' }
+		);
+		await logTime(scene.technician, { taskId: loose.id }, { minutes: 20, ...when }, clock);
+
+		const read = async () => {
+			const rows = await reportAll(scene.technician, { projectTag: scene.project.projectTag });
+			if (!rows.ok) throw new Error(rows.error);
+			return {
+				total: await projectTime(scene.technician, scene.project.id),
+				csv: timeEntriesCsv(rows.value)
+			};
+		};
+		const before = await read();
+
+		await getDb()
+			.update(tasks)
+			.set({ parentTaskId: null })
+			.where(eq(tasks.parentTaskId, scene.task.id));
+		await getDb().update(tasks).set({ parentTaskId: scene.task.id }).where(eq(tasks.id, loose.id));
+
+		expect(await read()).toEqual(before);
+		expect(before.total?.totalMinutes).toBe(125);
 	});
 });

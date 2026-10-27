@@ -1,5 +1,17 @@
-import { and, asc, desc, eq, exists, inArray, isNull, ne, sql, type SQL } from 'drizzle-orm';
-import type { StateGroup } from '#lib/domain/status.js';
+import {
+	and,
+	asc,
+	desc,
+	eq,
+	exists,
+	inArray,
+	isNull,
+	ne,
+	notInArray,
+	sql,
+	type SQL
+} from 'drizzle-orm';
+import { CLOSED_STATE_GROUPS, isClosedGroup, type StateGroup } from '#lib/domain/status.js';
 import { actorColumns, recordActivity } from '../activity';
 import type { SessionUser } from '../auth/guards';
 import { m } from '#lib/paraglide/messages.js';
@@ -49,6 +61,16 @@ import {
 
 export type TaskAssigneeView = { personId: string; fullName: string };
 
+/** A task named by its code and title: a subtask's parent, a refusal's list. */
+export type TaskRef = { taskTag: string; title: string };
+
+/**
+ * A task's children as the viewer may count them (ADR 0055 §10). `total` and
+ * `completed` cover the visible, non-cancelled ones, the milestone formula;
+ * `restricted` the children the viewer cannot see, whatever their state.
+ */
+export type SubtaskCounts = { total: number; completed: number; restricted: number };
+
 export type TaskView = {
 	id: string;
 	taskTag: string;
@@ -72,6 +94,9 @@ export type TaskView = {
 	/** Place in the board column; only the order of two of them means anything. */
 	position: number;
 	assignees: TaskAssigneeView[];
+	/** The task this one is a subtask of; `null` too when the viewer cannot see it (ADR 0042). */
+	parent: TaskRef | null;
+	subtasks: SubtaskCounts;
 	createdAt: Date;
 	updatedAt: Date;
 };
@@ -93,6 +118,8 @@ const taskColumns = {
 	milestoneName: milestones.name,
 	dueDate: tasks.dueDate,
 	position: tasks.position,
+	/** Read to find the parent, never handed out: a hidden parent must not leak its id. */
+	parentTaskId: tasks.parentTaskId,
 	createdAt: tasks.createdAt,
 	updatedAt: tasks.updatedAt
 };
@@ -108,33 +135,69 @@ function tasksWithRelations() {
 
 type TaskRow = Awaited<ReturnType<typeof tasksWithRelations>>[number];
 
-/** A second query rather than a join, so a task with three assignees is still one row. */
-async function withAssignees(rows: TaskRow[]): Promise<TaskView[]> {
+const NO_SUBTASKS: SubtaskCounts = { total: 0, completed: 0, restricted: 0 };
+
+/**
+ * Assignees, parent and subtask counts: further queries rather than joins, so a
+ * task with three assignees is still one row. Each relative is read through the
+ * viewer's own scope (ADR 0055 §9): seeing a task never grants sight of its
+ * parent or its children, which is why a hidden parent reads as `null` and
+ * hidden children only as a count.
+ */
+async function withRelations(viewer: SessionUser, rows: TaskRow[]): Promise<TaskView[]> {
 	if (rows.length === 0) return [];
 
-	const assigned = await getDb()
-		.select({
-			taskId: taskAssignees.taskId,
-			personId: taskAssignees.personId,
-			fullName: people.fullName
-		})
-		.from(taskAssignees)
-		.innerJoin(people, eq(taskAssignees.personId, people.id))
-		.where(
-			inArray(
-				taskAssignees.taskId,
-				rows.map((row) => row.id)
-			)
-		)
-		.orderBy(asc(people.fullName), asc(people.id));
+	const ids = rows.map((row) => row.id);
+	const parentIds = [
+		...new Set(rows.flatMap((row) => (row.parentTaskId === null ? [] : [row.parentTaskId])))
+	];
+	const visible = requireTaskScope(viewer);
 
-	return rows.map((row) => ({
-		...row,
-		position: Number(row.position),
-		assignees: assigned
-			.filter((entry) => entry.taskId === row.id)
-			.map(({ personId, fullName }) => ({ personId, fullName }))
-	}));
+	const [assigned, parents, children] = await Promise.all([
+		getDb()
+			.select({
+				taskId: taskAssignees.taskId,
+				personId: taskAssignees.personId,
+				fullName: people.fullName
+			})
+			.from(taskAssignees)
+			.innerJoin(people, eq(taskAssignees.personId, people.id))
+			.where(inArray(taskAssignees.taskId, ids))
+			.orderBy(asc(people.fullName), asc(people.id)),
+		parentIds.length === 0
+			? []
+			: getDb()
+					.select({ id: tasks.id, taskTag: tasks.taskTag, title: tasks.title })
+					.from(tasks)
+					.where(and(visible, inArray(tasks.id, parentIds))),
+		getDb()
+			.select({
+				parentTaskId: tasks.parentTaskId,
+				total: sql<number>`(count(*) filter (where (${visible}) and ${states.group} <> 'cancelled'))::int`,
+				completed: sql<number>`(count(*) filter (where (${visible}) and ${states.group} = 'completed'))::int`,
+				restricted: sql<number>`(count(*) filter (where not (${visible})))::int`
+			})
+			.from(tasks)
+			.innerJoin(states, eq(tasks.stateId, states.id))
+			.where(inArray(tasks.parentTaskId, ids))
+			.groupBy(tasks.parentTaskId)
+	]);
+
+	return rows.map(({ parentTaskId, ...row }) => {
+		const parent = parents.find((candidate) => candidate.id === parentTaskId);
+		const counts = children.find((entry) => entry.parentTaskId === row.id);
+		return {
+			...row,
+			position: Number(row.position),
+			assignees: assigned
+				.filter((entry) => entry.taskId === row.id)
+				.map(({ personId, fullName }) => ({ personId, fullName })),
+			parent: parent ? { taskTag: parent.taskTag, title: parent.title } : null,
+			subtasks: counts
+				? { total: counts.total, completed: counts.completed, restricted: counts.restricted }
+				: NO_SUBTASKS
+		};
+	});
 }
 
 export interface TaskListRequest {
@@ -144,6 +207,8 @@ export interface TaskListRequest {
 	group?: StateGroup;
 	/** A milestone id, or `'none'` for the tasks that have no milestone. */
 	milestone?: string;
+	/** A task id: its subtasks. */
+	parentTaskId?: string;
 	q?: string;
 }
 
@@ -177,6 +242,7 @@ export async function listTasks(
 			: request.milestone
 				? eq(tasks.milestoneId, request.milestone)
 				: undefined,
+		request.parentTaskId ? eq(tasks.parentTaskId, request.parentTaskId) : undefined,
 		term ? matchesQuery(tasks.search, term) : undefined
 	);
 	const ordered = tasksWithRelations()
@@ -189,7 +255,7 @@ export async function listTasks(
 			asc(tasks.id)
 		);
 
-	if (!paging) return withAssignees(await ordered);
+	if (!paging) return withRelations(viewer, await ordered);
 
 	const window = pageWindow(paging);
 	const rows = await ordered.limit(window.limit).offset(window.offset);
@@ -199,7 +265,7 @@ export async function listTasks(
 		.innerJoin(states, eq(tasks.stateId, states.id))
 		.where(where);
 
-	return page(await withAssignees(rows), counted?.total ?? 0, window);
+	return page(await withRelations(viewer, rows), counted?.total ?? 0, window);
 }
 
 function hasAssignee(personId: string): SQL {
@@ -249,7 +315,7 @@ export async function myOpenTasks(viewer: SessionUser, limit = 5): Promise<TaskV
 		.orderBy(desc(tasks.updatedAt), asc(tasks.id))
 		.limit(limit);
 
-	return withAssignees(rows);
+	return withRelations(viewer, rows);
 }
 
 /** The groups that count as "open" for someone's own work. */
@@ -263,20 +329,45 @@ export async function getTask(
 	const rows = await tasksWithRelations()
 		.where(and(requireTaskScope(viewer), eq(tasks.taskTag, taskTag)))
 		.limit(1);
-	const [task] = await withAssignees(rows);
+	const [task] = await withRelations(viewer, rows);
 
 	return task ? success(task) : failure('task_not_found');
+}
+
+/**
+ * The subtasks of a task the viewer can see, in board order: only the visible
+ * ones, the rest are `subtasks.restricted` on the parent (ADR 0055 §9). **The
+ * caller has resolved the parent in the viewer's scope first.**
+ */
+export async function subtasksOf(viewer: SessionUser, taskId: string): Promise<TaskView[]> {
+	return listTasks(viewer, { parentTaskId: taskId });
 }
 
 /* -------------------------------------------------------------------------- */
 /* Writes                                                                     */
 /* -------------------------------------------------------------------------- */
 
+/** Why a task cannot go under a parent (ADR 0055), shared by creation and `setTaskParent`. */
+export type ParentFailure = 'parent_not_found' | 'parent_is_subtask' | 'parent_closed';
+
 export type CreateTaskFailure =
-	ProjectWriteFailure | 'state_not_found' | 'milestone_not_found' | 'duplicate_task_tag';
+	| ProjectWriteFailure
+	| ParentFailure
+	| 'state_not_found'
+	| 'milestone_not_found'
+	| 'duplicate_task_tag';
 export type UpdateTaskFailure = TaskWriteFailure | 'duplicate_task_tag';
 export type AssignFailure = TaskWriteFailure | 'person_not_found' | 'not_a_member';
-export type MoveTaskFailure = TaskWriteFailure | 'state_not_found' | 'invalid_neighbours';
+export type MoveTaskFailure =
+	| TaskWriteFailure
+	| 'state_not_found'
+	| 'invalid_neighbours'
+	/** A child left a closed group while its parent is closed. */
+	| 'parent_closed'
+	/** A parent entered a closed group while these children are open. */
+	| { kind: 'open_subtasks'; subtasks: TaskRef[] };
+export type SetTaskParentFailure =
+	TaskWriteFailure | ParentFailure | 'same_task' | 'task_has_subtasks';
 
 /** The tasks of one board column in order, optionally leaving one out. */
 export async function columnOf(
@@ -337,6 +428,14 @@ export async function openTask(
 		return failure('milestone_not_found' as const);
 	}
 
+	// Born as a subtask: the same rules as `setTaskParent`, and `task.created` says so.
+	let parent: ParentCandidate | null = null;
+	if (values.parentTaskId) {
+		const found = await parentFor(tx, actor, projectId, values.parentTaskId, state.group);
+		if (!found.ok) return found;
+		parent = found.value;
+	}
+
 	const column = await columnOf(tx, projectId, state.id);
 	const placed = placeBetween(column.at(-1)?.position ?? null, null);
 	// Nothing follows the last task, so the end of a column never needs a renumber.
@@ -351,7 +450,9 @@ export async function openTask(
 			description: values.description,
 			dueDate: values.dueDate ?? null,
 			stateId: state.id,
-			milestoneId: values.milestoneId ?? null,
+			// A subtask inherits its parent's milestone, and nothing else (ADR 0055 §11).
+			milestoneId: parent ? parent.milestoneId : (values.milestoneId ?? null),
+			parentTaskId: parent?.id ?? null,
 			position: String(placed.position),
 			taskTag: values.taskTag
 		})
@@ -362,10 +463,79 @@ export async function openTask(
 		...actorColumns(actor),
 		target: { taskId: task.id },
 		verb: 'task.created',
-		payload: { taskTag: task.taskTag, title: task.title }
+		payload: {
+			taskTag: task.taskTag,
+			title: task.title,
+			...(parent ? { parent: parentSnapshot(parent) } : {})
+		}
 	});
 
 	return success({ id: task.id, taskTag: task.taskTag });
+}
+
+type ParentCandidate = {
+	id: string;
+	taskTag: string;
+	title: string;
+	parentTaskId: string | null;
+	milestoneId: string | null;
+	group: StateGroup;
+};
+
+/**
+ * A task as a history entry names it (ADR 0055 §12): the code and title as they
+ * read now, with the id so a reader who cannot see it gets them redacted
+ * (`redactWorkEntries`, ADR 0042).
+ */
+const parentSnapshot = (task: { id: string; taskTag: string; title: string }) => ({
+	taskId: task.id,
+	taskTag: task.taskTag,
+	title: task.title
+});
+
+/** A task of the project, as a parent candidate. Out of the actor's scope reads as absent. */
+async function parentCandidate(
+	tx: Transaction,
+	actor: SessionUser,
+	projectId: string,
+	taskId: string
+): Promise<ParentCandidate | null> {
+	const [row] = await tx
+		.select({
+			id: tasks.id,
+			taskTag: tasks.taskTag,
+			title: tasks.title,
+			parentTaskId: tasks.parentTaskId,
+			milestoneId: tasks.milestoneId,
+			group: states.group
+		})
+		.from(tasks)
+		.innerJoin(states, eq(tasks.stateId, states.id))
+		.where(and(eq(tasks.id, taskId), eq(tasks.projectId, projectId), requireTaskScope(actor)));
+	return row ?? null;
+}
+
+/**
+ * The parent a task of group `childGroup` may go under, in project `projectId`
+ * (ADR 0055). Another project's task, or one out of the actor's scope, is
+ * `parent_not_found` (ADR 0042 semantics). One level only: a subtask cannot be a
+ * parent. An open task cannot go under a closed parent.
+ *
+ * **Assumes the project lock is held**, which is what serialises two writes that
+ * could together build a second level (A under B while B goes under C).
+ */
+async function parentFor(
+	tx: Transaction,
+	actor: SessionUser,
+	projectId: string,
+	parentTaskId: string,
+	childGroup: StateGroup
+): Promise<Outcome<ParentCandidate, ParentFailure>> {
+	const parent = await parentCandidate(tx, actor, projectId, parentTaskId);
+	if (!parent) return failure('parent_not_found');
+	if (parent.parentTaskId !== null) return failure('parent_is_subtask');
+	if (isClosedGroup(parent.group) && !isClosedGroup(childGroup)) return failure('parent_closed');
+	return success(parent);
 }
 
 /** The milestone, when it exists **in this project**: another project's reads as absent. */
@@ -404,6 +574,10 @@ export async function createTask(
 		// The milestone was deleted between the check and the insert.
 		if (constraintViolation(error)?.constraint === 'tasks_milestone_same_project_fk') {
 			return failure('milestone_not_found');
+		}
+		// Unreachable under the project lock; kept so a broken invariant reads as missing.
+		if (constraintViolation(error)?.constraint === 'tasks_parent_same_project_fk') {
+			return failure('parent_not_found');
 		}
 		throw error;
 	}
@@ -505,6 +679,92 @@ export async function setTaskMilestone(
 		});
 
 		return success(undefined);
+	});
+}
+
+/**
+ * Puts the task under a parent of **its own project**, or promotes it to a
+ * top-level task (`null`). The only function that writes `parent_task_id` after
+ * creation (ADR 0055 §4), under the project lock, which serialises every pair of
+ * writes that could together build a second level.
+ *
+ * - `same_task`; `parent_not_found` for a task of another project or out of the
+ *   actor's scope; `parent_is_subtask` when the parent has a parent;
+ *   `task_has_subtasks` when the task already has children; `parent_closed` when
+ *   the parent is closed and the task is open.
+ * - Setting the parent the task already has writes and records nothing.
+ * - Records `task.parent.changed` on the child only, with snapshots. The task's
+ *   milestone is left alone.
+ */
+export async function setTaskParent(
+	actor: SessionUser,
+	taskId: string,
+	parentTaskId: string | null
+): Promise<Outcome<void, SetTaskParentFailure>> {
+	requireManage(actor);
+
+	return getDb().transaction(async (tx) => {
+		const locked = await lockTask(tx, actor, taskId);
+		if (!locked.ok) return locked;
+		const { task } = locked.value;
+
+		if (parentTaskId === task.id) return failure('same_task' as const);
+		if ((task.parentTaskId ?? null) === parentTaskId) return success(undefined);
+
+		let to: ParentCandidate | null = null;
+		if (parentTaskId !== null) {
+			const [state] = await tx
+				.select({ group: states.group })
+				.from(states)
+				.where(eq(states.id, task.stateId));
+			const found = await parentFor(tx, actor, task.projectId, parentTaskId, state.group);
+			if (!found.ok) return found;
+			to = found.value;
+
+			const [child] = await tx
+				.select({ id: tasks.id })
+				.from(tasks)
+				.where(eq(tasks.parentTaskId, task.id))
+				.limit(1);
+			if (child) return failure('task_has_subtasks' as const);
+		}
+
+		await writeParent(tx, actor, task, to);
+
+		return success(undefined);
+	});
+}
+
+/**
+ * The one statement that changes `parent_task_id` after creation, and its
+ * `task.parent.changed` on the child (ADR 0055 §4, §12). Shared by
+ * `setTaskParent` and by `moveTaskToProject`, which detaches a subtask before
+ * moving it; both have validated the change and hold the project lock.
+ */
+export async function writeParent(
+	tx: Transaction,
+	actor: SessionUser,
+	task: { id: string; parentTaskId: string | null },
+	to: { id: string; taskTag: string; title: string } | null
+): Promise<void> {
+	const [from] = task.parentTaskId
+		? await tx
+				.select({ id: tasks.id, taskTag: tasks.taskTag, title: tasks.title })
+				.from(tasks)
+				.where(eq(tasks.id, task.parentTaskId))
+		: [];
+
+	await tx
+		.update(tasks)
+		.set({ parentTaskId: to?.id ?? null, updatedAt: new Date() })
+		.where(eq(tasks.id, task.id));
+
+	await recordActivity(tx, {
+		organisationId: actor.organisationId,
+		...actorColumns(actor),
+		target: { taskId: task.id },
+		verb: 'task.parent.changed',
+		payload: { from: from ? parentSnapshot(from) : null, to: to ? parentSnapshot(to) : null }
 	});
 }
 
@@ -706,6 +966,44 @@ export async function setAssignees(
 
 /* -------------------------------- moving ----------------------------------- */
 
+/**
+ * The subtask rules of a move (ADR 0055 §6). Only a move that crosses between
+ * an open and a closed group is concerned; reordering, or going from one closed
+ * state to another, is not. Nothing cascades: the move is refused instead.
+ *
+ * - A parent entering a closed group with an open child: `open_subtasks`, listing them.
+ * - A child leaving a closed group while its parent is closed: `parent_closed`.
+ */
+async function familyRefusal(
+	tx: Transaction,
+	task: { id: string; parentTaskId: string | null },
+	fromGroup: StateGroup,
+	toGroup: StateGroup
+): Promise<Exclude<MoveTaskFailure, TaskWriteFailure | 'state_not_found'> | null> {
+	if (!isClosedGroup(fromGroup) && isClosedGroup(toGroup)) {
+		const open = await tx
+			.select({ taskTag: tasks.taskTag, title: tasks.title })
+			.from(tasks)
+			.innerJoin(states, eq(tasks.stateId, states.id))
+			.where(
+				and(eq(tasks.parentTaskId, task.id), notInArray(states.group, [...CLOSED_STATE_GROUPS]))
+			)
+			.orderBy(asc(tasks.taskTag));
+		if (open.length > 0) return { kind: 'open_subtasks', subtasks: open };
+	}
+
+	if (isClosedGroup(fromGroup) && !isClosedGroup(toGroup) && task.parentTaskId !== null) {
+		const [parent] = await tx
+			.select({ group: states.group })
+			.from(tasks)
+			.innerJoin(states, eq(tasks.stateId, states.id))
+			.where(eq(tasks.id, task.parentTaskId));
+		if (parent && isClosedGroup(parent.group)) return 'parent_closed';
+	}
+
+	return null;
+}
+
 export interface MoveNeighbours {
 	/** The task the moved one is dropped **before**: it ends up directly below the moved task. */
 	before?: string;
@@ -751,6 +1049,14 @@ export async function moveTask(
 			.from(states)
 			.where(and(eq(states.id, toStateId), eq(states.organisationId, actor.organisationId)));
 		if (!target) return failure('state_not_found' as const);
+
+		const [from] = await tx
+			.select({ id: states.id, name: states.name, group: states.group })
+			.from(states)
+			.where(eq(states.id, task.stateId));
+
+		const refused = await familyRefusal(tx, task, from.group, target.group);
+		if (refused) return failure(refused);
 
 		const column = await columnOf(tx, task.projectId, target.id, task.id);
 
@@ -810,11 +1116,6 @@ export async function moveTask(
 			.where(eq(tasks.id, task.id));
 
 		if (task.stateId !== target.id) {
-			const [from] = await tx
-				.select({ id: states.id, name: states.name, group: states.group })
-				.from(states)
-				.where(eq(states.id, task.stateId));
-
 			await recordActivity(tx, {
 				organisationId: actor.organisationId,
 				...actorColumns(actor),

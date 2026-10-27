@@ -16,6 +16,10 @@ export type BoardTask = BoardItem & {
 	/** Shown on the card when the task counts towards a milestone. */
 	milestoneName?: string | null;
 	assignees: { personId: string; fullName: string }[];
+	/** A subtask's parent (ADR 0055); `null` too when the viewer cannot see it. */
+	parent?: { taskTag: string } | null;
+	/** A parent's children: visible non-cancelled ones counted, hidden ones as `restricted`. */
+	subtasks?: { total: number; completed: number; restricted: number };
 };
 export type BoardColumnModel<T extends BoardItem> = { state: BoardState; items: T[] };
 

@@ -133,3 +133,19 @@ now so nobody redesigns it under pressure. Several decisions already constrain i
 - Out of scope, each for its own issue if needed: escalating a ticket straight into a subtask, a
   notification when every subtask is completed, a "top-level only" filter, and everything listed
   under Considered options.
+
+## Amendment 2026-10-27: the parent snapshot carries its id, and one writer is shared
+
+Two points of the decision could not be built exactly as written while building #59.
+
+- **§12, the snapshot.** `task.parent.changed` and `task.created`'s `parent` carry
+  `{ taskId, taskTag, title }`, not `{ taskTag, title }`. A subtask's history names its parent, and
+  §9 says seeing a child never grants sight of the parent: an employee assigned to the child alone
+  must not read the parent's code or title there (ADR 0042, Leaks §2). History is redacted at read
+  time, which needs to know which task an entry names; the code cannot say it, because a code is
+  editable (ADR 0010) and may since belong to another task. `projects`' `redactWorkEntries` blanks
+  the snapshot for such a reader ("una tarea restringida"), and `taskTimeline` applies it. The API
+  timeline drops the id, as it drops every internal id.
+- **§4, one writer.** `setTaskParent` is the only way to change `parent_task_id` after creation,
+  and §8 also detaches a subtask moved to another project. Both go through one internal writer,
+  `writeParent`, which records `task.parent.changed`; nothing else writes the column.
