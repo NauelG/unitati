@@ -185,32 +185,29 @@ export async function createMilestone(
 }
 
 /**
- * A milestone of the actor's organisation and its project, locked. The project
- * is read from the milestone, locked, and the milestone read **again** after the
- * lock, so a concurrent delete is seen. A project the actor cannot see reads as
- * `milestone_not_found`, like one that does not exist (ADR 0042).
+ * A milestone **of `projectId`**, with that project locked. The caller names the
+ * project, like `createMilestone`, and the milestone is read after the lock and
+ * only within it: a milestone of another project is `milestone_not_found`, so no
+ * caller can edit one through a project it is not in. A project the actor cannot
+ * see reads the same way, like one that does not exist (ADR 0042).
  */
 async function lockMilestone(
 	tx: Transaction,
 	actor: SessionUser,
+	projectId: string,
 	milestoneId: string
 ): Promise<Outcome<Milestone, 'milestone_not_found' | 'project_archived'>> {
-	const [owning] = await tx
-		.select({ projectId: milestones.projectId })
-		.from(milestones)
-		.where(
-			and(eq(milestones.id, milestoneId), eq(milestones.organisationId, actor.organisationId))
-		);
-	if (!owning) return failure('milestone_not_found');
-
-	const locked = await lockProject(tx, actor, owning.projectId);
+	const locked = await lockProject(tx, actor, projectId);
 	if (!locked.ok) {
 		return failure(
 			locked.error === 'project_archived' ? 'project_archived' : 'milestone_not_found'
 		);
 	}
 
-	const [milestone] = await tx.select().from(milestones).where(eq(milestones.id, milestoneId));
+	const [milestone] = await tx
+		.select()
+		.from(milestones)
+		.where(and(eq(milestones.id, milestoneId), eq(milestones.projectId, projectId)));
 	return milestone ? success(milestone) : failure('milestone_not_found');
 }
 
@@ -221,6 +218,7 @@ async function lockMilestone(
  */
 export async function updateMilestone(
 	actor: SessionUser,
+	projectId: string,
 	milestoneId: string,
 	input: UpdateMilestoneInput
 ): Promise<Outcome<void, Exclude<MilestoneWriteFailure, 'project_not_found'>>> {
@@ -230,7 +228,7 @@ export async function updateMilestone(
 	const values = parsed.value;
 
 	return getDb().transaction(async (tx) => {
-		const locked = await lockMilestone(tx, actor, milestoneId);
+		const locked = await lockMilestone(tx, actor, projectId, milestoneId);
 		if (!locked.ok) return locked;
 		const current = locked.value;
 
@@ -283,12 +281,13 @@ export async function updateMilestone(
  */
 export async function deleteMilestone(
 	actor: SessionUser,
+	projectId: string,
 	milestoneId: string
 ): Promise<Outcome<void, 'milestone_not_found' | 'project_archived'>> {
 	requireManage(actor);
 
 	return getDb().transaction(async (tx) => {
-		const locked = await lockMilestone(tx, actor, milestoneId);
+		const locked = await lockMilestone(tx, actor, projectId, milestoneId);
 		if (!locked.ok) return locked;
 		const milestone = locked.value;
 
