@@ -6,6 +6,14 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.5.2] - 2026-10-27
+
+### Fixed
+
+- Editing or deleting a milestone now checks, inside the same locked transaction, that the milestone
+  belongs to the project being edited. The check used to live in the project page, outside the
+  transaction; `updateMilestone` and `deleteMilestone` now take the project, like `createMilestone`.
+
 ## [1.5.1] - 2026-10-27
 
 ### Fixed

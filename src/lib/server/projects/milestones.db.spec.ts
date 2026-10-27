@@ -53,7 +53,9 @@ describe('writing milestones', () => {
 		expect(created.ok).toBe(true);
 		if (!created.ok) return;
 
-		const updated = await updateMilestone(technician, created.value.id, { name: 'Go-live' });
+		const updated = await updateMilestone(technician, project.id, created.value.id, {
+			name: 'Go-live'
+		});
 		expect(updated.ok).toBe(true);
 		const listed = await listMilestones(technician, project.id);
 		expect(listed.ok && listed.value.map((m) => m.name)).toEqual(['Go-live']);
@@ -61,14 +63,14 @@ describe('writing milestones', () => {
 		await expect(createMilestone(employee, project.id, { name: 'X', ...range })).rejects.toThrow(
 			/cannot manage projects/
 		);
-		await expect(updateMilestone(employee, created.value.id, { name: 'X' })).rejects.toThrow(
-			/cannot manage projects/
-		);
-		await expect(deleteMilestone(employee, created.value.id)).rejects.toThrow(
+		await expect(
+			updateMilestone(employee, project.id, created.value.id, { name: 'X' })
+		).rejects.toThrow(/cannot manage projects/);
+		await expect(deleteMilestone(employee, project.id, created.value.id)).rejects.toThrow(
 			/cannot manage projects/
 		);
 
-		expect((await deleteMilestone(technician, created.value.id)).ok).toBe(true);
+		expect((await deleteMilestone(technician, project.id, created.value.id)).ok).toBe(true);
 		const after = await listMilestones(technician, project.id);
 		expect(after.ok && after.value).toEqual([]);
 	});
@@ -84,7 +86,9 @@ describe('writing milestones', () => {
 
 		const existing = await createMilestoneRow(organisation.id, project.id);
 		// Only the start is sent: it is checked against the stored target.
-		expect(await updateMilestone(technician, existing.id, { startDate: '2026-12-15' })).toEqual({
+		expect(
+			await updateMilestone(technician, project.id, existing.id, { startDate: '2026-12-15' })
+		).toEqual({
 			ok: false,
 			error: 'invalid_dates'
 		});
@@ -124,15 +128,31 @@ describe('writing milestones', () => {
 			ok: false,
 			error: 'project_not_found'
 		});
-		expect(await updateMilestone(technician, nobody, { name: 'X' })).toEqual({
+		expect(await updateMilestone(technician, project.id, nobody, { name: 'X' })).toEqual({
 			ok: false,
 			error: 'milestone_not_found'
 		});
-		expect(await deleteMilestone(technician, nobody)).toEqual({
+		expect(await deleteMilestone(technician, project.id, nobody)).toEqual({
 			ok: false,
 			error: 'milestone_not_found'
 		});
 		expect(project.id).toBeTruthy();
+	});
+
+	it('does not update or delete a milestone through a project it is not in', async () => {
+		const { technician, organisation, project } = await setup();
+		const other = await createProjectRow(organisation.id, { name: 'Elsewhere' });
+		const foreign = await createMilestoneRow(organisation.id, other.id, { name: 'Theirs' });
+
+		const missing = { ok: false, error: 'milestone_not_found' };
+		expect(await updateMilestone(technician, project.id, foreign.id, { name: 'X' })).toEqual(
+			missing
+		);
+		expect(await deleteMilestone(technician, project.id, foreign.id)).toEqual(missing);
+
+		const listed = await listMilestones(technician, other.id);
+		expect(listed.ok && listed.value.map((m) => m.name)).toEqual(['Theirs']);
+		expect(await entries({ projectId: other.id })).toEqual([]);
 	});
 
 	it('refuses every write on an archived project', async () => {
@@ -145,8 +165,10 @@ describe('writing milestones', () => {
 		expect(await createMilestone(technician, project.id, { name: 'X', ...range })).toEqual(
 			archived
 		);
-		expect(await updateMilestone(technician, milestone.id, { name: 'X' })).toEqual(archived);
-		expect(await deleteMilestone(technician, milestone.id)).toEqual(archived);
+		expect(await updateMilestone(technician, project.id, milestone.id, { name: 'X' })).toEqual(
+			archived
+		);
+		expect(await deleteMilestone(technician, project.id, milestone.id)).toEqual(archived);
 		expect(await setTaskMilestone(technician, task.id, milestone.id)).toEqual(archived);
 	});
 });
@@ -235,7 +257,7 @@ describe('deleting a milestone', () => {
 			milestoneId: milestone.id
 		});
 
-		expect((await deleteMilestone(technician, milestone.id)).ok).toBe(true);
+		expect((await deleteMilestone(technician, project.id, milestone.id)).ok).toBe(true);
 
 		const [row] = await getDb().select().from(tasks).where(eq(tasks.id, task.id));
 		expect(row).toMatchObject({ milestoneId: null, projectId: project.id });
@@ -253,7 +275,10 @@ describe('the milestone entries', () => {
 		if (!created.ok) throw new Error('setup');
 		const id = created.value.id;
 
-		await updateMilestone(technician, id, { targetDate: '2026-12-15', name: 'Pilot 2' });
+		await updateMilestone(technician, project.id, id, {
+			targetDate: '2026-12-15',
+			name: 'Pilot 2'
+		});
 
 		expect(await entries({ projectId: project.id })).toEqual([
 			{ verb: 'project.milestone.created', payload: { milestoneId: id, name: 'Pilot', ...range } },
@@ -275,9 +300,9 @@ describe('the milestone entries', () => {
 		if (!created.ok) throw new Error('setup');
 		const id = created.value.id;
 
-		await updateMilestone(technician, id, { description: 'Why it matters' });
-		await updateMilestone(technician, id, { name: 'Pilot', ...range });
-		await updateMilestone(technician, id, {});
+		await updateMilestone(technician, project.id, id, { description: 'Why it matters' });
+		await updateMilestone(technician, project.id, id, { name: 'Pilot', ...range });
+		await updateMilestone(technician, project.id, id, {});
 
 		expect((await entries({ projectId: project.id })).map((e) => e.verb)).toEqual([
 			'project.milestone.created'

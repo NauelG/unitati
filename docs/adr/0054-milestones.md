@@ -23,11 +23,14 @@ model already draws `PROJECT ||--o{ MILESTONE` and ADR 0002 places the entity in
    `tasks_milestone_same_project_fk (project_id, milestone_id) → milestones (project_id, id)`, which
    needs `unique (project_id, id)` on `milestones`. With the default `MATCH SIMPLE` a task without a
    milestone is not checked. The domain checks the same thing first and answers
-   `milestone_not_found`, the semantics of ADR 0042, never a 403.
+   `milestone_not_found`, the semantics of ADR 0042, never a 403. The same rule binds the milestone
+   writes: `updateMilestone` and `deleteMilestone` take the `projectId`, like `createMilestone`, lock
+   that project and look the milestone up only inside it, so no caller can edit one through a
+   project it is not in.
 3. **The foreign key is `ON DELETE SET NULL ("milestone_id")` and the migration is hand-edited.** A
    plain `SET NULL` would also null `tasks.project_id`, which is `NOT NULL`, and every milestone
    delete would fail. The column list (PostgreSQL 15+; the stack runs 17) is something Drizzle cannot
-   express, so `drizzle/0045_milestones.sql` carries it and the `foreignKey` in `schema.ts` says so.
+   express, so `drizzle/0046_milestones.sql` carries it and the `foreignKey` in `schema.ts` says so.
    A later `npm run db:generate` reports no changes.
 4. **Status and progress are derived on read and never stored.** `milestoneStatus` is a pure function
    of the dates, today, and the task counts per state group. Rules, in this order: `completed` (at

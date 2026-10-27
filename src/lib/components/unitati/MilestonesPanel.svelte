@@ -3,7 +3,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import type { Tone } from './status.js';
 
-	/** Derived on read from the dates and the tasks (ADR 0053); never stored. */
+	/** Derived on read from the dates and the tasks (ADR 0054); never stored. */
 	type MilestoneStatus = 'completed' | 'overdue' | 'upcoming' | 'active';
 
 	/** What a row needs; the page's `milestones` satisfies it as it is. */

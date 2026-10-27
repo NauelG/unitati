@@ -326,7 +326,7 @@ export const PAYLOAD_SCHEMAS = {
 	'project.attachment.removed': z.object({ filename: presentName }),
 
 	// Milestones are renamed and deleted, so every entry snapshots the name. `from` and
-	// `to` of a change hold only the fields that changed (ADR 0053); a description-only
+	// `to` of a change hold only the fields that changed (ADR 0054); a description-only
 	// edit writes nothing.
 	'project.milestone.created': z.object({
 		milestoneId: z.uuid(),
