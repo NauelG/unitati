@@ -6,6 +6,14 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.7.1] - 2026-10-28
+
+### Fixed
+
+- Starting the single sign-on flow no longer fails with `redirect_external_not_allowed`: the
+  redirect to the identity provider is now a plain 303, since SvelteKit's `redirect()` refuses
+  external locations (#408).
+
 ## [1.7.0] - 2026-10-27
 
 ### Added

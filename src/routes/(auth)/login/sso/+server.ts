@@ -25,5 +25,7 @@ export const GET: RequestHandler = async ({ request, url, cookies }) => {
 		console.error('could not start the SSO sign-in', error);
 		redirect(303, `${SSO_ERROR_PATH}?error=sso_unavailable`);
 	}
-	redirect(303, target);
+	// `redirect()` refuses an external location in SvelteKit 3, and the identity
+	// provider is one. The flow's cookies set above are still sent with this response.
+	return new Response(null, { status: 303, headers: { location: target } });
 };
