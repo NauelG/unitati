@@ -71,20 +71,26 @@ development, staging and production ([ADR 0025](adr/0025-deployment-agnostic.md)
 package path in the example is the current upstream image; set `UNITATI_IMAGE` to another registry
 URL or tag when appropriate.
 
-| Variable                                                                           | Purpose                                                       |
-| ---------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `DATABASE_URL`                                                                     | PostgreSQL connection string; required to run                 |
-| `BETTER_AUTH_SECRET`                                                               | Secret for sessions and tokens; generate and preserve it      |
-| `BETTER_AUTH_URL`                                                                  | Public origin of this installation; use HTTPS in production   |
-| `APP_ENV`                                                                          | `development`, `staging` or `production`                      |
-| `UPLOADS_DIR`                                                                      | Persistent file storage; `/data/uploads` in the image         |
-| `BODY_SIZE_LIMIT`                                                                  | Request body limit; the image sets `56M`                      |
-| `ORGANISATION_TIME_ZONE`                                                           | IANA zone for signed handover documents; e.g. `Europe/Madrid` |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | Optional outbound mail; see [`.env.example`](../.env.example) |
+| Variable                                                                           | Purpose                                                                                |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                                     | PostgreSQL connection string; required to run                                          |
+| `BETTER_AUTH_SECRET`                                                               | Secret for sessions and tokens; generate and preserve it                               |
+| `BETTER_AUTH_URL`                                                                  | Public origin of this installation; use HTTPS in production                            |
+| `APP_ENV`                                                                          | `development`, `staging` or `production`                                               |
+| `UPLOADS_DIR`                                                                      | Persistent file storage; `/data/uploads` in the image                                  |
+| `BODY_SIZE_LIMIT`                                                                  | Request body limit; the image sets `56M`                                               |
+| `ORGANISATION_TIME_ZONE`                                                           | IANA zone for signed handover documents; e.g. `Europe/Madrid`                          |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`                              | Optional single sign-on; all three or none, see [SSO with authentik](sso-authentik.md) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | Optional outbound mail; see [`.env.example`](../.env.example)                          |
 
 Mail is optional: a technician can answer a ticket with `SMTP_HOST` unset, but the requester is
 not notified by email. Configure it before relying on email notifications or mailed handover
 links. For local development, `npm run mail:start` runs Mailpit on port 8025.
+
+Single sign-on is optional too: with the three `OIDC_*` variables set, people sign in through your
+OpenID Connect identity provider ([ADR 0056](adr/0056-single-sign-on-with-oidc-and-scim.md)). The
+guide [SSO with authentik](sso-authentik.md) walks through the provider, the application and the
+variables. Admins always keep their local password at `/login/local`.
 
 To build the image yourself: `docker build -t unitati:dev .`. Image processing uses `sharp`,
 whose prebuilt binaries support Linux x64/arm64 and macOS; `npm ci` needs no native build

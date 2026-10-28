@@ -1,5 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { requireUser } from '#lib/server/auth/guards.js';
+import { installationFeatures } from '#lib/server/settings/guard.js';
 import { permissionsOf } from '#lib/server/access/permissions.js';
 import {
 	ASSET_READ_PERMISSIONS,
@@ -57,6 +58,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	return {
 		user: { name: user.name, email: user.email, role: user.role, personId: user.personId },
 		permissions,
+		features: installationFeatures(),
 		unreadNotifications,
 		counts: { assets, serviceDesk, directory, projects, tasks },
 		timeEnabled,

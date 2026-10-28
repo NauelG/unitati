@@ -20,6 +20,8 @@ describe('safeRedirectTarget', () => {
 		['login with query', '/login?redirectTo=/x'],
 		['setup', '/setup'],
 		['sign-out', '/sign-out'],
+		['signed-out', '/signed-out'],
+		['sso error', '/login/sso-error?error=email_taken'],
 		['empty', ''],
 		['null', null]
 	])('falls back to / for %s', (_name, value) => {

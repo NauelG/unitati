@@ -362,9 +362,15 @@ export function activitySentence(entry: ActivityEntry): string {
 			});
 
 		case 'person.created':
-			return entry.payload.via === 'import'
-				? m.activity_person_created_imported()
-				: m.activity_person_created();
+			if (entry.payload.via === 'import') return m.activity_person_created_imported();
+			if (entry.payload.via === 'sso') return m.activity_person_created_sso();
+			return m.activity_person_created();
+
+		case 'person.identity.linked':
+			return m.activity_person_identity_linked();
+
+		case 'person.identity.unlinked':
+			return m.activity_person_identity_unlinked();
 
 		case 'person.deactivated':
 			return m.activity_person_deactivated();

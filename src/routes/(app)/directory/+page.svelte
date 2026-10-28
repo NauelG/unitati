@@ -8,6 +8,7 @@
 	import UserMinusIcon from '@lucide/svelte/icons/user-minus';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import UserCheckIcon from '@lucide/svelte/icons/user-check';
+	import UnlinkIcon from '@lucide/svelte/icons/unlink';
 	import UserXIcon from '@lucide/svelte/icons/user-x';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -107,7 +108,7 @@
 			{/if}
 			{#if data.canManagePeople}
 				{#if !person.hasAccess}
-					{#if person.active}
+					{#if person.active && !data.ssoRequired}
 						<DropdownMenu.Item onSelect={() => dialogs?.access(person, 'grant')}>
 							<UserPlusIcon class="size-4" aria-hidden="true" />
 							{m.directory_grant_access()}
@@ -121,10 +122,13 @@
 							{m.directory_change_role()}
 						</DropdownMenu.Item>
 					{/if}
-					<DropdownMenu.Item onSelect={() => dialogs?.reset(person)}>
-						<KeyRoundIcon class="size-4" aria-hidden="true" />
-						{m.directory_reset_password()}
-					</DropdownMenu.Item>
+					<!-- While SSO is required only an admin keeps a password (ADR 0056). -->
+					{#if !data.ssoRequired || person.role === 'admin'}
+						<DropdownMenu.Item onSelect={() => dialogs?.reset(person)}>
+							<KeyRoundIcon class="size-4" aria-hidden="true" />
+							{m.directory_reset_password()}
+						</DropdownMenu.Item>
+					{/if}
 					{#if person.id !== data.selfPersonId && person.id !== data.lastAdminId}
 						<DropdownMenu.Item
 							class="text-[var(--danger)]"
@@ -134,6 +138,12 @@
 							{m.directory_revoke_access()}
 						</DropdownMenu.Item>
 					{/if}
+				{/if}
+				{#if data.canUnlinkIdentity && person.hasIdentity}
+					<DropdownMenu.Item onSelect={() => dialogs?.unlink(person)}>
+						<UnlinkIcon class="size-4" aria-hidden="true" />
+						{m.directory_unlink_identity()}
+					</DropdownMenu.Item>
 				{/if}
 				{#if person.active}
 					<DropdownMenu.Item

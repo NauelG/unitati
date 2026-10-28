@@ -17,7 +17,13 @@ export interface SettingsSection {
 	/** A message function, not a string: the locale is per request. */
 	label: () => string;
 	permission: Permission;
+	/** Listed only on an installation that has the feature; absent means always. */
+	feature?: SettingsFeature;
 }
+
+/** What an installation may or may not have, decided by its environment rather than by a role. */
+export type SettingsFeature = 'sso';
+export type SettingsFeatures = Readonly<Partial<Record<SettingsFeature, boolean>>>;
 
 /** Display order of the modules in the navigation and the index; the one list `SettingsModule` derives from. */
 export const MODULE_ORDER = [
@@ -136,18 +142,30 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
 	},
 	{
 		module: 'platform',
+		href: '/settings/platform/authentication',
+		label: m.settings_section_authentication,
+		permission: 'organisation.manage',
+		feature: 'sso'
+	},
+	{
+		module: 'platform',
 		href: '/settings/api-keys',
 		label: m.settings_section_api_keys,
 		permission: 'api.keys.manage'
 	}
 ];
 
-/** The sections whose permission the viewer holds; registry order is kept. */
+/** The sections whose permission the viewer holds and whose feature the installation has; registry order is kept. */
 export function visibleSections(
 	permissions: readonly string[],
-	sections: readonly SettingsSection[] = SETTINGS_SECTIONS
+	sections: readonly SettingsSection[] = SETTINGS_SECTIONS,
+	features: SettingsFeatures = {}
 ): SettingsSection[] {
-	return sections.filter((section) => permissions.includes(section.permission));
+	return sections.filter(
+		(section) =>
+			permissions.includes(section.permission) &&
+			(section.feature === undefined || features[section.feature] === true)
+	);
 }
 
 export interface SettingsModuleGroup {

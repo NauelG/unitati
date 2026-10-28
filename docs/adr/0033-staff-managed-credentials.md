@@ -50,3 +50,8 @@ pending.
 - `SessionUser.mustChangePassword` is optional: API-key and service-account users have no password.
 - Roles change on the user's next request, because the session user is resolved from the database
   on every request.
+
+> **Note (ADR 0056):** a person who signs in through the identity provider needs no grant: the IdP
+> decides access and Unitati creates their user as `employee`. While SSO is required, "Grant access"
+> and "Reset password" are offered only for admins, and the address of a linked person is managed by
+> the provider (it is read-only until an admin unlinks them).

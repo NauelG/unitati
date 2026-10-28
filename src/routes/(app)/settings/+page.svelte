@@ -8,7 +8,9 @@
 
 	let { data }: PageProps = $props();
 
-	const groups = $derived(groupByModule(visibleSections(data.permissions)));
+	const groups = $derived(
+		groupByModule(visibleSections(data.permissions, undefined, data.features))
+	);
 </script>
 
 <svelte:head>

@@ -9,6 +9,7 @@ import {
 	listHandovers
 } from '#lib/server/assets/index.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
+import { getAuthenticationSettings } from '#lib/server/auth/settings.js';
 import {
 	addPersonComment,
 	listDepartments,
@@ -88,6 +89,9 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 		canManagePeople,
 		canEditPeople,
 		canCheckout,
+		// An identity provider is the way in while SSO is required (ADR 0056).
+		ssoRequired: (await getAuthenticationSettings(user.organisationId)).ssoRequired,
+		canUnlinkIdentity: can(user, 'organisation.manage'),
 		selfPersonId: user.personId,
 		lastAdminId: activeAdmins.length === 1 ? activeAdmins[0].id : null,
 		openTakeBack: canCheckout && held.length > 0 && url.searchParams.get('takeBack') === '1',

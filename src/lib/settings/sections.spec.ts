@@ -147,3 +147,37 @@ describe('groupByModule', () => {
 		expect(groupByModule([])).toEqual([]);
 	});
 });
+
+describe('visibleSections and installation features', () => {
+	const gated: readonly SettingsSection[] = [
+		{
+			module: 'platform',
+			href: '/settings/platform/authentication',
+			label: () => 'Autenticación',
+			permission: 'organisation.manage',
+			feature: 'sso'
+		}
+	];
+
+	it('hides a feature section on an installation without the feature', () => {
+		expect(visibleSections(['organisation.manage'], gated)).toEqual([]);
+		expect(visibleSections(['organisation.manage'], gated, { sso: false })).toEqual([]);
+	});
+
+	it('shows it to whoever holds the permission once the feature is on', () => {
+		expect(
+			visibleSections(['organisation.manage'], gated, { sso: true }).map((section) => section.href)
+		).toEqual(['/settings/platform/authentication']);
+		expect(visibleSections(['projects.manage'], gated, { sso: true })).toEqual([]);
+	});
+
+	it('lists the authentication section in the registry only behind the sso feature', () => {
+		const admin = ['organisation.manage'];
+		expect(visibleSections(admin).map((section) => section.href)).not.toContain(
+			'/settings/platform/authentication'
+		);
+		expect(
+			visibleSections(admin, undefined, { sso: true }).map((section) => section.href)
+		).toContain('/settings/platform/authentication');
+	});
+});

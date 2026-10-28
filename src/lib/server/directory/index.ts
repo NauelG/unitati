@@ -4,7 +4,7 @@ import { TECHNICIAN_DIRECTORY_GRANTS } from '../access/permissions';
 import { users } from '../auth/schema';
 import type { SessionUser } from '../auth/guards';
 import { locationPaths } from './locations';
-import { departments, organisations, people, teams } from './schema';
+import { departments, organisations, people, personIdentities, teams } from './schema';
 
 export {
 	countLocationChildren,
@@ -42,6 +42,17 @@ export {
 	userIdOfPerson
 } from './access';
 export type { PersonForAccess } from './access';
+export {
+	dismissProvisioningWarning,
+	findPersonIdentity,
+	listOpenProvisioningWarnings,
+	organisationIdOfUser,
+	resolveSsoIdentity,
+	soleOrganisationId,
+	unlinkPersonIdentity,
+	userIdsInOrganisation
+} from './identities';
+export type { OpenProvisioningWarning, ResolvedPerson, SsoClaims, SsoRefusal } from './identities';
 export { addPersonComment, listPersonComments } from './person-comments';
 export type { AddPersonCommentFailure } from './person-comments';
 export { setPersonLocation } from './person-location';
@@ -119,6 +130,8 @@ export interface DirectoryEntry {
 	departmentName: string | null;
 	/** True when a credential belongs to this person (`user_id IS NOT NULL`). */
 	hasAccess: boolean;
+	/** True while an identity provider owns this person's name and email (ADR 0056). */
+	hasIdentity: boolean;
 	role: string | null;
 	active: boolean;
 	locationId: string | null;
@@ -145,6 +158,7 @@ export async function listPeople(
 			departmentId: people.departmentId,
 			departmentName: departments.name,
 			hasAccess: sql<boolean>`${people.userId} is not null`,
+			hasIdentity: sql<boolean>`exists (select 1 from ${personIdentities} where ${personIdentities.personId} = ${people.id})`,
 			role: users.role,
 			active: people.active,
 			locationId: people.locationId

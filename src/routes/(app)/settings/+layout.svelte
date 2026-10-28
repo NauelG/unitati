@@ -8,7 +8,7 @@
 	let { data, children }: LayoutProps = $props();
 
 	const groups = $derived(
-		groupByModule(visibleSections(data.permissions)).map((group) => ({
+		groupByModule(visibleSections(data.permissions, undefined, data.features)).map((group) => ({
 			label: MODULE_LABELS[group.module](),
 			items: group.sections.map((section) => ({ href: section.href, label: section.label() }))
 		}))

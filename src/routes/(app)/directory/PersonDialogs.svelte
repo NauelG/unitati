@@ -7,6 +7,10 @@
 		departmentId: string | null;
 		locationId: string | null;
 		role: string | null;
+		/** True while an identity provider owns the name and email (ADR 0056). */
+		hasIdentity?: boolean;
+		/** An inactive person's email stays editable even when an identity provider manages them. */
+		active?: boolean;
 	}
 
 	/** The confirmation's subject with what they still hold (`?deactivate=`). */
@@ -81,6 +85,8 @@
 	let accessPending = $state(false);
 	let revoking = $state<DialogPerson | null>(null);
 	let revokePending = $state(false);
+	let unlinking = $state<DialogPerson | null>(null);
+	let unlinkPending = $state(false);
 	let revealed = $state<{ name: string; password: string } | null>(null);
 	let copied = $state(false);
 
@@ -120,6 +126,10 @@
 		revoking = target;
 	}
 
+	export function unlink(target: DialogPerson) {
+		unlinking = target;
+	}
+
 	export async function reset(target: DialogPerson) {
 		resetId = target.id;
 		resetName = target.fullName;
@@ -145,6 +155,10 @@
 	}
 
 	const person = $derived(editing && editing !== 'new' ? editing : null);
+	// The identity provider owns both fields; a disabled input is not posted, so the
+	// action leaves them untouched. An inactive person's email is the one exception.
+	const nameManaged = $derived(person?.hasIdentity === true);
+	const emailManaged = $derived(person?.hasIdentity === true && person.active !== false);
 
 	function close() {
 		editing = null;
@@ -188,7 +202,7 @@
 	}
 </script>
 
-{#if form?.message && ['reactivatePerson', 'deactivatePerson', 'resetPassword', 'revokeAccess'].includes(form.action) && !deactivating}
+{#if form?.message && ['reactivatePerson', 'deactivatePerson', 'resetPassword', 'revokeAccess', 'unlinkIdentity'].includes(form.action) && !deactivating}
 	<FormError class="mt-[var(--space-4)]">{form.message}</FormError>
 {/if}
 
@@ -232,6 +246,8 @@
 				name="fullName"
 				bind:value={draftName}
 				maxlength={120}
+				disabled={nameManaged}
+				hint={nameManaged ? m.directory_identity_managed_hint() : undefined}
 				required
 			/>
 			<Field
@@ -240,6 +256,8 @@
 				type="email"
 				bind:value={draftEmail}
 				error={emailFailure}
+				disabled={emailManaged}
+				hint={emailManaged ? m.directory_identity_managed_hint() : undefined}
 				required
 			/>
 			<SelectField
@@ -411,6 +429,36 @@
 			})}
 		>
 			<input type="hidden" name="id" value={revoking?.id ?? ''} />
+			{@render confirm()}
+		</form>
+	{/snippet}
+</ConfirmDialog>
+
+<ConfirmDialog
+	open={unlinking !== null}
+	onOpenChange={(next) => {
+		if (!next) unlinking = null;
+	}}
+	title={m.directory_unlink_title({ name: unlinking?.fullName ?? '' })}
+	description={m.directory_unlink_ask()}
+	confirmLabel={m.directory_unlink_identity()}
+	pending={unlinkPending}
+	error={unlinking && form?.action === 'unlinkIdentity' && form.id === unlinking.id
+		? form.message
+		: null}
+>
+	{#snippet action(confirm)}
+		<form
+			method="POST"
+			action="?/unlinkIdentity"
+			use:enhance={confirmSubmit({
+				onPending: (value) => (unlinkPending = value),
+				onSettled: (succeeded) => {
+					if (succeeded) unlinking = null;
+				}
+			})}
+		>
+			<input type="hidden" name="id" value={unlinking?.id ?? ''} />
 			{@render confirm()}
 		</form>
 	{/snippet}

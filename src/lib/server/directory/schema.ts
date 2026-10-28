@@ -6,12 +6,15 @@ import {
 	doublePrecision,
 	foreignKey,
 	index,
+	jsonb,
 	integer,
 	pgEnum,
 	pgTable,
 	primaryKey,
 	text,
+	timestamp,
 	unique,
+	uniqueIndex,
 	uuid,
 	type AnyPgColumn
 } from 'drizzle-orm/pg-core';
@@ -297,3 +300,72 @@ export const personComments = pgTable(
 	},
 	(table) => [index('person_comments_person_created').on(table.personId, table.createdAt)]
 );
+
+/**
+ * The link between a person and the account they hold at an identity provider
+ * (ADR 0056). Created once, by email, when the ID token says the address is
+ * verified; from then on `(provider, external_id)` is the identity and the
+ * email is never used to find it again.
+ *
+ * `provider` is `oidc:<issuer>`, `external_id` the `sub` claim (case-sensitive).
+ * `unique (person_id, provider)` keeps a person to one identity per provider.
+ */
+export const personIdentities = pgTable(
+	'person_identities',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		personId: uuid('person_id')
+			.notNull()
+			.references(() => people.id, { onDelete: 'cascade' }),
+		provider: text('provider').notNull(),
+		externalId: text('external_id').notNull(),
+		...timestamps
+	},
+	(table) => [
+		unique('person_identities_org_provider_external').on(
+			table.organisationId,
+			table.provider,
+			table.externalId
+		),
+		unique('person_identities_person_provider').on(table.personId, table.provider),
+		index('person_identities_person_idx').on(table.personId)
+	]
+);
+
+export const PROVISIONING_WARNING_KINDS = ['email_taken'] as const;
+export const provisioningWarningKind = pgEnum(
+	'provisioning_warning_kind',
+	PROVISIONING_WARNING_KINDS
+);
+
+/**
+ * Something an admin has to look at after an identity could not be provisioned
+ * (ADR 0056): today, an identity whose email another person already holds.
+ * One open warning per identity and kind, so a repeated sign-in does not pile up.
+ */
+export const provisioningWarnings = pgTable(
+	'provisioning_warnings',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		organisationId: uuid('organisation_id')
+			.notNull()
+			.references(() => organisations.id, { onDelete: 'cascade' }),
+		provider: text('provider').notNull(),
+		externalId: text('external_id').notNull(),
+		kind: provisioningWarningKind('kind').notNull(),
+		detail: jsonb('detail').notNull().$type<Record<string, unknown>>(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		dismissedAt: timestamp('dismissed_at', { withTimezone: true })
+	},
+	(table) => [
+		uniqueIndex('provisioning_warnings_open_unique')
+			.on(table.organisationId, table.provider, table.externalId, table.kind)
+			.where(sql`${table.dismissedAt} is null`)
+	]
+);
+
+export type PersonIdentity = typeof personIdentities.$inferSelect;
+export type ProvisioningWarning = typeof provisioningWarnings.$inferSelect;

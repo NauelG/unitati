@@ -6,7 +6,8 @@ import { failure, success, type Outcome } from '../shared/outcome';
 import type { WriteOptions } from '../shared/write-options';
 import { actorColumns, recordActivity } from '../activity';
 import { locationPaths } from './locations';
-import { departments, locations, people } from './schema';
+import { users } from '../auth/schema';
+import { departments, locations, people, personIdentities } from './schema';
 import type { PersonInput, PersonUpdateInput } from './validation';
 
 /**
@@ -19,7 +20,7 @@ import type { PersonInput, PersonUpdateInput } from './validation';
 
 export type PersonCreateFailure = 'duplicate_email' | 'department_not_found' | 'location_not_found';
 export type PersonUpdateFailure =
-	'not_found' | 'duplicate_email' | 'department_not_found' | 'email_locked';
+	'not_found' | 'duplicate_email' | 'department_not_found' | 'email_locked' | 'identity_managed';
 export type PersonDeactivateFailure = 'not_found' | 'already_inactive' | 'self';
 export type PersonReactivateFailure = 'not_found' | 'already_active';
 
@@ -120,6 +121,7 @@ export async function updatePerson(
 					email: people.email,
 					departmentId: people.departmentId,
 					userId: people.userId,
+					active: people.active,
 					departmentName: departments.name
 				})
 				.from(people)
@@ -128,14 +130,27 @@ export async function updatePerson(
 				.limit(1);
 			if (!current) return failure('not_found');
 
+			// The identity provider owns name and email of a linked person (ADR 0056);
+			// an admin unlinks them first to edit by hand.
+			const [identity] = await tx
+				.select({ id: personIdentities.id })
+				.from(personIdentities)
+				.where(eq(personIdentities.personId, personId))
+				.limit(1);
+
 			const changes: Partial<typeof people.$inferInsert> = {};
 			if (input.fullName !== undefined && input.fullName !== current.fullName) {
+				if (identity) return failure('identity_managed');
 				changes.fullName = input.fullName;
 			}
+			let emailChanged = false;
 			if (input.email !== undefined && input.email !== current.email) {
-				// The address is also the sign-in; #230 changes both together.
-				if (current.userId !== null) return failure('email_locked');
+				// The address is also the sign-in; #230 changes both together. An inactive
+				// person's address is the one exception: an admin must be able to free it
+				// when the identity provider hands it to someone else (ADR 0056).
+				if (current.userId !== null && current.active) return failure('email_locked');
 				changes.email = input.email;
+				emailChanged = true;
 			}
 
 			let nextDepartment: { id: string; name: string } | null | undefined;
@@ -166,6 +181,13 @@ export async function updatePerson(
 				.update(people)
 				.set({ ...changes, updatedAt: new Date() })
 				.where(eq(people.id, personId));
+			// Same transaction as the directory record: the sign-in address never lags behind it.
+			if (emailChanged && current.userId !== null) {
+				await tx
+					.update(users)
+					.set({ email: input.email!.toLowerCase(), updatedAt: new Date() })
+					.where(eq(users.id, current.userId));
+			}
 
 			if (nextDepartment !== undefined) {
 				await recordActivity(tx, {

@@ -189,7 +189,9 @@
 	] satisfies (NavLeafSource | NavGroupSource)[]);
 
 	/** The *Configuración* link exists only when at least one registry section is visible. */
-	const showSettings = $derived(visibleSections(data.permissions).length > 0);
+	const showSettings = $derived(
+		visibleSections(data.permissions, undefined, data.features).length > 0
+	);
 </script>
 
 {#snippet settingsLink({ rail }: { rail: boolean })}
