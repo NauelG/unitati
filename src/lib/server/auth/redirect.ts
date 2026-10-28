@@ -1,6 +1,6 @@
 const FALLBACK = '/';
 const PLACEHOLDER_ORIGIN = 'http://unitati.invalid';
-const LOOP_PATHS = ['/login', '/setup', '/sign-out'];
+const LOOP_PATHS = ['/login', '/setup', '/sign-out', '/signed-out'];
 
 /**
  * Where to go after signing in. Only a same-origin relative path survives: the

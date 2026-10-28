@@ -1,7 +1,7 @@
 {
 	"name": "unitati",
 	"private": true,
-	"version": "1.6.1",
+	"version": "1.7.0",
 	"license": "AGPL-3.0-only",
 	"repository": {
 		"type": "git",
@@ -93,6 +93,7 @@
 		}
 	},
 	"dependencies": {
+		"@better-auth/sso": "^1.7.14",
 		"@expo-google-fonts/noto-sans": "0.4.2",
 		"@number-flow/svelte": "^0.4.2",
 		"@tiptap/core": "^3.32.0",
@@ -102,7 +103,7 @@
 		"@tiptap/pm": "^3.32.0",
 		"@tiptap/starter-kit": "^3.32.0",
 		"@tiptap/suggestion": "^3.32.0",
-		"better-auth": "^1.7.7",
+		"better-auth": "^1.7.14",
 		"csv-parse": "^7.0.3",
 		"drizzle-orm": "^0.45.3",
 		"drizzle-zod": "^0.8.3",

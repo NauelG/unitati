@@ -138,6 +138,8 @@
 		'person.deactivated': UserRoundX,
 		'person.reactivated': UserRoundCheck,
 		'person.department.changed': ArrowRightLeft,
+		'person.identity.linked': Link,
+		'person.identity.unlinked': Unlink,
 		'person.location.changed': MapPin,
 		'catalogue.location.created': MapPinPlus,
 		'catalogue.location.updated': MapPinPen,

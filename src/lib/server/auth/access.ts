@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm';
+import { OIDC_PROVIDER_ID } from '../../oidc';
 import { getDb } from '../db';
 import { uniqueConstraintName } from '../db/errors';
 import {
@@ -7,13 +8,16 @@ import {
 	findPersonForAccess,
 	linkPersonToUser,
 	setPersonEmail,
+	unlinkPersonIdentity,
 	userIdOfPerson,
 	type PersonDeactivateFailure
 } from '../directory';
+import { can } from '../access/permissions';
 import { failure, success, type Outcome } from '../shared/outcome';
 import type { SessionUser } from './guards';
 import { getAuth } from '.';
 import { authAccounts, sessions, users, type UserRole } from './schema';
+import { getAuthenticationSettings } from './settings';
 import { generateTemporaryPassword } from './temporary-password';
 
 /**
@@ -30,11 +34,14 @@ import { generateTemporaryPassword } from './temporary-password';
 
 export { generateTemporaryPassword } from './temporary-password';
 
-export type GrantAccessFailure = 'not_found' | 'already_has_access' | 'inactive' | 'email_taken';
-export type ResetPasswordFailure = 'not_found' | 'no_access';
+export type GrantAccessFailure =
+	'not_found' | 'already_has_access' | 'inactive' | 'email_taken' | 'sso_required';
+export type ResetPasswordFailure = 'not_found' | 'no_access' | 'sso_required';
 export type ChangeRoleFailure = 'not_found' | 'no_access' | 'last_admin' | 'self';
 export type RevokeAccessFailure = ChangeRoleFailure;
-export type ChangeAccessEmailFailure = 'not_found' | 'no_access' | 'email_taken';
+export type ChangeAccessEmailFailure =
+	'not_found' | 'no_access' | 'email_taken' | 'identity_managed';
+export type UnlinkIdentityFailure = 'not_found' | 'not_linked';
 
 async function hashPassword(password: string): Promise<string> {
 	return (await getAuth().$context).password.hash(password);
@@ -45,6 +52,11 @@ export async function grantAccess(
 	personId: string,
 	role: UserRole
 ): Promise<Outcome<{ temporaryPassword: string }, GrantAccessFailure>> {
+	// While SSO is required a new person gets in through the identity provider; a
+	// password is only ever handed out to an admin (ADR 0056).
+	if (role !== 'admin' && (await getAuthenticationSettings(actor.organisationId)).ssoRequired) {
+		return failure('sso_required');
+	}
 	const temporaryPassword = generateTemporaryPassword();
 	const passwordHash = await hashPassword(temporaryPassword);
 
@@ -87,11 +99,15 @@ export async function resetPassword(
 ): Promise<Outcome<{ temporaryPassword: string }, ResetPasswordFailure>> {
 	const temporaryPassword = generateTemporaryPassword();
 	const passwordHash = await hashPassword(temporaryPassword);
+	const { ssoRequired } = await getAuthenticationSettings(actor.organisationId);
 
 	return getDb().transaction(async (tx) => {
 		const person = await findPersonForAccess(tx, actor.organisationId, personId);
 		if (!person) return failure('not_found');
 		if (person.userId === null) return failure('no_access');
+
+		const [user] = await tx.select().from(users).where(eq(users.id, person.userId)).limit(1);
+		if (user.role !== 'admin' && ssoRequired) return failure('sso_required');
 
 		await tx
 			.update(authAccounts)
@@ -167,6 +183,9 @@ export async function changeAccessEmail(
 			const person = await findPersonForAccess(tx, actor.organisationId, personId);
 			if (!person) return failure('not_found');
 			if (person.userId === null) return failure('no_access');
+			// The identity provider owns the address of a linked person, until they are
+			// inactive: then an admin may free it (ADR 0056).
+			if (person.hasIdentity && person.active) return failure('identity_managed');
 
 			await tx
 				.update(users)
@@ -190,6 +209,35 @@ export async function deactivatePersonAndEndSessions(
 	const outcome = await deactivatePerson(actor, personId);
 	if (outcome.ok && userId !== null) await endSessions(userId);
 	return outcome;
+}
+
+/**
+ * Unlinks a person from the identity provider (ADR 0056): the link goes, their
+ * SSO sessions end, and name and email are theirs to edit again. Their local
+ * credential, if they have one, is untouched.
+ */
+export async function unlinkIdentity(
+	actor: SessionUser,
+	personId: string
+): Promise<Outcome<void, UnlinkIdentityFailure>> {
+	if (!can(actor, 'organisation.manage')) return failure('not_found');
+
+	return getDb().transaction(async (tx) => {
+		const unlinked = await unlinkPersonIdentity(tx, actor, personId);
+		if (!unlinked.ok) return failure(unlinked.error);
+
+		const { userId } = unlinked.value;
+		if (userId !== null) {
+			await tx
+				.delete(sessions)
+				.where(and(eq(sessions.userId, userId), eq(sessions.authMethod, 'sso')));
+			// Better Auth's own record of the same account would let the old `sub` back in.
+			await tx
+				.delete(authAccounts)
+				.where(and(eq(authAccounts.userId, userId), eq(authAccounts.providerId, OIDC_PROVIDER_ID)));
+		}
+		return success(undefined);
+	});
 }
 
 export async function endSessions(userId: string): Promise<void> {

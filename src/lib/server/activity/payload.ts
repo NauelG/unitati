@@ -412,8 +412,8 @@ export const PAYLOAD_SCHEMAS = {
 	'person.created': z.object({
 		fullName: presentName,
 		email: presentName,
-		// Present when a CSV import made the person (ADR 0034); older rows lack it.
-		via: z.literal('import').optional()
+		// Present when a CSV import (ADR 0034) or a first SSO sign-in (ADR 0056) made the person; older rows lack it.
+		via: z.enum(['import', 'sso']).optional()
 	}),
 	'person.deactivated': z.object({}),
 	'person.reactivated': z.object({}),
@@ -423,6 +423,10 @@ export const PAYLOAD_SCHEMAS = {
 		toDepartmentId: z.uuid().nullable(),
 		toDepartmentName: presentName.nullable()
 	}),
+	// An identity at the organisation's identity provider, linked once by verified email
+	// and unlinked by an admin (ADR 0056). `provider` is `oidc:<issuer>`.
+	'person.identity.linked': z.object({ provider: presentName, via: z.literal('email') }),
+	'person.identity.unlinked': z.object({ provider: presentName }),
 	'person.location.changed': z.object({
 		from: locationRef.nullable(),
 		to: locationRef.nullable(),

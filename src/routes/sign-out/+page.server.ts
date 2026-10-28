@@ -15,6 +15,7 @@ export const actions: Actions = {
 		});
 		// Carries the expiry that clears the session cookie.
 		applyAuthCookies(headers, event.cookies);
-		redirect(303, '/login');
+		// Says so and stays put: signing out must not bounce into the identity provider (ADR 0056).
+		redirect(303, '/signed-out');
 	}
 };

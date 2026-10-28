@@ -23,3 +23,7 @@ People, teams, departments, locations and the organisation's brand, name and col
 ## Access (credentials)
 
 `access.ts` holds what the `auth` domain needs to grant, change and revoke a person's sign-in (ADR [0033](../../../../docs/adr/0033-staff-managed-credentials.md)): `findPersonForAccess`, `linkPersonToUser`, `setPersonEmail`, `countActiveAdmins`, all taking the caller's transaction, plus `userIdOfPerson` and `isUserActive`. `resolveSessionUser` returns nobody for a deactivated person.
+
+## Identities (single sign-on)
+
+`identities.ts` holds what the `auth` sign-in callback needs from the directory (ADR [0056](../../../../docs/adr/0056-single-sign-on-with-oidc-and-scim.md)): `resolveSsoIdentity` finds, links or creates the person for a verified identity and writes the provider's name and email onto the record, all inside the caller's transaction, and returns a refusal (`email_not_verified`, `inactive`, `no_person`, `email_taken`) as a value so the provisioning warning it records still commits. `unlinkPersonIdentity`, `findPersonIdentity`, `listOpenProvisioningWarnings` and `dismissProvisioningWarning` serve the unlink action and the settings page. `soleOrganisationId`, `organisationIdOfUser` and `userIdsInOrganisation` let `auth` act per organisation without reading `people`. While a person has an identity, `updatePerson` refuses name and email changes (`identity_managed`).

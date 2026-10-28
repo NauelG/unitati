@@ -1,6 +1,6 @@
 # 0006. Email and password authentication
 
-- **Status:** accepted
+- **Status:** accepted, partly superseded by [ADR 0056](0056-single-sign-on-with-oidc-and-scim.md)
 - **Date:** 2026-10-06
 
 ## Context
@@ -42,3 +42,8 @@ Magic link, OIDC, LDAP and SCIM are post-v1 in the [roadmap](../roadmap-v1.md).
   warehouse floor does not wait for an email to arrive before they can report it.
 - The divergence from renyst-app is deliberate and recorded here, so that the next person to
   notice it finds the reason instead of assuming an oversight.
+
+> **Note (ADR 0056):** OpenID Connect single sign-on now sits beside email and password and can
+> be made mandatory, in which case only admins keep a password (the break-glass `/login/local`).
+> Email and password remains the default and the only method of an installation without an identity
+> provider.

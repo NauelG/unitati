@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { can } from '#lib/server/access/permissions.js';
 import { countAssetsInCustodyOf } from '#lib/server/assets/index.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
+import { getAuthenticationSettings } from '#lib/server/auth/settings.js';
 import {
 	countTeams,
 	createPerson,
@@ -57,6 +58,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		canManagePeople,
 		canEditPeople,
 		canCheckout,
+		// An identity provider is the way in while SSO is required (ADR 0056).
+		ssoRequired: (await getAuthenticationSettings(user.organisationId)).ssoRequired,
+		canUnlinkIdentity: can(user, 'organisation.manage'),
 		showInactive,
 		openCreate: canEditPeople && url.searchParams.get('new') === '1',
 		deactivating,

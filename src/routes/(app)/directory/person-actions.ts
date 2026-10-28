@@ -7,7 +7,8 @@ import {
 	deactivatePersonAndEndSessions,
 	grantAccess,
 	resetPassword,
-	revokeAccess
+	revokeAccess,
+	unlinkIdentity
 } from '#lib/server/auth/access.js';
 import { requirePermission } from '#lib/server/auth/guards.js';
 import {
@@ -53,7 +54,10 @@ export const failureMessage = {
 	last_admin: () => m.directory_error_last_admin(),
 	self: () => m.directory_error_self(),
 	already_inactive: () => m.directory_error_already_inactive(),
-	already_active: () => m.directory_error_already_active()
+	already_active: () => m.directory_error_already_active(),
+	identity_managed: () => m.directory_error_identity_managed(),
+	sso_required: () => m.directory_error_sso_required(),
+	not_linked: () => m.directory_error_not_found()
 } as const;
 
 export const personActions = {
@@ -64,9 +68,11 @@ export const personActions = {
 		if (!target.success) return rejected('updatePerson', m.directory_error_not_found());
 		const personId = target.data.id;
 
-		// A disabled email field is not posted: the key is absent, so it stays untouched.
-		const parsed = personInput.partial({ email: true }).safeParse({
+		// A disabled field is not posted: the key is absent, so it stays untouched. The
+		// name and email of a person an identity provider manages arrive that way.
+		const parsed = personInput.partial({ email: true, fullName: true }).safeParse({
 			...fields,
+			fullName: 'fullName' in fields ? fields.fullName : undefined,
 			email: 'email' in fields ? fields.email : undefined
 		});
 		const location = locationField.safeParse(fields.locationId ?? '');
@@ -166,6 +172,18 @@ export const personActions = {
 		const outcome = await changeRole(user, parsed.data.id, parsed.data.role);
 		if (!outcome.ok) return rejected('changeRole', failureMessage[outcome.error](), parsed.data.id);
 		return { action: 'changeRole' as const, message: null, id: null };
+	},
+
+	unlinkIdentity: async ({ locals, request }: ActionEvent) => {
+		const user = requirePermission(locals.user, 'organisation.manage');
+		const target = withId.safeParse(await fieldsOf(request));
+		if (!target.success) return rejected('unlinkIdentity', m.directory_error_not_found());
+
+		const outcome = await unlinkIdentity(user, target.data.id);
+		if (!outcome.ok) {
+			return rejected('unlinkIdentity', failureMessage[outcome.error](), target.data.id);
+		}
+		return { action: 'unlinkIdentity' as const, message: null, id: null };
 	},
 
 	revokeAccess: async ({ locals, request }: ActionEvent) => {

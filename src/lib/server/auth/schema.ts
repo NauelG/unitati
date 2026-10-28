@@ -1,4 +1,5 @@
-import { boolean, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { boolean, check, pgTable, pgEnum, text, timestamp } from 'drizzle-orm/pg-core';
 import { timestamps } from '../shared/columns';
 
 /**
@@ -25,17 +26,29 @@ export const users = pgTable('users', {
 	...timestamps
 });
 
-export const sessions = pgTable('sessions', {
-	id: text('id').primaryKey(),
-	userId: text('user_id')
-		.notNull()
-		.references(() => users.id, { onDelete: 'cascade' }),
-	token: text('token').notNull().unique(),
-	expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-	ipAddress: text('ip_address'),
-	userAgent: text('user_agent'),
-	...timestamps
-});
+export const SESSION_AUTH_METHODS = ['password', 'sso'] as const;
+export type SessionAuthMethod = (typeof SESSION_AUTH_METHODS)[number];
+
+export const sessions = pgTable(
+	'sessions',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		token: text('token').notNull().unique(),
+		expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+		ipAddress: text('ip_address'),
+		userAgent: text('user_agent'),
+		/**
+		 * How the session was opened (ADR 0056). Drives the 12-hour, never-refreshed
+		 * lifetime of an SSO session and the revocation when SSO becomes required.
+		 */
+		authMethod: text('auth_method').notNull().default('password'),
+		...timestamps
+	},
+	(table) => [check('sessions_auth_method', sql`${table.authMethod} in ('password', 'sso')`)]
+);
 
 export const authAccounts = pgTable('auth_accounts', {
 	id: text('id').primaryKey(),
@@ -61,6 +74,22 @@ export const verifications = pgTable('verifications', {
 	value: text('value').notNull(),
 	expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 	...timestamps
+});
+
+/**
+ * The `@better-auth/sso` plugin's own table. The provider is registered
+ * statically from the environment, so no row is ever read or written today;
+ * the plugin still declares the model, and the adapter needs it mapped.
+ */
+export const ssoProviders = pgTable('sso_providers', {
+	id: text('id').primaryKey(),
+	issuer: text('issuer').notNull(),
+	oidcConfig: text('oidc_config'),
+	samlConfig: text('saml_config'),
+	userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+	providerId: text('provider_id').notNull().unique(),
+	organizationId: text('organization_id'),
+	domain: text('domain').notNull()
 });
 
 export type UserRole = (typeof userRole.enumValues)[number];

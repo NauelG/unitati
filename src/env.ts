@@ -23,6 +23,28 @@ function isTimeZone(zone: string): boolean {
 	}
 }
 
+/** An absent OIDC variable is an empty string, so the three can be compared without `undefined`. */
+const oidcVariable =
+	(name: string, validate?: (value: string) => void) => (value: string | undefined) => {
+		const trimmed = value?.trim() ?? '';
+		if (trimmed && validate) validate(trimmed);
+		return trimmed;
+	};
+
+function assertHttpUrl(name: string) {
+	return (value: string) => {
+		let url: URL;
+		try {
+			url = new URL(value);
+		} catch {
+			throw new Error(`${name} is not a URL: ${value}`);
+		}
+		if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+			throw new Error(`${name} must be an http(s) URL: ${value}`);
+		}
+	};
+}
+
 export const variables = defineEnvVars({
 	APP_ENV: {
 		description:
@@ -73,6 +95,21 @@ export const variables = defineEnvVars({
 	MAIL_FROM: {
 		description: 'Sender address of outbound mail, e.g. "Unitati <desk@example.com>".',
 		schema: (value) => value || 'Unitati <no-reply@localhost>'
+	},
+	OIDC_ISSUER: {
+		description:
+			"Issuer URL of the organisation's OpenID Connect identity provider, e.g. https://authentik.example.com/application/o/unitati/. Set together with OIDC_CLIENT_ID and OIDC_CLIENT_SECRET to turn single sign-on on; with none of the three set, nothing about SSO is visible (ADR 0056).",
+		schema: oidcVariable('OIDC_ISSUER', assertHttpUrl('OIDC_ISSUER'))
+	},
+	OIDC_CLIENT_ID: {
+		description:
+			'Client id of this installation at the identity provider. All-or-none with OIDC_ISSUER and OIDC_CLIENT_SECRET.',
+		schema: oidcVariable('OIDC_CLIENT_ID')
+	},
+	OIDC_CLIENT_SECRET: {
+		description:
+			'Client secret of this installation at the identity provider. Only ever read from the environment: it is never stored in the database.',
+		schema: oidcVariable('OIDC_CLIENT_SECRET')
 	},
 	ORGANISATION_TIME_ZONE: {
 		description:

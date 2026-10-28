@@ -6,6 +6,28 @@ All notable changes to Unitati are documented here. The format follows
 the API or the configuration bump the major version, features the minor and fixes the patch.
 Before 1.0.0, minor bumps carried features and patch bumps carried fixes.
 
+## [1.7.0] - 2026-10-27
+
+### Added
+
+- Single sign-on with OpenID Connect (#408, #43, ADR 0056). With `OIDC_ISSUER`, `OIDC_CLIENT_ID` and
+  `OIDC_CLIENT_SECRET` set (all three or none), the sign-in screen offers "Entrar con SSO". The first
+  sign-in links the person by a verified email; from then on the identity's `sub` is what counts. The
+  provider is authoritative for name and email, which are read-only in the directory until an admin
+  unlinks the person. A person who is not in the directory is refused, or created as an employee with
+  "Alta automática" on; a new identity whose email another person holds is refused and leaves a
+  warning in the new Ajustes → Plataforma → Autenticación page, which also holds the button label,
+  "Inicio de sesión único obligatorio" (non-admin password sessions are revoked, their passwords are
+  kept) and "Redirigir automáticamente". SSO sessions last 12 hours and are never refreshed. Admins
+  always sign in with a password at `/login/local`. Signing out lands on a page that says so. See
+  `docs/sso-authentik.md`.
+- The email of an inactive person with a user can be edited, so an address the provider has reassigned
+  can be freed.
+
+### Changed
+
+- `better-auth` is now 1.7.14 and `@better-auth/sso` is a dependency.
+
 ## [1.6.1] - 2026-10-27
 
 ### Fixed

@@ -1,8 +1,8 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { Transaction } from '../db';
 import { getDb } from '../db';
 import { users } from '../auth/schema';
-import { people } from './schema';
+import { people, personIdentities } from './schema';
 
 /**
  * What the `auth` domain needs from the directory to grant, change and revoke
@@ -19,6 +19,8 @@ export interface PersonForAccess {
 	active: boolean;
 	/** The credential that signs in as this person, if any. */
 	userId: string | null;
+	/** True while an identity provider owns this person's name and email (ADR 0056). */
+	hasIdentity: boolean;
 }
 
 export async function findPersonForAccess(
@@ -32,7 +34,8 @@ export async function findPersonForAccess(
 			fullName: people.fullName,
 			email: people.email,
 			active: people.active,
-			userId: people.userId
+			userId: people.userId,
+			hasIdentity: sql<boolean>`exists (select 1 from ${personIdentities} where ${personIdentities.personId} = ${people.id})`
 		})
 		.from(people)
 		.where(and(eq(people.id, personId), eq(people.organisationId, organisationId)))

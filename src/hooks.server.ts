@@ -6,6 +6,8 @@ import { paraglideMiddleware } from '#lib/paraglide/server.js';
 import { authenticateRequest, isApiPath } from '#lib/server/api/index.js';
 import { passwordChangeRedirect } from '#lib/server/auth/guards.js';
 import { getAuth } from '#lib/server/auth/index.js';
+import { oidcConfig } from '#lib/server/auth/oidc.js';
+import { ssoSessionLapsed } from '#lib/server/auth/sessions.js';
 import { closeDb } from '#lib/server/db/index.js';
 import { resolveSessionUser } from '#lib/server/directory/index.js';
 import { registerPorts } from '#lib/server/ports.js';
@@ -38,6 +40,9 @@ if (!building) {
 if (!building) {
 	registerPorts();
 	registerSubscriptions();
+	// Half-configured single sign-on (one or two of the OIDC variables) stops the
+	// server here rather than quietly serving a sign-in without it (ADR 0056).
+	oidcConfig();
 }
 
 // `event.request` is readonly in SvelteKit 3, so the request is not swapped as
@@ -74,7 +79,13 @@ const authHandle: Handle = async ({ event, resolve }) => {
 
 	const auth = getAuth();
 	const session = await auth.api.getSession({ headers: event.request.headers });
-	event.locals.user = session?.user ? await resolveSessionUser(session.user.id) : null;
+	// An SSO session is twelve hours from creation whatever `expires_at` says (ADR 0056).
+	const lapsed = session ? ssoSessionLapsed(session.session) : false;
+	// Past its twelve hours the row goes too, so the stale cookie does not linger.
+	if (session && lapsed) {
+		await (await auth.$context).internalAdapter.deleteSession(session.session.token);
+	}
+	event.locals.user = session?.user && !lapsed ? await resolveSessionUser(session.user.id) : null;
 
 	// A temporary password confines the session to changing it (#230). The public
 	// handover signing page is exempt (#275); no layout signs anyone in for it.
